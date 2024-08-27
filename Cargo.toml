@@ -6,12 +6,27 @@ publish = false
 version = "0.1.0"
 
 [workspace]
-members = ["bins", "mini-app", "storage"]
+members = ["bins", "ledger", "mini-app", "storage", "bot"]
 resolver = "2"
 
 [workspace.dependencies]
+ledger = {path = "ledger"}
 mini-app = {path = "mini-app"}
+bot = {path = "bot"}
 storage = {path = "storage"}
 
 #libs 
+color-eyre = "0.6"
+derive_more = "0.99"
 dotenv = "0.15.0"
+eyre = "0.6"
+futures = "0.3"
+log = "0.4"
+mongodb = {version = "3.0"}
+pretty_env_logger = "0.5"
+serde = "1"
+serde_json = "1"
+teloxide = {version = "0.13", features = ["macros"]}
+thiserror = "1"
+tokio = {version = "1", features = ["full"]}
+url = "2"

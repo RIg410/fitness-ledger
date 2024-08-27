@@ -1,5 +1,5 @@
 [package]
-name = "storage"
+name = "bot"
 
 edition.workspace = true
 license.workspace = true
@@ -7,8 +7,6 @@ publish.workspace = true
 version.workspace = true
 
 [dependencies]
+ledger.workspace = true
 eyre.workspace = true
-mongodb.workspace = true
-
 teloxide.workspace = true
-

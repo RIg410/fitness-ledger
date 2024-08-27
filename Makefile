@@ -1,7 +1,7 @@
 up:
-	docker-compose up -d
+	docker compose up -d
 down:
-	docker-compose down
+	docker compose down
 
 start:
 	cargo leptos watch
@@ -16,3 +16,7 @@ clippy:
 
 test:
 	cargo test
+
+build:
+	cargo build --release	
+	sudo docker compose build
