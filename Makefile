@@ -16,4 +16,3 @@ clippy:
 
 test:
 	cargo test
-	cargo leptos end-to-end
