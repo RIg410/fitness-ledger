@@ -4,7 +4,7 @@ use std::{
 };
 use teloxide::types::ChatId;
 
-use crate::process::{greeting::Greeting, profile_menu::ProfileState};
+use crate::process::{greeting::Greeting, profile_menu::ProfileState, users_menu::UserState};
 
 #[derive(Clone, Debug, Default)]
 pub enum State {
@@ -12,6 +12,7 @@ pub enum State {
     Start,
     Greeting(Greeting),
     Profile(ProfileState),
+    Users(UserState)
 }
 
 #[derive(Default, Clone)]

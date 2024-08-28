@@ -1,4 +1,5 @@
 pub mod rights;
+pub mod stat;
 
 use crate::date_time::{opt_naive_date_deserialize, opt_naive_date_serialize, Date};
 use crate::Storage;
@@ -56,6 +57,13 @@ impl Storage {
                 doc! { "user_id": id },
                 doc! { "$set": { "birthday": date } },
             )
+            .await?;
+        Ok(())
+    }
+
+    pub async fn update_chat_id(&self, id: &str, chat_id: i64) -> Result<()> {
+        self.users
+            .update_one(doc! { "user_id": id }, doc! { "$set": { "chat_id": chat_id } })
             .await?;
         Ok(())
     }

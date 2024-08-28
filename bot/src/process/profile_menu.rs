@@ -1,5 +1,5 @@
-use crate::state::{self, State};
-use chrono::{DateTime, Local, NaiveDate, TimeZone};
+use crate::state::State;
+use chrono::NaiveDate;
 use eyre::Result;
 use ledger::{Ledger, SetDateError};
 use log::warn;
@@ -23,7 +23,7 @@ pub enum ProfileState {
 pub async fn go_to_profile(
     bot: &Bot,
     user: &User,
-    ledger: &Ledger,
+    _: &Ledger,
     msg: &Message,
 ) -> Result<Option<State>> {
     let mut to_send = bot
@@ -93,7 +93,7 @@ fn parse_date(date: Option<&str>) -> Result<NaiveDate> {
 pub async fn handle_callback(
     bot: &Bot,
     user: &User,
-    ledger: &Ledger,
+    _: &Ledger,
     q: &CallbackQuery,
     state: ProfileState,
 ) -> Result<Option<State>> {

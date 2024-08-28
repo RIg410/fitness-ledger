@@ -26,10 +26,6 @@ impl Ledger {
         self.storage.get_user_by_id(id).await
     }
 
-    pub async fn get_user_by_chat_id(&self, chat_id: i64) -> Result<Option<User>> {
-        self.storage.get_user_by_chat_id(chat_id).await
-    }
-
     pub async fn create_user(
         &self,
         chat_id: i64,
@@ -86,6 +82,10 @@ impl Ledger {
             .await
             .map_err(|err| SetDateError::Common(err))?;
         Ok(())
+    }
+
+    pub async fn update_chat_id(&self, id: &str, chat_id: i64) -> Result<()> {
+        self.storage.update_chat_id(id, chat_id).await
     }
 }
 

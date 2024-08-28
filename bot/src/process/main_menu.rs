@@ -14,7 +14,7 @@ use teloxide::{
 
 use crate::state::State;
 
-use super::profile_menu::go_to_profile;
+use super::{profile_menu::go_to_profile, users_menu::go_to_users};
 
 const COLUMNS: usize = 2;
 
@@ -38,9 +38,9 @@ pub async fn handle_message(
 
     match command {
         MainMenuItem::Profile => go_to_profile(bot, user, ledger, msg).await,
-        MainMenuItem::Schedule => Ok(None),
-        MainMenuItem::Users => Ok(None),
-        MainMenuItem::Subscription => Ok(None),
+        MainMenuItem::Schedule => bail!("Not implemented"),
+        MainMenuItem::Users => go_to_users(bot, user, ledger, msg).await,
+        MainMenuItem::Subscription => bail!("Not implemented"),
     }
 }
 

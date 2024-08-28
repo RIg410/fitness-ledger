@@ -104,10 +104,10 @@ async fn message_handler(
 }
 
 async fn inline_query_handler(
-    bot: Bot,
+    _: Bot,
     q: InlineQuery,
-    ledger: Ledger,
-    state_holder: StateHolder,
+    _: Ledger,
+    _: StateHolder,
 ) -> Result<(), RequestError> {
     dbg!(q);
     Ok(())
@@ -144,10 +144,10 @@ async fn callback_handler(
             State::Profile(state) => {
                 process::profile_menu::handle_callback(&bot, &user, &ledger, &q, state).await
             }
-            _ => {
-                error!("Unexpected state: {:#?}", state);
-                Ok(None)
+            State::Users(state) => {
+                process::users_menu::handle_callback(&bot, &user, &ledger, &q, state).await
             }
+            State::Start | State::Greeting(_) => Ok(None),
         };
 
         match new_state {
