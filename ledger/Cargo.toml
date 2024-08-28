@@ -7,4 +7,7 @@ publish.workspace = true
 version.workspace = true
 
 [dependencies]
+chrono.workspace = true
+eyre.workspace = true
+log.workspace = true
 storage.workspace = true

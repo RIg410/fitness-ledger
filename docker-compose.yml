@@ -11,10 +11,10 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_ROOT_PASSWORD
     volumes:
       - "./data:/data/db"
-  backend:
-    build: .
-    restart: always
-    environment:
-      MONGO_URL: $MONGO_URL
-      TG_TOKEN: $TG_TOKEN
-      RUST_LOG: $RUST_LOG
+  # backend:
+  #   build: .
+  #   restart: always
+  #   environment:
+  #     MONGO_URL: $MONGO_URL
+  #     TG_TOKEN: $TG_TOKEN
+  #     RUST_LOG: $RUST_LOG

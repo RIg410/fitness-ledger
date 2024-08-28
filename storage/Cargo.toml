@@ -7,8 +7,7 @@ publish.workspace = true
 version.workspace = true
 
 [dependencies]
+chrono.workspace = true
 eyre.workspace = true
 mongodb.workspace = true
-
-teloxide.workspace = true
-
+serde.workspace = true

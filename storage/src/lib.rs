@@ -1,8 +1,15 @@
+pub mod user;
+
 use eyre::{Context as _, Result};
-use mongodb::Client;
+use mongodb::{Client, Collection, Database};
+use user::User;
+
+const DB_NAME: &str = "ledger_db";
 
 pub struct Storage {
-    client: Client,
+    pub(crate) client: Client,
+    pub(crate) db: Database,
+    pub(crate) users: Collection<User>,
 }
 
 impl Storage {
@@ -10,6 +17,8 @@ impl Storage {
         let client = Client::with_uri_str(uri)
             .await
             .context("Failed to connect to MongoDB")?;
-        Ok(Storage { client })
+        let db = client.database(DB_NAME);
+        let users = db.collection(user::COLLECTION);
+        Ok(Storage { client, db, users })
     }
 }
