@@ -22,7 +22,7 @@ pub async fn proc(
             return Ok(None);
         }
     }
-    
+
     if let Some(state) = main_menu::handle_message(&bot, &user, &ledger, &msg).await? {
         return Ok(Some(state));
     }

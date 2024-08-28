@@ -1,5 +1,5 @@
-pub mod user;
 mod date_time;
+pub mod user;
 
 use eyre::{Context as _, Result};
 use mongodb::{Client, Collection, Database};
