@@ -30,7 +30,7 @@ pub async fn handle_message(
         return Ok(None);
     };
 
-    let command = if let Some(command) = dbg!(MainMenuItem::try_from(dbg!(text))).ok() {
+    let command = if let Some(command) = MainMenuItem::try_from(text).ok() {
         command
     } else {
         return Ok(None);

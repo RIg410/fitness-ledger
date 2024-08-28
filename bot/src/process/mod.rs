@@ -16,16 +16,20 @@ pub async fn proc(
     state: State,
     user: User,
 ) -> Result<Option<State>> {
-    dbg!(&msg);
     if let Some(text) = msg.text() {
         if text == "/start" {
             main_menu::show_commands(&bot, &user).await?;
             return Ok(None);
         }
     }
+    
+    if let Some(state) = main_menu::handle_message(&bot, &user, &ledger, &msg).await? {
+        return Ok(Some(state));
+    }
+
     match state {
         State::Start | State::Greeting(_) => {
-            Ok(main_menu::handle_message(&bot, &user, &ledger, &msg).await?)
+            main_menu::handle_message(&bot, &user, &ledger, &msg).await
         }
         State::Profile(state) => {
             profile_menu::handle_message(&bot, &user, &ledger, &msg, state).await

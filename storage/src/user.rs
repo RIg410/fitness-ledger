@@ -1,7 +1,8 @@
 pub mod rights;
 
+use crate::date_time::{opt_naive_date_deserialize, opt_naive_date_serialize, Date};
 use crate::Storage;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, NaiveDate};
 use eyre::Result;
 use mongodb::bson::doc;
 use rights::Rights;
@@ -16,7 +17,9 @@ pub struct User {
     pub name: UserName,
     pub rights: Rights,
     pub phone: String,
-    pub birthday: Option<DateTime<Local>>,
+    #[serde(serialize_with = "opt_naive_date_serialize")]
+    #[serde(deserialize_with = "opt_naive_date_deserialize")]
+    pub birthday: Option<NaiveDate>,
     pub reg_date: DateTime<Local>,
     pub balance: u64,
 }
@@ -29,7 +32,11 @@ pub struct UserName {
 }
 
 impl Storage {
-    pub async fn get_user_by_id(&self, id: String) -> Result<Option<User>> {
+    pub async fn get_user_by_chat_id(&self, chat_id: i64) -> Result<Option<User>> {
+        Ok(self.users.find_one(doc! { "chat_id": chat_id }).await?)
+    }
+
+    pub async fn get_user_by_id(&self, id: &str) -> Result<Option<User>> {
         Ok(self.users.find_one(doc! { "user_id": id }).await?)
     }
 
@@ -40,5 +47,16 @@ impl Storage {
 
     pub async fn users_count(&self) -> Result<u64> {
         Ok(self.users.count_documents(doc! {}).await?)
+    }
+
+    pub async fn set_user_birthday(&self, id: &str, birthday: NaiveDate) -> Result<()> {
+        let date = mongodb::bson::to_document(&Date::from(birthday))?;
+        self.users
+            .update_one(
+                doc! { "user_id": id },
+                doc! { "$set": { "birthday": date } },
+            )
+            .await?;
+        Ok(())
     }
 }

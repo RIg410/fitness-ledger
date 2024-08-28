@@ -22,8 +22,12 @@ impl Ledger {
         }
     }
 
-    pub async fn get_user_by_id(&self, id: String) -> Result<Option<User>> {
+    pub async fn get_user_by_id(&self, id: &str) -> Result<Option<User>> {
         self.storage.get_user_by_id(id).await
+    }
+
+    pub async fn get_user_by_chat_id(&self, chat_id: i64) -> Result<Option<User>> {
+        self.storage.get_user_by_chat_id(chat_id).await
     }
 
     pub async fn create_user(
@@ -62,4 +66,31 @@ impl Ledger {
         self.storage.insert_user(user).await?;
         Ok(())
     }
+
+    pub async fn set_user_birthday(
+        &self,
+        id: &str,
+        date: chrono::NaiveDate,
+    ) -> std::result::Result<(), SetDateError> {
+        let user = self
+            .storage
+            .get_user_by_id(id)
+            .await
+            .map_err(|err| SetDateError::Common(err))?;
+        let user = user.ok_or(SetDateError::UserNotFound)?;
+        if user.birthday.is_some() {
+            return Err(SetDateError::AlreadySet);
+        }
+        self.storage
+            .set_user_birthday(&user.user_id, date)
+            .await
+            .map_err(|err| SetDateError::Common(err))?;
+        Ok(())
+    }
+}
+
+pub enum SetDateError {
+    UserNotFound,
+    AlreadySet,
+    Common(eyre::Error),
 }
