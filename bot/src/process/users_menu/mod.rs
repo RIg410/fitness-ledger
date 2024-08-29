@@ -14,7 +14,7 @@ use teloxide::{
     types::{CallbackQuery, ChatId, Message, MessageId},
     Bot,
 };
-use user_profile::UserCallback;
+use user_profile::{rights::UserRightsCallback, UserCallback};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum UserState {
@@ -78,7 +78,7 @@ pub async fn handle_message(
 
 pub async fn handle_callback(
     bot: &Bot,
-    user: &User,
+    me: &User,
     ledger: &Ledger,
     q: &CallbackQuery,
     state: UserState,
@@ -89,10 +89,10 @@ pub async fn handle_callback(
         return state.into();
     };
 
-    let chat_id = q.chat_id().unwrap_or(ChatId(user.chat_id));
+    let chat_id = q.chat_id().unwrap_or(ChatId(me.chat_id));
     match state {
         UserState::ShowList(query) => match SearchCallback::try_from(data.as_str()) {
-            Ok(cmd) => search::handle_callback(bot, user, ledger, query, cmd, chat_id).await,
+            Ok(cmd) => search::handle_callback(bot, me, ledger, query, cmd, chat_id).await,
             Err(err) => {
                 log::warn!("Failed to parse search callback: {:#}", err);
                 return UserState::ShowList(query).into();
@@ -100,14 +100,22 @@ pub async fn handle_callback(
         },
         UserState::SelectUser(selected_user) => match UserCallback::try_from(data.as_str()) {
             Ok(cmd) => {
-                user_profile::handle_callback(bot, user, ledger, selected_user, cmd, chat_id).await
+                user_profile::handle_callback(bot, me, ledger, selected_user, cmd, chat_id).await
             }
             Err(err) => {
                 log::warn!("Failed to parse search callback: {:#}", err);
                 return UserState::SelectUser(selected_user).into();
             }
         },
-        UserState::UserRights(_) => todo!(),
+        UserState::UserRights(selected_user) => match UserRightsCallback::try_from(data.as_str()) {
+            Ok(cmd) => {
+                user_profile::rights::handle_callback(bot, me, ledger, selected_user, cmd, chat_id).await
+            }
+            Err(err) => {
+                log::warn!("Failed to parse search callback: {:#}", err);
+                return UserState::SelectUser(selected_user).into();
+            }
+        },
     }
 }
 

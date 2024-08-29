@@ -149,11 +149,11 @@ pub async fn handle_callback(
 }
 
 pub(crate) async fn handle_message(
-    bot: &Bot,
-    user: &User,
-    ledger: &Ledger,
-    message: &Message,
-    state: SelectedUser,
+    _: &Bot,
+    _: &User,
+    _: &Ledger,
+    _: &Message,
+    _: SelectedUser,
 ) -> Result<Option<State>> {
     todo!()
 }

@@ -113,7 +113,7 @@ pub async fn handle_callback(
             };
             let params = UserListParams::new(new_query, list_params.message_id);
             update_search(bot, user, ledger, chat_id, &params).await?;
-            Ok(Some(State::Users(UserState::ShowList(params))))
+            UserState::ShowList(params).into()
         }
         SearchCallback::Prev => {
             let new_query = Query {
@@ -122,7 +122,7 @@ pub async fn handle_callback(
             };
             let params = UserListParams::new(new_query, list_params.message_id);
             update_search(bot, user, ledger, chat_id, &params).await?;
-            Ok(Some(State::Users(UserState::ShowList(params))))
+            UserState::ShowList(params).into()
         }
         SearchCallback::Select(user_id) => {
             show_user_profile(
@@ -134,9 +134,7 @@ pub async fn handle_callback(
                 list_params.message_id,
             )
             .await?;
-            Ok(Some(State::Users(UserState::SelectUser(
-                SelectedUser::new(list_params.clone(), user_id),
-            ))))
+            UserState::SelectUser(SelectedUser::new(list_params.clone(), user_id)).into()
         }
     }
 }

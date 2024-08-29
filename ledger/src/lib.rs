@@ -1,3 +1,4 @@
+use eyre::eyre;
 use eyre::Result;
 use log::{info, warn};
 use storage::{
@@ -100,6 +101,21 @@ impl Ledger {
         info!("Blocking user: {}", user_id);
         warn!("remove subscription!!!!");
         self.storage.block_user(user_id, is_active).await
+    }
+
+    pub async fn edit_user_rule(&self, user_id: &str, rule: Rule, is_active: bool) -> Result<()> {
+        if Rule::Full == rule {
+            return Err(eyre!("Cannot edit full rule"));
+        }
+        if is_active {
+            self.storage.add_user_rule(user_id, &rule).await?;
+            info!("Adding rule {:?} to user {}", rule, user_id);
+        } else {
+            self.storage.remove_user_rule(user_id, &rule).await?;
+            info!("Removing rule {:?} from user {}", rule, user_id);
+        }
+
+        Ok(())
     }
 }
 
