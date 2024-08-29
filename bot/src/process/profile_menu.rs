@@ -114,7 +114,7 @@ pub async fn handle_callback(
     }
 }
 
-fn format_user_profile(user: &User) -> String {
+pub fn format_user_profile(user: &User) -> String {
     let empty = "?".to_string();
     format!(
         "

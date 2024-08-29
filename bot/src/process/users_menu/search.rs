@@ -13,6 +13,8 @@ use teloxide::{
 
 use crate::{process::users_menu::UserState, state::State};
 
+use super::user_profile::show_user_profile;
+
 pub const LIMIT: u64 = 7;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -69,6 +71,7 @@ pub async fn handle_callback(
     ledger: &Ledger,
     query: (Query, MessageId),
     cmd: SearchCallback,
+    chat_id: ChatId,
 ) -> Result<Option<State>> {
     if !user.rights.has_rule(Rule::User(UserRule::FindUser)) {
         return Err(eyre!("User has no rights to find users"));
@@ -80,24 +83,30 @@ pub async fn handle_callback(
                 query: query.0.query.clone(),
                 offset: query.0.offset + LIMIT,
             };
-            update_search(bot, user, ledger, &new_query, &query.1).await?;
-            return Ok(Some(State::Users(UserState::ShowList((
+            update_search(bot, user, ledger, &new_query, chat_id, &query.1).await?;
+            Ok(Some(State::Users(UserState::ShowList((
                 new_query, query.1,
-            )))));
+            )))))
         }
         SearchCallback::Prev => {
             let new_query = Query {
                 query: query.0.query.clone(),
                 offset: query.0.offset.saturating_sub(LIMIT),
             };
-            update_search(bot, user, ledger, &new_query, &query.1).await?;
-            return Ok(Some(State::Users(UserState::ShowList((
+            update_search(bot, user, ledger, &new_query, chat_id, &query.1).await?;
+            Ok(Some(State::Users(UserState::ShowList((
                 new_query, query.1,
-            )))));
+            )))))
         }
-        SearchCallback::Select(user_id) => {}
+        SearchCallback::Select(user_id) => {
+            show_user_profile(bot, user, ledger, user_id.clone(), chat_id, query.1).await?;
+            Ok(Some(State::Users(UserState::SelectUser((
+                query.0.clone(),
+                query.1,
+                user_id,
+            )))))
+        }
     }
-    Ok(Some(State::Users(UserState::ShowList((query.0, query.1)))))
 }
 
 pub async fn search_users(
@@ -124,15 +133,16 @@ pub async fn search_users(
 
 pub async fn update_search(
     bot: &Bot,
-    user: &User,
+    _: &User,
     ledger: &Ledger,
     query: &Query,
+    chat_id: ChatId,
     msg_id: &MessageId,
 ) -> Result<()> {
     let count = ledger.user_count().await?;
     let users = ledger.find_users(&query.query, query.offset, LIMIT).await?;
     let message = render_message(count, &users, query.offset);
-    bot.edit_message_text(ChatId(user.chat_id), msg_id.clone(), message.0)
+    bot.edit_message_text(chat_id, msg_id.clone(), message.0)
         .parse_mode(teloxide::types::ParseMode::MarkdownV2)
         .reply_markup(message.1)
         .await?;

@@ -1,5 +1,5 @@
-pub mod list;
 pub mod search;
+pub mod user_profile;
 
 use crate::state::State;
 use eyre::Result;
@@ -7,12 +7,15 @@ use ledger::Ledger;
 use search::{Query, SearchCallback};
 use storage::user::User;
 use teloxide::{
-    types::{CallbackQuery, Message, MessageId},
+    dispatching::dialogue::GetChatId,
+    types::{CallbackQuery, ChatId, Message, MessageId},
     Bot,
 };
+use user_profile::UserCallback;
 #[derive(Clone, Debug, PartialEq)]
 pub enum UserState {
     ShowList((Query, MessageId)),
+    SelectUser((Query, MessageId, String)),
 }
 
 pub async fn go_to_users(
@@ -27,11 +30,11 @@ pub async fn go_to_users(
 }
 
 pub async fn handle_message(
-    bot: &Bot,
-    user: &User,
-    ledger: &Ledger,
-    msg: &Message,
-    state: UserState,
+    _: &Bot,
+    _: &User,
+    _: &Ledger,
+    _: &Message,
+    _: UserState,
 ) -> Result<Option<State>> {
     Ok(None)
 }
@@ -48,16 +51,36 @@ pub async fn handle_callback(
     } else {
         return Ok(Some(State::Users(state)));
     };
+
+    let chat_id = q.chat_id().unwrap_or(ChatId(user.chat_id));
     match state {
         UserState::ShowList(query) => match SearchCallback::try_from(data.as_str()) {
-            Ok(cmd) => {
-                search::handle_callback(bot, user, ledger, query, cmd)
-                    .await
-            }
+            Ok(cmd) => search::handle_callback(bot, user, ledger, query, cmd, chat_id).await,
             Err(err) => {
                 log::warn!("Failed to parse search callback: {:#}", err);
                 return Ok(Some(State::Users(UserState::ShowList(query))));
             }
         },
+        UserState::SelectUser((query, message_id, user_id)) => {
+            match UserCallback::try_from(data.as_str()) {
+                Ok(cmd) => {
+                    user_profile::handle_callback(
+                        bot,
+                        user,
+                        ledger,
+                        (query, message_id, user_id),
+                        cmd,
+                        chat_id,
+                    )
+                    .await
+                }
+                Err(err) => {
+                    log::warn!("Failed to parse search callback: {:#}", err);
+                    return Ok(Some(State::Users(UserState::SelectUser((
+                        query, message_id, user_id,
+                    )))));
+                }
+            }
+        }
     }
 }
