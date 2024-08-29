@@ -158,6 +158,9 @@ async fn callback_handler(
                 process::users_menu::handle_callback(&bot, &user, &ledger, &q, state).await
             }
             State::Start | State::Greeting(_) => Ok(None),
+            State::Schedule(state) => {
+                process::schedule_menu::handle_callback(&bot, &user, &ledger, &q, state).await
+            }
         };
 
         match new_state {

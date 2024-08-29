@@ -5,45 +5,49 @@ use teloxide::{types::Message, Bot};
 
 use crate::state::State;
 
+pub mod format;
 pub mod greeting;
 pub mod main_menu;
 pub mod profile_menu;
+pub mod schedule_menu;
 pub mod users_menu;
-pub mod format;
 
 pub async fn proc(
     bot: Bot,
     msg: Message,
     ledger: Ledger,
     state: State,
-    mut user: User,
+    mut me: User,
 ) -> Result<Option<State>> {
-    if user.chat_id != msg.chat.id.0 {
-        ledger.update_chat_id(&user.user_id, msg.chat.id.0).await?;
-        user = ledger
-            .get_user_by_id(&user.user_id)
+    if me.chat_id != msg.chat.id.0 {
+        ledger.update_chat_id(&me.user_id, msg.chat.id.0).await?;
+        me = ledger
+            .get_user_by_id(&me.user_id)
             .await?
             .expect("User not found after update");
     }
 
     if let Some(text) = msg.text() {
         if text == "/start" {
-            main_menu::show_commands(&bot, &user).await?;
+            main_menu::show_commands(&bot, &me).await?;
             return Ok(None);
         }
     }
 
-    if let Some(state) = main_menu::handle_message(&bot, &user, &ledger, &msg).await? {
+    if let Some(state) = main_menu::handle_message(&bot, &me, &ledger, &msg).await? {
         return Ok(Some(state));
     }
 
     match state {
         State::Start | State::Greeting(_) => {
-            main_menu::handle_message(&bot, &user, &ledger, &msg).await
+            main_menu::handle_message(&bot, &me, &ledger, &msg).await
         }
         State::Profile(state) => {
-            profile_menu::handle_message(&bot, &user, &ledger, &msg, state).await
+            profile_menu::handle_message(&bot, &me, &ledger, &msg, state).await
         }
-        State::Users(state) => users_menu::handle_message(&bot, &user, &ledger, &msg, state).await,
+        State::Users(state) => users_menu::handle_message(&bot, &me, &ledger, &msg, state).await,
+        State::Schedule(state) => {
+            schedule_menu::handle_message(&bot, &me, &ledger, &msg, state).await
+        }
     }
 }

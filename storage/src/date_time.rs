@@ -43,3 +43,18 @@ where
     let date = Option::<Date>::deserialize(deserializer)?;
     Ok(date.map(NaiveDate::from))
 }
+
+pub fn naive_date_serialize<S>(date: &NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    Date::from(*date).serialize(serializer)
+}
+
+pub fn naive_date_deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let date = Date::deserialize(deserializer)?;
+    Ok(NaiveDate::from(date))
+}

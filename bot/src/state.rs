@@ -1,4 +1,4 @@
-use crate::process::{greeting::Greeting, profile_menu::ProfileState, users_menu::UserState};
+use crate::process::{greeting::Greeting, profile_menu::ProfileState, schedule_menu::ScheduleState, users_menu::UserState};
 use eyre::Result;
 use std::{
     collections::HashMap,
@@ -13,6 +13,7 @@ pub enum State {
     Greeting(Greeting),
     Profile(ProfileState),
     Users(UserState),
+    Schedule(ScheduleState),
 }
 
 impl From<UserState> for Result<Option<State>> {

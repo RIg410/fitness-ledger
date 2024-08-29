@@ -1,6 +1,7 @@
 mod date_time;
-pub mod user;
 pub mod schedule;
+pub mod training;
+pub mod user;
 
 use eyre::{Context as _, Result};
 use mongodb::{bson::doc, Client, Database};
