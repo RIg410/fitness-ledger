@@ -1,3 +1,5 @@
+pub mod rights;
+
 use eyre::eyre;
 use eyre::Result;
 use ledger::Ledger;
@@ -140,7 +142,17 @@ pub async fn handle_callback(
             )))))
         }
         UserCallback::Edit(_) => todo!(),
-        UserCallback::EditRights(_) => todo!(),
+        UserCallback::EditRights(user_id) => {
+            if !me.rights.has_rule(Rule::User(UserRule::EditUserRights)) {
+                return Err(eyre!("User has no rights to edit user rights"));
+            }
+            let user = ledger
+                .get_user_by_id(&user_id)
+                .await?
+                .ok_or_else(|| eyre!("User not found"))?;
+
+            todo!()
+        }
     }
 }
 
