@@ -52,7 +52,7 @@ pub enum TrainingRule {
     ViewSchedule,
     EditTraining,
     CancelTraining,
-    Train
+    Train,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -60,5 +60,7 @@ pub enum UserRule {
     ViewSelfProfile,
     EditSelfProfile,
     FindUser,
-    EditUser,
+    EditUserRights,
+    BlockUser,
+    EditUserInfo,
 }

@@ -1,5 +1,5 @@
 use eyre::Result;
-use log::info;
+use log::{info, warn};
 use storage::{
     user::{
         rights::{Rights, Rule, TrainingRule, UserRule},
@@ -94,6 +94,12 @@ impl Ledger {
 
     pub async fn update_chat_id(&self, id: &str, chat_id: i64) -> Result<()> {
         self.storage.update_chat_id(id, chat_id).await
+    }
+
+    pub async fn block_user(&self, user_id: &str, is_active: bool) -> Result<()> {
+        info!("Blocking user: {}", user_id);
+        warn!("remove subscription!!!!");
+        self.storage.block_user(user_id, is_active).await
     }
 }
 

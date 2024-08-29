@@ -1,7 +1,7 @@
 use eyre::{eyre, Result};
 use ledger::Ledger;
 use storage::user::{
-    rights::{Rule, TrainingRule, UserRule},
+    rights::{Rule, UserRule},
     User,
 };
 use teloxide::{
@@ -14,7 +14,7 @@ use teloxide::{
 
 use crate::{process::users_menu::UserState, state::State};
 
-use super::user_profile::show_user_profile;
+use super::{user_profile::show_user_profile, user_type};
 
 pub const LIMIT: u64 = 7;
 
@@ -29,12 +29,12 @@ impl TryFrom<&str> for SearchCallback {
     type Error = eyre::Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        if value == "next" {
+        if value == "sc_next" {
             Ok(SearchCallback::Next)
-        } else if value == "prev" {
+        } else if value == "sc_prev" {
             Ok(SearchCallback::Prev)
-        } else if value.starts_with("select:") {
-            Ok(SearchCallback::Select(value[7..].to_string()))
+        } else if value.starts_with("sc_select:") {
+            Ok(SearchCallback::Select(value[10..].to_string()))
         } else {
             Err(eyre!("Invalid search callback:{}", value))
         }
@@ -44,9 +44,9 @@ impl TryFrom<&str> for SearchCallback {
 impl SearchCallback {
     pub fn to_data(&self) -> String {
         match self {
-            SearchCallback::Next => "next".to_string(),
-            SearchCallback::Prev => "prev".to_string(),
-            SearchCallback::Select(user_id) => format!("select:{}", user_id),
+            SearchCallback::Next => "sc_next".to_string(),
+            SearchCallback::Prev => "sc_prev".to_string(),
+            SearchCallback::Select(user_id) => format!("sc_select:{}", user_id),
         }
     }
 }
@@ -226,20 +226,10 @@ fn render_message(
 }
 
 fn make_button(user: &User) -> InlineKeyboardButton {
-    let user_type = if !user.is_active {
-        "⚫"
-    } else if user.rights.has_rule(Rule::Full) {
-        "🔴"
-    } else if user.rights.has_rule(Rule::Training(TrainingRule::Train)) {
-        "🔵"
-    } else {
-        "🟢"
-    };
-
     InlineKeyboardButton::callback(
         format!(
             "{}{} {}",
-            user_type,
+            user_type(user),
             user.name.first_name,
             user.name.last_name.as_ref().unwrap_or(&"".to_string())
         ),

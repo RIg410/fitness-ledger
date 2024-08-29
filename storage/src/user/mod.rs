@@ -95,4 +95,14 @@ impl UserStore {
             .await?;
         Ok(cursor.try_collect().await?)
     }
+
+    pub async fn block_user(&self, user_id: &str, is_active: bool) -> Result<()> {
+        self.users
+            .update_one(
+                doc! { "user_id": user_id },
+                doc! { "$set": { "is_active": is_active } },
+            )
+            .await?;
+        Ok(())
+    }
 }

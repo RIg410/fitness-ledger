@@ -1,4 +1,4 @@
-use crate::{process::format::format_data, state::State};
+use crate::{process::{format::format_data, users_menu::user_type}, state::State};
 use chrono::NaiveDate;
 use eyre::Result;
 use ledger::{Ledger, SetDateError};
@@ -128,7 +128,7 @@ pub fn format_user_profile(user: &User) -> String {
     let empty = "?".to_string();
     format!(
         "
-    🟣 Пользователь : _{}_
+    {} Пользователь : _{}_
         Имя : _{}_
         Телефон : _{}_
         Дата рождения : _{}_
@@ -136,13 +136,17 @@ pub fn format_user_profile(user: &User) -> String {
         *Баланс : _{}_ занятий*
         ➖➖➖➖➖➖➖➖➖➖
     ",
+        user_type(user),
         escape(user.name.tg_user_name.as_ref().unwrap_or_else(|| &empty)),
         escape(&user.name.first_name),
         escape(&user.phone),
-        escape(&user.birthday
-            .as_ref()
-            .map(format_data)
-            .unwrap_or_else(|| empty.clone())),
+        escape(
+            &user
+                .birthday
+                .as_ref()
+                .map(format_data)
+                .unwrap_or_else(|| empty.clone())
+        ),
         user.balance
     )
 }
