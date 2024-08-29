@@ -82,7 +82,7 @@ pub async fn create_user(
     from: &TgUser,
 ) -> Result<User> {
     info!("Creating user with chat_id: {}", chat_id);
-    let user = ledger.get_user_by_id(&from.id.0.to_string()).await?;
+    let user = ledger.get_user_by_tg_id(&from.id.0.to_string()).await?;
     if user.is_some() {
         return Err(eyre::eyre!("User {} already exists", chat_id));
     }
@@ -99,7 +99,7 @@ pub async fn create_user(
         )
         .await
         .context("Failed to create user")?;
-    match ledger.get_user_by_id(&from.id.0.to_string()).await {
+    match ledger.get_user_by_tg_id(&from.id.0.to_string()).await {
         Ok(Some(user)) => Ok(user),
         Ok(None) => Err(eyre::eyre!("Failed to create user")),
         Err(err) => Err(err),

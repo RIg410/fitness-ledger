@@ -22,7 +22,7 @@ pub async fn proc(
     if me.chat_id != msg.chat.id.0 {
         ledger.update_chat_id(&me.user_id, msg.chat.id.0).await?;
         me = ledger
-            .get_user_by_id(&me.user_id)
+            .get_user_by_tg_id(&me.user_id)
             .await?
             .expect("User not found after update");
     }

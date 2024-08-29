@@ -1,12 +1,14 @@
+use super::rights::Rights;
 use crate::date_time::{opt_naive_date_deserialize, opt_naive_date_serialize};
 use chrono::{DateTime, Local, NaiveDate};
 use mongodb::bson::doc;
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-
-use super::rights::Rights;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
     pub chat_id: i64,
     pub user_id: String,
     pub name: UserName,

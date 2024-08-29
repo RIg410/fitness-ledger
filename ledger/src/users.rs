@@ -2,14 +2,15 @@ use crate::Ledger;
 use eyre::eyre;
 use eyre::Result;
 use log::{info, warn};
+use mongodb::bson::oid::ObjectId;
 use storage::user::{
     rights::{Rights, Rule, TrainingRule, UserRule},
     User, UserName,
 };
 
 impl Ledger {
-    pub async fn get_user_by_id(&self, id: &str) -> Result<Option<User>> {
-        self.storage.get_user_by_id(id).await
+    pub async fn get_user_by_tg_id(&self, id: &str) -> Result<Option<User>> {
+        self.storage.get_by_tg_id(id).await
     }
 
     pub async fn create_user(
@@ -19,7 +20,7 @@ impl Ledger {
         name: UserName,
         phone: String,
     ) -> Result<()> {
-        let is_first_user = self.storage.users_count().await? == 0;
+        let is_first_user = self.storage.count().await? == 0;
         let mut rights = Rights::default();
         if is_first_user {
             rights.add_rule(Rule::Full);
@@ -44,19 +45,20 @@ impl Ledger {
             reg_date: chrono::Local::now(),
             balance: 0,
             is_active: true,
+            id: ObjectId::new(),
         };
         info!("Creating user: {:?}", user);
-        self.storage.insert_user(user).await?;
+        self.storage.insert(user).await?;
         Ok(())
     }
 
     pub async fn user_count(&self) -> Result<u64> {
-        self.storage.users_count().await
+        self.storage.count().await
     }
 
     pub async fn find_users(&self, query: &str, limit: u64, offset: u64) -> Result<Vec<User>> {
         let keywords = query.split_whitespace().collect::<Vec<_>>();
-        self.storage.find_users(&keywords, limit, offset).await
+        self.storage.find(&keywords, limit, offset).await
     }
 
     pub async fn set_user_birthday(
@@ -66,7 +68,7 @@ impl Ledger {
     ) -> std::result::Result<(), SetDateError> {
         let user = self
             .storage
-            .get_user_by_id(id)
+            .get_by_tg_id(id)
             .await
             .map_err(|err| SetDateError::Common(err))?;
         let user = user.ok_or(SetDateError::UserNotFound)?;
@@ -74,20 +76,20 @@ impl Ledger {
             return Err(SetDateError::AlreadySet);
         }
         self.storage
-            .set_user_birthday(&user.user_id, date)
+            .set_birthday(&user.user_id, date)
             .await
             .map_err(|err| SetDateError::Common(err))?;
         Ok(())
     }
 
     pub async fn update_chat_id(&self, id: &str, chat_id: i64) -> Result<()> {
-        self.storage.update_chat_id(id, chat_id).await
+        self.storage.chat_id(id, chat_id).await
     }
 
     pub async fn block_user(&self, user_id: &str, is_active: bool) -> Result<()> {
         info!("Blocking user: {}", user_id);
         warn!("remove subscription!!!!");
-        self.storage.block_user(user_id, is_active).await
+        self.storage.block(user_id, is_active).await
     }
 
     pub async fn edit_user_rule(&self, user_id: &str, rule: Rule, is_active: bool) -> Result<()> {
@@ -95,10 +97,10 @@ impl Ledger {
             return Err(eyre!("Cannot edit full rule"));
         }
         if is_active {
-            self.storage.add_user_rule(user_id, &rule).await?;
+            self.storage.add_rule(user_id, &rule).await?;
             info!("Adding rule {:?} to user {}", rule, user_id);
         } else {
-            self.storage.remove_user_rule(user_id, &rule).await?;
+            self.storage.remove_rule(user_id, &rule).await?;
             info!("Removing rule {:?} from user {}", rule, user_id);
         }
 

@@ -71,7 +71,7 @@ pub async fn show_user_profile(
         return Err(eyre!("User has no rights to view users"));
     }
     let user = ledger
-        .get_user_by_id(&user_id)
+        .get_user_by_tg_id(&user_id)
         .await?
         .ok_or_else(|| eyre!("User not found"))?;
 
@@ -131,7 +131,7 @@ pub async fn handle_callback(
                 return Err(eyre!("User has no rights to block users"));
             }
             let user = ledger
-                .get_user_by_id(&user_id)
+                .get_user_by_tg_id(&user_id)
                 .await?
                 .ok_or_else(|| eyre!("User not found"))?;
             ledger.block_user(&user_id, !user.is_active).await?;

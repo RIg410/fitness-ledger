@@ -76,7 +76,7 @@ async fn message_handler(
     };
 
     let chat_id = msg.chat.id;
-    let user = match ledger.get_user_by_id(&user_id).await {
+    let user = match ledger.get_user_by_tg_id(&user_id).await {
         Ok(user) => user,
         Err(err) => {
             error!("Failed to get user: {:#}", err);
@@ -131,7 +131,7 @@ async fn callback_handler(
             .get_state(chat_id)
             .unwrap_or_else(|| State::default());
 
-        let user = match ledger.get_user_by_id(&q.from.id.0.to_string()).await {
+        let user = match ledger.get_user_by_tg_id(&q.from.id.0.to_string()).await {
             Ok(Some(user)) => user,
             Ok(None) => {
                 error!("User {} not found", q.from.id.0);

@@ -79,7 +79,7 @@ pub async fn handle_callback(
                 .await?;
 
             let user = ledger
-                .get_user_by_id(&query.user_id)
+                .get_user_by_tg_id(&query.user_id)
                 .await?
                 .ok_or_else(|| eyre!("User not found"))?;
 
@@ -98,7 +98,7 @@ pub async fn show_user_rights(
     query: SelectedUser,
 ) -> Result<Option<State>> {
     let user = ledger
-        .get_user_by_id(&user_id)
+        .get_user_by_tg_id(&user_id)
         .await?
         .ok_or_else(|| eyre!("User not found"))?;
     render_user_rights(bot, &user, chat_id, &query).await?;

@@ -18,7 +18,8 @@ pub async fn go_to_schedule(
     ledger: &Ledger,
     msg: &Message,
 ) -> Result<Option<State>> {
-    println!("go_to_schedule");
+    
+
     todo!()
 }
 

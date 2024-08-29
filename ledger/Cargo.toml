@@ -11,3 +11,4 @@ chrono.workspace = true
 eyre.workspace = true
 log.workspace = true
 storage.workspace = true
+mongodb.workspace = true

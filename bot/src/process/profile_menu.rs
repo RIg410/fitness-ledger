@@ -1,4 +1,7 @@
-use crate::{process::{format::format_data, users_menu::user_type}, state::State};
+use crate::{
+    process::{format::format_data, users_menu::user_type},
+    state::State,
+};
 use chrono::NaiveDate;
 use eyre::Result;
 use ledger::{Ledger, SetDateError};
@@ -75,7 +78,7 @@ pub async fn handle_message(
                 }
                 go_to_profile(
                     bot,
-                    &ledger.get_user_by_id(&user.user_id).await?.unwrap(),
+                    &ledger.get_user_by_tg_id(&user.user_id).await?.unwrap(),
                     ledger,
                     msg,
                 )
