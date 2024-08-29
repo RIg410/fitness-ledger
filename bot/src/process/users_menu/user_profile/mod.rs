@@ -3,6 +3,7 @@ pub mod rights;
 use eyre::eyre;
 use eyre::Result;
 use ledger::Ledger;
+use rights::show_user_rights;
 use storage::user::rights::Rule;
 use storage::user::rights::UserRule;
 use storage::user::User;
@@ -19,6 +20,7 @@ use crate::process::profile_menu::format_user_profile;
 use crate::state::State;
 
 use super::search::Query;
+use super::SelectedUser;
 use super::UserState;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -116,16 +118,14 @@ pub async fn handle_callback(
     bot: &Bot,
     me: &User,
     ledger: &Ledger,
-    query: (Query, MessageId, String),
+    query: SelectedUser,
     cmd: UserCallback,
     chat_id: ChatId,
 ) -> Result<Option<State>> {
     match cmd {
         UserCallback::Back => {
-            super::search::update_search(bot, me, ledger, &query.0, chat_id, &query.1).await?;
-            Ok(Some(State::Users(super::UserState::ShowList((
-                query.0, query.1,
-            )))))
+            super::search::update_search(bot, me, ledger, chat_id, &query.list).await?;
+            Ok(Some(State::Users(super::UserState::ShowList(query.list))))
         }
         UserCallback::BlockUnblock(user_id) => {
             if !me.rights.has_rule(Rule::User(UserRule::BlockUser)) {
@@ -136,22 +136,15 @@ pub async fn handle_callback(
                 .await?
                 .ok_or_else(|| eyre!("User not found"))?;
             ledger.block_user(&user_id, !user.is_active).await?;
-            show_user_profile(bot, me, ledger, user_id, chat_id, query.1).await?;
-            Ok(Some(State::Users(UserState::SelectUser((
-                query.0, query.1, query.2,
-            )))))
+            show_user_profile(bot, me, ledger, user_id, chat_id, query.list.message_id).await?;
+            Ok(Some(State::Users(UserState::SelectUser(query))))
         }
         UserCallback::Edit(_) => todo!(),
         UserCallback::EditRights(user_id) => {
             if !me.rights.has_rule(Rule::User(UserRule::EditUserRights)) {
                 return Err(eyre!("User has no rights to edit user rights"));
             }
-            let user = ledger
-                .get_user_by_id(&user_id)
-                .await?
-                .ok_or_else(|| eyre!("User not found"))?;
-
-            todo!()
+            show_user_rights(bot, me, ledger, user_id, chat_id, query).await
         }
     }
 }
@@ -161,7 +154,7 @@ pub(crate) async fn handle_message(
     user: &User,
     ledger: &Ledger,
     message: &Message,
-    state: (Query, MessageId, String),
+    state: SelectedUser,
 ) -> Result<Option<State>> {
     todo!()
 }

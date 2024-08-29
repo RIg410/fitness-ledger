@@ -1,7 +1,12 @@
+use eyre::Result;
 use ledger::Ledger;
 use storage::user::User;
-use teloxide::{types::{ChatId, MessageId}, Bot};
-use eyre::Result;
+use teloxide::{
+    types::{ChatId, MessageId},
+    Bot,
+};
+
+use crate::{process::users_menu::{search::Query, SelectedUser}, state::State};
 
 pub async fn show_user_rights(
     bot: &Bot,
@@ -9,7 +14,7 @@ pub async fn show_user_rights(
     ledger: &Ledger,
     user_id: String,
     chat_id: ChatId,
-    msg_id: MessageId,
-) -> Result<()> {
-    Ok(())
+    query: SelectedUser,
+) -> Result<Option<State>> {
+    todo!()
 }

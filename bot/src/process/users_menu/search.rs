@@ -14,7 +14,7 @@ use teloxide::{
 
 use crate::{process::users_menu::UserState, state::State};
 
-use super::{user_profile::show_user_profile, user_type};
+use super::{user_profile::show_user_profile, user_type, SelectedUser, UserListParams};
 
 pub const LIMIT: u64 = 7;
 
@@ -71,7 +71,7 @@ pub async fn handle_message(
     user: &User,
     ledger: &Ledger,
     msg: &Message,
-    state: (Query, MessageId),
+    state: UserListParams,
 ) -> Result<Option<State>> {
     bot.delete_message(msg.chat.id, msg.id).await?;
     if !user.rights.has_rule(Rule::User(UserRule::FindUser)) {
@@ -87,16 +87,17 @@ pub async fn handle_message(
         query: query,
         offset: 0,
     };
+    let params = UserListParams::new(query, state.message_id);
 
-    update_search(bot, user, ledger, &query, msg.chat.id, &state.1).await?;
-    Ok(Some(State::Users(UserState::ShowList((query, state.1)))))
+    update_search(bot, user, ledger, msg.chat.id, &params).await?;
+    Ok(Some(State::Users(UserState::ShowList(params))))
 }
 
 pub async fn handle_callback(
     bot: &Bot,
     user: &User,
     ledger: &Ledger,
-    query: (Query, MessageId),
+    list_params: UserListParams,
     cmd: SearchCallback,
     chat_id: ChatId,
 ) -> Result<Option<State>> {
@@ -107,31 +108,35 @@ pub async fn handle_callback(
     match cmd {
         SearchCallback::Next => {
             let new_query = Query {
-                query: query.0.query.clone(),
-                offset: query.0.offset + LIMIT,
+                query: list_params.query.query.clone(),
+                offset: list_params.query.offset + LIMIT,
             };
-            update_search(bot, user, ledger, &new_query, chat_id, &query.1).await?;
-            Ok(Some(State::Users(UserState::ShowList((
-                new_query, query.1,
-            )))))
+            let params = UserListParams::new(new_query, list_params.message_id);
+            update_search(bot, user, ledger, chat_id, &params).await?;
+            Ok(Some(State::Users(UserState::ShowList(params))))
         }
         SearchCallback::Prev => {
             let new_query = Query {
-                query: query.0.query.clone(),
-                offset: query.0.offset.saturating_sub(LIMIT),
+                query: list_params.query.query.clone(),
+                offset: list_params.query.offset.saturating_sub(LIMIT),
             };
-            update_search(bot, user, ledger, &new_query, chat_id, &query.1).await?;
-            Ok(Some(State::Users(UserState::ShowList((
-                new_query, query.1,
-            )))))
+            let params = UserListParams::new(new_query, list_params.message_id);
+            update_search(bot, user, ledger, chat_id, &params).await?;
+            Ok(Some(State::Users(UserState::ShowList(params))))
         }
         SearchCallback::Select(user_id) => {
-            show_user_profile(bot, user, ledger, user_id.clone(), chat_id, query.1).await?;
-            Ok(Some(State::Users(UserState::SelectUser((
-                query.0.clone(),
-                query.1,
-                user_id,
-            )))))
+            show_user_profile(
+                bot,
+                user,
+                ledger,
+                user_id.clone(),
+                chat_id,
+                list_params.message_id,
+            )
+            .await?;
+            Ok(Some(State::Users(UserState::SelectUser(
+                SelectedUser::new(list_params.clone(), user_id),
+            ))))
         }
     }
 }
@@ -162,14 +167,20 @@ pub async fn update_search(
     bot: &Bot,
     _: &User,
     ledger: &Ledger,
-    query: &Query,
     chat_id: ChatId,
-    msg_id: &MessageId,
+    list_params: &UserListParams,
 ) -> Result<()> {
     let count = ledger.user_count().await?;
-    let users = ledger.find_users(&query.query, query.offset, LIMIT).await?;
-    let message = render_message(count, &query.query, &users, query.offset);
-    bot.edit_message_text(chat_id, msg_id.clone(), message.0)
+    let users = ledger
+        .find_users(&list_params.query.query, list_params.query.offset, LIMIT)
+        .await?;
+    let message = render_message(
+        count,
+        &list_params.query.query,
+        &users,
+        list_params.query.offset,
+    );
+    bot.edit_message_text(chat_id, list_params.message_id, message.0)
         .parse_mode(teloxide::types::ParseMode::MarkdownV2)
         .reply_markup(message.1)
         .await?;
