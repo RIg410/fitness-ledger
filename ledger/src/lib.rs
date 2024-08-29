@@ -1,9 +1,10 @@
 use storage::schedule::ScheduleStore;
 use storage::{user::UserStore, Storage};
-mod users;
 mod schedule;
+mod users;
 pub use users::*;
-pub use schedule::*;
+
+const MAX_WEEKS: i64 = 12;
 
 #[derive(Clone)]
 pub struct Ledger {

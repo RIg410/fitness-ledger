@@ -26,6 +26,14 @@ impl Week {
             ],
         }
     }
+
+    pub fn next_week_id(&self) -> NaiveDate {
+        self.id + chrono::Duration::days(7)
+    }
+
+    pub fn prev_week_id(&self) -> NaiveDate {
+        self.id - chrono::Duration::days(7)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

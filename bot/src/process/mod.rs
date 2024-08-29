@@ -1,7 +1,12 @@
+use std::fmt::Debug;
+
 use eyre::Result;
 use ledger::Ledger;
 use storage::user::User;
-use teloxide::{types::Message, Bot};
+use teloxide::{
+    types::{ChatId, Message, MessageId},
+    Bot,
+};
 
 use crate::state::State;
 
@@ -10,6 +15,21 @@ pub mod main_menu;
 pub mod profile_menu;
 pub mod schedule_menu;
 pub mod users_menu;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Origin {
+    pub chat_id: ChatId,
+    pub message_id: MessageId,
+}
+
+impl From<&Message> for Origin {
+    fn from(msg: &Message) -> Self {
+        Self {
+            chat_id: msg.chat.id,
+            message_id: msg.id,
+        }
+    }
+}
 
 pub async fn proc(
     bot: Bot,

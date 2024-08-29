@@ -4,10 +4,11 @@ use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup},
 };
 
-use crate::state::State;
+use crate::{process::Origin, state::State};
 
-use super::ScheduleState;
+use super::{calendar::go_to_calendar, ScheduleState};
 
+#[derive(Clone, Debug)]
 pub enum ScheduleLendingCallback {
     MyTrainings,
     Schedule,
@@ -45,12 +46,12 @@ pub fn render() -> (String, InlineKeyboardMarkup) {
         ScheduleLendingCallback::MyTrainings.to_data(),
     )]);
     keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
-        "📅  Расписание",
-        "slc_find_training",
+        "📅  Календарь",
+        ScheduleLendingCallback::Schedule.to_data(),
     )]);
     keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
         "🔍 Найти тренировку",
-        "slc_find_training",
+        ScheduleLendingCallback::FindTraining.to_data(),
     )]);
 
     (msg, keyboard)
@@ -58,12 +59,13 @@ pub fn render() -> (String, InlineKeyboardMarkup) {
 
 pub(crate) async fn handle_message(
     bot: &teloxide::Bot,
-    me: &storage::user::User,
-    ledger: &ledger::Ledger,
+    _: &storage::user::User,
+    _: &ledger::Ledger,
     message: &teloxide::prelude::Message,
+    origin: Origin,
 ) -> Result<Option<State>, eyre::Error> {
     bot.delete_message(message.chat.id, message.id).await?;
-    ScheduleState::Lending.into()
+    ScheduleState::Lending(origin).into()
 }
 
 pub(crate) async fn handle_callback(
@@ -71,6 +73,20 @@ pub(crate) async fn handle_callback(
     me: &storage::user::User,
     ledger: &ledger::Ledger,
     q: &teloxide::prelude::CallbackQuery,
+    origin: Origin,
 ) -> Result<Option<State>, eyre::Error> {
-    todo!()
+    let data = q
+        .data
+        .as_ref()
+        .ok_or_else(|| eyre!("No data in callback"))?;
+    let callback = ScheduleLendingCallback::try_from(data.as_str())?;
+    match callback {
+        ScheduleLendingCallback::MyTrainings => {
+            todo!()
+        }
+        ScheduleLendingCallback::Schedule => go_to_calendar(bot, me, ledger, origin, None).await,
+        ScheduleLendingCallback::FindTraining => {
+            todo!()
+        }
+    }
 }

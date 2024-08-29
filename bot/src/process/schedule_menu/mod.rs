@@ -9,27 +9,30 @@ use teloxide::{
     Bot,
 };
 
+use super::Origin;
+
+mod calendar;
 mod lending;
-mod schedule;
 
 #[derive(Clone, Debug)]
 pub enum ScheduleState {
-    Lending,
-    Schedule,
+    Lending(Origin),
+    Calendar(Origin),
 }
 
-pub async fn go_to_schedule(
+pub async fn go_to_schedule_lending(
     bot: &Bot,
     _: &User,
     _: &Ledger,
     msg: &Message,
 ) -> Result<Option<State>> {
     let (text, keymap) = lending::render();
-    bot.send_message(msg.chat.id, text)
+    let msg = bot
+        .send_message(msg.chat.id, text)
         .reply_markup(keymap)
         .await?;
 
-    ScheduleState::Lending.into()
+    ScheduleState::Lending(Origin::from(&msg)).into()
 }
 
 pub async fn handle_message(
@@ -40,8 +43,12 @@ pub async fn handle_message(
     state: ScheduleState,
 ) -> Result<Option<State>> {
     match state {
-        ScheduleState::Lending => lending::handle_message(bot, me, ledger, message).await,
-        ScheduleState::Schedule => schedule::handle_message(bot, me, ledger, message).await,
+        ScheduleState::Lending(origin) => {
+            lending::handle_message(bot, me, ledger, message, origin).await
+        }
+        ScheduleState::Calendar(origin) => {
+            calendar::handle_message(bot, me, ledger, message, origin).await
+        }
     }
 }
 
@@ -53,7 +60,11 @@ pub async fn handle_callback(
     state: ScheduleState,
 ) -> Result<Option<State>> {
     match state {
-        ScheduleState::Lending => lending::handle_callback(bot, me, ledger, q).await,
-        ScheduleState::Schedule => schedule::handle_callback(bot, me, ledger, q).await,
+        ScheduleState::Lending(origin) => {
+            lending::handle_callback(bot, me, ledger, q, origin).await
+        }
+        ScheduleState::Calendar(origin) => {
+            calendar::handle_callback(bot, me, ledger, q, origin).await
+        }
     }
 }
