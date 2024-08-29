@@ -121,15 +121,7 @@ async fn render_user_rights(
             }
 
             keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
-                format!(
-                    "{} {}",
-                    rule.name(),
-                    if *is_active {
-                        "✅"
-                    } else {
-                        "❌"
-                    }
-                ),
+                format!("{} {}", rule.name(), if *is_active { "✅" } else { "❌" }),
                 UserRightsCallback::EditRule(rule.id(), !is_active).to_data(),
             )]);
         }
@@ -146,4 +138,15 @@ async fn render_user_rights(
         .reply_markup(keyboard)
         .await?;
     Ok(())
+}
+
+pub(crate) async fn handle_message(
+    bot: &Bot,
+    _: &User,
+    _: &Ledger,
+    message: &teloxide::prelude::Message,
+    selected_user: SelectedUser,
+) -> std::result::Result<Option<State>, eyre::Error> {
+    bot.delete_message(message.chat.id, message.id).await?;
+    UserState::UserRights(selected_user).into()
 }

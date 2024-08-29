@@ -72,7 +72,9 @@ pub async fn handle_message(
         UserState::SelectUser(selected_user) => {
             user_profile::handle_message(bot, user, ledger, message, selected_user).await
         }
-        UserState::UserRights(_) => todo!(),
+        UserState::UserRights(selected_user) => {
+            user_profile::rights::handle_message(bot, user, ledger, message, selected_user).await
+        }
     }
 }
 
@@ -109,7 +111,8 @@ pub async fn handle_callback(
         },
         UserState::UserRights(selected_user) => match UserRightsCallback::try_from(data.as_str()) {
             Ok(cmd) => {
-                user_profile::rights::handle_callback(bot, me, ledger, selected_user, cmd, chat_id).await
+                user_profile::rights::handle_callback(bot, me, ledger, selected_user, cmd, chat_id)
+                    .await
             }
             Err(err) => {
                 log::warn!("Failed to parse search callback: {:#}", err);

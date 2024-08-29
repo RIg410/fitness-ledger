@@ -79,14 +79,11 @@ pub async fn handle_message(
     }
 
     let mut query = msg.text().to_owned().unwrap_or_default().to_string();
-    if query == "." {
+    if query.len() == 1 && !query.chars().next().unwrap().is_alphanumeric() {
         query = "".to_string();
     }
 
-    let query = Query {
-        query: query,
-        offset: 0,
-    };
+    let query = Query { query, offset: 0 };
     let params = UserListParams::new(query, state.message_id);
 
     update_search(bot, user, ledger, msg.chat.id, &params).await?;

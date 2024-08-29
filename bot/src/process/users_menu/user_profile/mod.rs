@@ -3,6 +3,7 @@ pub mod rights;
 use eyre::eyre;
 use eyre::Result;
 use ledger::Ledger;
+use log::warn;
 use rights::show_user_rights;
 use storage::user::rights::Rule;
 use storage::user::rights::UserRule;
@@ -138,7 +139,10 @@ pub async fn handle_callback(
             show_user_profile(bot, me, ledger, user_id, chat_id, query.list.message_id).await?;
             UserState::SelectUser(query).into()
         }
-        UserCallback::Edit(_) => todo!(),
+        UserCallback::Edit(_) => {
+            warn!("Edit user info not implemented");
+            UserState::SelectUser(query).into()
+        }
         UserCallback::EditRights(user_id) => {
             if !me.rights.has_rule(Rule::User(UserRule::EditUserRights)) {
                 return Err(eyre!("User has no rights to edit user rights"));
@@ -149,11 +153,12 @@ pub async fn handle_callback(
 }
 
 pub(crate) async fn handle_message(
-    _: &Bot,
+    bot: &Bot,
     _: &User,
     _: &Ledger,
-    _: &Message,
-    _: SelectedUser,
+    msg: &Message,
+    state: SelectedUser,
 ) -> Result<Option<State>> {
-    todo!()
+    bot.delete_message(msg.chat.id, msg.id).await?;
+    UserState::SelectUser(state).into()
 }
