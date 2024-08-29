@@ -17,7 +17,7 @@ const SET_BIRTHDAY: &str = "/set_birthday";
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum ProfileState {
     #[default]
-    ShowStatus,
+    Lending,
     SetDate,
 }
 
@@ -37,7 +37,7 @@ pub async fn go_to_profile(
         ]));
     }
     to_send.await?;
-    ProfileState::ShowStatus.into()
+    ProfileState::Lending.into()
 }
 
 pub async fn handle_message(
@@ -48,7 +48,10 @@ pub async fn handle_message(
     state: ProfileState,
 ) -> Result<Option<State>> {
     match state {
-        ProfileState::ShowStatus => go_to_profile(bot, user, ledger, msg).await,
+        ProfileState::Lending => {
+            bot.delete_message(msg.chat.id, msg.id).await?;
+            ProfileState::Lending.into()
+        },
         ProfileState::SetDate => match parse_date(msg.text()) {
             Ok(date) => {
                 if let Err(err) = ledger.set_user_birthday(&user.user_id, date).await {
@@ -104,7 +107,7 @@ pub async fn handle_callback(
     q: &CallbackQuery,
     state: ProfileState,
 ) -> Result<Option<State>> {
-    if state != ProfileState::ShowStatus {
+    if state != ProfileState::Lending {
         return state.into();
     }
 
