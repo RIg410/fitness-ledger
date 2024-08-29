@@ -28,6 +28,18 @@ impl From<Greeting> for Result<Option<State>> {
     }
 }
 
+impl From<ProfileState> for Result<Option<State>> {
+    fn from(state: ProfileState) -> Self {
+        Ok(Some(State::Profile(state)))
+    }
+}
+
+impl From<ScheduleState> for Result<Option<State>> {
+    fn from(state: ScheduleState) -> Self {
+        Ok(Some(State::Schedule(state)))
+    }
+}
+
 #[derive(Default, Clone)]
 pub struct StateHolder {
     map: Arc<Mutex<HashMap<ChatId, State>>>,

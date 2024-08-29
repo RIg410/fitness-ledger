@@ -3,9 +3,13 @@ use eyre::Result;
 use ledger::Ledger;
 use storage::user::User;
 use teloxide::{
+    payloads::SendMessageSetters as _,
+    prelude::Requester as _,
     types::{CallbackQuery, Message},
     Bot,
 };
+
+mod lending;
 
 #[derive(Clone, Debug)]
 pub enum ScheduleState {
@@ -14,13 +18,16 @@ pub enum ScheduleState {
 
 pub async fn go_to_schedule(
     bot: &Bot,
-    me: &User,
-    ledger: &Ledger,
+    _: &User,
+    _: &Ledger,
     msg: &Message,
 ) -> Result<Option<State>> {
-    
+    let (text, keymap) = lending::render();
+    bot.send_message(msg.chat.id, text)
+        .reply_markup(keymap)
+        .await?;
 
-    todo!()
+    ScheduleState::Start.into()
 }
 
 pub async fn handle_message(

@@ -40,7 +40,7 @@ pub async fn go_to_profile(
         ]));
     }
     to_send.await?;
-    Ok(Some(State::Profile(ProfileState::ShowStatus)))
+    ProfileState::ShowStatus.into()
 }
 
 pub async fn handle_message(
@@ -88,7 +88,7 @@ pub async fn handle_message(
                 warn!("Failed to parse date '{:?}': {:#}", msg.text(), err);
                 bot.send_message(msg.chat.id, "Неверный формат даты")
                     .await?;
-                Ok(Some(State::Profile(ProfileState::SetDate)))
+                ProfileState::SetDate.into()
             }
         },
     }
@@ -108,7 +108,7 @@ pub async fn handle_callback(
     state: ProfileState,
 ) -> Result<Option<State>> {
     if state != ProfileState::ShowStatus {
-        return Ok(Some(State::Profile(state)));
+        return state.into();
     }
 
     let data = if let Some(data) = q.data.as_ref() {
@@ -121,7 +121,7 @@ pub async fn handle_callback(
         SET_BIRTHDAY => {
             let text = "Введите дату рождения в формате ДД.ММ.ГГГГ";
             bot.send_message(ChatId(user.chat_id), text).await?;
-            Ok(Some(State::Profile(ProfileState::SetDate)))
+            ProfileState::SetDate.into()
         }
         _ => Ok(None),
     }
