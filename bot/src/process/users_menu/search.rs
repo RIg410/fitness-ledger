@@ -8,6 +8,7 @@ use teloxide::{
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester as _,
     types::{ChatId, InlineKeyboardButton, InlineKeyboardMarkup, Message, MessageId},
+    utils::markdown::escape,
     Bot,
 };
 
@@ -63,6 +64,32 @@ impl Default for Query {
             offset: 0,
         }
     }
+}
+
+pub async fn handle_message(
+    bot: &Bot,
+    user: &User,
+    ledger: &Ledger,
+    msg: &Message,
+    state: (Query, MessageId),
+) -> Result<Option<State>> {
+    bot.delete_message(msg.chat.id, msg.id).await?;
+    if !user.rights.has_rule(Rule::User(UserRule::FindUser)) {
+        return Err(eyre!("User has no rights to find users"));
+    }
+
+    let mut query = msg.text().to_owned().unwrap_or_default().to_string();
+    if query == "." {
+        query = "".to_string();
+    }
+
+    let query = Query {
+        query: query,
+        offset: 0,
+    };
+
+    update_search(bot, user, ledger, &query, msg.chat.id, &state.1).await?;
+    Ok(Some(State::Users(UserState::ShowList((query, state.1)))))
 }
 
 pub async fn handle_callback(
@@ -122,7 +149,7 @@ pub async fn search_users(
 
     let count = ledger.user_count().await?;
     let users = ledger.find_users(&query.query, query.offset, LIMIT).await?;
-    let message = render_message(count, &users, query.offset);
+    let message = render_message(count, &query.query, &users, query.offset);
     let msg = bot
         .send_message(msg.chat.id, message.0)
         .parse_mode(teloxide::types::ParseMode::MarkdownV2)
@@ -141,7 +168,7 @@ pub async fn update_search(
 ) -> Result<()> {
     let count = ledger.user_count().await?;
     let users = ledger.find_users(&query.query, query.offset, LIMIT).await?;
-    let message = render_message(count, &users, query.offset);
+    let message = render_message(count, &query.query, &users, query.offset);
     bot.edit_message_text(chat_id, msg_id.clone(), message.0)
         .parse_mode(teloxide::types::ParseMode::MarkdownV2)
         .reply_markup(message.1)
@@ -149,7 +176,12 @@ pub async fn update_search(
     Ok(())
 }
 
-fn render_message(total_count: u64, users: &[User], offset: u64) -> (String, InlineKeyboardMarkup) {
+fn render_message(
+    total_count: u64,
+    query: &str,
+    users: &[User],
+    offset: u64,
+) -> (String, InlineKeyboardMarkup) {
     let msg = format!(
         "
     🟣 Всего пользователей: _{}_
@@ -159,8 +191,10 @@ fn render_message(total_count: u64, users: &[User], offset: u64) -> (String, Inl
     🔴 \\- Администратор 
 
     Что бы найти пользователя, воспользуйтесь поиском\\. Введите имя, фамилию или телефон пользователя\\.\n
+    Запрос: _'{}'_
     ",
-        total_count
+        total_count,
+        escape(query)
     );
 
     let mut markup = InlineKeyboardMarkup::default();

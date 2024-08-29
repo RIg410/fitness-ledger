@@ -9,6 +9,7 @@ use teloxide::prelude::Requester as _;
 use teloxide::types::ChatId;
 use teloxide::types::InlineKeyboardButton;
 use teloxide::types::InlineKeyboardMarkup;
+use teloxide::types::Message;
 use teloxide::types::MessageId;
 use teloxide::Bot;
 
@@ -84,4 +85,14 @@ pub async fn handle_callback(
             )))))
         }
     }
+}
+
+pub(crate) async fn handle_message(
+    bot: &Bot,
+    user: &User,
+    ledger: &Ledger,
+    message: &Message,
+    state: (Query, MessageId, String),
+) -> Result<Option<State>> {
+    todo!()
 }

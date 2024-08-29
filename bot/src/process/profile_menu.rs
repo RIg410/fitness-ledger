@@ -5,7 +5,11 @@ use ledger::{Ledger, SetDateError};
 use log::warn;
 use storage::user::User;
 use teloxide::{
-    payloads::SendMessageSetters as _, prelude::Requester as _, types::{CallbackQuery, ChatId, InlineKeyboardButton, InlineKeyboardMarkup, Message}, utils::markdown::escape, Bot
+    payloads::SendMessageSetters as _,
+    prelude::Requester as _,
+    types::{CallbackQuery, ChatId, InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    utils::markdown::escape,
+    Bot,
 };
 
 const SET_BIRTHDAY: &str = "/set_birthday";
@@ -69,7 +73,13 @@ pub async fn handle_message(
                         }
                     }
                 }
-                go_to_profile(bot, &ledger.get_user_by_id(&user.user_id).await?.unwrap(), ledger, msg).await
+                go_to_profile(
+                    bot,
+                    &ledger.get_user_by_id(&user.user_id).await?.unwrap(),
+                    ledger,
+                    msg,
+                )
+                .await
             }
             Err(err) => {
                 warn!("Failed to parse date '{:?}': {:#}", msg.text(), err);

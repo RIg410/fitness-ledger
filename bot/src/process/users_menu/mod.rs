@@ -30,13 +30,21 @@ pub async fn go_to_users(
 }
 
 pub async fn handle_message(
-    _: &Bot,
-    _: &User,
-    _: &Ledger,
-    _: &Message,
-    _: UserState,
+    bot: &Bot,
+    user: &User,
+    ledger: &Ledger,
+    message: &Message,
+    state: UserState,
 ) -> Result<Option<State>> {
-    Ok(None)
+    match state {
+        UserState::ShowList(query) => {
+            search::handle_message(bot, user, ledger, message, query).await
+        }
+        UserState::SelectUser((query, message_id, user_id)) => {
+            user_profile::handle_message(bot, user, ledger, message, (query, message_id, user_id))
+                .await
+        }
+    }
 }
 
 pub async fn handle_callback(
