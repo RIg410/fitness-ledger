@@ -1,24 +1,22 @@
-use std::sync::Arc;
-
 use eyre::Result;
 use log::info;
 use storage::{
     user::{
         rights::{Rights, Rule, TrainingRule, UserRule},
-        User, UserName,
+        User, UserName, UserStore,
     },
     Storage,
 };
 
 #[derive(Clone)]
 pub struct Ledger {
-    storage: Arc<Storage>,
+    storage: UserStore,
 }
 
 impl Ledger {
     pub fn new(storage: Storage) -> Self {
         Ledger {
-            storage: Arc::new(storage),
+            storage: storage.users,
         }
     }
 
@@ -61,6 +59,15 @@ impl Ledger {
         info!("Creating user: {:?}", user);
         self.storage.insert_user(user).await?;
         Ok(())
+    }
+
+    pub async fn user_count(&self) -> Result<u64> {
+        self.storage.users_count().await
+    }
+
+    pub async fn find_users(&self, query: &str, limit: u64, offset: u64) -> Result<Vec<User>> {
+        let keywords = query.split_whitespace().collect::<Vec<_>>();
+        self.storage.find_users(&keywords, limit, offset).await
     }
 
     pub async fn set_user_birthday(

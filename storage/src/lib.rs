@@ -2,15 +2,15 @@ mod date_time;
 pub mod user;
 
 use eyre::{Context as _, Result};
-use mongodb::{Client, Collection, Database};
-use user::User;
+use mongodb::{bson::doc, Client, Database};
+use user::UserStore;
 
 const DB_NAME: &str = "ledger_db";
 
 pub struct Storage {
-    pub(crate) client: Client,
-    pub(crate) db: Database,
-    pub(crate) users: Collection<User>,
+    _client: Client,
+    _db: Database,
+    pub users: UserStore,
 }
 
 impl Storage {
@@ -19,7 +19,14 @@ impl Storage {
             .await
             .context("Failed to connect to MongoDB")?;
         let db = client.database(DB_NAME);
-        let users = db.collection(user::COLLECTION);
-        Ok(Storage { client, db, users })
+        db.run_command(doc! { "ping": 1 })
+            .await
+            .context("Failed to ping MongoDB")?;
+        let users = UserStore::new(&db);
+        Ok(Storage {
+            _client: client,
+            _db: db,
+            users,
+        })
     }
 }

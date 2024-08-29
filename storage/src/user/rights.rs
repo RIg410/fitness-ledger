@@ -52,6 +52,7 @@ pub enum TrainingRule {
     ViewSchedule,
     EditTraining,
     CancelTraining,
+    Train
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]

@@ -1934,6 +1934,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "eyre",
+ "futures-util",
  "mongodb",
  "serde",
  "serde_with 3.9.0",

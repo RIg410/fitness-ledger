@@ -1,38 +1,31 @@
+pub mod model;
 pub mod rights;
 pub mod stat;
+use std::sync::Arc;
 
-use crate::date_time::{opt_naive_date_deserialize, opt_naive_date_serialize, Date};
-use crate::Storage;
-use chrono::{DateTime, Local, NaiveDate};
+pub use model::{User, UserName};
+
+use crate::date_time::Date;
+use chrono::NaiveDate;
 use eyre::Result;
-use mongodb::bson::doc;
-use rights::Rights;
-use serde::{Deserialize, Serialize};
+use futures_util::stream::TryStreamExt;
+use mongodb::{bson::doc, Collection, Database};
 
-pub(crate) const COLLECTION: &str = "Users";
+const COLLECTION: &str = "Users";
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct User {
-    pub chat_id: i64,
-    pub user_id: String,
-    pub name: UserName,
-    pub rights: Rights,
-    pub phone: String,
-    #[serde(serialize_with = "opt_naive_date_serialize")]
-    #[serde(deserialize_with = "opt_naive_date_deserialize")]
-    pub birthday: Option<NaiveDate>,
-    pub reg_date: DateTime<Local>,
-    pub balance: u64,
+#[derive(Clone)]
+pub struct UserStore {
+    pub(crate) users: Arc<Collection<User>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UserName {
-    pub tg_user_name: Option<String>,
-    pub first_name: String,
-    pub last_name: Option<String>,
-}
+impl UserStore {
+    pub(crate) fn new(db: &Database) -> Self {
+        let users = db.collection(COLLECTION);
+        UserStore {
+            users: Arc::new(users),
+        }
+    }
 
-impl Storage {
     pub async fn get_user_by_chat_id(&self, chat_id: i64) -> Result<Option<User>> {
         Ok(self.users.find_one(doc! { "chat_id": chat_id }).await?)
     }
@@ -63,8 +56,43 @@ impl Storage {
 
     pub async fn update_chat_id(&self, id: &str, chat_id: i64) -> Result<()> {
         self.users
-            .update_one(doc! { "user_id": id }, doc! { "$set": { "chat_id": chat_id } })
+            .update_one(
+                doc! { "user_id": id },
+                doc! { "$set": { "chat_id": chat_id } },
+            )
             .await?;
         Ok(())
+    }
+
+    pub async fn find_users(
+        &self,
+        keywords: &[&str],
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<User>> {
+        let mut query = doc! {};
+        if !keywords.is_empty() {
+            let mut keyword_query = vec![];
+            for keyword in keywords {
+                let regex = format!("^{}", keyword);
+                let regex_query = doc! {
+                    "$or": [
+                        { "name.first_name": { "$regex": &regex, "$options": "i" } },
+                        { "name.last_name": { "$regex": &regex, "$options": "i" } },
+                        { "name.tg_user_name": { "$regex": &regex, "$options": "i" } },
+                        { "phone": { "$regex": &regex, "$options": "i" } },
+                    ]
+                };
+                keyword_query.push(regex_query);
+            }
+            query = doc! { "$or": keyword_query };
+        }
+        let cursor = self
+            .users
+            .find(query)
+            .skip(offset)
+            .limit(limit as i64)
+            .await?;
+        Ok(cursor.try_collect().await?)
     }
 }

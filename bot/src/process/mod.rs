@@ -9,6 +9,7 @@ pub mod greeting;
 pub mod main_menu;
 pub mod profile_menu;
 pub mod users_menu;
+pub mod format;
 
 pub async fn proc(
     bot: Bot,

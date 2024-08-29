@@ -12,3 +12,4 @@ eyre.workspace = true
 mongodb.workspace = true
 serde.workspace = true
 serde_with.workspace = true
+futures-util.workspace = true

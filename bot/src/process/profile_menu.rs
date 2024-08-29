@@ -1,14 +1,11 @@
-use crate::state::State;
+use crate::{process::format::format_data, state::State};
 use chrono::NaiveDate;
 use eyre::Result;
 use ledger::{Ledger, SetDateError};
 use log::warn;
 use storage::user::User;
 use teloxide::{
-    payloads::SendMessageSetters as _,
-    prelude::Requester as _,
-    types::{CallbackQuery, ChatId, InlineKeyboardButton, InlineKeyboardMarkup, Message},
-    Bot,
+    payloads::SendMessageSetters as _, prelude::Requester as _, types::{CallbackQuery, ChatId, InlineKeyboardButton, InlineKeyboardMarkup, Message}, utils::markdown::escape, Bot
 };
 
 const SET_BIRTHDAY: &str = "/set_birthday";
@@ -72,7 +69,7 @@ pub async fn handle_message(
                         }
                     }
                 }
-                go_to_profile(bot, user, ledger, msg).await
+                go_to_profile(bot, &ledger.get_user_by_id(&user.user_id).await?.unwrap(), ledger, msg).await
             }
             Err(err) => {
                 warn!("Failed to parse date '{:?}': {:#}", msg.text(), err);
@@ -129,17 +126,13 @@ fn format_user_profile(user: &User) -> String {
         *Баланс : _{}_ занятий*
         ➖➖➖➖➖➖➖➖➖➖
     ",
-        user.name.tg_user_name.as_ref().unwrap_or_else(|| &empty),
-        user.name.first_name,
-        user.phone,
-        user.birthday
+        escape(user.name.tg_user_name.as_ref().unwrap_or_else(|| &empty)),
+        escape(&user.name.first_name),
+        escape(&user.phone),
+        escape(&user.birthday
             .as_ref()
             .map(format_data)
-            .unwrap_or_else(|| empty.clone()),
+            .unwrap_or_else(|| empty.clone())),
         user.balance
     )
-}
-
-fn format_data(data: &NaiveDate) -> String {
-    data.format("%d\\.%m\\.%Y").to_string()
 }
