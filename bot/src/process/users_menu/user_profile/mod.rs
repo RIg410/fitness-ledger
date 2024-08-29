@@ -19,7 +19,6 @@ use teloxide::Bot;
 use crate::process::profile_menu::format_user_profile;
 use crate::state::State;
 
-use super::search::Query;
 use super::SelectedUser;
 use super::UserState;
 
@@ -125,7 +124,7 @@ pub async fn handle_callback(
     match cmd {
         UserCallback::Back => {
             super::search::update_search(bot, me, ledger, chat_id, &query.list).await?;
-            Ok(Some(State::Users(super::UserState::ShowList(query.list))))
+            UserState::ShowList(query.list).into()
         }
         UserCallback::BlockUnblock(user_id) => {
             if !me.rights.has_rule(Rule::User(UserRule::BlockUser)) {
@@ -137,7 +136,7 @@ pub async fn handle_callback(
                 .ok_or_else(|| eyre!("User not found"))?;
             ledger.block_user(&user_id, !user.is_active).await?;
             show_user_profile(bot, me, ledger, user_id, chat_id, query.list.message_id).await?;
-            Ok(Some(State::Users(UserState::SelectUser(query))))
+            UserState::SelectUser(query).into()
         }
         UserCallback::Edit(_) => todo!(),
         UserCallback::EditRights(user_id) => {

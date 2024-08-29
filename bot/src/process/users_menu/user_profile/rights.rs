@@ -6,7 +6,7 @@ use teloxide::{
     Bot,
 };
 
-use crate::{process::users_menu::{search::Query, SelectedUser}, state::State};
+use crate::{process::users_menu::SelectedUser, state::State};
 
 pub async fn show_user_rights(
     bot: &Bot,

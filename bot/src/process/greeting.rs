@@ -28,13 +28,13 @@ pub async fn greet(bot: Bot, msg: Message, ledger: Ledger, state: State) -> Resu
     let from = if let Some(from) = &msg.from {
         from
     } else {
-        return Ok(Some(State::Greeting(Greeting::Start)));
+        return Greeting::Start.into();
     };
 
     if from.is_bot {
         bot.send_message(msg.chat.id, "Бот работает только с людьми.")
             .await?;
-        return Ok(Some(State::Greeting(Greeting::Start)));
+        return Greeting::Start.into();
     }
 
     let state = if let State::Greeting(greeting) = state {
@@ -50,7 +50,7 @@ pub async fn greet(bot: Bot, msg: Message, ledger: Ledger, state: State) -> Resu
             bot.send_message(msg.chat.id, GREET_START)
                 .reply_markup(keymap.one_time_keyboard())
                 .await?;
-            Ok(Some(State::Greeting(Greeting::RequestPhone)))
+            Greeting::RequestPhone.into()
         }
         Greeting::RequestPhone => {
             if let Some(contact) = msg.contact() {
@@ -69,7 +69,7 @@ pub async fn greet(bot: Bot, msg: Message, ledger: Ledger, state: State) -> Resu
                     "Нажмите на кнопку, чтобы отправить номер телефона.",
                 )
                 .await?;
-                return Ok(Some(State::Greeting(Greeting::RequestPhone)));
+                return Greeting::RequestPhone.into();
             }
         }
     }

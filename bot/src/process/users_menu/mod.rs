@@ -55,9 +55,7 @@ pub async fn go_to_users(
 ) -> Result<Option<State>> {
     let query = Query::default();
     let msg_id = search::search_users(bot, user, ledger, &query, msg).await?;
-    Ok(Some(State::Users(UserState::ShowList(
-        UserListParams::new(query, msg_id),
-    ))))
+    UserState::ShowList(UserListParams::new(query, msg_id)).into()
 }
 
 pub async fn handle_message(
@@ -88,7 +86,7 @@ pub async fn handle_callback(
     let data = if let Some(data) = &q.data {
         data
     } else {
-        return Ok(Some(State::Users(state)));
+        return state.into();
     };
 
     let chat_id = q.chat_id().unwrap_or(ChatId(user.chat_id));
@@ -97,7 +95,7 @@ pub async fn handle_callback(
             Ok(cmd) => search::handle_callback(bot, user, ledger, query, cmd, chat_id).await,
             Err(err) => {
                 log::warn!("Failed to parse search callback: {:#}", err);
-                return Ok(Some(State::Users(UserState::ShowList(query))));
+                return UserState::ShowList(query).into();
             }
         },
         UserState::SelectUser(selected_user) => match UserCallback::try_from(data.as_str()) {
@@ -106,7 +104,7 @@ pub async fn handle_callback(
             }
             Err(err) => {
                 log::warn!("Failed to parse search callback: {:#}", err);
-                return Ok(Some(State::Users(UserState::SelectUser(selected_user))));
+                return UserState::SelectUser(selected_user).into();
             }
         },
         UserState::UserRights(_) => todo!(),

@@ -1,10 +1,10 @@
+use crate::process::{greeting::Greeting, profile_menu::ProfileState, users_menu::UserState};
+use eyre::Result;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
 use teloxide::types::ChatId;
-
-use crate::process::{greeting::Greeting, profile_menu::ProfileState, users_menu::UserState};
 
 #[derive(Clone, Debug, Default)]
 pub enum State {
@@ -12,7 +12,19 @@ pub enum State {
     Start,
     Greeting(Greeting),
     Profile(ProfileState),
-    Users(UserState)
+    Users(UserState),
+}
+
+impl From<UserState> for Result<Option<State>> {
+    fn from(state: UserState) -> Self {
+        Ok(Some(State::Users(state)))
+    }
+}
+
+impl From<Greeting> for Result<Option<State>> {
+    fn from(greeting: Greeting) -> Self {
+        Ok(Some(State::Greeting(greeting)))
+    }
 }
 
 #[derive(Default, Clone)]
