@@ -75,7 +75,7 @@ async fn message_handler(
         return Ok(());
     };
 
-    let id = msg.chat.id;
+    let chat_id = msg.chat.id;
     let user = match ledger.get_user_by_id(&user_id).await {
         Ok(user) => user,
         Err(err) => {
@@ -86,17 +86,22 @@ async fn message_handler(
     };
 
     let new_state = if let Some(user) = user {
+        if !user.is_active {
+            bot.send_message(chat_id, "Ваш аккаунт заблокирован")
+                .await?;
+            return Ok(());
+        }
         process::proc(bot.clone(), msg, ledger, state, user).await
     } else {
         process::greeting::greet(bot.clone(), msg, ledger, state).await
     };
 
     match new_state {
-        Ok(Some(new_state)) => state_holder.set_state(id, new_state),
-        Ok(None) => state_holder.remove_state(id),
+        Ok(Some(new_state)) => state_holder.set_state(chat_id, new_state),
+        Ok(None) => state_holder.remove_state(chat_id),
         Err(err) => {
             error!("Failed to process message: {:#}", err);
-            bot.send_message(id, ERROR).await?;
+            bot.send_message(chat_id, ERROR).await?;
         }
     }
 
@@ -139,6 +144,11 @@ async fn callback_handler(
                 return Ok(());
             }
         };
+        if !user.is_active {
+            bot.send_message(chat_id, "Ваш аккаунт заблокирован")
+                .await?;
+            return Ok(());
+        }
 
         let new_state = match state {
             State::Profile(state) => {

@@ -55,6 +55,7 @@ impl Ledger {
             birthday: None,
             reg_date: chrono::Local::now(),
             balance: 0,
+            is_active: true,
         };
         info!("Creating user: {:?}", user);
         self.storage.insert_user(user).await?;

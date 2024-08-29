@@ -17,6 +17,12 @@ pub struct User {
     pub birthday: Option<NaiveDate>,
     pub reg_date: DateTime<Local>,
     pub balance: u64,
+    #[serde(default = "default_is_active")]
+    pub is_active: bool,
+}
+
+fn default_is_active() -> bool {
+    true
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

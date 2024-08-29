@@ -192,7 +192,9 @@ fn render_message(total_count: u64, users: &[User], offset: u64) -> (String, Inl
 }
 
 fn make_button(user: &User) -> InlineKeyboardButton {
-    let user_type = if user.rights.has_rule(Rule::Full) {
+    let user_type = if !user.is_active {
+        "⚫"
+    } else if user.rights.has_rule(Rule::Full) {
         "🔴"
     } else if user.rights.has_rule(Rule::Training(TrainingRule::Train)) {
         "🔵"

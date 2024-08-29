@@ -1,5 +1,6 @@
 mod date_time;
 pub mod user;
+pub mod schedule;
 
 use eyre::{Context as _, Result};
 use mongodb::{bson::doc, Client, Database};
@@ -11,6 +12,7 @@ pub struct Storage {
     _client: Client,
     _db: Database,
     pub users: UserStore,
+    pub schedule: schedule::ScheduleStore,
 }
 
 impl Storage {
@@ -23,10 +25,12 @@ impl Storage {
             .await
             .context("Failed to ping MongoDB")?;
         let users = UserStore::new(&db);
+        let schedule = schedule::ScheduleStore::new(&db);
         Ok(Storage {
             _client: client,
             _db: db,
             users,
+            schedule,
         })
     }
 }
