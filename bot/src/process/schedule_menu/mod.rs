@@ -10,10 +10,12 @@ use teloxide::{
 };
 
 mod lending;
+mod schedule;
 
 #[derive(Clone, Debug)]
 pub enum ScheduleState {
-    Start,
+    Lending,
+    Schedule,
 }
 
 pub async fn go_to_schedule(
@@ -27,7 +29,7 @@ pub async fn go_to_schedule(
         .reply_markup(keymap)
         .await?;
 
-    ScheduleState::Start.into()
+    ScheduleState::Lending.into()
 }
 
 pub async fn handle_message(
@@ -37,8 +39,10 @@ pub async fn handle_message(
     message: &Message,
     state: ScheduleState,
 ) -> Result<Option<State>> {
-    println!("handle_message");
-    todo!()
+    match state {
+        ScheduleState::Lending => lending::handle_message(bot, me, ledger, message).await,
+        ScheduleState::Schedule => schedule::handle_message(bot, me, ledger, message).await,
+    }
 }
 
 pub async fn handle_callback(
@@ -48,6 +52,8 @@ pub async fn handle_callback(
     q: &CallbackQuery,
     state: ScheduleState,
 ) -> Result<Option<State>> {
-    println!("handle_callback");
-    todo!()
+    match state {
+        ScheduleState::Lending => lending::handle_callback(bot, me, ledger, q).await,
+        ScheduleState::Schedule => schedule::handle_callback(bot, me, ledger, q).await,
+    }
 }

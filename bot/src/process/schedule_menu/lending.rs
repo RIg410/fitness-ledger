@@ -1,5 +1,12 @@
 use eyre::eyre;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
+use teloxide::{
+    prelude::Requester,
+    types::{InlineKeyboardButton, InlineKeyboardMarkup},
+};
+
+use crate::state::State;
+
+use super::ScheduleState;
 
 pub enum ScheduleLendingCallback {
     MyTrainings,
@@ -47,4 +54,23 @@ pub fn render() -> (String, InlineKeyboardMarkup) {
     )]);
 
     (msg, keyboard)
+}
+
+pub(crate) async fn handle_message(
+    bot: &teloxide::Bot,
+    me: &storage::user::User,
+    ledger: &ledger::Ledger,
+    message: &teloxide::prelude::Message,
+) -> Result<Option<State>, eyre::Error> {
+    bot.delete_message(message.chat.id, message.id).await?;
+    ScheduleState::Lending.into()
+}
+
+pub(crate) async fn handle_callback(
+    bot: &teloxide::Bot,
+    me: &storage::user::User,
+    ledger: &ledger::Ledger,
+    q: &teloxide::prelude::CallbackQuery,
+) -> Result<Option<State>, eyre::Error> {
+    todo!()
 }

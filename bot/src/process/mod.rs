@@ -5,7 +5,6 @@ use teloxide::{types::Message, Bot};
 
 use crate::state::State;
 
-pub mod format;
 pub mod greeting;
 pub mod main_menu;
 pub mod profile_menu;

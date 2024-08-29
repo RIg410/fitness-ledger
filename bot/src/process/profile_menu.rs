@@ -1,7 +1,4 @@
-use crate::{
-    process::{format::format_data, users_menu::user_type},
-    state::State,
-};
+use crate::{format::format_data, process::users_menu::user_type, state::State};
 use chrono::NaiveDate;
 use eyre::Result;
 use ledger::{Ledger, SetDateError};

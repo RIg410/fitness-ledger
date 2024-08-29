@@ -1,3 +1,4 @@
+pub mod format;
 mod process;
 mod sessions;
 mod state;
