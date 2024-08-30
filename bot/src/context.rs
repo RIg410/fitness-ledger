@@ -2,15 +2,15 @@ use eyre::Context as _;
 use ledger::Ledger;
 use storage::user::{rights::Rule, User};
 use teloxide::{
-    payloads::SendMessageSetters as _,
-    prelude::{Requester, ResponseResult},
-    types::{ChatId, KeyboardMarkup, MessageId},
+    payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
+    prelude::Requester,
+    types::{ChatId, InlineKeyboardMarkup, KeyboardMarkup, MessageId},
     Bot,
 };
 
 pub struct Context {
-    bot: Bot,
-    me: User,
+    pub bot: Bot,
+    pub me: User,
     pub ledger: Ledger,
     origin: Origin,
 }
@@ -37,8 +37,28 @@ impl Context {
         self.origin
     }
 
-    pub fn update_origin(&mut self, id: MessageId) {
+    pub fn update_origin_msg_id(&mut self, id: MessageId) {
         self.origin.message_id = id;
+    }
+
+    pub async fn edit_origin(
+        &self,
+        text: &str,
+        markup: InlineKeyboardMarkup,
+    ) -> Result<(), eyre::Error> {
+        self.bot
+            .edit_message_text(self.chat_id(), self.origin.message_id, text)
+            .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+            .reply_markup(markup)
+            .await
+            .context(format!("Failed to send message: {}", text))?
+            .id;
+        Ok(())
+    }
+
+    pub async fn delete_msg(&self, id: MessageId) -> Result<(), eyre::Error> {
+        self.bot.delete_message(self.chat_id(), id).await?;
+        Ok(())
     }
 
     pub fn has_right(&self, rule: Rule) -> bool {
@@ -57,6 +77,17 @@ impl Context {
             .await
             .context(format!("Failed to send message: {}", text))?
             .id)
+    }
+
+    pub async fn reload_user(&mut self) -> Result<(), eyre::Error> {
+        let user = self
+            .ledger
+            .get_user_by_tg_id(self.me.tg_id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Failed to load existing user:{}", self.me.id))?;
+
+        self.me = user;
+        Ok(())
     }
 
     pub async fn send_replay_markup(

@@ -8,7 +8,7 @@ use storage::user::UserName;
 use teloxide::types::{ButtonRequest, Contact, KeyboardButton, KeyboardMarkup, Message};
 
 const GREET_START: &str =
-    "Добрый день. Приветствуем вас в нашей семье.\nПожалуйста, оставьте ваш номер телефона.";
+    "Добрый день\\. Приветствуем вас в нашей семье\\.\nПожалуйста, оставьте ваш номер телефона\\.";
 
 #[derive(Default)]
 pub struct SignUpView {
@@ -40,7 +40,7 @@ impl View for SignUpView {
         };
 
         if from.is_bot {
-            ctx.send_msg("Бот работает только с людьми.").await?;
+            ctx.send_msg("Бот работает только с людьми\\.").await?;
             return Ok(None);
         }
         match self.state {
@@ -49,8 +49,7 @@ impl View for SignUpView {
                     KeyboardMarkup::new(vec![vec![
                         KeyboardButton::new("📱 Отправить номер").request(ButtonRequest::Contact)
                     ]]);
-                ctx.send_replay_markup(GREET_START, keymap.one_time_keyboard())
-                    .await?;
+                ctx.send_replay_markup(GREET_START, keymap).await?;
                 self.state = State::RequestPhone;
                 Ok(None)
             }
@@ -59,12 +58,20 @@ impl View for SignUpView {
                     create_user(&ctx.ledger, msg.chat.id.0, contact, from)
                         .await
                         .context("Failed to create user")?;
-                    ctx.send_msg("Добро пожаловать!").await?;
+                    ctx.send_msg("Добро пожаловать\\!").await?;
+
+                    ctx.reload_user().await?;
                     let view = Box::new(MainMenuView);
                     return Ok(Some(view));
                 } else {
-                    ctx.send_msg("Нажмите на кнопку, чтобы отправить номер телефона\\.")
-                        .await?;
+                    let keymap =
+                        KeyboardMarkup::new(vec![vec![KeyboardButton::new("📱 Отправить номер")
+                            .request(ButtonRequest::Contact)]]);
+                    ctx.send_replay_markup(
+                        "Нажмите на кнопку, чтобы отправить номер телефона\\.",
+                        keymap,
+                    )
+                    .await?;
                     Ok(None)
                 }
             }

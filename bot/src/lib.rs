@@ -116,6 +116,7 @@ async fn inner_message_handler(
     {
         let mut sign_up = SignUpView::default();
         sign_up.show(ctx).await?;
+        sign_up.handle_message(ctx, &msg).await?;
         Box::new(sign_up)
     } else {
         let mut main_view = MainMenuView;
@@ -168,7 +169,7 @@ async fn callback_handler(
     } else {
         return Ok(());
     };
-    match inner_callback_handler(&mut ctx, widget, is_real_user, q.data, state_holder).await {
+    match inner_callback_handler(&mut ctx, widget, is_real_user, q.data, state_holder, q.id).await {
         Ok(_) => Ok(()),
         Err(err) => {
             error!("Failed to handle message: {:#}", err);
@@ -186,6 +187,7 @@ async fn inner_callback_handler(
     is_real_user: bool,
     data: Option<String>,
     state_holder: StateHolder,
+    id: String,
 ) -> Result<(), eyre::Error> {
     if !ctx.is_active() {
         ctx.send_msg("Ваш аккаунт заблокирован").await?;
@@ -230,6 +232,7 @@ async fn inner_callback_handler(
         },
     );
 
+    ctx.bot.answer_callback_query(id).await?;
     Ok(())
 }
 
