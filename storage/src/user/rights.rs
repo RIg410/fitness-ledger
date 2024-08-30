@@ -77,6 +77,8 @@ pub enum Rule {
 
     // Training
     Train,
+    
+    EditSchedule,
 }
 
 impl Rule {

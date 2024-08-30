@@ -1,4 +1,4 @@
-use super::{CalendarState, ScheduleCalendarCallback};
+use super::{plan_training::{self, PlanTrainingState}, week::render_training_status, CalendarState, ScheduleCalendarCallback};
 use crate::{
     process::{schedule_menu::ScheduleState, Origin},
     state::State,
@@ -8,13 +8,43 @@ use eyre::Result;
 use ledger::Ledger;
 use storage::{schedule::model::Day, user::User};
 use teloxide::{
-    payloads::EditMessageTextSetters as _, prelude::Requester as _, types::{InlineKeyboardButton, InlineKeyboardMarkup},
+    payloads::EditMessageTextSetters as _,
+    prelude::Requester as _,
+    types::{InlineKeyboardButton, InlineKeyboardMarkup},
     Bot,
 };
 
 #[derive(Clone, Debug)]
 pub enum DayState {
     Lending(DayLending),
+    AddingTraining(PlanTrainingState),
+}
+
+#[derive(Clone, Debug)]
+pub enum CalendarDayCallback {
+    AddTraining(NaiveDate),
+}
+
+impl CalendarDayCallback {
+    pub fn to_data(&self) -> String {
+        match self {
+            CalendarDayCallback::AddTraining(date) => {
+                format!("cdc_add_training:{}", date.format("%Y-%m-%d"))
+            }
+        }
+    }
+}
+
+impl From<&str> for CalendarDayCallback {
+    fn from(data: &str) -> Self {
+        let parts: Vec<&str> = data.split(':').collect();
+        match parts[0] {
+            "cdc_add_training" => CalendarDayCallback::AddTraining(
+                NaiveDate::parse_from_str(parts[1], "%Y-%m-%d").unwrap(),
+            ),
+            _ => panic!("Invalid CalendarDayCallback"),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -59,7 +89,15 @@ pub(crate) async fn handle_message(
     message: &teloxide::prelude::Message,
     state: DayState,
 ) -> std::result::Result<Option<State>, eyre::Error> {
-    todo!()
+    match &state {
+        DayState::Lending(_) => {
+            bot.delete_message(message.chat.id, message.id).await?;
+            state.into()
+        }
+        DayState::AddingTraining(date) => {
+            plan_training::handle_message(bot, user, ledger, message, date).await
+        }
+    }
 }
 
 pub(crate) async fn handle_callback(
@@ -73,12 +111,58 @@ pub(crate) async fn handle_callback(
         DayState::Lending(lending) => {
             go_to_day(bot, me, ledger, lending.origin, lending.date).await
         }
+        DayState::AddingTraining(date) => {
+            plan_training::handle_callback(bot, me, ledger, q, date).await
+        }
     }
 }
 
 fn render_day(me: &User, ledger: &Ledger, day: &Day) -> (String, InlineKeyboardMarkup) {
-    let msg = format!("📅  Расписание на *{}*:", day.date.format("%d\\.%m\\.%Y"));
+    let msg = format!(
+        "
+📅  Расписание на *{}*:
+➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖
+🟢 \\- открыта запись 
+🟣 \\- мест нет
+🟠 \\- запись закрыта
+🔵 \\- идет тренировка
+⛔ \\- отменено 
+✔️  \\- завершено
+➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖
+{}
+        ",
+        day.date.format("%d\\.%m\\.%Y"),
+        if day.training.is_empty() {
+            "нет занятий 🌴"
+        } else {
+            ""
+        }
+    );
     let mut keymap = InlineKeyboardMarkup::default();
+
+    for training in &day.training {
+        let mut row = vec![];
+        row.push(InlineKeyboardButton::callback(
+            format!(
+                "{} {} {}",
+                render_training_status(&training.status),
+                training.start_at.format("%H:%M"),
+                training.name.as_str(),
+            ),
+            format!("slc_training_{}", training.id),
+        ));
+        keymap = keymap.append_row(row);
+    }
+
+    if me
+        .rights
+        .has_rule(storage::user::rights::Rule::EditSchedule)
+    {
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+            "📝  запланировать тренировку",
+            CalendarDayCallback::AddTraining(day.date).to_data(),
+        )]);
+    }
 
     let mut nav_row = vec![];
     let now = chrono::Local::now().naive_local().date();

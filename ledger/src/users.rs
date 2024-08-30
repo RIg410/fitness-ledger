@@ -1,5 +1,4 @@
 use crate::Ledger;
-use eyre::eyre;
 use eyre::Result;
 use log::{info, warn};
 use mongodb::bson::oid::ObjectId;

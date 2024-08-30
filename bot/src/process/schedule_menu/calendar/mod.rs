@@ -14,6 +14,7 @@ use teloxide::Bot;
 use week::render_week;
 
 mod day;
+mod plan_training;
 mod week;
 
 #[derive(Clone, Debug)]
@@ -27,6 +28,7 @@ impl CalendarState {
         match self {
             CalendarState::Lending(origin) => origin,
             CalendarState::Day(DayState::Lending(day)) => &day.origin,
+            CalendarState::Day(DayState::AddingTraining(state)) => state.origin(),
         }
     }
 }
@@ -81,9 +83,11 @@ pub(crate) async fn handle_message(
     message: &teloxide::prelude::Message,
     state: CalendarState,
 ) -> Result<Option<State>> {
-    bot.delete_message(message.chat.id, message.id).await?;
     match state {
-        CalendarState::Lending(_) => state.into(),
+        CalendarState::Lending(_) => {
+            bot.delete_message(message.chat.id, message.id).await?;
+            state.into()
+        }
         CalendarState::Day(state) => day::handle_message(bot, user, ledger, message, state).await,
     }
 }

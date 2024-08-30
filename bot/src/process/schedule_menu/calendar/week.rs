@@ -17,7 +17,7 @@ pub fn render_week(week: &Week, has_prev: bool, hes_next: bool) -> (String, Inli
 🟣 \\- мест нет
 ✔️  \\- завершено
 🟠 \\- запись закрыта
-🌴 \\- нет занятий
+🌴 \\- нет тренировок
 ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖
         ",
         week.id.format("%d\\.%m\\.%Y"),
@@ -81,7 +81,7 @@ fn render_weekday(weekday: &NaiveDate) -> &'static str {
 
 fn render_day_status(day: &Day) -> &'static str {
     if day.training.is_empty() {
-        return "🌴";
+        return "нет занятий 🌴";
     }
     let mut full = true;
     let mut finished = true;
@@ -106,7 +106,7 @@ fn render_day_status(day: &Day) -> &'static str {
     }
 }
 
-fn render_training_status(training: &TrainingStatus) -> &'static str {
+pub fn render_training_status(training: &TrainingStatus) -> &'static str {
     match training {
         TrainingStatus::Finished => "✔️",
         TrainingStatus::OpenToSignup => "🟢",
