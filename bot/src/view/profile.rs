@@ -20,7 +20,7 @@ pub struct UserProfile {
 #[async_trait]
 impl View for UserProfile {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let (msg, keymap) = render_user_profile(&ctx.me);
+        let (msg, keymap) = render_user_profile(&ctx, &ctx.me);
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
@@ -70,11 +70,9 @@ impl View for UserProfile {
     async fn handle_callback(
         &mut self,
         ctx: &mut Context,
-        data: Option<&str>,
+        data: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        let cb =
-            Callback::try_from(data.ok_or_else(|| eyre::eyre!("expected data in profile view:"))?)?;
-        match cb {
+        match Callback::try_from(data)? {
             Callback::SetDate => {
                 self.wait_for_date = true;
                 ctx.send_msg("Введите дату рождения в формате ДД\\.ММ\\.ГГГГ")
@@ -91,7 +89,7 @@ fn parse_date(date: Option<&str>) -> Result<NaiveDate, eyre::Error> {
         .map_err(|err| eyre::eyre!("Failed to parse date: {:#}", err))?)
 }
 
-pub fn render_user_profile(user: &User) -> (String, InlineKeyboardMarkup) {
+pub fn render_user_profile(_: &Context, user: &User) -> (String, InlineKeyboardMarkup) {
     let empty = "?".to_string();
     let msg = format!(
         "

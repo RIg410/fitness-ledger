@@ -205,12 +205,24 @@ async fn inner_callback_handler(
         Box::new(sign_up)
     } else {
         let mut main_view = MainMenuView;
-        if let Some(mut redirect) = main_view.handle_callback(ctx, data.as_deref()).await? {
+        if let Some(mut redirect) = main_view
+            .handle_callback(
+                ctx,
+                data.as_ref().ok_or_else(|| eyre::eyre!("Expected callback data"))?,
+            )
+            .await?
+        {
             redirect.show(ctx).await?;
             redirect
         } else {
             if let Some(mut widget) = widget {
-                match widget.handle_callback(ctx, data.as_deref()).await? {
+                match widget
+                    .handle_callback(
+                        ctx,
+                        data.as_ref().ok_or_else(|| eyre::eyre!("Expected callback data"))?,
+                    )
+                    .await?
+                {
                     Some(mut new_widget) => {
                         new_widget.show(ctx).await?;
                         new_widget
@@ -260,7 +272,7 @@ async fn build_context(
         origin
     } else {
         let id = bot
-            .send_message(tg_id, "🏠")
+            .send_message(tg_id, ".")
             .await
             .map_err(|err| (err.into(), bot.clone()))?
             .id;

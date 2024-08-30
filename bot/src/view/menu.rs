@@ -72,7 +72,7 @@ impl View for MainMenuView {
     async fn handle_callback(
         &mut self,
         _: &mut Context,
-        _: Option<&str>,
+        _: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
         Ok(None)
     }

@@ -25,7 +25,7 @@ impl View for ScheduleView {
     async fn handle_callback(
         &mut self,
         ctx: &mut Context,
-        data: Option<&str>,
+        data: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
         Ok(None)
     }
