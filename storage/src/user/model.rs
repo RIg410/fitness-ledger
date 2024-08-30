@@ -18,7 +18,7 @@ pub struct User {
     #[serde(deserialize_with = "opt_naive_date_deserialize")]
     pub birthday: Option<NaiveDate>,
     pub reg_date: DateTime<Local>,
-    pub balance: u64,
+    pub balance: i32,
     #[serde(default = "default_is_active")]
     pub is_active: bool,
 }

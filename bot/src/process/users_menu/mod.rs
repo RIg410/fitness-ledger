@@ -5,10 +5,7 @@ use crate::state::State;
 use eyre::Result;
 use ledger::Ledger;
 use search::{Query, SearchCallback};
-use storage::user::{
-    rights::{Rule, TrainingRule},
-    User,
-};
+use storage::user::{rights::Rule, User};
 use teloxide::{
     dispatching::dialogue::GetChatId,
     types::{CallbackQuery, ChatId, Message, MessageId},
@@ -125,9 +122,9 @@ pub async fn handle_callback(
 pub fn user_type(user: &User) -> &str {
     if !user.is_active {
         "⚫"
-    } else if user.rights.has_rule(Rule::Full) {
+    } else if user.rights.is_full() {
         "🔴"
-    } else if user.rights.has_rule(Rule::Training(TrainingRule::Train)) {
+    } else if user.rights.has_rule(Rule::Train) {
         "🔵"
     } else {
         "🟢"

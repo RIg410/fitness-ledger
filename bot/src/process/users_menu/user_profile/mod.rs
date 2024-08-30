@@ -6,7 +6,6 @@ use ledger::Ledger;
 use log::warn;
 use rights::show_user_rights;
 use storage::user::rights::Rule;
-use storage::user::rights::UserRule;
 use storage::user::User;
 use teloxide::payloads::EditMessageTextSetters as _;
 use teloxide::prelude::Requester as _;
@@ -68,9 +67,7 @@ pub async fn show_user_profile(
     chat_id: ChatId,
     msg_id: MessageId,
 ) -> Result<()> {
-    if !me.rights.has_rule(Rule::User(UserRule::FindUser)) {
-        return Err(eyre!("User has no rights to view users"));
-    }
+    me.rights.ensure(Rule::ViewUsers)?;
     let user = ledger
         .get_user_by_tg_id(&user_id)
         .await?
@@ -79,7 +76,7 @@ pub async fn show_user_profile(
     let user_info = format_user_profile(&user);
     let mut markup = InlineKeyboardMarkup::default();
 
-    if me.rights.has_rule(Rule::User(UserRule::BlockUser)) && me.user_id != user_id {
+    if me.rights.has_rule(Rule::BlockUser) && me.user_id != user_id {
         markup = markup.append_row(vec![InlineKeyboardButton::callback(
             if user.is_active {
                 "❌ Заблокировать"
@@ -90,14 +87,14 @@ pub async fn show_user_profile(
         )]);
     }
 
-    if me.rights.has_rule(Rule::User(UserRule::EditUserInfo)) {
+    if me.rights.has_rule(Rule::EditUserInfo) {
         markup = markup.append_row(vec![InlineKeyboardButton::callback(
             "✍️ Редактировать",
             UserCallback::Edit(user_id.clone()).to_data(),
         )]);
     }
 
-    if me.rights.has_rule(Rule::User(UserRule::EditUserRights)) {
+    if me.rights.has_rule(Rule::EditUserRights) {
         markup = markup.append_row(vec![InlineKeyboardButton::callback(
             "🔒 Права",
             UserCallback::EditRights(user_id.clone()).to_data(),
@@ -128,9 +125,7 @@ pub async fn handle_callback(
             UserState::ShowList(query.list).into()
         }
         UserCallback::BlockUnblock(user_id) => {
-            if !me.rights.has_rule(Rule::User(UserRule::BlockUser)) {
-                return Err(eyre!("User has no rights to block users"));
-            }
+            me.rights.ensure(Rule::BlockUser)?;
             let user = ledger
                 .get_user_by_tg_id(&user_id)
                 .await?
@@ -144,9 +139,7 @@ pub async fn handle_callback(
             UserState::SelectUser(query).into()
         }
         UserCallback::EditRights(user_id) => {
-            if !me.rights.has_rule(Rule::User(UserRule::EditUserRights)) {
-                return Err(eyre!("User has no rights to edit user rights"));
-            }
+            me.rights.ensure(Rule::EditUserRights)?;
             show_user_rights(bot, me, ledger, user_id, chat_id, query).await
         }
     }

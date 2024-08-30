@@ -1,9 +1,6 @@
 use eyre::{bail, Ok, Result};
 use ledger::Ledger;
-use storage::user::{
-    rights::{Rule, SubscriptionsRule, TrainingRule, UserRule},
-    User,
-};
+use storage::user::{rights::Rule, User};
 use strum::{EnumIter, IntoEnumIterator};
 use teloxide::{
     payloads::SendMessageSetters,
@@ -14,7 +11,9 @@ use teloxide::{
 
 use crate::state::State;
 
-use super::{profile_menu::go_to_profile, schedule_menu::go_to_schedule_lending, users_menu::go_to_users};
+use super::{
+    profile_menu::go_to_profile, schedule_menu::go_to_schedule_lending, users_menu::go_to_users,
+};
 
 const COLUMNS: usize = 2;
 
@@ -48,9 +47,10 @@ pub async fn show_commands(bot: &Bot, user: &User) -> Result<()> {
     let mut keymap = Vec::<Vec<KeyboardButton>>::with_capacity(3);
 
     for item in MainMenuItem::iter() {
-        if !user.rights.has_rule(item.rule()) {
+        if MainMenuItem::Users == item && !user.rights.has_rule(Rule::ViewUsers) {
             continue;
         }
+
         if let Some(last) = keymap.last() {
             if last.len() == COLUMNS {
                 keymap.push(Vec::with_capacity(COLUMNS));
@@ -71,7 +71,7 @@ pub async fn show_commands(bot: &Bot, user: &User) -> Result<()> {
     Ok(())
 }
 
-#[derive(EnumIter, Clone, Copy, Debug)]
+#[derive(EnumIter, Clone, Copy, Debug, PartialEq)]
 pub enum MainMenuItem {
     Profile,
     Schedule,
@@ -107,15 +107,6 @@ impl MainMenuItem {
             MainMenuItem::Schedule => SCHEDULE_NAME,
             MainMenuItem::Users => USERS_NAME,
             MainMenuItem::Subscription => SUBSCRIPTION_NAME,
-        }
-    }
-
-    pub fn rule(&self) -> Rule {
-        match self {
-            MainMenuItem::Profile => Rule::User(UserRule::ViewSelfProfile),
-            MainMenuItem::Schedule => Rule::Training(TrainingRule::ViewSchedule),
-            MainMenuItem::Users => Rule::User(UserRule::FindUser),
-            MainMenuItem::Subscription => Rule::Subscription(SubscriptionsRule::ViewSubscription),
         }
     }
 }

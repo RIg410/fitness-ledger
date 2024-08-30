@@ -5,10 +5,7 @@ use crate::{
 use eyre::eyre;
 use eyre::Result;
 use ledger::Ledger;
-use storage::user::{
-    rights::{Rule, UserRule},
-    User,
-};
+use storage::user::{rights::Rule, User};
 use teloxide::{
     payloads::EditMessageTextSetters as _,
     prelude::Requester,
@@ -20,7 +17,7 @@ use super::show_user_profile;
 
 pub enum UserRightsCallback {
     Back,
-    EditRule(u32, bool),
+    EditRule(u8, bool),
 }
 
 impl UserRightsCallback {
@@ -68,10 +65,7 @@ pub async fn handle_callback(
             UserState::SelectUser(query).into()
         }
         UserRightsCallback::EditRule(rule_id, is_active) => {
-            if !me.rights.has_rule(Rule::User(UserRule::EditUserRights)) {
-                log::warn!("User {} has no rights to edit user rights", me.user_id);
-                return Ok(None);
-            }
+            me.rights.ensure(Rule::EditUserRights)?;
 
             let rule = Rule::try_from(rule_id)?;
             ledger
@@ -114,12 +108,8 @@ async fn render_user_rights(
     let mut msg = format!("{} 🔒Права:", user_type(user));
     let mut keyboard = InlineKeyboardMarkup::default();
 
-    if !user.rights.has_rule(Rule::Full) {
+    if !user.rights.is_full() {
         for (rule, is_active) in user.rights.get_all_rules().iter() {
-            if rule == &Rule::Full {
-                continue;
-            }
-
             keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
                 format!("{} {}", rule.name(), if *is_active { "✅" } else { "❌" }),
                 UserRightsCallback::EditRule(rule.id(), !is_active).to_data(),

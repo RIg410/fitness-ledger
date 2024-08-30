@@ -1,4 +1,5 @@
 use crate::state::State;
+use calendar::CalendarState;
 use eyre::Result;
 use ledger::Ledger;
 use storage::user::User;
@@ -17,7 +18,7 @@ mod lending;
 #[derive(Clone, Debug)]
 pub enum ScheduleState {
     Lending(Origin),
-    Calendar(Origin),
+    Calendar(CalendarState),
 }
 
 pub async fn go_to_schedule_lending(
@@ -46,8 +47,8 @@ pub async fn handle_message(
         ScheduleState::Lending(origin) => {
             lending::handle_message(bot, me, ledger, message, origin).await
         }
-        ScheduleState::Calendar(origin) => {
-            calendar::handle_message(bot, me, ledger, message, origin).await
+        ScheduleState::Calendar(state) => {
+            calendar::handle_message(bot, me, ledger, message, state).await
         }
     }
 }
@@ -63,8 +64,8 @@ pub async fn handle_callback(
         ScheduleState::Lending(origin) => {
             lending::handle_callback(bot, me, ledger, q, origin).await
         }
-        ScheduleState::Calendar(origin) => {
-            calendar::handle_callback(bot, me, ledger, q, origin).await
+        ScheduleState::Calendar(state) => {
+            calendar::handle_callback(bot, me, ledger, q, state).await
         }
     }
 }

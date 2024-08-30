@@ -109,23 +109,20 @@ impl UserStore {
     }
 
     pub async fn add_rule(&self, user_id: &str, rule: &rights::Rule) -> Result<()> {
-        let rule = mongodb::bson::to_document(&rule)?;
         self.users
             .update_one(
                 doc! { "user_id": user_id },
-                doc! { "$addToSet": { "rights.rights": rule } },
+                doc! { "$addToSet": { "rights.rights": format!("{:?}", rule) } },
             )
             .await?;
         Ok(())
     }
 
     pub async fn remove_rule(&self, user_id: &str, rule: &rights::Rule) -> Result<()> {
-        let rule = mongodb::bson::to_document(&rule)?;
-
         self.users
             .update_one(
                 doc! { "user_id": user_id },
-                doc! { "$pull": { "rights.rights": rule } },
+                doc! { "$pull": { "rights.rights": format!("{:?}", rule) } },
             )
             .await?;
         Ok(())

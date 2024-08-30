@@ -1,9 +1,6 @@
 use eyre::{eyre, Result};
 use ledger::Ledger;
-use storage::user::{
-    rights::{Rule, UserRule},
-    User,
-};
+use storage::user::{rights::Rule, User};
 use teloxide::{
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester as _,
@@ -68,15 +65,13 @@ impl Default for Query {
 
 pub async fn handle_message(
     bot: &Bot,
-    user: &User,
+    me: &User,
     ledger: &Ledger,
     msg: &Message,
     state: UserListParams,
 ) -> Result<Option<State>> {
     bot.delete_message(msg.chat.id, msg.id).await?;
-    if !user.rights.has_rule(Rule::User(UserRule::FindUser)) {
-        return Err(eyre!("User has no rights to find users"));
-    }
+    me.rights.ensure(Rule::ViewUsers)?;
 
     let mut query = msg.text().to_owned().unwrap_or_default().to_string();
     if query.len() == 1 && !query.chars().next().unwrap().is_alphanumeric() {
@@ -86,21 +81,19 @@ pub async fn handle_message(
     let query = Query { query, offset: 0 };
     let params = UserListParams::new(query, state.message_id);
 
-    update_search(bot, user, ledger, msg.chat.id, &params).await?;
+    update_search(bot, me, ledger, msg.chat.id, &params).await?;
     Ok(Some(State::Users(UserState::ShowList(params))))
 }
 
 pub async fn handle_callback(
     bot: &Bot,
-    user: &User,
+    me: &User,
     ledger: &Ledger,
     list_params: UserListParams,
     cmd: SearchCallback,
     chat_id: ChatId,
 ) -> Result<Option<State>> {
-    if !user.rights.has_rule(Rule::User(UserRule::FindUser)) {
-        return Err(eyre!("User has no rights to find users"));
-    }
+    me.rights.ensure(Rule::ViewUsers)?;
 
     match cmd {
         SearchCallback::Next => {
@@ -109,7 +102,7 @@ pub async fn handle_callback(
                 offset: list_params.query.offset + LIMIT,
             };
             let params = UserListParams::new(new_query, list_params.message_id);
-            update_search(bot, user, ledger, chat_id, &params).await?;
+            update_search(bot, me, ledger, chat_id, &params).await?;
             UserState::ShowList(params).into()
         }
         SearchCallback::Prev => {
@@ -118,13 +111,13 @@ pub async fn handle_callback(
                 offset: list_params.query.offset.saturating_sub(LIMIT),
             };
             let params = UserListParams::new(new_query, list_params.message_id);
-            update_search(bot, user, ledger, chat_id, &params).await?;
+            update_search(bot, me, ledger, chat_id, &params).await?;
             UserState::ShowList(params).into()
         }
         SearchCallback::Select(user_id) => {
             show_user_profile(
                 bot,
-                user,
+                me,
                 ledger,
                 user_id.clone(),
                 chat_id,
@@ -138,14 +131,12 @@ pub async fn handle_callback(
 
 pub async fn search_users(
     bot: &Bot,
-    user: &User,
+    me: &User,
     ledger: &Ledger,
     query: &Query,
     msg: &Message,
 ) -> Result<MessageId> {
-    if !user.rights.has_rule(Rule::User(UserRule::FindUser)) {
-        return Err(eyre!("User has no rights to find users"));
-    }
+    me.rights.ensure(Rule::ViewUsers)?;
 
     let count = ledger.user_count().await?;
     let users = ledger.find_users(&query.query, query.offset, LIMIT).await?;

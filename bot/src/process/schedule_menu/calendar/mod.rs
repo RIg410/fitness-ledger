@@ -2,16 +2,42 @@ use super::ScheduleState;
 use crate::process::Origin;
 use crate::state::State;
 use chrono::NaiveDate;
+use day::go_to_day;
+use day::DayState;
 use eyre::eyre;
 use eyre::Result;
 use ledger::Ledger;
-use rendering::render_week;
 use storage::user::User;
 use teloxide::payloads::EditMessageTextSetters as _;
 use teloxide::prelude::Requester;
 use teloxide::Bot;
-mod rendering;
+use week::render_week;
 
+mod day;
+mod week;
+
+#[derive(Clone, Debug)]
+pub enum CalendarState {
+    Lending(Origin),
+    Day(DayState),
+}
+
+impl CalendarState {
+    pub fn origin(&self) -> &Origin {
+        match self {
+            CalendarState::Lending(origin) => origin,
+            CalendarState::Day(DayState::Lending(day)) => &day.origin,
+        }
+    }
+}
+
+impl From<CalendarState> for Result<Option<State>> {
+    fn from(state: CalendarState) -> Self {
+        Ok(Some(State::Schedule(ScheduleState::Calendar(state))))
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum ScheduleCalendarCallback {
     GoToWeek(NaiveDate),
     SelectDay(NaiveDate),
@@ -50,13 +76,16 @@ impl TryFrom<&str> for ScheduleCalendarCallback {
 
 pub(crate) async fn handle_message(
     bot: &teloxide::Bot,
-    _: &storage::user::User,
-    _: &ledger::Ledger,
+    user: &storage::user::User,
+    ledger: &ledger::Ledger,
     message: &teloxide::prelude::Message,
-    origin: Origin,
+    state: CalendarState,
 ) -> Result<Option<State>> {
     bot.delete_message(message.chat.id, message.id).await?;
-    ScheduleState::Calendar(origin).into()
+    match state {
+        CalendarState::Lending(_) => state.into(),
+        CalendarState::Day(state) => day::handle_message(bot, user, ledger, message, state).await,
+    }
 }
 
 pub(crate) async fn handle_callback(
@@ -64,19 +93,27 @@ pub(crate) async fn handle_callback(
     me: &storage::user::User,
     ledger: &ledger::Ledger,
     q: &teloxide::prelude::CallbackQuery,
-    origin: Origin,
+    state: CalendarState,
 ) -> Result<Option<State>> {
     let data = q
         .data
         .as_ref()
         .ok_or_else(|| eyre!("No data in callback"))?;
-    let callback = ScheduleCalendarCallback::try_from(data.as_str())?;
-
-    match callback {
-        ScheduleCalendarCallback::GoToWeek(week_id) => {
-            go_to_calendar(bot, me, ledger, origin, Some(week_id)).await
+    if let Ok(callback) = ScheduleCalendarCallback::try_from(data.as_str()) {
+        let origin = state.origin();
+        match callback {
+            ScheduleCalendarCallback::GoToWeek(week_id) => {
+                go_to_calendar(bot, me, ledger, origin.clone(), Some(week_id)).await
+            }
+            ScheduleCalendarCallback::SelectDay(day) => {
+                go_to_day(bot, me, ledger, origin.clone(), day).await
+            }
         }
-        ScheduleCalendarCallback::SelectDay(day) => todo!(),
+    } else {
+        match state {
+            CalendarState::Lending(origin) => CalendarState::Lending(origin).into(),
+            CalendarState::Day(state) => day::handle_callback(bot, me, ledger, q, state).await,
+        }
     }
 }
 
@@ -99,5 +136,5 @@ pub async fn go_to_calendar(
         .reply_markup(keymap)
         .await?;
 
-    ScheduleState::Calendar(origin).into()
+    ScheduleState::Calendar(CalendarState::Lending(origin)).into()
 }

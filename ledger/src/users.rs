@@ -4,7 +4,7 @@ use eyre::Result;
 use log::{info, warn};
 use mongodb::bson::oid::ObjectId;
 use storage::user::{
-    rights::{Rights, Rule, TrainingRule, UserRule},
+    rights::{Rights, Rule},
     User, UserName,
 };
 
@@ -21,19 +21,11 @@ impl Ledger {
         phone: String,
     ) -> Result<()> {
         let is_first_user = self.storage.count().await? == 0;
-        let mut rights = Rights::default();
-        if is_first_user {
-            rights.add_rule(Rule::Full);
+        let rights = if is_first_user {
+            Rights::full()
         } else {
-            rights.add_rule(Rule::User(UserRule::ViewSelfProfile));
-            rights.add_rule(Rule::User(UserRule::EditSelfProfile));
-            rights.add_rule(Rule::Training(TrainingRule::SignupForTraining));
-            rights.add_rule(Rule::Training(TrainingRule::CancelTrainingSignup));
-            rights.add_rule(Rule::Training(TrainingRule::ViewSchedule));
-            rights.add_rule(Rule::Subscription(
-                storage::user::rights::SubscriptionsRule::ViewSubscription,
-            ));
-        }
+            Rights::customer()
+        };
 
         let user = User {
             chat_id,
@@ -93,9 +85,6 @@ impl Ledger {
     }
 
     pub async fn edit_user_rule(&self, user_id: &str, rule: Rule, is_active: bool) -> Result<()> {
-        if Rule::Full == rule {
-            return Err(eyre!("Cannot edit full rule"));
-        }
         if is_active {
             self.storage.add_rule(user_id, &rule).await?;
             info!("Adding rule {:?} to user {}", rule, user_id);
