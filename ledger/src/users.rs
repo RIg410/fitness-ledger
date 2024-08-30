@@ -8,17 +8,11 @@ use storage::user::{
 };
 
 impl Ledger {
-    pub async fn get_user_by_tg_id(&self, id: &str) -> Result<Option<User>> {
-        self.storage.get_by_tg_id(id).await
+    pub async fn get_user_by_tg_id(&self, tg_id: i64) -> Result<Option<User>> {
+        self.storage.get_by_tg_id(tg_id).await
     }
 
-    pub async fn create_user(
-        &self,
-        chat_id: i64,
-        user_id: String,
-        name: UserName,
-        phone: String,
-    ) -> Result<()> {
+    pub async fn create_user(&self, tg_id: i64, name: UserName, phone: String) -> Result<()> {
         let is_first_user = self.storage.count().await? == 0;
         let rights = if is_first_user {
             Rights::full()
@@ -27,8 +21,7 @@ impl Ledger {
         };
 
         let user = User {
-            chat_id,
-            user_id,
+            tg_id: tg_id,
             name,
             rights,
             phone,
@@ -54,7 +47,7 @@ impl Ledger {
 
     pub async fn set_user_birthday(
         &self,
-        id: &str,
+        id: i64,
         date: chrono::NaiveDate,
     ) -> std::result::Result<(), SetDateError> {
         let user = self
@@ -67,29 +60,26 @@ impl Ledger {
             return Err(SetDateError::AlreadySet);
         }
         self.storage
-            .set_birthday(&user.user_id, date)
+            .set_birthday(user.tg_id, date)
             .await
             .map_err(|err| SetDateError::Common(err))?;
         Ok(())
     }
 
-    pub async fn update_chat_id(&self, id: &str, chat_id: i64) -> Result<()> {
-        self.storage.chat_id(id, chat_id).await
-    }
 
-    pub async fn block_user(&self, user_id: &str, is_active: bool) -> Result<()> {
-        info!("Blocking user: {}", user_id);
+    pub async fn block_user(&self, tg_id: i64, is_active: bool) -> Result<()> {
+        info!("Blocking user: {}", tg_id);
         warn!("remove subscription!!!!");
-        self.storage.block(user_id, is_active).await
+        self.storage.block(tg_id, is_active).await
     }
 
-    pub async fn edit_user_rule(&self, user_id: &str, rule: Rule, is_active: bool) -> Result<()> {
+    pub async fn edit_user_rule(&self, tg_id: i64, rule: Rule, is_active: bool) -> Result<()> {
         if is_active {
-            self.storage.add_rule(user_id, &rule).await?;
-            info!("Adding rule {:?} to user {}", rule, user_id);
+            self.storage.add_rule(tg_id, &rule).await?;
+            info!("Adding rule {:?} to user {}", rule, tg_id);
         } else {
-            self.storage.remove_rule(user_id, &rule).await?;
-            info!("Removing rule {:?} from user {}", rule, user_id);
+            self.storage.remove_rule(tg_id, &rule).await?;
+            info!("Removing rule {:?} from user {}", rule, tg_id);
         }
 
         Ok(())

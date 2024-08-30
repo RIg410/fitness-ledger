@@ -15,3 +15,4 @@ log.workspace = true
 storage.workspace = true
 strum.workspace = true
 teloxide.workspace = true
+async-trait.workspace = true

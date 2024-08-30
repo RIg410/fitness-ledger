@@ -8,19 +8,13 @@ use teloxide::{
     Bot,
 };
 
-use crate::state::State;
+use crate::{context::Origin, state::State};
 
 pub mod greeting;
 pub mod main_menu;
 pub mod profile_menu;
 pub mod schedule_menu;
 pub mod users_menu;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Origin {
-    pub chat_id: ChatId,
-    pub message_id: MessageId,
-}
 
 impl From<&Message> for Origin {
     fn from(msg: &Message) -> Self {

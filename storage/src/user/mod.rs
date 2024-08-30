@@ -29,12 +29,8 @@ impl UserStore {
         }
     }
 
-    pub async fn get_by_chat_id(&self, chat_id: i64) -> Result<Option<User>> {
-        Ok(self.users.find_one(doc! { "chat_id": chat_id }).await?)
-    }
-
-    pub async fn get_by_tg_id(&self, id: &str) -> Result<Option<User>> {
-        Ok(self.users.find_one(doc! { "user_id": id }).await?)
+    pub async fn get_by_tg_id(&self, tg_id: i64) -> Result<Option<User>> {
+        Ok(self.users.find_one(doc! { "tg_id": tg_id }).await?)
     }
 
     pub async fn get_by_id(&self, id: ObjectId) -> Result<Option<User>> {
@@ -50,23 +46,10 @@ impl UserStore {
         Ok(self.users.count_documents(doc! {}).await?)
     }
 
-    pub async fn set_birthday(&self, id: &str, birthday: NaiveDate) -> Result<()> {
+    pub async fn set_birthday(&self, tg_id: i64, birthday: NaiveDate) -> Result<()> {
         let date = mongodb::bson::to_document(&Date::from(birthday))?;
         self.users
-            .update_one(
-                doc! { "user_id": id },
-                doc! { "$set": { "birthday": date } },
-            )
-            .await?;
-        Ok(())
-    }
-
-    pub async fn chat_id(&self, id: &str, chat_id: i64) -> Result<()> {
-        self.users
-            .update_one(
-                doc! { "user_id": id },
-                doc! { "$set": { "chat_id": chat_id } },
-            )
+            .update_one(doc! { "tg_id": tg_id }, doc! { "$set": { "birthday": date } })
             .await?;
         Ok(())
     }
@@ -98,30 +81,30 @@ impl UserStore {
         Ok(cursor.try_collect().await?)
     }
 
-    pub async fn block(&self, user_id: &str, is_active: bool) -> Result<()> {
+    pub async fn block(&self, tg_id: i64, is_active: bool) -> Result<()> {
         self.users
             .update_one(
-                doc! { "user_id": user_id },
+                doc! { "tg_id": tg_id },
                 doc! { "$set": { "is_active": is_active } },
             )
             .await?;
         Ok(())
     }
 
-    pub async fn add_rule(&self, user_id: &str, rule: &rights::Rule) -> Result<()> {
+    pub async fn add_rule(&self, tg_id: i64, rule: &rights::Rule) -> Result<()> {
         self.users
             .update_one(
-                doc! { "user_id": user_id },
+                doc! { "tg_id": tg_id },
                 doc! { "$addToSet": { "rights.rights": format!("{:?}", rule) } },
             )
             .await?;
         Ok(())
     }
 
-    pub async fn remove_rule(&self, user_id: &str, rule: &rights::Rule) -> Result<()> {
+    pub async fn remove_rule(&self, tg_id: i64, rule: &rights::Rule) -> Result<()> {
         self.users
             .update_one(
-                doc! { "user_id": user_id },
+                doc! { "tg_id": tg_id },
                 doc! { "$pull": { "rights.rights": format!("{:?}", rule) } },
             )
             .await?;

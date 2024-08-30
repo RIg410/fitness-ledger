@@ -1,19 +1,28 @@
-pub mod format;
-mod process;
-mod sessions;
+// pub mod format;
+// mod process;
+// mod sessions;
+mod context;
 mod state;
+mod view;
 
-use eyre::Result;
+use context::{Context, Origin};
+use eyre::{Error, Result};
 use ledger::Ledger;
-use log::error;
-use process::main_menu::MainMenuItem;
-use state::{State, StateHolder};
+use log::{error, info};
+use state::{State, StateHolder, Widget};
+use storage::user::User;
 use teloxide::{
     dispatching::UpdateFilterExt as _,
     dptree,
     prelude::{Dispatcher, Requester as _, ResponseResult},
-    types::{CallbackQuery, InlineQuery, Message, Update},
-    Bot, RequestError,
+    types::{CallbackQuery, ChatId, InlineQuery, Message, Update},
+    utils::markdown::escape,
+    Bot,
+};
+use view::{
+    menu::{MainMenuItem, MainMenuView},
+    signup::SignUpView,
+    View as _,
 };
 
 const ERROR: &str = "Что-то пошло не так. Пожалуйста, попробуйте позже.";
@@ -65,57 +74,78 @@ async fn message_handler(
     ledger: Ledger,
     state_holder: StateHolder,
 ) -> ResponseResult<()> {
-    let state = state_holder
-        .clone()
-        .get_state(msg.chat.id)
-        .unwrap_or_else(|| State::default());
+    let (mut ctx, widget, is_real_user) =
+        match build_context(bot, ledger, msg.chat.id, &state_holder).await {
+            Ok(ctx) => ctx,
+            Err((err, bot)) => {
+                error!("Failed to build context: {:#}", err);
+                bot.send_message(msg.chat.id, ERROR).await?;
+                return Ok(());
+            }
+        };
 
-    let user_id = if let Some(id) = msg.from.as_ref().map(|user| user.id.0.to_string()) {
-        id
-    } else {
-        return Ok(());
-    };
-
-    let chat_id = msg.chat.id;
-    let user = match ledger.get_user_by_tg_id(&user_id).await {
-        Ok(user) => user,
+    match inner_message_handler(&mut ctx, widget, is_real_user, msg, state_holder).await {
+        Ok(_) => Ok(()),
         Err(err) => {
-            error!("Failed to get user: {:#}", err);
-            bot.send_message(msg.chat.id, ERROR).await?;
-            return Ok(());
-        }
-    };
-
-    let new_state = if let Some(user) = user {
-        if !user.is_active {
-            bot.send_message(chat_id, "Ваш аккаунт заблокирован")
-                .await?;
-            return Ok(());
-        }
-        process::proc(bot.clone(), msg, ledger, state, user).await
-    } else {
-        process::greeting::greet(bot.clone(), msg, ledger, state).await
-    };
-
-    match new_state {
-        Ok(Some(new_state)) => state_holder.set_state(chat_id, new_state),
-        Ok(None) => state_holder.remove_state(chat_id),
-        Err(err) => {
-            error!("Failed to process message: {:#}", err);
-            bot.send_message(chat_id, ERROR).await?;
+            error!("Failed to handle message: {:#}", err);
+            if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
+                error!("send message error :{:#}", err);
+            }
+            Ok(())
         }
     }
-
-    Ok(())
 }
 
-async fn inline_query_handler(
-    _: Bot,
-    q: InlineQuery,
-    _: Ledger,
-    _: StateHolder,
-) -> Result<(), RequestError> {
-    dbg!(q);
+async fn inner_message_handler(
+    ctx: &mut Context,
+    widget: Option<Widget>,
+    is_real_user: bool,
+    msg: Message,
+    state_holder: StateHolder,
+) -> Result<(), eyre::Error> {
+    if !ctx.is_active() {
+        ctx.send_msg("Ваш аккаунт заблокирован").await?;
+        return Ok(());
+    }
+
+    let view = if !is_real_user
+        && !widget
+            .as_ref()
+            .map(|w| w.allow_unsigned_user())
+            .unwrap_or_default()
+    {
+        let mut sign_up = SignUpView::default();
+        sign_up.show(ctx).await?;
+        Box::new(sign_up)
+    } else {
+        let mut main_view = MainMenuView;
+        if let Some(mut redirect) = main_view.handle_message(ctx, &msg).await? {
+            redirect.show(ctx).await?;
+            redirect
+        } else {
+            if let Some(mut widget) = widget {
+                match widget.handle_message(ctx, &msg).await? {
+                    Some(mut new_widget) => {
+                        new_widget.show(ctx).await?;
+                        new_widget
+                    }
+                    None => widget,
+                }
+            } else {
+                main_view.show(ctx).await?;
+                Box::new(main_view)
+            }
+        }
+    };
+
+    state_holder.set_state(
+        ctx.chat_id(),
+        State {
+            view: Some(view),
+            origin: Some(ctx.origin()),
+        },
+    );
+
     Ok(())
 }
 
@@ -124,55 +154,128 @@ async fn callback_handler(
     q: CallbackQuery,
     ledger: Ledger,
     state_holder: StateHolder,
-) -> Result<(), RequestError> {
-    if let Some(original_message) = &q.message {
+) -> ResponseResult<()> {
+    let (mut ctx, widget, is_real_user) = if let Some(original_message) = &q.message {
         let chat_id = original_message.chat().id;
-        let state = state_holder
-            .clone()
-            .get_state(chat_id)
-            .unwrap_or_else(|| State::default());
-
-        let user = match ledger.get_user_by_tg_id(&q.from.id.0.to_string()).await {
-            Ok(Some(user)) => user,
-            Ok(None) => {
-                error!("User {} not found", q.from.id.0);
+        match build_context(bot, ledger, chat_id, &state_holder).await {
+            Ok(ctx) => ctx,
+            Err((err, bot)) => {
+                error!("Failed to build context: {}", err);
                 bot.send_message(chat_id, ERROR).await?;
                 return Ok(());
             }
-            Err(err) => {
-                error!("Failed to get user: {:#}", err);
-                bot.send_message(chat_id, ERROR).await?;
-                return Ok(());
-            }
-        };
-        if !user.is_active {
-            bot.send_message(chat_id, "Ваш аккаунт заблокирован")
-                .await?;
-            return Ok(());
         }
-
-        let new_state = match state {
-            State::Profile(state) => {
-                process::profile_menu::handle_callback(&bot, &user, &ledger, &q, state).await
+    } else {
+        return Ok(());
+    };
+    match inner_callback_handler(&mut ctx, widget, is_real_user, q.data, state_holder).await {
+        Ok(_) => Ok(()),
+        Err(err) => {
+            error!("Failed to handle message: {:#}", err);
+            if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
+                error!("send message error :{:#}", err);
             }
-            State::Users(state) => {
-                process::users_menu::handle_callback(&bot, &user, &ledger, &q, state).await
-            }
-            State::Start | State::Greeting(_) => Ok(None),
-            State::Schedule(state) => {
-                process::schedule_menu::handle_callback(&bot, &user, &ledger, &q, state).await
-            }
-        };
-
-        match new_state {
-            Ok(Some(new_state)) => state_holder.set_state(chat_id, new_state),
-            Ok(None) => state_holder.remove_state(chat_id),
-            Err(err) => {
-                error!("Failed to process callback: {:#}", err);
-                bot.send_message(chat_id, ERROR).await?;
-            }
+            Ok(())
         }
     }
-    bot.answer_callback_query(q.id).await?;
+}
+
+async fn inner_callback_handler(
+    ctx: &mut Context,
+    widget: Option<Widget>,
+    is_real_user: bool,
+    data: Option<String>,
+    state_holder: StateHolder,
+) -> Result<(), eyre::Error> {
+    if !ctx.is_active() {
+        ctx.send_msg("Ваш аккаунт заблокирован").await?;
+        return Ok(());
+    }
+
+    let view = if !is_real_user
+        && !widget
+            .as_ref()
+            .map(|w| w.allow_unsigned_user())
+            .unwrap_or_default()
+    {
+        let mut sign_up = SignUpView::default();
+        sign_up.show(ctx).await?;
+        Box::new(sign_up)
+    } else {
+        let mut main_view = MainMenuView;
+        if let Some(mut redirect) = main_view.handle_callback(ctx, data.as_deref()).await? {
+            redirect.show(ctx).await?;
+            redirect
+        } else {
+            if let Some(mut widget) = widget {
+                match widget.handle_callback(ctx, data.as_deref()).await? {
+                    Some(mut new_widget) => {
+                        new_widget.show(ctx).await?;
+                        new_widget
+                    }
+                    None => widget,
+                }
+            } else {
+                main_view.show(ctx).await?;
+                Box::new(main_view)
+            }
+        }
+    };
+
+    state_holder.set_state(
+        ctx.chat_id(),
+        State {
+            view: Some(view),
+            origin: Some(ctx.origin()),
+        },
+    );
+
+    Ok(())
+}
+
+async fn build_context(
+    bot: Bot,
+    ledger: Ledger,
+    tg_id: ChatId,
+    state_holder: &StateHolder,
+) -> Result<(Context, Option<Widget>, bool), (Error, Bot)> {
+    let (user, real) = if let Some(user) = ledger
+        .get_user_by_tg_id(tg_id.0)
+        .await
+        .map_err(|err| (err, bot.clone()))?
+    {
+        (user, true)
+    } else {
+        (User::new(tg_id.0), false)
+    };
+
+    let state = state_holder
+        .get_state(tg_id)
+        .unwrap_or_else(|| State::default());
+
+    let origin = if let Some(origin) = state.origin {
+        origin
+    } else {
+        let id = bot
+            .send_message(tg_id, "🏠")
+            .await
+            .map_err(|err| (err.into(), bot.clone()))?
+            .id;
+        Origin {
+            chat_id: tg_id,
+            message_id: id,
+        }
+    };
+
+    Ok((Context::new(bot, user, ledger, origin), state.view, real))
+}
+
+async fn inline_query_handler(
+    _: Bot,
+    _: InlineQuery,
+    _: Ledger,
+    _: StateHolder,
+) -> ResponseResult<()> {
+    info!("inline");
     Ok(())
 }

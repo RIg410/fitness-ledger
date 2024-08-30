@@ -9,8 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct User {
     #[serde(rename = "_id")]
     pub id: ObjectId,
-    pub chat_id: i64,
-    pub user_id: String,
+    pub tg_id: i64,
     pub name: UserName,
     pub rights: Rights,
     pub phone: String,
@@ -21,6 +20,26 @@ pub struct User {
     pub balance: i32,
     #[serde(default = "default_is_active")]
     pub is_active: bool,
+}
+
+impl User {
+    pub fn new(tg_id: i64) -> User {
+        User {
+            id: ObjectId::new(),
+            tg_id: tg_id,
+            name: UserName {
+                tg_user_name: None,
+                first_name: "".to_owned(),
+                last_name: None,
+            },
+            rights: Rights::customer(),
+            phone: "".to_owned(),
+            birthday: None,
+            reg_date: Local::now(),
+            balance: 0,
+            is_active: true,
+        }
+    }
 }
 
 fn default_is_active() -> bool {
