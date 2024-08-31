@@ -1,7 +1,9 @@
 use super::{profile::user_type, View};
+use crate::callback_data::Calldata as _;
 use crate::view::users::profile::UserProfile;
 use crate::{context::Context, state::Widget};
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use storage::user::{rights::Rule, User};
 use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
@@ -61,7 +63,7 @@ impl View for UsersView {
     ) -> Result<Option<Widget>, eyre::Error> {
         ctx.ensure(Rule::ViewUsers)?;
 
-        match Callback::try_from(data)? {
+        match Callback::from_data(data)? {
             Callback::Next => {
                 self.query.offset += LIMIT;
                 self.show(ctx).await?;
@@ -156,34 +158,10 @@ fn make_button(user: &User) -> InlineKeyboardButton {
     )
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 enum Callback {
     Next,
     Prev,
     Select(i64),
 }
 
-impl TryFrom<&str> for Callback {
-    type Error = eyre::Error;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        if value == "sc_next" {
-            Ok(Callback::Next)
-        } else if value == "sc_prev" {
-            Ok(Callback::Prev)
-        } else if value.starts_with("sc_select:") {
-            Ok(Callback::Select(value[10..].parse()?))
-        } else {
-            Err(eyre::eyre!("Invalid search callback:{}", value))
-        }
-    }
-}
-
-impl Callback {
-    pub fn to_data(&self) -> String {
-        match self {
-            Callback::Next => "sc_next".to_string(),
-            Callback::Prev => "sc_prev".to_string(),
-            Callback::Select(user_id) => format!("sc_select:{}", user_id),
-        }
-    }
-}

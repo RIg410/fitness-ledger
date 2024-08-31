@@ -1,10 +1,11 @@
 use super::View;
-use crate::{context::Context, state::Widget};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use chrono::{Datelike, NaiveDate, Weekday};
 use day::DayView;
 use eyre::eyre;
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use storage::{
     schedule::model::{Day, Week},
     training::model::TrainingStatus,
@@ -14,7 +15,6 @@ use teloxide::{prelude::Requester as _, types::Message};
 
 pub mod day;
 
-#[derive(Default)]
 pub struct CalendarView {
     go_back: Option<Widget>,
     weed_id: NaiveDate,
@@ -58,7 +58,7 @@ impl View for CalendarView {
         ctx: &mut Context,
         data: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        match CalendarCallback::try_from(data)? {
+        match CalendarCallback::from_data(data)? {
             CalendarCallback::GoToWeek(week) => {
                 self.weed_id = week;
                 self.show(ctx).await?;
@@ -107,9 +107,9 @@ pub fn render_week(
     );
 
     let mut buttons = InlineKeyboardMarkup::default();
+    let now = chrono::Local::now().naive_local().date();
     for day in &week.days {
-        let now = chrono::Local::now().naive_local().date();
-        if day.date <= now {
+        if day.date < now {
             continue;
         }
 
@@ -207,42 +207,9 @@ pub fn render_training_status(training: &TrainingStatus) -> &'static str {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum CalendarCallback {
     GoToWeek(NaiveDate),
     SelectDay(NaiveDate),
     Back,
-}
-
-impl CalendarCallback {
-    pub fn to_data(&self) -> String {
-        match self {
-            CalendarCallback::GoToWeek(date) => {
-                format!("scc_goto:{}", date.format("%Y-%m-%d"))
-            }
-            CalendarCallback::SelectDay(date) => {
-                format!("scc_select:{}", date.format("%Y-%m-%d"))
-            }
-            CalendarCallback::Back => "scc_back".to_string(),
-        }
-    }
-}
-
-impl TryFrom<&str> for CalendarCallback {
-    type Error = eyre::Error;
-
-    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
-        let parts: Vec<&str> = value.split(':').collect();
-        if parts.len() != 2 {
-            return Err(eyre!("Invalid CalendarCallback"));
-        }
-
-        let date = NaiveDate::parse_from_str(parts[1], "%Y-%m-%d")?;
-        match parts[0] {
-            "scc_goto" => Ok(Self::GoToWeek(date)),
-            "scc_select" => Ok(Self::SelectDay(date)),
-            "scc_back" => Ok(Self::Back),
-            _ => Err(eyre!("Invalid CalendarCallback")),
-        }
-    }
 }

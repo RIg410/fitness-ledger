@@ -2,13 +2,18 @@ use async_trait::async_trait;
 use chrono::NaiveDate;
 use ledger::SetDateError;
 use log::warn;
+use serde::{Deserialize, Serialize};
 use storage::user::{rights::Rule, User};
 use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
 
-use crate::{context::Context, state::Widget};
+use crate::{
+    callback_data::{decode_data, Calldata as _},
+    context::Context,
+    state::Widget,
+};
 
 use super::View;
 
@@ -72,7 +77,7 @@ impl View for UserProfile {
         ctx: &mut Context,
         data: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        match Callback::try_from(data)? {
+        match Callback::from_data(data)? {
             Callback::SetDate => {
                 self.wait_for_date = true;
                 ctx.send_msg("Введите дату рождения в формате ДД\\.ММ\\.ГГГГ")
@@ -137,25 +142,7 @@ pub fn user_type(user: &User) -> &str {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Callback {
     SetDate,
-}
-
-impl Callback {
-    pub fn to_data(&self) -> String {
-        match self {
-            Callback::SetDate => "pcsd".to_owned(),
-        }
-    }
-}
-
-impl TryFrom<&str> for Callback {
-    type Error = eyre::Error;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "pcsd" => Ok(Callback::SetDate),
-            _ => Err(eyre::eyre!("failed to parse profile CB:{}", value)),
-        }
-    }
 }

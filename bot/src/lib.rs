@@ -4,6 +4,7 @@
 mod context;
 mod state;
 mod view;
+pub mod callback_data;
 
 use context::{Context, Origin};
 use eyre::{Error, Result};

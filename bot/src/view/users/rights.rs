@@ -1,8 +1,9 @@
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use storage::user::{rights::Rule, User};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
-use crate::{context::Context, state::Widget, view::profile::user_type};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::profile::user_type};
 
 use super::View;
 
@@ -48,7 +49,7 @@ impl View for UserRightsView {
         ctx: &mut Context,
         data: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        match UserRightsCallback::try_from(data)? {
+        match UserRightsCallback::from_data(data)? {
             UserRightsCallback::Back => {
                 if let Some(back) = self.go_back.take() {
                     return Ok(Some(back));
@@ -96,30 +97,9 @@ fn render_user_rights(user: &User, back: bool) -> (String, InlineKeyboardMarkup)
     (msg, keyboard)
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum UserRightsCallback {
     Back,
     EditRule(u8, bool),
 }
 
-impl UserRightsCallback {
-    pub fn to_data(&self) -> String {
-        match self {
-            UserRightsCallback::Back => "rc_back".to_string(),
-            UserRightsCallback::EditRule(id, is_active) => format!("rc_edit:{}:{}", id, is_active),
-        }
-    }
-}
-
-impl UserRightsCallback {
-    pub fn try_from(value: &str) -> Result<Self, eyre::Error> {
-        let parts: Vec<&str> = value.split(':').collect();
-        match parts.as_slice() {
-            ["rc_back"] => Ok(UserRightsCallback::Back),
-            ["rc_edit", id, is_active] => Ok(UserRightsCallback::EditRule(
-                id.parse()?,
-                is_active.parse()?,
-            )),
-            _ => Err(eyre::eyre!("Invalid rights callback: {}", value)),
-        }
-    }
-}

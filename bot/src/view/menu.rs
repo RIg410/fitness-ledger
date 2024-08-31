@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use chrono::Local;
 use eyre::{bail, Ok, Result};
 use storage::user::rights::Rule;
 use strum::{EnumIter, IntoEnumIterator};
@@ -63,7 +64,7 @@ impl View for MainMenuView {
         ctx.update_origin_msg_id(id);
         Ok(Some(match command {
             MainMenuItem::Profile => Box::new(UserProfile::default()),
-            MainMenuItem::Schedule => Box::new(CalendarView::default()),
+            MainMenuItem::Schedule => Box::new(CalendarView::new(Local::now().date_naive(), None)),
             MainMenuItem::Users => Box::new(UsersView::default()),
             MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
         }))

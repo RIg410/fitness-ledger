@@ -31,6 +31,10 @@ impl ScheduleStore {
         match week {
             Some(week) => Ok(week),
             None => {
+                if week_id + chrono::Duration::days(28) < chrono::Local::now().naive_local().date()
+                {
+                    return Err(eyre::eyre!("Week is too far in the past"));
+                }
                 let week = Week::new(week_id);
                 self.schedule.insert_one(week.clone()).await?;
                 Ok(week)

@@ -2,6 +2,7 @@ use std::mem;
 
 use async_trait::async_trait;
 use log::warn;
+use serde::{Deserialize, Serialize};
 use storage::user::{rights::Rule, User};
 use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
@@ -9,6 +10,7 @@ use teloxide::{
 };
 
 use crate::{
+    callback_data::Calldata as _,
     context::Context,
     state::Widget,
     view::{profile::user_type, View},
@@ -49,7 +51,7 @@ impl View for UserProfile {
         ctx: &mut Context,
         data: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        let cb = UserCallback::try_from(data)?;
+        let cb = UserCallback::from_data(data)?;
 
         match cb {
             UserCallback::Back => {
@@ -146,35 +148,10 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
     (msg, markup)
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum UserCallback {
     Back,
     BlockUnblock,
     Edit,
     EditRights,
-}
-
-impl TryFrom<&str> for UserCallback {
-    type Error = eyre::Error;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(match value {
-            "uc_back" => UserCallback::Back,
-            "uc_block" => UserCallback::BlockUnblock,
-            "uc_edit" => UserCallback::Edit,
-            "uc_rights" => UserCallback::EditRights,
-            _ => return Err(eyre::eyre!("Failed to parse callback")),
-        })
-    }
-}
-
-impl UserCallback {
-    pub fn to_data(&self) -> &str {
-        match self {
-            UserCallback::Back => "uc_back",
-            UserCallback::BlockUnblock => "uc_block",
-            UserCallback::Edit => "uc_edit",
-            UserCallback::EditRights => "uc_rights",
-        }
-    }
 }

@@ -1,9 +1,12 @@
 use super::{render_training_status, View};
+use crate::callback_data::Calldata as _;
 use crate::{context::Context, state::Widget};
 use async_trait::async_trait;
 use chrono::{Duration, NaiveDate};
 use eyre::eyre;
 use eyre::Result;
+use serde::Deserialize;
+use serde::Serialize;
 use storage::schedule::model::Day;
 use teloxide::prelude::Requester as _;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
@@ -39,7 +42,7 @@ impl View for DayView {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        match CalendarDayCallback::try_from(data)? {
+        match CalendarDayCallback::from_data(data)? {
             CalendarDayCallback::AddTraining(_) => todo!(),
             CalendarDayCallback::SelectTraining(_) => todo!(),
             CalendarDayCallback::SelectDay(day) => {
@@ -103,30 +106,32 @@ fn render_day(ctx: &Context, day: &Day, has_back: bool) -> (String, InlineKeyboa
     let mut nav_row = vec![];
     let now = chrono::Local::now().naive_local().date();
     if now < day.date {
+        let prev = day.date - Duration::days(1);
         nav_row.push(InlineKeyboardButton::callback(
-            "⬅️",
-            CalendarDayCallback::SelectDay(day.date - Duration::days(1)).to_data(),
+            format!("{} ⬅️", prev.format("%d.%m")),
+            CalendarDayCallback::SelectDay(prev).to_data(),
         ));
     }
 
     if ctx.ledger.has_week(day.date + Duration::days(1)) {
+        let next = day.date + Duration::days(1);
         nav_row.push(InlineKeyboardButton::callback(
-            "➡️",
-            CalendarDayCallback::SelectDay(day.date + Duration::days(1)).to_data(),
+            format!("➡️ {}", next.format("%d.%m")),
+            CalendarDayCallback::SelectDay(next).to_data(),
         ));
     }
     keymap = keymap.append_row(nav_row);
 
     if has_back {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "🔙 Назад",
+            "📅 Назад",
             CalendarDayCallback::Back.to_data(),
         )]);
     }
     (msg, keymap)
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum CalendarDayCallback {
     AddTraining(NaiveDate),
     SelectTraining(u64),
@@ -134,37 +139,3 @@ pub enum CalendarDayCallback {
     Back,
 }
 
-impl CalendarDayCallback {
-    pub fn to_data(&self) -> String {
-        match self {
-            CalendarDayCallback::AddTraining(date) => {
-                format!("cdc_add_training:{}", date.format("%Y-%m-%d"))
-            }
-            CalendarDayCallback::SelectTraining(id) => format!("cdc_select_training:{}", id),
-            CalendarDayCallback::SelectDay(date) => {
-                format!("cdc_select_day:{}", date.format("%Y-%m-%d"))
-            }
-            CalendarDayCallback::Back => "cdc_back:".to_string(),
-        }
-    }
-}
-
-impl TryFrom<&str> for CalendarDayCallback {
-    type Error = eyre::Error;
-
-    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
-        let parts: Vec<&str> = value.split(':').collect();
-        if parts.len() != 2 {
-            return Err(eyre!("Invalid CalendarDayCallback"));
-        }
-
-        let date = NaiveDate::parse_from_str(parts[1], "%Y-%m-%d")?;
-        match parts[0] {
-            "cdc_add_training" => Ok(Self::AddTraining(date)),
-            "cdc_select_training" => Ok(Self::SelectTraining(parts[1].parse()?)),
-            "cdc_select_day" => Ok(Self::SelectDay(date)),
-            "cdc_back" => Ok(Self::Back),
-            _ => Err(eyre!("Invalid CalendarDayCallback")),
-        }
-    }
-}
