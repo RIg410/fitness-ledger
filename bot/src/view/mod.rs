@@ -5,10 +5,11 @@ use teloxide::types::Message;
 
 pub mod menu;
 pub mod profile;
-pub mod schedule;
+pub mod calendar;
 pub mod signup;
 pub mod subscription;
 pub mod users;
+pub mod training;
 
 #[async_trait]
 pub trait View {
@@ -35,9 +36,8 @@ pub trait View {
 mod template {
     use async_trait::async_trait;
     use teloxide::types::Message;
-
     use crate::{context::Context, state::Widget};
-
+    use eyre::Result;
     use super::View;
 
     #[derive(Default)]
@@ -45,7 +45,7 @@ mod template {
 
     #[async_trait]
     impl View for UserProfile {
-        async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
+        async fn show(&mut self, ctx: &mut Context) -> Result<()> {
             Ok(())
         }
 
@@ -53,7 +53,7 @@ mod template {
             &mut self,
             ctx: &mut Context,
             message: &Message,
-        ) -> Result<Option<Widget>, eyre::Error> {
+        ) -> Result<Option<Widget>> {
             Ok(None)
         }
 
@@ -61,7 +61,7 @@ mod template {
             &mut self,
             ctx: &mut Context,
             data: &str,
-        ) -> Result<Option<Widget>, eyre::Error> {
+        ) -> Result<Option<Widget>> {
             Ok(None)
         }
     }

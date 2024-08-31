@@ -7,7 +7,7 @@ use teloxide::types::{BotCommand, KeyboardButton, KeyboardMarkup, Message};
 use crate::{context::Context, state::Widget};
 
 use super::{
-    profile::UserProfile, schedule::ScheduleView, subscription::SubscriptionView, users::UsersView,
+    calendar::CalendarView, profile::UserProfile, subscription::SubscriptionView, users::UsersView,
     View,
 };
 
@@ -63,7 +63,7 @@ impl View for MainMenuView {
         ctx.update_origin_msg_id(id);
         Ok(Some(match command {
             MainMenuItem::Profile => Box::new(UserProfile::default()),
-            MainMenuItem::Schedule => Box::new(ScheduleView::default()),
+            MainMenuItem::Schedule => Box::new(CalendarView::default()),
             MainMenuItem::Users => Box::new(UsersView::default()),
             MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
         }))
