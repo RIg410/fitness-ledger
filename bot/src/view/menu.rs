@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use chrono::Local;
 use eyre::{bail, Ok, Result};
 use storage::user::rights::Rule;
 use strum::{EnumIter, IntoEnumIterator};
@@ -8,8 +7,8 @@ use teloxide::types::{BotCommand, KeyboardButton, KeyboardMarkup, Message};
 use crate::{context::Context, state::Widget};
 
 use super::{
-    calendar::CalendarView, profile::UserProfile, subscription::SubscriptionView, users::UsersView,
-    View,
+    profile::UserProfile, subscription::SubscriptionView, training::TrainingMainView,
+    users::UsersView, View,
 };
 
 const COLUMNS: usize = 2;
@@ -64,7 +63,7 @@ impl View for MainMenuView {
         ctx.update_origin_msg_id(id);
         Ok(Some(match command {
             MainMenuItem::Profile => Box::new(UserProfile::default()),
-            MainMenuItem::Schedule => Box::new(CalendarView::new(Local::now().date_naive(), None)),
+            MainMenuItem::Trainings => Box::new(TrainingMainView::default()),
             MainMenuItem::Users => Box::new(UsersView::default()),
             MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
         }))
@@ -82,7 +81,7 @@ impl View for MainMenuView {
 #[derive(EnumIter, Clone, Copy, Debug, PartialEq)]
 pub enum MainMenuItem {
     Profile,
-    Schedule,
+    Trainings,
     Users,
     Subscription,
 }
@@ -90,8 +89,8 @@ pub enum MainMenuItem {
 const PROFILE_DESCRIPTION: &str = "Профиль 🧑";
 const PROFILE_NAME: &str = "/profile";
 
-const SCHEDULE_DESCRIPTION: &str = "Расписание 📅";
-const SCHEDULE_NAME: &str = "/schedule";
+const TRAININGS_DESCRIPTION: &str = "Тренировки 🤸🏻‍♂️";
+const TRAININGS_NAME: &str = "/trainings";
 
 const USERS_DESCRIPTION: &str = "Пользователи 👥";
 const USERS_NAME: &str = "/users";
@@ -103,7 +102,7 @@ impl MainMenuItem {
     pub fn description(&self) -> &'static str {
         match self {
             MainMenuItem::Profile => PROFILE_DESCRIPTION,
-            MainMenuItem::Schedule => SCHEDULE_DESCRIPTION,
+            MainMenuItem::Trainings => TRAININGS_DESCRIPTION,
             MainMenuItem::Users => USERS_DESCRIPTION,
             MainMenuItem::Subscription => SUBSCRIPTION_DESCRIPTION,
         }
@@ -112,7 +111,7 @@ impl MainMenuItem {
     pub fn name(&self) -> &'static str {
         match self {
             MainMenuItem::Profile => PROFILE_NAME,
-            MainMenuItem::Schedule => SCHEDULE_NAME,
+            MainMenuItem::Trainings => TRAININGS_NAME,
             MainMenuItem::Users => USERS_NAME,
             MainMenuItem::Subscription => SUBSCRIPTION_NAME,
         }
@@ -134,7 +133,7 @@ impl TryFrom<&str> for MainMenuItem {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             PROFILE_NAME | PROFILE_DESCRIPTION => Ok(MainMenuItem::Profile),
-            SCHEDULE_NAME | SCHEDULE_DESCRIPTION => Ok(MainMenuItem::Schedule),
+            TRAININGS_NAME | TRAININGS_DESCRIPTION => Ok(MainMenuItem::Trainings),
             USERS_NAME | USERS_DESCRIPTION => Ok(MainMenuItem::Users),
             SUBSCRIPTION_NAME | SUBSCRIPTION_DESCRIPTION => Ok(MainMenuItem::Subscription),
             _ => bail!("Unknown command"),

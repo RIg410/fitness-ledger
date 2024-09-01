@@ -1,6 +1,5 @@
 use super::rights::Rights;
-use crate::date_time::{opt_naive_date_deserialize, opt_naive_date_serialize};
-use chrono::{DateTime, Local, NaiveDate};
+use chrono::{DateTime, Local};
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -13,9 +12,7 @@ pub struct User {
     pub name: UserName,
     pub rights: Rights,
     pub phone: String,
-    #[serde(serialize_with = "opt_naive_date_serialize")]
-    #[serde(deserialize_with = "opt_naive_date_deserialize")]
-    pub birthday: Option<NaiveDate>,
+    pub birthday: Option<DateTime<Local>>,
     pub reg_date: DateTime<Local>,
     pub balance: i32,
     #[serde(default = "default_is_active")]

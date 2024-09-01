@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use chrono::NaiveDate;
+use chrono::{DateTime, Local, TimeZone as _};
 use ledger::SetDateError;
 use log::warn;
 use serde::{Deserialize, Serialize};
@@ -9,11 +9,7 @@ use teloxide::{
     utils::markdown::escape,
 };
 
-use crate::{
-    callback_data::{decode_data, Calldata as _},
-    context::Context,
-    state::Widget,
-};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 
 use super::View;
 
@@ -88,10 +84,17 @@ impl View for UserProfile {
     }
 }
 
-fn parse_date(date: Option<&str>) -> Result<NaiveDate, eyre::Error> {
+fn parse_date(date: Option<&str>) -> Result<DateTime<Local>, eyre::Error> {
     let date = date.ok_or_else(|| eyre::eyre!("Date is empty"))?;
-    Ok(chrono::NaiveDate::parse_from_str(date.trim(), "%d.%m.%Y")
-        .map_err(|err| eyre::eyre!("Failed to parse date: {:#}", err))?)
+    let date = chrono::NaiveDate::parse_from_str(date.trim(), "%d.%m.%Y")
+        .map_err(|err| eyre::eyre!("Failed to parse date: {:#}", err))?;
+    let date = date
+        .and_hms_micro_opt(0, 0, 0, 0)
+        .ok_or_else(|| eyre::eyre!("Invalid date"))?;
+    Ok(Local
+        .from_local_datetime(&date)
+        .earliest()
+        .ok_or_else(|| eyre::eyre!("Invalid date"))?)
 }
 
 pub fn render_user_profile(_: &Context, user: &User) -> (String, InlineKeyboardMarkup) {

@@ -172,6 +172,7 @@ dependencies = [
  "itertools 0.2.2",
  "ledger",
  "log",
+ "mongodb",
  "serde",
  "storage",
  "strum",
@@ -1011,6 +1012,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "eyre",
+ "futures-util",
  "log",
  "mongodb",
  "storage",

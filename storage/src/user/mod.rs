@@ -5,10 +5,10 @@ use std::sync::Arc;
 
 pub use model::{User, UserName};
 
-use crate::date_time::Date;
-use chrono::NaiveDate;
-use eyre::Result;
+use chrono::{DateTime, Local};
+use eyre::{Error, Result};
 use futures_util::stream::TryStreamExt;
+use mongodb::bson::to_bson;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     Collection, Database,
@@ -46,10 +46,12 @@ impl UserStore {
         Ok(self.users.count_documents(doc! {}).await?)
     }
 
-    pub async fn set_birthday(&self, tg_id: i64, birthday: NaiveDate) -> Result<()> {
-        let date = mongodb::bson::to_document(&Date::from(birthday))?;
+    pub async fn set_birthday(&self, tg_id: i64, birthday: DateTime<Local>) -> Result<()> {
         self.users
-            .update_one(doc! { "tg_id": tg_id }, doc! { "$set": { "birthday": date } })
+            .update_one(
+                doc! { "tg_id": tg_id },
+                doc! { "$set": { "birthday": to_bson(&birthday)? } },
+            )
             .await?;
         Ok(())
     }
@@ -109,5 +111,11 @@ impl UserStore {
             )
             .await?;
         Ok(())
+    }
+
+    pub async fn get_instructors(&self) -> Result<Vec<User>, Error> {
+        let filter = doc! { "rights.rights": "Train" };
+        let cursor = self.users.find(filter).await?;
+        Ok(cursor.try_collect().await?)
     }
 }

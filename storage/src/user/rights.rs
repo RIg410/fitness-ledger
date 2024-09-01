@@ -77,7 +77,9 @@ pub enum Rule {
 
     // Training
     Train,
-    
+
+    CancelTraining,
+    CreateTraining,
     EditSchedule,
 }
 

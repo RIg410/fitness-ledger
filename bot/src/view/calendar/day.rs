@@ -1,24 +1,27 @@
-use super::{render_training_status, View};
+use super::training::TrainingView;
+use super::{render_training_status, CallbackDateTime, View};
 use crate::callback_data::Calldata as _;
+use crate::view::training::schedule_training::ScheduleTraining;
 use crate::{context::Context, state::Widget};
 use async_trait::async_trait;
-use chrono::{Duration, NaiveDate};
-use eyre::eyre;
+use chrono::{DateTime, Duration, Local};
 use eyre::Result;
 use serde::Deserialize;
 use serde::Serialize;
-use storage::schedule::model::Day;
+use storage::calendar::day_id;
+use storage::calendar::model::Day;
+use storage::user::rights::Rule;
 use teloxide::prelude::Requester as _;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 #[derive(Default)]
 pub struct DayView {
-    pub date: chrono::NaiveDate,
+    pub date: DateTime<Local>,
     pub go_back: Option<Widget>,
 }
 
 impl DayView {
-    pub fn new(date: chrono::NaiveDate, go_back: Option<Widget>) -> Self {
+    pub fn new(date: DateTime<Local>, go_back: Option<Widget>) -> Self {
         Self { date, go_back }
     }
 }
@@ -26,8 +29,8 @@ impl DayView {
 #[async_trait]
 impl View for DayView {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let day = ctx.ledger.get_day(self.date).await?;
-        let (msg, keymap) = render_day(ctx, &day, self.go_back.is_some());
+        let day = ctx.ledger.calendar.get_day(self.date).await?;
+        let (msg, keymap) = render_day(ctx, &day, self.date, self.go_back.is_some());
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
@@ -43,10 +46,27 @@ impl View for DayView {
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
         match CalendarDayCallback::from_data(data)? {
-            CalendarDayCallback::AddTraining(_) => todo!(),
-            CalendarDayCallback::SelectTraining(_) => todo!(),
-            CalendarDayCallback::SelectDay(day) => {
-                self.date = day;
+            CalendarDayCallback::AddTraining => {
+                ctx.ensure(Rule::EditSchedule)?;
+
+                let widget = Box::new(DayView::new(self.date, self.go_back.take()));
+                return Ok(Some(Box::new(ScheduleTraining::new(
+                    self.date,
+                    Some(widget),
+                ))));
+            }
+            CalendarDayCallback::SelectTraining(id) => {
+                return Ok(Some(Box::new(TrainingView::new(
+                    id.into(),
+                    Some(Box::new(DayView::new(self.date, self.go_back.take()))),
+                ))));
+            }
+            CalendarDayCallback::Next => {
+                self.date += Duration::days(1);
+                self.show(ctx).await?;
+            }
+            CalendarDayCallback::Prev => {
+                self.date -= Duration::days(1);
                 self.show(ctx).await?;
             }
             CalendarDayCallback::Back => {
@@ -59,7 +79,12 @@ impl View for DayView {
     }
 }
 
-fn render_day(ctx: &Context, day: &Day, has_back: bool) -> (String, InlineKeyboardMarkup) {
+fn render_day(
+    ctx: &Context,
+    day: &Day,
+    date: DateTime<Local>,
+    has_back: bool,
+) -> (String, InlineKeyboardMarkup) {
     let msg = format!(
         "
 📅  Расписание на *{}*:
@@ -73,7 +98,7 @@ fn render_day(ctx: &Context, day: &Day, has_back: bool) -> (String, InlineKeyboa
 ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖
 {}
         ",
-        day.date.format("%d\\.%m\\.%Y"),
+        date.format("%d\\.%m\\.%Y"),
         if day.training.is_empty() {
             "нет занятий 🌴"
         } else {
@@ -87,11 +112,11 @@ fn render_day(ctx: &Context, day: &Day, has_back: bool) -> (String, InlineKeyboa
         row.push(InlineKeyboardButton::callback(
             format!(
                 "{} {} {}",
-                render_training_status(&training.status),
+                render_training_status(&training.status, training.is_full()),
                 training.start_at.format("%H:%M"),
                 training.name.as_str(),
             ),
-            format!("slc_training_{}", training.id),
+            CalendarDayCallback::SelectTraining(training.start_at.into()).to_data(),
         ));
         keymap = keymap.append_row(row);
     }
@@ -99,25 +124,25 @@ fn render_day(ctx: &Context, day: &Day, has_back: bool) -> (String, InlineKeyboa
     if ctx.has_right(storage::user::rights::Rule::EditSchedule) {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "📝  запланировать тренировку",
-            CalendarDayCallback::AddTraining(day.date).to_data(),
+            CalendarDayCallback::AddTraining.to_data(),
         )]);
     }
 
     let mut nav_row = vec![];
-    let now = chrono::Local::now().naive_local().date();
-    if now < day.date {
-        let prev = day.date - Duration::days(1);
+    let now = day_id(chrono::Local::now()).unwrap_or_else(|| chrono::Local::now());
+    if now < date {
+        let prev = date - Duration::days(1);
         nav_row.push(InlineKeyboardButton::callback(
             format!("{} ⬅️", prev.format("%d.%m")),
-            CalendarDayCallback::SelectDay(prev).to_data(),
+            CalendarDayCallback::Prev.to_data(),
         ));
     }
 
-    if ctx.ledger.has_week(day.date + Duration::days(1)) {
-        let next = day.date + Duration::days(1);
+    if ctx.ledger.calendar.has_week(date + Duration::days(1)) {
+        let next = date + Duration::days(1);
         nav_row.push(InlineKeyboardButton::callback(
             format!("➡️ {}", next.format("%d.%m")),
-            CalendarDayCallback::SelectDay(next).to_data(),
+            CalendarDayCallback::Next.to_data(),
         ));
     }
     keymap = keymap.append_row(nav_row);
@@ -133,9 +158,9 @@ fn render_day(ctx: &Context, day: &Day, has_back: bool) -> (String, InlineKeyboa
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum CalendarDayCallback {
-    AddTraining(NaiveDate),
-    SelectTraining(u64),
-    SelectDay(NaiveDate),
+    AddTraining,
+    SelectTraining(CallbackDateTime),
+    Next,
+    Prev,
     Back,
 }
-

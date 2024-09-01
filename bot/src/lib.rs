@@ -1,10 +1,10 @@
 // pub mod format;
 // mod process;
 // mod sessions;
+pub mod callback_data;
 mod context;
 mod state;
 mod view;
-pub mod callback_data;
 
 use context::{Context, Origin};
 use eyre::{Error, Result};
@@ -34,7 +34,7 @@ pub async fn start_bot(ledger: Ledger, token: String) -> Result<()> {
 
     bot.set_my_commands(vec![
         MainMenuItem::Profile.into(),
-        MainMenuItem::Schedule.into(),
+        MainMenuItem::Trainings.into(),
         MainMenuItem::Subscription.into(),
     ])
     .await?;
@@ -209,7 +209,8 @@ async fn inner_callback_handler(
         if let Some(mut redirect) = main_view
             .handle_callback(
                 ctx,
-                data.as_ref().ok_or_else(|| eyre::eyre!("Expected callback data"))?,
+                data.as_ref()
+                    .ok_or_else(|| eyre::eyre!("Expected callback data"))?,
             )
             .await?
         {
@@ -220,7 +221,8 @@ async fn inner_callback_handler(
                 match widget
                     .handle_callback(
                         ctx,
-                        data.as_ref().ok_or_else(|| eyre::eyre!("Expected callback data"))?,
+                        data.as_ref()
+                            .ok_or_else(|| eyre::eyre!("Expected callback data"))?,
                     )
                     .await?
                 {

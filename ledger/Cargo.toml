@@ -12,3 +12,5 @@ eyre.workspace = true
 log.workspace = true
 storage.workspace = true
 mongodb.workspace = true
+futures-util.workspace = true
+

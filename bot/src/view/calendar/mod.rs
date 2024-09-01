@@ -1,27 +1,29 @@
 use super::View;
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
-use chrono::{Datelike, NaiveDate, Weekday};
+use chrono::{DateTime, Datelike, Local, TimeZone, Timelike as _, Weekday};
 use day::DayView;
-use eyre::eyre;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use storage::{
-    schedule::model::{Day, Week},
+    calendar::{
+        day_id,
+        model::{Day, Week},
+    },
     training::model::TrainingStatus,
 };
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 use teloxide::{prelude::Requester as _, types::Message};
 
 pub mod day;
+pub mod training;
 
 pub struct CalendarView {
     go_back: Option<Widget>,
-    weed_id: NaiveDate,
+    weed_id: DateTime<Local>,
 }
 
 impl CalendarView {
-    pub fn new(id: NaiveDate, go_back: Option<Widget>) -> Self {
+    pub fn new(id: DateTime<Local>, go_back: Option<Widget>) -> Self {
         Self {
             go_back,
             weed_id: id,
@@ -32,12 +34,12 @@ impl CalendarView {
 #[async_trait]
 impl View for CalendarView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let week = ctx.ledger.get_week(Some(self.weed_id)).await?;
+        let week = ctx.ledger.calendar.get_week(Some(self.weed_id)).await?;
 
         let (text, keymap) = render_week(
             &week,
-            ctx.ledger.has_prev_week(&week),
-            ctx.ledger.has_next_week(&week),
+            ctx.ledger.calendar.has_prev_week(&week),
+            ctx.ledger.calendar.has_next_week(&week),
             self.go_back.is_some(),
         );
         ctx.edit_origin(&text, keymap).await?;
@@ -60,13 +62,13 @@ impl View for CalendarView {
     ) -> Result<Option<Widget>, eyre::Error> {
         match CalendarCallback::from_data(data)? {
             CalendarCallback::GoToWeek(week) => {
-                self.weed_id = week;
+                self.weed_id = week.into();
                 self.show(ctx).await?;
                 Ok(None)
             }
             CalendarCallback::SelectDay(day) => {
                 let view = DayView::new(
-                    day,
+                    day.into(),
                     Some(Box::new(CalendarView::new(
                         self.weed_id,
                         self.go_back.take(),
@@ -107,26 +109,25 @@ pub fn render_week(
     );
 
     let mut buttons = InlineKeyboardMarkup::default();
-    let now = chrono::Local::now().naive_local().date();
-    for day in &week.days {
-        if day.date < now {
+    let now = day_id(chrono::Local::now()).unwrap_or_else(|| chrono::Local::now());
+
+    for (day, date) in week.days() {
+        if date < now {
             continue;
         }
 
         let mut row = vec![];
-        let short = day.training.iter().map(|t| &t.short_name).join("/");
-
         let name = format!(
-            "{} {} : {} {}",
-            render_weekday(&day.date),
-            day.date.format("%d.%m"),
+            "{} {} : {}: тренировки - {}",
+            render_weekday(&date),
+            date.format("%d.%m"),
             render_day_status(&day),
-            short
+            day.training.len()
         );
 
         row.push(InlineKeyboardButton::callback(
             name,
-            CalendarCallback::SelectDay(day.date).to_data(),
+            CalendarCallback::SelectDay(date.into()).to_data(),
         ));
         buttons = buttons.append_row(row);
     }
@@ -134,15 +135,15 @@ pub fn render_week(
     let mut last_row = vec![];
     if has_prev {
         last_row.push(InlineKeyboardButton::callback(
-            "⬅️",
-            CalendarCallback::GoToWeek(week.prev_week_id()).to_data(),
+            "⬅️ предыдущая неделя",
+            CalendarCallback::GoToWeek(week.prev_week_id().into()).to_data(),
         ));
     }
 
     if hes_next {
         last_row.push(InlineKeyboardButton::callback(
-            "➡️",
-            CalendarCallback::GoToWeek(week.next_week_id()).to_data(),
+            "➡️ cледующая неделя",
+            CalendarCallback::GoToWeek(week.next_week_id().into()).to_data(),
         ));
     }
     buttons = buttons.append_row(last_row);
@@ -157,7 +158,7 @@ pub fn render_week(
     (msg, buttons)
 }
 
-fn render_weekday(weekday: &NaiveDate) -> &'static str {
+fn render_weekday(weekday: &DateTime<Local>) -> &'static str {
     match weekday.weekday() {
         Weekday::Mon => "Пн",
         Weekday::Tue => "Вт",
@@ -179,7 +180,7 @@ fn render_day_status(day: &Day) -> &'static str {
         if training.status == TrainingStatus::OpenToSignup {
             return "🟢";
         }
-        if training.status != TrainingStatus::Full {
+        if !training.is_full() {
             full = false;
         }
         if training.status != TrainingStatus::Finished {
@@ -196,20 +197,61 @@ fn render_day_status(day: &Day) -> &'static str {
     }
 }
 
-pub fn render_training_status(training: &TrainingStatus) -> &'static str {
+pub fn render_training_status(training: &TrainingStatus, is_full: bool) -> &'static str {
+    if is_full {
+        return "🟣";
+    }
     match training {
         TrainingStatus::Finished => "✔️",
         TrainingStatus::OpenToSignup => "🟢",
         TrainingStatus::ClosedToSignup => "🟠",
         TrainingStatus::InProgress => "🔵",
         TrainingStatus::Cancelled => "⛔",
-        TrainingStatus::Full => "🟣",
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum CalendarCallback {
-    GoToWeek(NaiveDate),
-    SelectDay(NaiveDate),
+enum CalendarCallback {
+    GoToWeek(CallbackDateTime),
+    SelectDay(CallbackDateTime),
     Back,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CallbackDateTime {
+    year: i32,
+    month: u8,
+    day: u8,
+    hour: u8,
+    minute: u8,
+    second: u8,
+}
+
+impl From<DateTime<Local>> for CallbackDateTime {
+    fn from(date: DateTime<Local>) -> Self {
+        Self {
+            year: date.year(),
+            month: date.month() as u8,
+            day: date.day() as u8,
+            hour: date.hour() as u8,
+            minute: date.minute() as u8,
+            second: date.second() as u8,
+        }
+    }
+}
+
+impl From<CallbackDateTime> for DateTime<Local> {
+    fn from(date: CallbackDateTime) -> Self {
+        Local
+            .with_ymd_and_hms(
+                date.year,
+                date.month as u32,
+                date.day as u32,
+                date.hour as u32,
+                date.minute as u32,
+                date.second as u32,
+            )
+            .earliest()
+            .unwrap()
+    }
 }

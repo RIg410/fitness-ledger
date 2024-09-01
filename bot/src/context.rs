@@ -79,6 +79,21 @@ impl Context {
             .id)
     }
 
+    pub async fn send_msg_with_markup(
+        &self,
+        text: &str,
+        markup: InlineKeyboardMarkup,
+    ) -> Result<(), eyre::Error> {
+        self.bot
+            .send_message(self.chat_id(), text)
+            .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+            .reply_markup(markup)
+            .await
+            .context(format!("Failed to send message: {}", text))?
+            .id;
+        Ok(())
+    }
+
     pub async fn reload_user(&mut self) -> Result<(), eyre::Error> {
         let user = self
             .ledger

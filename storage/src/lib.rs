@@ -1,5 +1,4 @@
-mod date_time;
-pub mod schedule;
+pub mod calendar;
 pub mod training;
 pub mod user;
 
@@ -13,7 +12,8 @@ pub struct Storage {
     _client: Client,
     _db: Database,
     pub users: UserStore,
-    pub schedule: schedule::ScheduleStore,
+    pub schedule: calendar::CalendarStore,
+    pub training: training::TrainingStore,
 }
 
 impl Storage {
@@ -26,12 +26,14 @@ impl Storage {
             .await
             .context("Failed to ping MongoDB")?;
         let users = UserStore::new(&db);
-        let schedule = schedule::ScheduleStore::new(&db);
+        let schedule = calendar::CalendarStore::new(&db);
+        let training = training::TrainingStore::new(&db);
         Ok(Storage {
             _client: client,
             _db: db,
             users,
             schedule,
+            training,
         })
     }
 }
