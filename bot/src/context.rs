@@ -5,7 +5,7 @@ use teloxide::{
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester,
     types::{ChatId, InlineKeyboardMarkup, KeyboardMarkup, MessageId},
-    Bot,
+    ApiError, Bot, RequestError,
 };
 
 pub struct Context {
@@ -46,14 +46,20 @@ impl Context {
         text: &str,
         markup: InlineKeyboardMarkup,
     ) -> Result<(), eyre::Error> {
-        self.bot
+        let update_result = self
+            .bot
             .edit_message_text(self.chat_id(), self.origin.message_id, text)
             .parse_mode(teloxide::types::ParseMode::MarkdownV2)
             .reply_markup(markup)
-            .await
-            .context(format!("Failed to send message: {}", text))?
-            .id;
-        Ok(())
+            .await;
+        match update_result {
+            Ok(_) => Ok(()),
+            Err(RequestError::Api(ApiError::MessageNotModified)) => Ok(()),
+            Err(e) => {
+                log::error!("Failed to edit message: {}: {}", e, text);
+                Err(e.into())
+            }
+        }
     }
 
     pub async fn delete_msg(&self, id: MessageId) -> Result<(), eyre::Error> {

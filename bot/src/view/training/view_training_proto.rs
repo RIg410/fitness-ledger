@@ -1,6 +1,12 @@
 use super::{schedule_process::ScheduleTrainingPreset, View};
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
+use crate::{
+    callback_data::Calldata as _,
+    context::Context,
+    state::Widget,
+    view::calendar::{CalendarView, Filter},
+};
 use async_trait::async_trait;
+use chrono::Local;
 use eyre::Result;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -80,6 +86,19 @@ impl View for ViewTrainingProto {
                 ctx.update_origin_msg_id(id);
                 self.show(ctx).await?;
             }
+            TrainingProtoCallback::FindTraining => {
+                let back =
+                    ViewTrainingProto::new(self.id, self.preset.clone(), self.go_back.take());
+                let view = CalendarView::new(
+                    Local::now(),
+                    Some(Box::new(back)),
+                    None,
+                    Some(Filter {
+                        proto_id: Some(self.id),
+                    }),
+                );
+                return Ok(Some(Box::new(view)));
+            }
         }
         Ok(None)
     }
@@ -114,6 +133,13 @@ async fn render(
         )]);
     }
 
+    if !ctx.has_right(Rule::Train) {
+        keymap.push(vec![InlineKeyboardButton::callback(
+            "📅Расписание",
+            TrainingProtoCallback::FindTraining.to_data(),
+        )]);
+    }
+
     if go_back {
         keymap.push(vec![InlineKeyboardButton::callback(
             "⬅️Назад",
@@ -129,4 +155,5 @@ pub enum TrainingProtoCallback {
     Schedule,
     Description,
     Back,
+    FindTraining,
 }

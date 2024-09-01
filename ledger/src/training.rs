@@ -20,6 +20,10 @@ impl Ledger {
         Ok(self.training.get_by_id(id).await?)
     }
 
+    pub async fn get_all_trainings(&self) -> Result<Vec<TrainingProto>, Error> {
+        Ok(self.training.get_all().await?)
+    }
+
     pub async fn create_training_proto(&self, proto: &TrainingProto) -> Result<(), Error> {
         let training = self.get_training_by_name(&proto.name).await?;
         if training.is_some() {

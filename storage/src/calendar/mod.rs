@@ -1,12 +1,15 @@
 pub mod model;
 use chrono::{DateTime, Local, TimeZone, Weekday};
 use eyre::Result;
+use futures_util::StreamExt as _;
 use model::Week;
 use mongodb::{
-    bson::{doc, to_bson},
+    bson::{doc, oid::ObjectId, to_bson},
     Collection, Database,
 };
 use std::sync::Arc;
+
+use crate::training::model::Training;
 
 const COLLECTION: &str = "schedule";
 
@@ -55,6 +58,52 @@ impl CalendarStore {
 
         self.schedule.replace_one(filter, week).await?;
         Ok(())
+    }
+
+    pub async fn get_my_trainings(
+        &self,
+        id: ObjectId,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<Training>, eyre::Error> {
+        let filter = doc! {
+          "$and": [
+            {
+              "$or": [
+                { "days.training.instructor": id },
+                { "days.training.clients": { "$elemMatch": { "$eq": id } } }
+              ]
+            },
+            { "id": { "$gt": to_bson(&Local::now())? } }
+          ]
+        };
+
+        let mut cursor = self.schedule.find(filter).await?;
+        let mut trainings = Vec::new();
+        let mut skiped = 0;
+        let now = Local::now();
+        while let Some(week) = cursor.next().await {
+            let week = week?;
+            for day in week.days {
+                for training in day.training {
+                    if training.start_at < now {
+                        continue;
+                    }
+                    if training.instructor == id || training.clients.contains(&id) {
+                        if skiped <= offset {
+                            skiped += 1;
+                            continue;
+                        }
+                        if trainings.len() >= limit {
+                            return Ok(trainings);
+                        }
+                        trainings.push(training);
+                    }
+                }
+            }
+        }
+
+        Ok(trainings)
     }
 }
 

@@ -4,6 +4,7 @@ use super::{training::schedule_training::ScheduleTraining, View};
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use chrono::{DateTime, Datelike, Local, TimeZone, Timelike as _, Weekday};
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use storage::{calendar::model::Week, training::model::TrainingStatus, user::rights::Rule};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
@@ -17,6 +18,7 @@ pub struct CalendarView {
     weed_id: DateTime<Local>,
     selected_day: Weekday,
     date: DateTime<Local>,
+    filter: Filter,
 }
 
 impl CalendarView {
@@ -24,12 +26,14 @@ impl CalendarView {
         id: DateTime<Local>,
         go_back: Option<Widget>,
         selected_day: Option<Weekday>,
+        filter: Option<Filter>,
     ) -> Self {
         Self {
             go_back,
             weed_id: id,
             selected_day: selected_day.unwrap_or(Local::now().weekday()),
             date: id,
+            filter: filter.unwrap_or_default(),
         }
     }
 }
@@ -46,6 +50,7 @@ impl View for CalendarView {
             ctx.ledger.calendar.has_next_week(&week),
             self.go_back.is_some(),
             self.selected_day,
+            &self.filter,
         );
         ctx.edit_origin(&text, keymap).await?;
         Ok(())
@@ -90,6 +95,7 @@ impl View for CalendarView {
                         self.weed_id,
                         self.go_back.take(),
                         Some(self.selected_day),
+                        Some(self.filter.clone()),
                     ))),
                 ))));
             }
@@ -99,6 +105,7 @@ impl View for CalendarView {
                     self.weed_id,
                     self.go_back.take(),
                     Some(self.selected_day),
+                    Some(self.filter.clone()),
                 ));
                 return Ok(Some(Box::new(ScheduleTraining::new(
                     self.date,
@@ -116,19 +123,27 @@ pub fn render_week(
     hes_next: bool,
     has_back: bool,
     selected_day: Weekday,
+    filter: &Filter,
 ) -> (String, InlineKeyboardMarkup) {
     let msg = format!(
         "
 📅  Расписание
 *{} {}*
-с {} по {}
+с *{}* по *{}*
 День: *{}*
+➖➖➖➖➖➖➖➖➖➖➖
+✔️\\- тренировка прошла
+🟢\\- запись открыта
+🟠\\- запись закрыта
+🔵\\- тренировка идет
+⛔\\- тренировка отменена
+➖➖➖➖➖➖➖➖➖➖➖
 ",
         month(&week.id),
         week.id.year(),
         week.days().next().unwrap().1.format("%d\\.%m"),
         week.days().last().unwrap().1.format("%d\\.%m"),
-        dbg!(week.day_date(selected_day).format("%d\\.%m\\.%Y"))
+        week.day_date(selected_day).format("%d\\.%m\\.%Y")
     );
 
     let mut buttons = InlineKeyboardMarkup::default();
@@ -168,6 +183,12 @@ pub fn render_week(
     let day = week.get_day(selected_day);
 
     for training in &day.training {
+        if let Some(proto_id) = &filter.proto_id {
+            if training.proto_id != *proto_id {
+                continue;
+            }
+        }
+
         let mut row = vec![];
         row.push(InlineKeyboardButton::callback(
             format!(
@@ -286,4 +307,9 @@ impl From<CallbackDateTime> for DateTime<Local> {
             .earliest()
             .unwrap()
     }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Filter {
+    pub proto_id: Option<ObjectId>,
 }

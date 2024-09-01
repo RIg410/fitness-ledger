@@ -137,6 +137,15 @@ impl Calendar {
         self.calendar.update_week(week).await
     }
 
+    pub async fn get_my_trainings(
+        &self,
+        client: ObjectId,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<Training>> {
+        self.calendar.get_my_trainings(client, limit, offset).await
+    }
+
     pub async fn is_free_time_slot(&self, start_at: DateTime<Local>) -> Result<bool, Error> {
         let week = self.calendar.get_week(start_at).await?;
         let day = week.get_day(start_at.weekday());

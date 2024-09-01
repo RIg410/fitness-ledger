@@ -29,6 +29,11 @@ impl TrainingStore {
         Ok(self.store.find_one(doc! { "_id": id }).await?)
     }
 
+    pub async fn get_all(&self) -> Result<Vec<TrainingProto>, mongodb::error::Error> {
+        let cursor = self.store.find(doc! {}).await?;
+        Ok(cursor.try_collect().await?)
+    }
+
     pub async fn find(
         &self,
         query: Option<&str>,
