@@ -38,7 +38,11 @@ impl View for TrainingMainView {
                 return Ok(Some(widget));
             }
             ScheduleLendingCallback::Schedule => {
-                let widget = Box::new(CalendarView::new(Local::now(), Some(Box::new(TrainingMainView))));
+                let widget = Box::new(CalendarView::new(
+                    Local::now(),
+                    Some(Box::new(TrainingMainView)),
+                    None,
+                ));
                 return Ok(Some(widget));
             }
             ScheduleLendingCallback::FindTraining => {

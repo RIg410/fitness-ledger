@@ -73,7 +73,7 @@ impl View for SetDateTime {
                     preset.into_next_view(self.id, self.go_back.take().unwrap()),
                 ));
             } else {
-                ctx.send_msg("Неверный формат даты. _дд\\.мм_").await?;
+                ctx.send_msg("Неверный формат даты\\. _дд\\.мм_").await?;
             }
         } else {
             let mut preset = self.preset.take().unwrap();
@@ -91,7 +91,7 @@ impl View for SetDateTime {
                     preset.into_next_view(self.id, self.go_back.take().unwrap()),
                 ));
             } else {
-                ctx.send_msg("Неверный формат времени. _чч\\.мм_").await?;
+                ctx.send_msg("Неверный формат времени\\. _чч\\.мм_").await?;
             }
         }
         Ok(None)
