@@ -76,6 +76,19 @@ impl Training {
         Ok(())
     }
 
+    pub fn start_at_on(&self, day_id: DayId) -> DateTime<Utc> {
+        let new_date = day_id.local().naive_local().date();
+        let start_date = self.start_at_local();
+        let start_at = new_date
+            .and_hms_opt(start_date.hour(), start_date.minute(), start_date.second())
+            .expect("Invalid date");
+        Local
+            .from_local_datetime(&start_at)
+            .single()
+            .unwrap()
+            .with_timezone(&Utc)
+    }
+
     pub fn change_date(self, day_id: DayId) -> Training {
         let new_date = day_id.local().naive_local().date();
         let start_date = self.start_at_local();

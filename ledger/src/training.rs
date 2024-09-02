@@ -4,7 +4,10 @@ use futures_util::StreamExt as _;
 use mongodb::bson::oid::ObjectId;
 use storage::{
     calendar::model::DayId,
-    training::model::{Training, TrainingProto, TrainingStatus},
+    training::{
+        self,
+        model::{Training, TrainingProto, TrainingStatus},
+    },
 };
 
 use crate::Ledger;
@@ -34,6 +37,25 @@ impl Ledger {
         }
 
         Ok(self.training.insert(proto).await?)
+    }
+
+    pub async fn delete_training(&self, to_remove: &Training, all: bool) -> Result<(), Error> {
+        let day_id = DayId::from(to_remove.start_at);
+        let mut day = self.calendar.get_day(day_id).await?;
+        day.training.retain(|t| t.id != to_remove.id);
+        self.calendar.update_day(&day).await?;
+        if all {
+            let mut day = self.calendar.cursor(day_id, day_id.week_day()).await?;
+            while let Some(day) = day.next().await {
+                let mut day = day?;
+                let start_at = to_remove.start_at_on(day.day_id());
+                day.training
+                    .retain(|t| t.start_at != start_at && t.proto_id != to_remove.proto_id);
+                self.calendar.update_day(&day).await?;
+            }
+        }
+
+        Ok(())
     }
 
     pub async fn add_training(

@@ -76,6 +76,19 @@ impl View for TrainingView {
                 self.show(ctx).await?;
                 Ok(None)
             }
+            TCallback::Delete(all) => {
+                ctx.ensure(Rule::EditSchedule)?;
+                let training = ctx
+                    .ledger
+                    .calendar
+                    .get_training_by_start_at(self.id)
+                    .await?
+                    .ok_or_else(|| eyre::eyre!("Training not found"))?;
+                ctx.ledger
+                    .delete_training(&training, all)
+                    .await?;
+                Ok(self.go_back.take())
+            }
             TCallback::UnCancel => {
                 ctx.ensure(Rule::CancelTraining)?;
                 let training = ctx
@@ -177,6 +190,17 @@ _{}_
         }
     }
 
+    if ctx.has_right(Rule::EditSchedule) {
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+            "🗑️ Удалить эту тренировку",
+            TCallback::Delete(false).to_data(),
+        )]);
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+            "🗑️ Удалить все последующие",
+            TCallback::Delete(true).to_data(),
+        )]);
+    }
+
     if is_client {
         if training.clients.contains(&ctx.me.id) {
             if training.status == TrainingStatus::OpenToSignup {
@@ -207,6 +231,7 @@ _{}_
 enum TCallback {
     Back,
     Description,
+    Delete(bool),
     Cancel,
     UnCancel,
     SignUp,
