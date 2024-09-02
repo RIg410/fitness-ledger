@@ -81,7 +81,7 @@ impl View for ViewTrainingProto {
                     .get_training_by_id(self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                ctx.send_msg(&training.description).await?;
+                ctx.send_msg(&escape(&training.description)).await?;
                 let id = ctx.send_msg("\\.").await?;
                 ctx.update_origin_msg_id(id);
                 self.show(ctx).await?;
