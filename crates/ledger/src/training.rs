@@ -8,7 +8,6 @@ use model::{
     training::{Training, TrainingStatus},
 };
 use mongodb::bson::oid::ObjectId;
-use storage::training::{self};
 
 use crate::Ledger;
 

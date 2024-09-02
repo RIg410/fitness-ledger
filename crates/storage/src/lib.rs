@@ -1,16 +1,16 @@
 pub mod calendar;
+pub mod session;
 pub mod training;
 pub mod user;
 
-use eyre::{Context as _, Result};
-use mongodb::{bson::doc, Client, Database};
+use eyre::Result;
+use session::Db;
 use user::UserStore;
 
 const DB_NAME: &str = "ledger_db";
 
 pub struct Storage {
-    _client: Client,
-    _db: Database,
+    pub db: Db,
     pub users: UserStore,
     pub schedule: calendar::CalendarStore,
     pub training: training::TrainingStore,
@@ -18,19 +18,12 @@ pub struct Storage {
 
 impl Storage {
     pub async fn new(uri: &str) -> Result<Self> {
-        let client = Client::with_uri_str(uri)
-            .await
-            .context("Failed to connect to MongoDB")?;
-        let db = client.database(DB_NAME);
-        db.run_command(doc! { "ping": 1 })
-            .await
-            .context("Failed to ping MongoDB")?;
+        let db = Db::new(uri, DB_NAME).await?;
         let users = UserStore::new(&db);
         let schedule = calendar::CalendarStore::new(&db).await?;
         let training = training::TrainingStore::new(&db);
         Ok(Storage {
-            _client: client,
-            _db: db,
+            db,
             users,
             schedule,
             training,

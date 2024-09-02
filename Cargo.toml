@@ -5,7 +5,7 @@ publish = false
 version = "0.1.0"
 
 [workspace]
-members = ["crates/*"]
+members = ["crates/*", "bins"]
 resolver = "2"
 
 [workspace.dependencies]

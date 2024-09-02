@@ -1,6 +1,7 @@
 use eyre::Context as _;
 use ledger::Ledger;
 use model::{rights::Rule, user::User};
+use storage::session::Session;
 use teloxide::{
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester,
@@ -13,15 +14,17 @@ pub struct Context {
     pub me: User,
     pub ledger: Ledger,
     origin: Origin,
+    pub session: Session,
 }
 
 impl Context {
-    pub fn new(bot: Bot, me: User, ledger: Ledger, origin: Origin) -> Context {
+    pub fn new(bot: Bot, me: User, ledger: Ledger, origin: Origin, session: Session) -> Context {
         Context {
             bot,
             me,
             ledger,
             origin,
+            session,
         }
     }
 

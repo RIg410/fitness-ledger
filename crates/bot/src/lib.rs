@@ -86,8 +86,22 @@ async fn message_handler(
         };
 
     match inner_message_handler(&mut ctx, widget, is_real_user, msg, state_holder).await {
-        Ok(_) => Ok(()),
+        Ok(_) => {
+            if let Err(err) = ctx.session.commit_transaction().await {
+                error!("Failed to commit transaction: {:#}", err);
+                if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
+                    error!("send message error :{:#}", err);
+                }
+            }
+            Ok(())
+        }
         Err(err) => {
+            if let Err(err) = ctx.session.abort_transaction().await {
+                error!("Failed to abort transaction: {:#}", err);
+                if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
+                    error!("send message error :{:#}", err);
+                }
+            }
             error!("Failed to handle message: {:#}", err);
             if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
                 error!("send message error :{:#}", err);
@@ -285,7 +299,16 @@ async fn build_context(
         }
     };
 
-    Ok((Context::new(bot, user, ledger, origin), state.view, real))
+    let session = ledger
+        .db
+        .start_session()
+        .await
+        .map_err(|err| (err.into(), bot.clone()))?;
+    Ok((
+        Context::new(bot, user, ledger, origin, session),
+        state.view,
+        real,
+    ))
 }
 
 async fn inline_query_handler(

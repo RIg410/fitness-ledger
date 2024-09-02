@@ -23,6 +23,9 @@ async fn process(ledger: &Ledger) -> Result<(), Error> {
     info!("Processing background tasks");
     let now = chrono::Local::now();
     let mut day = ledger.calendar.get_day(DayId::from(now)).await?;
+    for training in &mut day.training {
+       
+    }
 
     Ok(())
 }
