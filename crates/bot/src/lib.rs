@@ -10,8 +10,8 @@ use context::{Context, Origin};
 use eyre::{Error, Result};
 use ledger::Ledger;
 use log::{error, info};
+use model::user::User;
 use state::{State, StateHolder, Widget};
-use storage::user::User;
 use teloxide::{
     dispatching::UpdateFilterExt as _,
     dptree,

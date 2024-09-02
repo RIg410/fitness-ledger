@@ -7,8 +7,8 @@ use crate::{
 };
 use async_trait::async_trait;
 use eyre::Result;
+use model::rights::Rule;
 use serde::{Deserialize, Serialize};
-use storage::user::rights::Rule;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 #[derive(Default)]

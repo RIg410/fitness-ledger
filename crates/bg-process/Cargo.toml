@@ -7,7 +7,9 @@ version.workspace = true
 
 [dependencies]
 ledger.workspace = true
-storage.workspace = true
+model.workspace = true
 tokio.workspace = true
 eyre.workspace = true
 log.workspace = true
+async-trait.workspace = true
+chrono.workspace = true

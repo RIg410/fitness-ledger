@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeZone as _};
 use ledger::SetDateError;
 use log::warn;
+use model::{rights::Rule, user::User};
 use serde::{Deserialize, Serialize};
-use storage::user::{rights::Rule, User};
 use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
     utils::markdown::escape,

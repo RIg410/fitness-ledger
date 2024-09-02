@@ -4,11 +4,11 @@ use super::{
 };
 use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::{calendar::render_weekday, View}};
 use async_trait::async_trait;
-use chrono::{DateTime, Datelike, Local};
+use chrono::{DateTime, Local};
 use eyre::{Error, Result};
+use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use storage::user::rights::Rule;
 use teloxide::{
     prelude::Requester as _,
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
@@ -28,7 +28,7 @@ impl ScheduleTraining {
 #[async_trait]
 impl View for ScheduleTraining {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        ctx.ensure(storage::user::rights::Rule::EditSchedule)?;
+        ctx.ensure(Rule::EditSchedule)?;
         let (msg, keymap) = render(ctx, &self.day, self.go_back.is_some()).await?;
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
@@ -44,7 +44,7 @@ impl View for ScheduleTraining {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        ctx.ensure(storage::user::rights::Rule::EditSchedule)?;
+        ctx.ensure(Rule::EditSchedule)?;
         match Callback::from_data(data)? {
             Callback::Back => {
                 if let Some(widget) = self.go_back.take() {

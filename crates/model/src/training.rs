@@ -2,29 +2,7 @@ use chrono::{DateTime, Datelike, Local, TimeZone as _, Timelike, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::calendar::model::DayId;
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TrainingProto {
-    #[serde(rename = "_id")]
-    pub id: ObjectId,
-    pub name: String,
-    pub description: String,
-    pub duration_min: u32,
-    pub capacity: u32,
-}
-
-impl Default for TrainingProto {
-    fn default() -> Self {
-        TrainingProto {
-            id: ObjectId::new(),
-            name: String::new(),
-            description: String::new(),
-            duration_min: 0,
-            capacity: 0,
-        }
-    }
-}
+use crate::ids::DayId;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Training {

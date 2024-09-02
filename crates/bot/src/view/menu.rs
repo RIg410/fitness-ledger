@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use eyre::{bail, Ok, Result};
-use storage::user::rights::Rule;
+use model::rights::Rule;
 use strum::{EnumIter, IntoEnumIterator};
 use teloxide::types::{BotCommand, KeyboardButton, KeyboardMarkup, Message};
 

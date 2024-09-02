@@ -2,9 +2,9 @@ use super::{ScheduleTrainingPreset, View};
 use crate::{callback_data::Calldata, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
+use model::{proto::TrainingProto, user::User};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use storage::{training::model::TrainingProto, user::User};
 use teloxide::{
     prelude::Requester as _,
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},

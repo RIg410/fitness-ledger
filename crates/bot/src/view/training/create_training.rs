@@ -1,8 +1,8 @@
 use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
 use eyre::Result;
+use model::{proto::TrainingProto, rights::Rule};
 use serde::{Deserialize, Serialize};
-use storage::{training::model::TrainingProto, user::rights::Rule};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 pub struct CreateTraining {

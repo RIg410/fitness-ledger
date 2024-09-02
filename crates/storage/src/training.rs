@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use futures_util::TryStreamExt as _;
-use model::TrainingProto;
-use mongodb::{bson::{doc, oid::ObjectId}, Collection};
-
-pub mod model;
+use model::proto::TrainingProto;
+use mongodb::{
+    bson::{doc, oid::ObjectId},
+    Collection,
+};
 
 const COLLECTION: &str = "training";
 

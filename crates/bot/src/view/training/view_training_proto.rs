@@ -7,9 +7,9 @@ use crate::{
 };
 use async_trait::async_trait;
 use eyre::Result;
+use model::{ids::WeekId, proto::TrainingProto, rights::Rule};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use storage::{calendar::model::WeekId, training::model::TrainingProto, user::rights::Rule};
 use teloxide::{
     prelude::Requester as _,
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},

@@ -1,6 +1,6 @@
 use eyre::Context as _;
 use ledger::Ledger;
-use storage::user::{rights::Rule, User};
+use model::{rights::Rule, user::User};
 use teloxide::{
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester,

@@ -3,9 +3,9 @@ use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
 use ledger::training::AddTrainingError;
+use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use storage::user::rights::Rule;
 use teloxide::{
     prelude::Requester as _,
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},

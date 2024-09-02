@@ -1,9 +1,8 @@
 use chrono::{DateTime, Local, Weekday};
 use eyre::{Error, Result};
+use model::{day::Day, ids::{DayId, WeekId}, training::{Training, TrainingStatus}};
 use mongodb::bson::oid::ObjectId;
-use storage::calendar::model::{Day, DayId, WeekId};
 use storage::calendar::CalendarStore;
-use storage::training::model::{Training, TrainingStatus};
 
 pub struct Calendar {
     calendar: CalendarStore,
@@ -84,9 +83,6 @@ impl Calendar {
         let training = day.training.iter_mut().find(|slot| slot.id == training.id);
 
         if let Some(training) = training {
-            if training.clients.len() >= training.capacity as usize {
-                return Err(eyre::eyre!("Training is full"));
-            }
             if training.status != TrainingStatus::OpenToSignup {
                 return Err(eyre::eyre!("Training is not open to sign up"));
             }
@@ -112,6 +108,10 @@ impl Calendar {
         let training = day.training.iter_mut().find(|slot| slot.id == training.id);
 
         if let Some(training) = training {
+            if training.status != TrainingStatus::OpenToSignup {
+                return Err(eyre::eyre!("Training is not open to sign up"));
+            }
+
             training.clients.retain(|c| c != &client);
         } else {
             return Err(eyre::eyre!("Training not found"));

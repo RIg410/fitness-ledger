@@ -10,22 +10,22 @@ pub struct SubscriptionView {}
 
 #[async_trait]
 impl View for SubscriptionView {
-    async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
+    async fn show(&mut self, _: &mut Context) -> Result<(), eyre::Error> {
         Ok(())
     }
 
     async fn handle_message(
         &mut self,
-        ctx: &mut Context,
-        message: &Message,
+        _: &mut Context,
+        _: &Message,
     ) -> Result<Option<Widget>, eyre::Error> {
         Ok(None)
     }
 
     async fn handle_callback(
         &mut self,
-        ctx: &mut Context,
-        data: &str,
+        _: &mut Context,
+        _: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
         Ok(None)
     }

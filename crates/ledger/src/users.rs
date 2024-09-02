@@ -2,11 +2,8 @@ use crate::Ledger;
 use chrono::{DateTime, Local};
 use eyre::Result;
 use log::{info, warn};
+use model::{rights::{Rights, Rule}, user::{User, UserName}};
 use mongodb::bson::oid::ObjectId;
-use storage::user::{
-    rights::{Rights, Rule},
-    User, UserName,
-};
 
 impl Ledger {
     pub async fn get_user_by_tg_id(&self, tg_id: i64) -> Result<Option<User>> {

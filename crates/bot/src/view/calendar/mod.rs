@@ -5,10 +5,11 @@ use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use chrono::{DateTime, Datelike, Duration, Local, TimeZone, Timelike as _, Weekday};
 use ledger::calendar::Week;
+use model::ids::{DayId, WeekId};
+use model::rights::Rule;
+use model::training::TrainingStatus;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use storage::calendar::model::{DayId, WeekId};
-use storage::{training::model::TrainingStatus, user::rights::Rule};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 use teloxide::{prelude::Requester as _, types::Message};
 use training::TrainingView;
@@ -199,7 +200,7 @@ pub fn render_week(
         ));
         buttons = buttons.append_row(row);
     }
-    if ctx.has_right(storage::user::rights::Rule::EditSchedule) {
+    if ctx.has_right(Rule::EditSchedule) {
         buttons = buttons.append_row(vec![InlineKeyboardButton::callback(
             "📝  запланировать тренировку",
             CalendarCallback::AddTraining.to_data(),

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use eyre::{bail, Context as _};
 use ledger::Ledger;
 use log::info;
-use storage::user::UserName;
+use model::user::UserName;
 use teloxide::types::{ButtonRequest, Contact, KeyboardButton, KeyboardMarkup, Message};
 
 const GREET_START: &str =

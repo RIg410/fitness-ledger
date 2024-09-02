@@ -1,8 +1,7 @@
-pub mod model;
 use chrono::{Duration, Utc, Weekday};
 use eyre::Result;
 use futures_util::StreamExt as _;
-use model::{Day, DayId};
+use model::{day::Day, ids::DayId, training::Training};
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::{FindOneOptions, IndexOptions},
@@ -10,7 +9,6 @@ use mongodb::{
 };
 use std::sync::Arc;
 
-use crate::training::model::Training;
 
 const COLLECTION: &str = "days";
 

@@ -1,18 +1,14 @@
-pub mod model;
-pub mod rights;
-pub mod stat;
-use std::sync::Arc;
-
-pub use model::{User, UserName};
-
 use chrono::{DateTime, Local};
 use eyre::{Error, Result};
 use futures_util::stream::TryStreamExt;
+use model::rights;
+use model::user::User;
 use mongodb::bson::to_bson;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     Collection, Database,
 };
+use std::sync::Arc;
 
 const COLLECTION: &str = "Users";
 

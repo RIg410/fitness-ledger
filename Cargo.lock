@@ -113,10 +113,12 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 name = "bg-process"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "chrono",
  "eyre",
  "ledger",
  "log",
- "storage",
+ "model",
  "tokio",
 ]
 
@@ -174,6 +176,7 @@ dependencies = [
  "itertools 0.2.2",
  "ledger",
  "log",
+ "model",
  "mongodb",
  "serde",
  "storage",
@@ -948,6 +951,7 @@ dependencies = [
  "eyre",
  "futures-util",
  "log",
+ "model",
  "mongodb",
  "storage",
  "tokio",
@@ -1069,9 +1073,12 @@ dependencies = [
 name = "model"
 version = "0.1.0"
 dependencies = [
+ "bson",
+ "chrono",
  "eyre",
- "log",
  "mongodb",
+ "serde",
+ "strum",
 ]
 
 [[package]]
@@ -1826,6 +1833,7 @@ dependencies = [
  "chrono",
  "eyre",
  "futures-util",
+ "model",
  "mongodb",
  "serde",
  "serde_with 3.9.0",

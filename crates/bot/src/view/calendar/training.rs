@@ -3,11 +3,8 @@ use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use eyre::Result;
+use model::{rights::Rule, training::{Training, TrainingStatus}};
 use serde::{Deserialize, Serialize};
-use storage::{
-    training::model::{Training, TrainingStatus},
-    user::rights::Rule,
-};
 use teloxide::{
     prelude::Requester as _,
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},

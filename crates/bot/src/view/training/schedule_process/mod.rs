@@ -3,10 +3,10 @@ use crate::{context::Context, state::Widget};
 use chrono::{DateTime, Local};
 use eyre::Result;
 use is_one_time::SetOneTime;
+use model::proto::TrainingProto;
 use mongodb::bson::oid::ObjectId;
 use set_date_time::SetDateTime;
 use set_instructor::SetInstructor;
-use storage::training::model::TrainingProto;
 use teloxide::utils::markdown::escape;
 
 mod finish;

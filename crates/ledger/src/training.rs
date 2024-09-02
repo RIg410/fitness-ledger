@@ -1,14 +1,14 @@
 use chrono::{DateTime, Local, Utc};
 use eyre::Error;
 use futures_util::StreamExt as _;
-use mongodb::bson::oid::ObjectId;
-use storage::{
-    calendar::model::DayId,
-    training::{
-        self,
-        model::{Training, TrainingProto, TrainingStatus},
-    },
+use model::{
+    ids::DayId,
+    proto::TrainingProto,
+    rights::Rule,
+    training::{Training, TrainingStatus},
 };
+use mongodb::bson::oid::ObjectId;
+use storage::training::{self};
 
 use crate::Ledger;
 
@@ -76,10 +76,7 @@ impl Ledger {
             .await?
             .ok_or(AddTrainingError::InstructorNotFound)?;
 
-        if !instructor
-            .rights
-            .has_rule(storage::user::rights::Rule::Train)
-        {
+        if !instructor.rights.has_rule(Rule::Train) {
             return Err(AddTrainingError::InstructorHasNoRights);
         }
         let day_id = DayId::from(start_at);

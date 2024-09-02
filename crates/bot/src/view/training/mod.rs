@@ -11,8 +11,8 @@ use async_trait::async_trait;
 use eyre::Result;
 use find_training::FindTraining;
 use me_training::MyTrainings;
+use model::ids::WeekId;
 use serde::{Deserialize, Serialize};
-use storage::calendar::model::WeekId;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 #[derive(Default)]

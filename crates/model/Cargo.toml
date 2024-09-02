@@ -7,5 +7,8 @@ version.workspace = true
 
 [dependencies]
 mongodb.workspace = true
-log.workspace = true
+serde.workspace = true
 eyre.workspace = true
+chrono.workspace = true
+bson.workspace = true
+strum.workspace = true

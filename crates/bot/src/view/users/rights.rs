@@ -1,6 +1,6 @@
 use async_trait::async_trait;
+use model::{rights::Rule, user::User};
 use serde::{Deserialize, Serialize};
-use storage::user::{rights::Rule, User};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::profile::user_type};
