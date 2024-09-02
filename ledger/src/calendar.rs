@@ -40,7 +40,7 @@ impl Calendar {
         Ok(Week { id: id, days: week })
     }
 
-    pub async fn get_training_by_date(
+    pub async fn get_training_by_start_at(
         &self,
         id: DateTime<Local>,
     ) -> Result<Option<Training>, Error> {
@@ -48,7 +48,7 @@ impl Calendar {
         Ok(day
             .training
             .iter()
-            .find(|slot| slot.is_training_time(id))
+            .find(|slot| slot.start_at == id)
             .map(|slot| slot.clone()))
     }
 

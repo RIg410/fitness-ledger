@@ -61,7 +61,7 @@ impl Training {
     }
 
     pub fn is_training_time(&self, time: DateTime<Local>) -> bool {
-        self.start_at <= time && time <= self.end_at()
+        self.start_at < time && time < self.end_at()
     }
 
     pub fn set_date(&mut self, week_date: DateTime<Local>) -> Result<(), eyre::Error> {

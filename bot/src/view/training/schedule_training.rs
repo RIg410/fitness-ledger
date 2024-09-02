@@ -2,9 +2,9 @@ use super::{
     create_training::CreateTraining, schedule_process::ScheduleTrainingPreset,
     view_training_proto::ViewTrainingProto,
 };
-use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::{calendar::render_weekday, View}};
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Datelike, Local};
 use eyre::{Error, Result};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -85,10 +85,11 @@ async fn render(
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
     let msg = format!(
         "
-🤸🏼 Добавить тренировку на день: *{}*
+🤸🏼 Добавить тренировку на день: *{}* _{}_
 Выберите тренировку из списка или создайте новую\\.
 ",
-        day.format("%d\\.%m\\.%Y")
+        day.format("%d\\.%m\\.%Y"),
+        render_weekday(day)
     );
     let mut markup = InlineKeyboardMarkup::default();
 

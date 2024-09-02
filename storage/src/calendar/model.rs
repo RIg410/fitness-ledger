@@ -29,9 +29,9 @@ impl Day {
 
     pub fn add_training(&mut self, training: Training) -> bool {
         let new_training_start_at = training.start_at_local();
-        let new_training_end_at =
-            training.start_at_local() + chrono::Duration::minutes(training.duration_min as i64);
-
+        let new_training_end_at = training.start_at_local()
+            + chrono::Duration::minutes(training.duration_min as i64)
+            + chrono::Duration::seconds(1);
         let conflict = self
             .training
             .iter()
@@ -45,7 +45,6 @@ impl Day {
                 (new_training_start_at >= start && new_training_start_at < end)
                     || (new_training_end_at > start && new_training_end_at <= end)
             });
-
         if !conflict {
             self.training.push(training);
             self.training.sort_by(|a, b| a.start_at.cmp(&b.start_at));

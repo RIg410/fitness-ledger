@@ -31,7 +31,7 @@ impl View for TrainingView {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_date(self.id)
+            .get_training_by_start_at(self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let (msg, keymap) = render(ctx, &training, self.go_back.is_some());
@@ -55,7 +55,7 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_date(self.id)
+                    .get_training_by_start_at(self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.send_msg(&escape(&training.description)).await?;
@@ -69,7 +69,7 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_date(self.id)
+                    .get_training_by_start_at(self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.ledger.calendar.cancel_training(&training).await?;
@@ -81,7 +81,7 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_date(self.id)
+                    .get_training_by_start_at(self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.ledger.calendar.uncancel_training(&training).await?;
@@ -92,7 +92,7 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_date(self.id)
+                    .get_training_by_start_at(self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 if training.status != TrainingStatus::OpenToSignup || training.is_full() {
@@ -113,7 +113,7 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_date(self.id)
+                    .get_training_by_start_at(self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.ledger

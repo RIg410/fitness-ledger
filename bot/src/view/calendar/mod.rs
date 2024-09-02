@@ -234,7 +234,7 @@ fn month(datetime: &DateTime<Local>) -> &str {
     }
 }
 
-fn render_weekday(weekday: &DateTime<Local>) -> &'static str {
+pub fn render_weekday(weekday: &DateTime<Local>) -> &'static str {
     match weekday.weekday() {
         Weekday::Mon => "Пн",
         Weekday::Tue => "Вт",
