@@ -96,10 +96,10 @@ async fn render(ctx: &Context, go_back: bool) -> Result<(String, InlineKeyboardM
             format!(
                 "{} {} {}",
                 render_training_status(&training.status, training.is_full()),
-                training.start_at.format("%d.%m %H:%M"),
+                training.start_at_local().format("%d.%m %H:%M"),
                 training.name.as_str(),
             ),
-            MyTrainingsCallback::SelectTraining(training.start_at.into()).to_data(),
+            MyTrainingsCallback::SelectTraining(training.start_at_local().into()).to_data(),
         ));
         keyboard = keyboard.append_row(row);
     }

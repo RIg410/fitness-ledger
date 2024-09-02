@@ -8,11 +8,11 @@ pub mod view_training_proto;
 use super::{calendar::CalendarView, View};
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
-use chrono::Local;
 use eyre::Result;
 use find_training::FindTraining;
 use me_training::MyTrainings;
 use serde::{Deserialize, Serialize};
+use storage::calendar::model::WeekId;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 #[derive(Default)]
@@ -42,7 +42,7 @@ impl View for TrainingMainView {
             }
             ScheduleLendingCallback::Schedule => {
                 let widget = Box::new(CalendarView::new(
-                    Local::now(),
+                    WeekId::default(),
                     Some(Box::new(TrainingMainView)),
                     None,
                     None,

@@ -37,3 +37,4 @@ url = "2"
 async-trait = "0.1.81"
 hex = "0.4.3"
 bincode = "1.3.3"
+bson = { version = "2", features = ["chrono-0_4"] } 

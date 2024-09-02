@@ -3,36 +3,35 @@ use std::vec;
 use super::{training::schedule_training::ScheduleTraining, View};
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
-use chrono::{DateTime, Datelike, Local, TimeZone, Timelike as _, Weekday};
+use chrono::{DateTime, Datelike, Duration, Local, TimeZone, Timelike as _, Weekday};
+use ledger::calendar::Week;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use storage::{calendar::model::Week, training::model::TrainingStatus, user::rights::Rule};
+use storage::calendar::model::{DayId, WeekId};
+use storage::{training::model::TrainingStatus, user::rights::Rule};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 use teloxide::{prelude::Requester as _, types::Message};
 use training::TrainingView;
-
 pub mod training;
 
 pub struct CalendarView {
     go_back: Option<Widget>,
-    weed_id: DateTime<Local>,
-    selected_day: Weekday,
-    date: DateTime<Local>,
+    week_id: WeekId,
+    selected_day: DayId,
     filter: Filter,
 }
 
 impl CalendarView {
     pub fn new(
-        id: DateTime<Local>,
+        week_id: WeekId,
         go_back: Option<Widget>,
         selected_day: Option<Weekday>,
         filter: Option<Filter>,
     ) -> Self {
         Self {
             go_back,
-            weed_id: id,
-            selected_day: selected_day.unwrap_or(Local::now().weekday()),
-            date: id,
+            week_id,
+            selected_day: week_id.day(selected_day.unwrap_or_else(|| Local::now().weekday())),
             filter: filter.unwrap_or_default(),
         }
     }
@@ -41,13 +40,12 @@ impl CalendarView {
 #[async_trait]
 impl View for CalendarView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let week = ctx.ledger.calendar.get_week(Some(self.weed_id)).await?;
-        self.date = week.day_date(self.selected_day);
+        let week = ctx.ledger.calendar.get_week(self.week_id).await?;
         let (text, keymap) = render_week(
             ctx,
             &week,
-            ctx.ledger.calendar.has_prev_week(&week),
-            ctx.ledger.calendar.has_next_week(&week),
+            self.week_id.prev().has_week(),
+            self.week_id.next().has_week(),
             self.go_back.is_some(),
             self.selected_day,
             &self.filter,
@@ -72,12 +70,12 @@ impl View for CalendarView {
     ) -> Result<Option<Widget>, eyre::Error> {
         match CalendarCallback::from_data(data)? {
             CalendarCallback::GoToWeek(week) => {
-                self.weed_id = week.into();
+                self.week_id = WeekId::from(week);
                 self.show(ctx).await?;
                 Ok(None)
             }
             CalendarCallback::SelectDay(day) => {
-                self.selected_day = day;
+                self.selected_day = DayId::from(day);
                 self.show(ctx).await?;
                 Ok(None)
             }
@@ -92,9 +90,9 @@ impl View for CalendarView {
                 return Ok(Some(Box::new(TrainingView::new(
                     id.into(),
                     Some(Box::new(CalendarView::new(
-                        self.weed_id,
+                        self.week_id,
                         self.go_back.take(),
-                        Some(self.selected_day),
+                        Some(self.selected_day.local().weekday()),
                         Some(self.filter.clone()),
                     ))),
                 ))));
@@ -102,13 +100,13 @@ impl View for CalendarView {
             CalendarCallback::AddTraining => {
                 ctx.ensure(Rule::EditSchedule)?;
                 let widget = Box::new(CalendarView::new(
-                    self.weed_id,
+                    self.week_id,
                     self.go_back.take(),
-                    Some(self.selected_day),
+                    Some(self.selected_day.local().weekday()),
                     Some(self.filter.clone()),
                 ));
                 return Ok(Some(Box::new(ScheduleTraining::new(
-                    self.date,
+                    self.selected_day.local(),
                     Some(widget),
                 ))));
             }
@@ -122,9 +120,10 @@ pub fn render_week(
     has_prev: bool,
     hes_next: bool,
     has_back: bool,
-    selected_day: Weekday,
+    selected_day: DayId,
     filter: &Filter,
 ) -> (String, InlineKeyboardMarkup) {
+    let week_local = week.id.local();
     let msg = format!(
         "
 📅  Расписание
@@ -136,27 +135,26 @@ pub fn render_week(
 🔵\\- тренировка идет
 ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖
 ",
-        month(&week.id),
-        week.id.year(),
-        week.days().next().unwrap().1.format("%d\\.%m"),
-        week.days().last().unwrap().1.format("%d\\.%m"),
+        month(&week_local),
+        week_local.year(),
+        week_local.format("%d\\.%m"),
+        (week_local + Duration::days(7)).format("%d\\.%m"),
     );
 
+    let week_day = selected_day.week_day();
     let mut buttons = InlineKeyboardMarkup::default();
     let mut row = vec![];
-    for (day, date) in week.days() {
+    for day in &week.days {
+        let day_id = day.day_id();
+        let date = day_id.local();
         let text = format!(
             "{}{}",
-            if day.weekday == selected_day {
-                "🟢"
-            } else {
-                ""
-            },
+            if day_id.week_day() == week_day { "🟢" } else { "" },
             render_weekday(&date)
         );
         row.push(InlineKeyboardButton::callback(
             text,
-            CalendarCallback::SelectDay(date.weekday()).to_data(),
+            CalendarCallback::SelectDay(date.into()).to_data(),
         ));
     }
     buttons = buttons.append_row(row);
@@ -164,19 +162,22 @@ pub fn render_week(
     if has_prev {
         row.push(InlineKeyboardButton::callback(
             "⬅️ предыдущая неделя",
-            CalendarCallback::GoToWeek(week.prev_week_id().into()).to_data(),
+            CalendarCallback::GoToWeek(week.id.prev().local().into()).to_data(),
         ));
     }
 
     if hes_next {
         row.push(InlineKeyboardButton::callback(
             "➡️ cледующая неделя",
-            CalendarCallback::GoToWeek(week.next_week_id().into()).to_data(),
+            CalendarCallback::GoToWeek(week.id.next().local().into()).to_data(),
         ));
     }
     buttons = buttons.append_row(row);
-
-    let day = week.get_day(selected_day);
+    let day = week
+        .days
+        .iter()
+        .find(|d| d.day_id().week_day() == week_day)
+        .unwrap();
 
     for training in &day.training {
         if let Some(proto_id) = &filter.proto_id {
@@ -185,15 +186,16 @@ pub fn render_week(
             }
         }
 
+        let start_at = training.start_at_local();
         let mut row = vec![];
         row.push(InlineKeyboardButton::callback(
             format!(
                 "{} {} {}",
                 render_training_status(&training.status, training.is_full()),
-                training.start_at.format("%H:%M"),
+                start_at.format("%H:%M"),
                 training.name.as_str(),
             ),
-            CalendarCallback::SelectTraining(training.start_at.into()).to_data(),
+            CalendarCallback::SelectTraining(start_at.into()).to_data(),
         ));
         buttons = buttons.append_row(row);
     }
@@ -260,7 +262,7 @@ pub fn render_training_status(training: &TrainingStatus, is_full: bool) -> &'sta
 #[derive(Debug, Serialize, Deserialize)]
 enum CalendarCallback {
     GoToWeek(CallbackDateTime),
-    SelectDay(Weekday),
+    SelectDay(CallbackDateTime),
     SelectTraining(CallbackDateTime),
     AddTraining,
     Back,
@@ -286,6 +288,20 @@ impl From<DateTime<Local>> for CallbackDateTime {
             minute: date.minute() as u8,
             second: date.second() as u8,
         }
+    }
+}
+
+impl From<CallbackDateTime> for WeekId {
+    fn from(date: CallbackDateTime) -> Self {
+        let local = DateTime::<Local>::from(date);
+        WeekId::new(local)
+    }
+}
+
+impl From<CallbackDateTime> for DayId {
+    fn from(date: CallbackDateTime) -> Self {
+        let local = DateTime::<Local>::from(date);
+        DayId::from(local)
     }
 }
 

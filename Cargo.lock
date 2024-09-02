@@ -188,6 +188,7 @@ dependencies = [
  "ahash",
  "base64 0.13.1",
  "bitvec",
+ "chrono",
  "hex",
  "indexmap 2.4.0",
  "js-sys",
@@ -1016,6 +1017,7 @@ dependencies = [
  "log",
  "mongodb",
  "storage",
+ "tokio",
 ]
 
 [[package]]
@@ -1948,6 +1950,7 @@ checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 name = "storage"
 version = "0.1.0"
 dependencies = [
+ "bson",
  "chrono",
  "eyre",
  "futures-util",

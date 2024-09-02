@@ -1,8 +1,11 @@
-use chrono::{DateTime, Datelike, Local};
+use chrono::{DateTime, Local, Utc};
 use eyre::Error;
 use futures_util::StreamExt as _;
 use mongodb::bson::oid::ObjectId;
-use storage::training::model::{Training, TrainingProto};
+use storage::{
+    calendar::model::DayId,
+    training::model::{Training, TrainingProto, TrainingStatus},
+};
 
 use crate::Ledger;
 
@@ -57,46 +60,40 @@ impl Ledger {
         {
             return Err(AddTrainingError::InstructorHasNoRights);
         }
-
-        let mut week = self.calendar.get_week(Some(start_at)).await?;
-        let weekday = start_at.weekday();
-        let day = week.get_day_mut(weekday);
+        let day_id = DayId::from(start_at);
+        let mut day = self.calendar.get_day(day_id).await?;
 
         let training = Training {
             id: ObjectId::new(),
             proto_id,
             name: proto.name.clone(),
             description: proto.description.clone(),
-            start_at,
+            start_at: start_at.with_timezone(&Utc),
             duration_min: proto.duration_min,
             instructor: instructor.id,
             clients: vec![],
             capacity: proto.capacity,
-            status: storage::training::model::TrainingStatus::OpenToSignup,
+            status: TrainingStatus::OpenToSignup,
             is_one_time: is_one_time,
         };
         let ok = day.add_training(training.clone());
         if !ok {
             return Err(AddTrainingError::TimeSlotOccupied);
         }
-        self.calendar.update_week(week).await?;
+        self.calendar.update_day(&day).await?;
 
         if !is_one_time {
-            let mut weeks = self.calendar.week_cursor(start_at).await?;
-            while let Some(week) = weeks.next().await {
-                let mut training = training.clone();
-                let mut week = week?;
-                let week_date = week.day_date(weekday);
-                let day = week.get_day_mut(weekday);
-                training.set_date(week_date)?;
-                let ok = day.add_training(training.clone());
+            let mut day = self.calendar.cursor(day_id, day_id.week_day()).await?;
+            while let Some(day) = day.next().await {
+                let mut day = day?;
+                let training = training.clone().change_date(day.day_id());
+                let ok = day.add_training(training);
                 if !ok {
                     return Err(AddTrainingError::TimeSlotOccupied);
                 }
-                self.calendar.update_week(week).await?;
+                self.calendar.update_day(&day).await?;
             }
         }
-
         Ok(())
     }
 }

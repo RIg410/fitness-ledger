@@ -9,7 +9,6 @@ pub mod training;
 mod users;
 pub use users::*;
 
-const MAX_WEEKS: i64 = 12;
 
 #[derive(Clone)]
 pub struct Ledger {

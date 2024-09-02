@@ -6,11 +6,10 @@ use crate::{
     view::calendar::{CalendarView, Filter},
 };
 use async_trait::async_trait;
-use chrono::Local;
 use eyre::Result;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use storage::{training::model::TrainingProto, user::rights::Rule};
+use storage::{calendar::model::WeekId, training::model::TrainingProto, user::rights::Rule};
 use teloxide::{
     prelude::Requester as _,
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
@@ -90,7 +89,7 @@ impl View for ViewTrainingProto {
                 let back =
                     ViewTrainingProto::new(self.id, self.preset.clone(), self.go_back.take());
                 let view = CalendarView::new(
-                    Local::now(),
+                    WeekId::default(),
                     Some(Box::new(back)),
                     None,
                     Some(Filter {

@@ -1,9 +1,8 @@
-use crate::MAX_WEEKS;
-use chrono::{DateTime, Datelike as _, Local};
+use chrono::{DateTime, Local, Weekday};
 use eyre::{Error, Result};
 use mongodb::bson::oid::ObjectId;
-use storage::calendar::model::{Day, Week};
-use storage::calendar::{day_id, CalendarStore};
+use storage::calendar::model::{Day, DayId, WeekId};
+use storage::calendar::CalendarStore;
 use storage::training::model::{Training, TrainingStatus};
 
 pub struct Calendar {
@@ -15,33 +14,37 @@ impl Calendar {
         Calendar { calendar }
     }
 
-    pub async fn get_week(&self, date: Option<DateTime<Local>>) -> Result<Week> {
-        let date = date.unwrap_or_else(|| chrono::Local::now());
-        if !self.has_week(date) {
-            return Err(eyre::eyre!("Week is too far in the future"));
-        }
-
-        self.calendar.get_week(date).await
+    pub async fn get_day(&self, day: DayId) -> Result<Day> {
+        self.calendar.get_day(day).await
     }
 
-    pub fn has_week(&self, id: DateTime<Local>) -> bool {
-        chrono::Local::now() + chrono::Duration::days(7 * MAX_WEEKS as i64) >= id
-    }
+    pub async fn get_week(&self, id: WeekId) -> Result<Week> {
+        let mon = id.day(chrono::Weekday::Mon);
+        let tue = mon.next();
+        let wed = tue.next();
+        let thu = wed.next();
+        let fri = thu.next();
+        let sat = fri.next();
+        let sun = sat.next();
+        let (mon, tue, wed, thu, fri, sat, sun) = tokio::try_join!(
+            self.get_day(mon),
+            self.get_day(tue),
+            self.get_day(wed),
+            self.get_day(thu),
+            self.get_day(fri),
+            self.get_day(sat),
+            self.get_day(sun),
+        )?;
 
-    pub fn has_next_week(&self, week: &Week) -> bool {
-        self.has_week(week.id + chrono::Duration::days(7))
-    }
-
-    pub fn has_prev_week(&self, week: &Week) -> bool {
-        week.id - chrono::Duration::days(1) >= day_id(chrono::Local::now()).unwrap_or_default()
+        let week = [mon, tue, wed, thu, fri, sat, sun];
+        Ok(Week { id: id, days: week })
     }
 
     pub async fn get_training_by_date(
         &self,
         id: DateTime<Local>,
     ) -> Result<Option<Training>, Error> {
-        let week = self.get_week(Some(id)).await?;
-        let day = week.get_day(id.weekday());
+        let day = self.get_day(DayId::from(id)).await?;
         Ok(day
             .training
             .iter()
@@ -50,9 +53,7 @@ impl Calendar {
     }
 
     pub async fn cancel_training(&self, training: &Training) -> Result<()> {
-        let mut week = self.get_week(Some(training.start_at)).await?;
-        let day = week.get_day_mut(training.start_at.weekday());
-
+        let mut day = self.get_day(training.day_id()).await?;
         let training = day.training.iter_mut().find(|slot| slot.id == training.id);
 
         if let Some(training) = training {
@@ -60,13 +61,11 @@ impl Calendar {
         } else {
             return Err(eyre::eyre!("Training not found"));
         }
-        self.update_week(week).await
+        self.calendar.update_day(&day).await
     }
 
     pub async fn uncancel_training(&self, training: &Training) -> Result<()> {
-        let mut week = self.get_week(Some(training.start_at)).await?;
-        let day = week.get_day_mut(training.start_at.weekday());
-
+        let mut day = self.get_day(training.day_id()).await?;
         let training = day.training.iter_mut().find(|slot| slot.id == training.id);
 
         if let Some(training) = training {
@@ -77,13 +76,11 @@ impl Calendar {
         } else {
             return Err(eyre::eyre!("Training not found"));
         }
-        self.update_week(week).await
+        self.calendar.update_day(&day).await
     }
 
     pub async fn sign_up_for_training(&self, training: &Training, client: ObjectId) -> Result<()> {
-        let mut week = self.get_week(Some(training.start_at)).await?;
-        let day = week.get_day_mut(training.start_at.weekday());
-
+        let mut day = self.get_day(training.day_id()).await?;
         let training = day.training.iter_mut().find(|slot| slot.id == training.id);
 
         if let Some(training) = training {
@@ -103,7 +100,7 @@ impl Calendar {
         } else {
             return Err(eyre::eyre!("Training not found"));
         }
-        self.update_week(week).await
+        self.calendar.update_day(&day).await
     }
 
     pub async fn sign_out_from_training(
@@ -111,9 +108,7 @@ impl Calendar {
         training: &Training,
         client: ObjectId,
     ) -> Result<()> {
-        let mut week = self.get_week(Some(training.start_at)).await?;
-        let day = week.get_day_mut(training.start_at.weekday());
-
+        let mut day = self.get_day(training.day_id()).await?;
         let training = day.training.iter_mut().find(|slot| slot.id == training.id);
 
         if let Some(training) = training {
@@ -121,20 +116,7 @@ impl Calendar {
         } else {
             return Err(eyre::eyre!("Training not found"));
         }
-        self.update_week(week).await
-    }
-
-    pub async fn get_day(&self, day: DateTime<Local>) -> Result<Day> {
-        let week = self.calendar.get_week(day).await?;
-        Ok(week.get_day(day.weekday()).clone())
-    }
-
-    pub async fn week_cursor(&self, date_time: DateTime<Local>) -> Result<mongodb::Cursor<Week>> {
-        self.calendar.week_cursor(date_time).await
-    }
-
-    pub async fn update_week(&self, week: Week) -> Result<()> {
-        self.calendar.update_week(week).await
+        self.calendar.update_day(&day).await
     }
 
     pub async fn get_my_trainings(
@@ -147,8 +129,8 @@ impl Calendar {
     }
 
     pub async fn is_free_time_slot(&self, start_at: DateTime<Local>) -> Result<bool, Error> {
-        let week = self.calendar.get_week(start_at).await?;
-        let day = week.get_day(start_at.weekday());
+        let id = DayId::new(start_at);
+        let day = self.calendar.get_day(id).await?;
         for slot in &day.training {
             if slot.is_training_time(start_at) {
                 return Ok(false);
@@ -156,4 +138,17 @@ impl Calendar {
         }
         Ok(true)
     }
+
+    pub async fn update_day(&self, day: &Day) -> Result<()> {
+        self.calendar.update_day(day).await
+    }
+
+    pub async fn cursor(&self, from: DayId, week_day: Weekday) -> Result<mongodb::Cursor<Day>> {
+        self.calendar.cursor(from, week_day).await
+    }
+}
+
+pub struct Week {
+    pub id: WeekId,
+    pub days: [Day; 7],
 }

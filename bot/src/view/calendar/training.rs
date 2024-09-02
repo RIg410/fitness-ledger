@@ -150,7 +150,7 @@ fn render(ctx: &Context, training: &Training, has_back: bool) -> (String, Inline
 _{}_
 ",
         escape(&training.name),
-        training.start_at.format("%d\\.%m\\.%Y %H:%M"),
+        training.start_at_local().format("%d\\.%m\\.%Y %H:%M"),
         cap,
         status(&training.status, training.is_full()),
     );

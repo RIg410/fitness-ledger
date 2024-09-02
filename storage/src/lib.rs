@@ -26,7 +26,7 @@ impl Storage {
             .await
             .context("Failed to ping MongoDB")?;
         let users = UserStore::new(&db);
-        let schedule = calendar::CalendarStore::new(&db);
+        let schedule = calendar::CalendarStore::new(&db).await?;
         let training = training::TrainingStore::new(&db);
         Ok(Storage {
             _client: client,

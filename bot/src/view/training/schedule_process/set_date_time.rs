@@ -39,7 +39,7 @@ impl View for SetDateTime {
             ctx.send_msg("На какой день назначить тренировку? _дд\\.мм_")
                 .await?;
         } else {
-            ctx.send_msg("На какое время назначить тренировку? _чч\\.мм_")
+            ctx.send_msg("На какое время назначить тренировку? _чч\\:мм_")
                 .await?;
         }
         Ok(())
@@ -91,7 +91,7 @@ impl View for SetDateTime {
                     preset.into_next_view(self.id, self.go_back.take().unwrap()),
                 ));
             } else {
-                ctx.send_msg("Неверный формат времени\\. _чч\\.мм_").await?;
+                ctx.send_msg("Неверный формат времени\\. _чч\\:мм_").await?;
             }
         }
         Ok(None)
@@ -108,7 +108,11 @@ impl TryFrom<&str> for TimeParts {
     type Error = eyre::Error;
 
     fn try_from(value: &str) -> Result<Self> {
-        let parts = value.split('.').collect::<Vec<_>>();
+        let parts = if value.contains(":") {
+            value.split(':').collect::<Vec<_>>()
+        } else {
+            value.split('.').collect::<Vec<_>>()
+        };
         if parts.len() != 2 {
             return Err(eyre::eyre!("Invalid time format"));
         }
