@@ -1,12 +1,12 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use bson::doc;
 use eyre::{Context as _, Error};
-use mongodb::{Client, ClientSession, Database};
+use mongodb::{Client, Database};
 
 #[derive(Clone)]
 pub struct Db {
-    client: Client,
+    _client: Client,
     db: Database,
 }
 
@@ -19,11 +19,10 @@ impl Db {
         db.run_command(doc! { "ping": 1 })
             .await
             .context("Failed to ping MongoDB")?;
-        Ok(Db { client, db })
-    }
-
-    pub async fn start_session(&self) -> mongodb::error::Result<Session> {
-        Ok(Session(self.client.start_session().await?))
+        Ok(Db {
+            _client: client,
+            db,
+        })
     }
 }
 
@@ -32,21 +31,5 @@ impl Deref for Db {
 
     fn deref(&self) -> &Self::Target {
         &self.db
-    }
-}
-
-pub struct Session(ClientSession);
-
-impl Deref for Session {
-    type Target = ClientSession;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Session {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
