@@ -9,7 +9,6 @@ use mongodb::{
 };
 use std::sync::Arc;
 
-
 const COLLECTION: &str = "days";
 
 #[derive(Clone)]
@@ -94,7 +93,7 @@ impl CalendarStore {
             Some(day) => Ok(day),
             None => {
                 let now = Utc::now();
-                if id.id() < now - chrono::Duration::days(1) {
+                if id.id() < now - chrono::Duration::days(10) {
                     return Err(eyre::eyre!("Day is too far in the past:{:?}", id));
                 }
                 if now + chrono::Duration::days(365 * 2) < id.id() {
