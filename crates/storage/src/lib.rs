@@ -19,7 +19,7 @@ pub struct Storage {
 impl Storage {
     pub async fn new(uri: &str) -> Result<Self> {
         let db = Db::new(uri, DB_NAME).await?;
-        let users = UserStore::new(&db);
+        let users = UserStore::new(&db).await?;
         let schedule = calendar::CalendarStore::new(&db).await?;
         let training = training::TrainingStore::new(&db);
         Ok(Storage {

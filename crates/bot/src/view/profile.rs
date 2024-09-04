@@ -107,6 +107,7 @@ pub fn render_user_profile(_: &Context, user: &User) -> (String, InlineKeyboardM
         Дата рождения : _{}_
         ➖➖➖➖➖➖➖➖➖➖
         *Баланс : _{}_ занятий*
+        *Зарезервировано : _{}_ занятий*
         ➖➖➖➖➖➖➖➖➖➖
     ",
         user_type(user),
@@ -120,7 +121,8 @@ pub fn render_user_profile(_: &Context, user: &User) -> (String, InlineKeyboardM
                 .map(|d| d.format("%d.%m.%Y").to_string())
                 .unwrap_or_else(|| empty.clone())
         ),
-        user.balance
+        user.balance,
+        user.reserved_balance
     );
     let mut keymap = InlineKeyboardMarkup::default();
     if user.birthday.is_none() {

@@ -16,7 +16,7 @@ pub struct User {
     pub reg_date: DateTime<Local>,
     pub balance: u32,
     #[serde(default)]
-    pub blocked_balance: u32,
+    pub reserved_balance: u32,
     #[serde(default = "default_is_active")]
     pub is_active: bool,
     #[serde(default)]
@@ -39,7 +39,7 @@ impl User {
             reg_date: Local::now(),
             balance: 0,
             is_active: true,
-            blocked_balance: 0,
+            reserved_balance: 0,
             version: 0,
         }
     }

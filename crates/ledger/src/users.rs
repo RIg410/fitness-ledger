@@ -8,9 +8,7 @@ use model::{
 };
 use mongodb::bson::oid::ObjectId;
 
-pub struct Users {
-    
-}
+pub struct Users {}
 
 impl Ledger {
     pub async fn get_user_by_tg_id(&self, tg_id: i64) -> Result<Option<User>> {
@@ -40,10 +38,9 @@ impl Ledger {
             balance: 0,
             is_active: true,
             id: ObjectId::new(),
-            blocked_balance: 0,
+            reserved_balance: 0,
             version: 0,
         };
-        info!("Creating user: {:?}", user);
         self.users.insert(user).await?;
         Ok(())
     }
@@ -85,7 +82,8 @@ impl Ledger {
     pub async fn block_user(&self, tg_id: i64, is_active: bool) -> Result<()> {
         info!("Blocking user: {}", tg_id);
         warn!("remove subscription!!!!");
-        self.users.block(tg_id, is_active).await
+        self.users.block(tg_id, is_active).await?;
+        Ok(())
     }
 
     pub async fn edit_user_rule(&self, tg_id: i64, rule: Rule, is_active: bool) -> Result<()> {
