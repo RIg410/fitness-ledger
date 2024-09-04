@@ -14,7 +14,7 @@ use mongodb::{
 };
 use std::sync::Arc;
 
-const COLLECTION: &str = "Users";
+const COLLECTION: &str = "users";
 
 #[derive(Clone)]
 pub struct UserStore {
