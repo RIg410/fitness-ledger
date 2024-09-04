@@ -98,12 +98,13 @@ pub async fn create_user(
     from: &teloxide::types::User,
 ) -> Result<(), eyre::Error> {
     info!("Creating user with chat_id: {}", chat_id);
-    let user = ledger.get_user_by_tg_id(from.id.0 as i64).await?;
+    let user = ledger.users.get_by_tg_id(from.id.0 as i64).await?;
     if user.is_some() {
         return Err(eyre::eyre!("User {} already exists", chat_id));
     }
     ledger
-        .create_user(
+        .users
+        .create(
             chat_id,
             UserName {
                 tg_user_name: from.username.clone(),

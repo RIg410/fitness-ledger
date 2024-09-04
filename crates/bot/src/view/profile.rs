@@ -34,7 +34,7 @@ impl View for UserProfile {
         if self.wait_for_date {
             match parse_date(msg.text()) {
                 Ok(date) => {
-                    if let Err(err) = ctx.ledger.set_user_birthday(ctx.me.tg_id, date).await {
+                    if let Err(err) = ctx.ledger.users.set_user_birthday(ctx.me.tg_id, date).await {
                         match err {
                             SetDateError::UserNotFound => {
                                 warn!("User {} not found", ctx.me.tg_id);

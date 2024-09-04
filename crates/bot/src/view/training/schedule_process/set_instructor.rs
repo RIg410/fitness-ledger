@@ -55,7 +55,8 @@ impl View for SetInstructor {
             InstructorCallback::SelectInstructor(instructor_id) => {
                 let instructor = ctx
                     .ledger
-                    .get_user_by_tg_id(instructor_id)
+                    .users
+                    .get_by_tg_id(instructor_id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Instructor not found"))?;
                 let mut preset = self.preset.take().unwrap();
@@ -75,7 +76,7 @@ async fn render(ctx: &Context, training: &TrainingProto) -> Result<(String, Inli
     );
     let mut markup = InlineKeyboardMarkup::default();
 
-    let instructors = ctx.ledger.get_instructors().await?;
+    let instructors = ctx.ledger.users.instructors().await?;
     for instructor in instructors {
         markup
             .inline_keyboard

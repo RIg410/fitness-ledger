@@ -258,7 +258,8 @@ async fn build_context(
     state_holder: &StateHolder,
 ) -> Result<(Context, Option<Widget>, bool), (Error, Bot)> {
     let (user, real) = if let Some(user) = ledger
-        .get_user_by_tg_id(tg_id.0)
+        .users
+        .get_by_tg_id(tg_id.0)
         .await
         .map_err(|err| (err, bot.clone()))?
     {

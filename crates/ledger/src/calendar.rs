@@ -4,6 +4,7 @@ use model::{day::Day, ids::{DayId, WeekId}, training::{Training, TrainingStatus}
 use mongodb::bson::oid::ObjectId;
 use storage::calendar::CalendarStore;
 
+#[derive(Clone)]
 pub struct Calendar {
     calendar: CalendarStore,
 }

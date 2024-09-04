@@ -1,10 +1,11 @@
+use bson::to_document;
 use chrono::{Duration, Utc, Weekday};
 use eyre::Result;
 use futures_util::StreamExt as _;
 use model::{day::Day, ids::DayId, training::Training};
 use mongodb::{
     bson::{doc, oid::ObjectId},
-    options::{FindOneOptions, IndexOptions},
+    options::{FindOneOptions, IndexOptions, UpdateOptions},
     Collection, Database, IndexModel,
 };
 use std::sync::Arc;
@@ -81,45 +82,56 @@ impl CalendarStore {
         Ok(trainings)
     }
 
-    pub async fn update_day(&self, day: &Day) -> Result<(), eyre::Error> {
-        let filter = doc! { "_id": day.id };
-        self.days.replace_one(filter, day).await?;
-        Ok(())
-    }
-
     pub async fn get_day(&self, id: DayId) -> Result<Day, eyre::Error> {
-        let day = self.days.find_one(doc! { "date_time": id.id() }).await?;
-        match day {
-            Some(day) => Ok(day),
-            None => {
-                let now = Utc::now();
-                if id.id() < now - chrono::Duration::days(10) {
-                    return Err(eyre::eyre!("Day is too far in the past:{:?}", id));
+        loop {
+            let day = self.days.find_one(doc! { "date_time": id.id() }).await?;
+            match day {
+                Some(day) => return Ok(day),
+                None => {
+                    let now = Utc::now();
+                    if id.id() < now - chrono::Duration::days(10) {
+                        return Err(eyre::eyre!("Day is too far in the past:{:?}", id));
+                    }
+                    if now + chrono::Duration::days(365 * 2) < id.id() {
+                        return Err(eyre::eyre!("Day is too far in the future:{:?}", id));
+                    }
+
+                    let filter = doc! {
+                        "weekday": id.week_day().to_string(),
+                        "date_time": { "$lt": id.id() },
+                    };
+
+                    let find_options = FindOneOptions::builder()
+                        .sort(doc! { "date_time": -1 })
+                        .build();
+
+                    let prev_day = self
+                        .days
+                        .find_one(filter)
+                        .with_options(find_options)
+                        .await?
+                        .unwrap_or(Day::new(id));
+
+                    let day = prev_day.copy(id);
+
+                    let result = self
+                        .days
+                        .update_one(
+                            doc! { "date_time": day.day_date() },
+                            doc! { "$setOnInsert": to_document(&day)? },
+                        )
+                        .with_options(UpdateOptions::builder().upsert(true).build())
+                        .await?;
+                    if result.upserted_id.is_some() {
+                        return Ok(day);
+                    }
                 }
-                if now + chrono::Duration::days(365 * 2) < id.id() {
-                    return Err(eyre::eyre!("Day is too far in the future:{:?}", id));
-                }
-
-                let filter = doc! {
-                    "weekday": id.week_day().to_string(),
-                    "date_time": { "$lt": id.id() },
-                };
-
-                let find_options = FindOneOptions::builder()
-                    .sort(doc! { "date_time": -1 })
-                    .build();
-
-                let prev_day = self
-                    .days
-                    .find_one(filter)
-                    .with_options(find_options)
-                    .await?
-                    .unwrap_or(Day::new(id));
-
-                let day = prev_day.copy(id);
-                self.days.insert_one(&day).await?;
-                Ok(day)
             }
         }
+    }
+
+    pub async fn update_day(&self, day: &Day) -> Result<(), eyre::Error> {
+        self.days.replace_one(doc! { "_id": day.id }, day).await?;
+        Ok(())
     }
 }

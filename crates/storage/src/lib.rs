@@ -12,7 +12,7 @@ const DB_NAME: &str = "ledger_db";
 pub struct Storage {
     pub db: Db,
     pub users: UserStore,
-    pub schedule: calendar::CalendarStore,
+    pub calendar: calendar::CalendarStore,
     pub training: training::TrainingStore,
 }
 
@@ -25,7 +25,7 @@ impl Storage {
         Ok(Storage {
             db,
             users,
-            schedule,
+            calendar: schedule,
             training,
         })
     }

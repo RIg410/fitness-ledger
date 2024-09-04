@@ -103,7 +103,8 @@ impl Context {
     pub async fn reload_user(&mut self) -> Result<(), eyre::Error> {
         let user = self
             .ledger
-            .get_user_by_tg_id(self.me.tg_id)
+            .users
+            .get_by_tg_id(self.me.tg_id)
             .await?
             .ok_or_else(|| eyre::eyre!("Failed to load existing user:{}", self.me.id))?;
 

@@ -56,7 +56,8 @@ pub async fn render_msg(
     let instructor = if let Some(tg_id) = preset.instructor {
         let user = ctx
             .ledger
-            .get_user_by_tg_id(tg_id)
+            .users
+            .get_by_tg_id(tg_id)
             .await?
             .ok_or_else(|| eyre::eyre!("User not found"))?;
         if let Some(name) = &user.name.tg_user_name {

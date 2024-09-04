@@ -3,7 +3,9 @@ use model::{rights::Rule, user::User};
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
-use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::profile::user_type};
+use crate::{
+    callback_data::Calldata as _, context::Context, state::Widget, view::profile::user_type,
+};
 
 use super::View;
 
@@ -27,7 +29,8 @@ impl View for UserRightsView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         let user = ctx
             .ledger
-            .get_user_by_tg_id(self.tg_id)
+            .users
+            .get_by_tg_id(self.tg_id)
             .await?
             .ok_or_else(|| eyre::eyre!("Failed to load user"))?;
         let (text, markup) = render_user_rights(&user, self.go_back.is_some());
@@ -62,6 +65,7 @@ impl View for UserRightsView {
 
                 let rule = Rule::try_from(rule_id)?;
                 ctx.ledger
+                    .users
                     .edit_user_rule(self.tg_id, rule, is_active)
                     .await?;
                 ctx.reload_user().await?;
@@ -102,4 +106,3 @@ pub enum UserRightsCallback {
     Back,
     EditRule(u8, bool),
 }
-

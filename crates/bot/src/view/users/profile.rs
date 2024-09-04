@@ -66,10 +66,14 @@ impl View for UserProfile {
                 ctx.ensure(Rule::BlockUser)?;
                 let user = ctx
                     .ledger
-                    .get_user_by_tg_id(self.tg_id)
+                    .users
+                    .get_by_tg_id(self.tg_id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("User not found"))?;
-                ctx.ledger.block_user(self.tg_id, !user.is_active).await?;
+                ctx.ledger
+                    .users
+                    .block_user(self.tg_id, !user.is_active)
+                    .await?;
                 ctx.reload_user().await?;
                 self.show(ctx).await?;
                 Ok(None)

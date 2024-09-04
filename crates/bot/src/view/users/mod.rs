@@ -29,10 +29,11 @@ impl UsersView {
 #[async_trait]
 impl View for UsersView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let count = ctx.ledger.user_count().await?;
+        let count = ctx.ledger.users.count().await?;
         let users = ctx
             .ledger
-            .find_users(&self.query.query, self.query.offset, LIMIT)
+            .users
+            .find(&self.query.query, self.query.offset, LIMIT)
             .await?;
         let (txt, markup) = render_message(count, &self.query.query, &users, self.query.offset);
         ctx.edit_origin(&txt, markup).await?;
