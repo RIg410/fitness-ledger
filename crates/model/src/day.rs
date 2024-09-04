@@ -1,5 +1,5 @@
 use crate::{ids::DayId, training::Training};
-use chrono::{DateTime, Datelike, Local, TimeZone as _, Utc, Weekday};
+use chrono::{DateTime, Datelike, Local, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,8 @@ pub struct Day {
     date_time: DateTime<Utc>,
     pub weekday: chrono::Weekday,
     pub training: Vec<Training>,
+    #[serde(default)]
+    pub version: u64,
 }
 
 impl Day {
@@ -20,6 +22,7 @@ impl Day {
             training: Vec::new(),
             id: ObjectId::new(),
             date_time: day.id(),
+            version: 0,
         }
     }
 
@@ -80,6 +83,7 @@ impl Day {
             date_time: id.id(),
             weekday: id.week_day(),
             training,
+            version: 0,
         }
     }
 }

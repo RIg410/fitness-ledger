@@ -9,6 +9,8 @@ pub struct TrainingProto {
     pub description: String,
     pub duration_min: u32,
     pub capacity: u32,
+    #[serde(default)]
+    pub version: u64,
 }
 
 impl Default for TrainingProto {
@@ -19,6 +21,7 @@ impl Default for TrainingProto {
             description: String::new(),
             duration_min: 0,
             capacity: 0,
+            version: 0,
         }
     }
 }

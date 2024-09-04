@@ -14,9 +14,13 @@ pub struct User {
     pub phone: String,
     pub birthday: Option<DateTime<Local>>,
     pub reg_date: DateTime<Local>,
-    pub balance: i32,
+    pub balance: u32,
+    #[serde(default)]
+    pub blocked_balance: u32,
     #[serde(default = "default_is_active")]
     pub is_active: bool,
+    #[serde(default)]
+    pub version: u64,
 }
 
 impl User {
@@ -35,6 +39,8 @@ impl User {
             reg_date: Local::now(),
             balance: 0,
             is_active: true,
+            blocked_balance: 0,
+            version: 0,
         }
     }
 }

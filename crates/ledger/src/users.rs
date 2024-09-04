@@ -2,8 +2,15 @@ use crate::Ledger;
 use chrono::{DateTime, Local};
 use eyre::Result;
 use log::{info, warn};
-use model::{rights::{Rights, Rule}, user::{User, UserName}};
+use model::{
+    rights::{Rights, Rule},
+    user::{User, UserName},
+};
 use mongodb::bson::oid::ObjectId;
+
+pub struct Users {
+    
+}
 
 impl Ledger {
     pub async fn get_user_by_tg_id(&self, tg_id: i64) -> Result<Option<User>> {
@@ -18,6 +25,11 @@ impl Ledger {
             Rights::customer()
         };
 
+        let user = self.get_user_by_tg_id(tg_id).await?;
+        if user.is_some() {
+            return Err(eyre::eyre!("User {} already exists", tg_id));
+        }
+
         let user = User {
             tg_id: tg_id,
             name,
@@ -28,6 +40,8 @@ impl Ledger {
             balance: 0,
             is_active: true,
             id: ObjectId::new(),
+            blocked_balance: 0,
+            version: 0,
         };
         info!("Creating user: {:?}", user);
         self.users.insert(user).await?;
