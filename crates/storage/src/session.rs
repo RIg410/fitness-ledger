@@ -2,11 +2,11 @@ use std::ops::Deref;
 
 use bson::doc;
 use eyre::{Context as _, Error};
-use mongodb::{Client, Database};
+use mongodb::{Client, ClientSession, Database};
 
 #[derive(Clone)]
 pub struct Db {
-    _client: Client,
+    client: Client,
     db: Database,
 }
 
@@ -19,10 +19,11 @@ impl Db {
         db.run_command(doc! { "ping": 1 })
             .await
             .context("Failed to ping MongoDB")?;
-        Ok(Db {
-            _client: client,
-            db,
-        })
+        Ok(Db { client, db })
+    }
+
+    pub async fn start_session(&self) -> Result<ClientSession, Error> {
+        Ok(self.client.start_session().await?)
     }
 }
 

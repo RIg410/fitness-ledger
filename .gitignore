@@ -5,3 +5,5 @@ pkg
 /target
 .env
 scripts
+replica.key
+

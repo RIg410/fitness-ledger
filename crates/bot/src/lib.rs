@@ -257,6 +257,7 @@ async fn build_context(
     tg_id: ChatId,
     state_holder: &StateHolder,
 ) -> Result<(Context, Option<Widget>, bool), (Error, Bot)> {
+    let session = ledger.db.start_session().await.map_err(|err| (err.into(), bot.clone()))?;
     let (user, real) = if let Some(user) = ledger
         .users
         .get_by_tg_id(tg_id.0)
@@ -286,7 +287,7 @@ async fn build_context(
         }
     };
 
-    Ok((Context::new(bot, user, ledger, origin), state.view, real))
+    Ok((Context::new(bot, user, ledger, origin, session), state.view, real))
 }
 
 async fn inline_query_handler(

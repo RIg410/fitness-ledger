@@ -5,6 +5,7 @@ use eyre::{bail, Context as _};
 use ledger::Ledger;
 use log::info;
 use model::user::UserName;
+use mongodb::ClientSession;
 use teloxide::types::{ButtonRequest, Contact, KeyboardButton, KeyboardMarkup, Message};
 
 const GREET_START: &str =
@@ -55,7 +56,7 @@ impl View for SignUpView {
             }
             State::RequestPhone => {
                 if let Some(contact) = msg.contact() {
-                    create_user(&ctx.ledger, msg.chat.id.0, contact, from)
+                    create_user(&ctx.ledger, msg.chat.id.0, contact, from, &mut ctx.session)
                         .await
                         .context("Failed to create user")?;
                     ctx.send_msg("Добро пожаловать\\!").await?;
@@ -96,6 +97,7 @@ pub async fn create_user(
     chat_id: i64,
     contact: &Contact,
     from: &teloxide::types::User,
+    session: &mut ClientSession,
 ) -> Result<(), eyre::Error> {
     info!("Creating user with chat_id: {}", chat_id);
     let user = ledger.users.get_by_tg_id(from.id.0 as i64).await?;
@@ -105,6 +107,7 @@ pub async fn create_user(
     ledger
         .users
         .create(
+            session,
             chat_id,
             UserName {
                 tg_user_name: from.username.clone(),
