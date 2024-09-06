@@ -4,7 +4,7 @@ use super::{training::schedule_training::ScheduleTraining, View};
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use chrono::{DateTime, Datelike, Duration, Local, TimeZone, Timelike as _, Weekday};
-use ledger::calendar::Week;
+use eyre::Error;
 use model::ids::{DayId, WeekId};
 use model::rights::Rule;
 use model::training::TrainingStatus;
@@ -41,20 +41,16 @@ impl CalendarView {
 #[async_trait]
 impl View for CalendarView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let week = ctx
-            .ledger
-            .calendar
-            .get_week(&mut ctx.session, self.week_id)
-            .await?;
         let (text, keymap) = render_week(
             ctx,
-            &week,
+            self.week_id,
             self.week_id.prev().has_week(),
             self.week_id.next().has_week(),
             self.go_back.is_some(),
             self.selected_day,
             &self.filter,
-        );
+        )
+        .await?;
         ctx.edit_origin(&text, keymap).await?;
         Ok(())
     }
@@ -76,6 +72,7 @@ impl View for CalendarView {
         match CalendarCallback::from_data(data)? {
             CalendarCallback::GoToWeek(week) => {
                 self.week_id = WeekId::from(week);
+                self.selected_day = self.week_id.day(self.selected_day.week_day());
                 self.show(ctx).await?;
                 Ok(None)
             }
@@ -119,16 +116,16 @@ impl View for CalendarView {
     }
 }
 
-pub fn render_week(
-    ctx: &Context,
-    week: &Week,
+pub async fn render_week(
+    ctx: &mut Context,
+    week_id: WeekId,
     has_prev: bool,
     hes_next: bool,
     has_back: bool,
-    selected_day: DayId,
+    selected_day_id: DayId,
     filter: &Filter,
-) -> (String, InlineKeyboardMarkup) {
-    let week_local = week.id.local();
+) -> Result<(String, InlineKeyboardMarkup), Error> {
+    let week_local = week_id.local();
     let msg = format!(
         "
 📅  Расписание
@@ -143,18 +140,17 @@ pub fn render_week(
         month(&week_local),
         week_local.year(),
         week_local.format("%d\\.%m"),
-        (week_local + Duration::days(7)).format("%d\\.%m"),
+        (week_local + Duration::days(6)).format("%d\\.%m"),
     );
 
-    let week_day = selected_day.week_day();
+    let selected_week_day = selected_day_id.week_day();
     let mut buttons = InlineKeyboardMarkup::default();
     let mut row = vec![];
-    for day in &week.days {
-        let day_id = day.day_id();
-        let date = day_id.local();
+    for week_day in week() {
+        let date = week_id.day(week_day).local();
         let text = format!(
             "{}{}",
-            if day_id.week_day() == week_day {
+            if selected_week_day == week_day {
                 "🟢"
             } else {
                 ""
@@ -171,23 +167,22 @@ pub fn render_week(
     if has_prev {
         row.push(InlineKeyboardButton::callback(
             "⬅️ предыдущая неделя",
-            CalendarCallback::GoToWeek(week.id.prev().local().into()).to_data(),
+            CalendarCallback::GoToWeek(week_id.prev().local().into()).to_data(),
         ));
     }
 
     if hes_next {
         row.push(InlineKeyboardButton::callback(
             "➡️ cледующая неделя",
-            CalendarCallback::GoToWeek(week.id.next().local().into()).to_data(),
+            CalendarCallback::GoToWeek(week_id.next().local().into()).to_data(),
         ));
     }
     buttons = buttons.append_row(row);
-    let day = week
-        .days
-        .iter()
-        .find(|d| d.day_id().week_day() == week_day)
-        .unwrap();
-
+    let day = ctx
+        .ledger
+        .calendar
+        .get_day(&mut ctx.session, selected_day_id)
+        .await?;
     for training in &day.training {
         if let Some(proto_id) = &filter.proto_id {
             if training.proto_id != *proto_id {
@@ -222,7 +217,7 @@ pub fn render_week(
         )]);
     }
 
-    (msg, buttons)
+    Ok((msg, buttons))
 }
 
 fn month(datetime: &DateTime<Local>) -> &str {
@@ -241,6 +236,18 @@ fn month(datetime: &DateTime<Local>) -> &str {
         12 => "Декабрь",
         _ => unreachable!(),
     }
+}
+
+fn week() -> [Weekday; 7] {
+    [
+        Weekday::Mon,
+        Weekday::Tue,
+        Weekday::Wed,
+        Weekday::Thu,
+        Weekday::Fri,
+        Weekday::Sat,
+        Weekday::Sun,
+    ]
 }
 
 pub fn render_weekday(weekday: &DateTime<Local>) -> &'static str {

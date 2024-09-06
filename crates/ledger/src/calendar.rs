@@ -22,27 +22,6 @@ impl Calendar {
         self.calendar.get_day(session, day).await
     }
 
-    pub async fn get_week(&self, session: &mut ClientSession, id: WeekId) -> Result<Week> {
-        let mon = id.day(chrono::Weekday::Mon);
-        let tue = mon.next();
-        let wed = tue.next();
-        let thu = wed.next();
-        let fri = thu.next();
-        let sat = fri.next();
-        let sun = sat.next();
-
-        let week = [
-            self.get_day(session, mon).await?,
-            self.get_day(session, tue).await?,
-            self.get_day(session, wed).await?,
-            self.get_day(session, thu).await?,
-            self.get_day(session, fri).await?,
-            self.get_day(session, sat).await?,
-            self.get_day(session, sun).await?,
-        ];
-        Ok(Week { id: id, days: week })
-    }
-
     pub async fn get_training_by_start_at(
         &self,
         session: &mut ClientSession,
@@ -177,9 +156,4 @@ impl Calendar {
     ) -> Result<mongodb::SessionCursor<Day>> {
         self.calendar.cursor(session, from, week_day).await
     }
-}
-
-pub struct Week {
-    pub id: WeekId,
-    pub days: [Day; 7],
 }

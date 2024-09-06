@@ -9,7 +9,7 @@ use tokio::time::{self};
 
 pub fn start(ledger: Ledger) {
     tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(10 * 60));
+        let mut interval = time::interval(Duration::from_secs(1 * 60));
         loop {
             interval.tick().await;
             if let Err(err) = process(&ledger).await {
@@ -20,7 +20,6 @@ pub fn start(ledger: Ledger) {
 }
 
 async fn process(ledger: &Ledger) -> Result<(), Error> {
-    info!("Processing background tasks");
     let now = chrono::Local::now();
     let mut session = ledger.db.start_session().await?;
     let mut day = ledger
