@@ -30,7 +30,7 @@ impl View for UserRightsView {
         let user = ctx
             .ledger
             .users
-            .get_by_tg_id(self.tg_id)
+            .get_by_tg_id(&mut ctx.session, self.tg_id)
             .await?
             .ok_or_else(|| eyre::eyre!("Failed to load user"))?;
         let (text, markup) = render_user_rights(&user, self.go_back.is_some());
@@ -66,7 +66,7 @@ impl View for UserRightsView {
                 let rule = Rule::try_from(rule_id)?;
                 ctx.ledger
                     .users
-                    .edit_user_rule(self.tg_id, rule, is_active)
+                    .edit_user_rule(&mut ctx.session, self.tg_id, rule, is_active)
                     .await?;
                 ctx.reload_user().await?;
                 self.show(ctx).await?;

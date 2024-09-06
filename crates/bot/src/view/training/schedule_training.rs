@@ -79,7 +79,7 @@ impl View for ScheduleTraining {
 }
 
 async fn render(
-    ctx: &Context,
+    ctx: &mut Context,
     day: &DateTime<Local>,
     has_back: bool,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
@@ -93,7 +93,7 @@ async fn render(
     );
     let mut markup = InlineKeyboardMarkup::default();
 
-    let trainings = ctx.ledger.find_trainings(None).await?;
+    let trainings = ctx.ledger.find_trainings(&mut ctx.session, None).await?;
 
     for training in trainings {
         markup

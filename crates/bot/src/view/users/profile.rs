@@ -67,12 +67,12 @@ impl View for UserProfile {
                 let user = ctx
                     .ledger
                     .users
-                    .get_by_tg_id(self.tg_id)
+                    .get_by_tg_id(&mut ctx.session, self.tg_id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("User not found"))?;
                 ctx.ledger
                     .users
-                    .block_user(self.tg_id, !user.is_active)
+                    .block_user(&mut ctx.session, self.tg_id, !user.is_active)
                     .await?;
                 ctx.reload_user().await?;
                 self.show(ctx).await?;

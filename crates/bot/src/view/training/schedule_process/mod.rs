@@ -41,7 +41,7 @@ impl ScheduleTrainingPreset {
 }
 
 pub async fn render_msg(
-    ctx: &Context,
+    ctx: &mut Context,
     training: &TrainingProto,
     preset: &ScheduleTrainingPreset,
 ) -> Result<String> {
@@ -57,7 +57,7 @@ pub async fn render_msg(
         let user = ctx
             .ledger
             .users
-            .get_by_tg_id(tg_id)
+            .get_by_tg_id(&mut ctx.session, tg_id)
             .await?
             .ok_or_else(|| eyre::eyre!("User not found"))?;
         if let Some(name) = &user.name.tg_user_name {

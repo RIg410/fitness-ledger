@@ -29,7 +29,7 @@ impl View for SetDateTime {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
-            .get_training_by_id(self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;
@@ -81,7 +81,7 @@ impl View for SetDateTime {
             let date_time = day.with_hour(parts.0).and_then(|d| d.with_minute(parts.1));
 
             if let Some(date_time) = date_time {
-                if !ctx.ledger.calendar.is_free_time_slot(date_time).await? {
+                if !ctx.ledger.calendar.is_free_time_slot(&mut ctx.session, date_time).await? {
                     ctx.send_msg("Это время уже занято").await?;
                     preset.date_time = None;
                 } else {

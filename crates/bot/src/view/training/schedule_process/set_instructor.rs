@@ -33,7 +33,7 @@ impl View for SetInstructor {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
-            .get_training_by_id(self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let (msg, keymap) = render(ctx, &training).await?;
@@ -56,7 +56,7 @@ impl View for SetInstructor {
                 let instructor = ctx
                     .ledger
                     .users
-                    .get_by_tg_id(instructor_id)
+                    .get_by_tg_id(&mut ctx.session, instructor_id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Instructor not found"))?;
                 let mut preset = self.preset.take().unwrap();
@@ -69,14 +69,14 @@ impl View for SetInstructor {
     }
 }
 
-async fn render(ctx: &Context, training: &TrainingProto) -> Result<(String, InlineKeyboardMarkup)> {
+async fn render(ctx: &mut Context, training: &TrainingProto) -> Result<(String, InlineKeyboardMarkup)> {
     let msg = format!(
         "🫰Выберите инструктора для тренировки *{}*",
         escape(&training.name)
     );
     let mut markup = InlineKeyboardMarkup::default();
 
-    let instructors = ctx.ledger.users.instructors().await?;
+    let instructors = ctx.ledger.users.instructors(&mut ctx.session).await?;
     for instructor in instructors {
         markup
             .inline_keyboard

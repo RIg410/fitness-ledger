@@ -60,7 +60,7 @@ impl View for MyTrainings {
     }
 }
 
-async fn render(ctx: &Context, go_back: bool) -> Result<(String, InlineKeyboardMarkup)> {
+async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeyboardMarkup)> {
     let mut msg = "🫶🏻 Мои тренировки:".to_owned();
 
     let mut keyboard = InlineKeyboardMarkup::default();
@@ -68,7 +68,7 @@ async fn render(ctx: &Context, go_back: bool) -> Result<(String, InlineKeyboardM
     let trainings = ctx
         .ledger
         .calendar
-        .get_my_trainings(ctx.me.id, 100, 0)
+        .get_my_trainings(&mut ctx.session, ctx.me.id, 100, 0)
         .await?;
 
     if trainings.is_empty() && !ctx.has_right(Rule::Train) {

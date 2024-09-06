@@ -60,7 +60,12 @@ impl View for CreateTraining {
             .ok_or_else(|| eyre::eyre!("State is missing"))?;
         self.state = Some(match state {
             State::SetName(mut training) => {
-                if ctx.ledger.get_training_by_name(msg).await?.is_some() {
+                if ctx
+                    .ledger
+                    .get_training_by_name(&mut ctx.session, msg)
+                    .await?
+                    .is_some()
+                {
                     ctx.send_msg("Тренировка с таким названием уже существует")
                         .await?;
                     State::SetName(training)
@@ -91,7 +96,9 @@ impl View for CreateTraining {
                 if let Ok(capacity) = msg.parse::<u32>() {
                     training.capacity = capacity;
                     ctx.ensure(Rule::CreateTraining)?;
-                    ctx.ledger.create_training_proto(&training).await?;
+                    ctx.ledger
+                        .create_training_proto(&mut ctx.session, &training)
+                        .await?;
                     ctx.send_msg("✅ Тренировка создана").await?;
                     let origin = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(origin);

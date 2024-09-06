@@ -22,10 +22,12 @@ pub fn start(ledger: Ledger) {
 async fn process(ledger: &Ledger) -> Result<(), Error> {
     info!("Processing background tasks");
     let now = chrono::Local::now();
-    let mut day = ledger.calendar.get_day(DayId::from(now)).await?;
-    for training in &mut day.training {
-       
-    }
+    let mut session = ledger.db.start_session().await?;
+    let mut day = ledger
+        .calendar
+        .get_day(&mut session, DayId::from(now))
+        .await?;
+    for training in &mut day.training {}
 
     Ok(())
 }

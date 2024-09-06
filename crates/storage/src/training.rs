@@ -7,7 +7,7 @@ use model::proto::TrainingProto;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::UpdateOptions,
-    Collection,
+    ClientSession, Collection,
 };
 
 const COLLECTION: &str = "training";
@@ -26,16 +26,28 @@ impl TrainingStore {
         }
     }
 
-    pub async fn get_by_id(&self, id: ObjectId) -> Result<Option<TrainingProto>, Error> {
-        Ok(self.store.find_one(doc! { "_id": id }).await?)
+    pub async fn get_by_id(
+        &self,
+        session: &mut ClientSession,
+        id: ObjectId,
+    ) -> Result<Option<TrainingProto>, Error> {
+        Ok(self
+            .store
+            .find_one(doc! { "_id": id })
+            .session(&mut *session)
+            .await?)
     }
 
-    pub async fn get_all(&self) -> Result<Vec<TrainingProto>, Error> {
-        let cursor = self.store.find(doc! {}).await?;
-        Ok(cursor.try_collect().await?)
+    pub async fn get_all(&self, session: &mut ClientSession) -> Result<Vec<TrainingProto>, Error> {
+        let mut cursor = self.store.find(doc! {}).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn find(&self, query: Option<&str>) -> Result<Vec<TrainingProto>, Error> {
+    pub async fn find(
+        &self,
+        session: &mut ClientSession,
+        query: Option<&str>,
+    ) -> Result<Vec<TrainingProto>, Error> {
         let filter = if let Some(query) = query {
             doc! {
                 "name": { "$regex": query, "$options": "i" }
@@ -44,24 +56,34 @@ impl TrainingStore {
             doc! {}
         };
 
-        let cursor = self.store.find(filter).await?;
-        Ok(cursor.try_collect().await?)
+        let mut cursor = self.store.find(filter).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn get_by_name(&self, name: &str) -> Result<Option<TrainingProto>, Error> {
+    pub async fn get_by_name(
+        &self,
+        session: &mut ClientSession,
+        name: &str,
+    ) -> Result<Option<TrainingProto>, Error> {
         Ok(self
             .store
             .find_one(doc! { "name": { "$regex": name, "$options": "i" } })
+            .session(&mut *session)
             .await?)
     }
 
-    pub async fn insert(&self, proto: &TrainingProto) -> Result<(), Error> {
+    pub async fn insert(
+        &self,
+        session: &mut ClientSession,
+        proto: &TrainingProto,
+    ) -> Result<(), Error> {
         let result = self
             .store
             .update_one(
                 doc! { "name": proto.name.clone() },
                 doc! { "$setOnInsert": to_document(proto)? },
             )
+            .session(&mut *session)
             .with_options(UpdateOptions::builder().upsert(true).build())
             .await?;
 
@@ -71,23 +93,37 @@ impl TrainingStore {
         Ok(())
     }
 
-    pub async fn delete(&self, proto: &TrainingProto) -> Result<(), Error> {
-        self.store.delete_one(doc! { "id": proto.id }).await?;
+    pub async fn delete(
+        &self,
+        session: &mut ClientSession,
+        proto: &TrainingProto,
+    ) -> Result<(), Error> {
+        self.store
+            .delete_one(doc! { "id": proto.id })
+            .session(&mut *session)
+            .await?;
         Ok(())
     }
 
-    pub async fn update_name(&self, proto: &TrainingProto, name: &str) -> Result<(), Error> {
+    pub async fn update_name(
+        &self,
+        session: &mut ClientSession,
+        proto: &TrainingProto,
+        name: &str,
+    ) -> Result<(), Error> {
         self.store
             .update_one(
                 doc! { "id": proto.id },
                 doc! { "$set": { "name": name }, "$inc" : { "version": 1 } },
             )
+            .session(&mut *session)
             .await?;
         Ok(())
     }
 
     pub async fn update_description(
         &self,
+        session: &mut ClientSession,
         proto: &TrainingProto,
         description: &str,
     ) -> Result<(), Error> {
@@ -96,26 +132,39 @@ impl TrainingStore {
                 doc! { "id": proto.id },
                 doc! { "$set": { "description": description }, "$inc" : { "version": 1 } },
             )
+            .session(&mut *session)
             .await?;
         Ok(())
     }
 
-    pub async fn update_duration(&self, proto: &TrainingProto, duration: u32) -> Result<(), Error> {
+    pub async fn update_duration(
+        &self,
+        session: &mut ClientSession,
+        proto: &TrainingProto,
+        duration: u32,
+    ) -> Result<(), Error> {
         self.store
             .update_one(
                 doc! { "id": proto.id },
                 doc! { "$set": { "duration_min": duration }, "$inc" : { "version": 1 } },
             )
+            .session(&mut *session)
             .await?;
         Ok(())
     }
 
-    pub async fn update_capacity(&self, proto: &TrainingProto, capacity: u32) -> Result<(), Error> {
+    pub async fn update_capacity(
+        &self,
+        session: &mut ClientSession,
+        proto: &TrainingProto,
+        capacity: u32,
+    ) -> Result<(), Error> {
         self.store
             .update_one(
                 doc! { "id": proto.id },
                 doc! { "$set": { "capacity": capacity }, "$inc" : { "version": 1 } },
             )
+            .session(&mut *session)
             .await?;
         Ok(())
     }

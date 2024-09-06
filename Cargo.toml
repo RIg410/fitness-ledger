@@ -15,6 +15,7 @@ ledger = {path = "crates/ledger"}
 mini-app = {path = "crates/mini-app"}
 model = {path = "crates/model"}
 storage = {path = "crates/storage"}
+tx_macro = {path = "crates/tx_macro"}
 
 #libs 
 async-trait = "0.1.81"
@@ -32,10 +33,13 @@ itertools = "0.2.2"
 log = "0.4"
 mongodb = {version = "3.0"}
 pretty_env_logger = "0.5"
+proc-macro2 = "1.0"
+quote = "1.0"
 serde = "1"
 serde_json = "1"
 serde_with = "3.9.0"
 strum = {version = "0.26", features = ["derive"]}
+syn = "1.0"
 teloxide = {version = "0.13", features = ["macros"]}
 thiserror = "1"
 tokio = {version = "1", features = ["full"]}

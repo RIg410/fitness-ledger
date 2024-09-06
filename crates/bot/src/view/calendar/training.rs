@@ -3,7 +3,10 @@ use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use eyre::Result;
-use model::{rights::Rule, training::{Training, TrainingStatus}};
+use model::{
+    rights::Rule,
+    training::{Training, TrainingStatus},
+};
 use serde::{Deserialize, Serialize};
 use teloxide::{
     prelude::Requester as _,
@@ -28,7 +31,7 @@ impl View for TrainingView {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(self.id)
+            .get_training_by_start_at(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let (msg, keymap) = render(ctx, &training, self.go_back.is_some());
@@ -52,7 +55,7 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_start_at(self.id)
+                    .get_training_by_start_at(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.send_msg(&escape(&training.description)).await?;
@@ -66,10 +69,13 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_start_at(self.id)
+                    .get_training_by_start_at(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                ctx.ledger.calendar.cancel_training(&training).await?;
+                ctx.ledger
+                    .calendar
+                    .cancel_training(&mut ctx.session, &training)
+                    .await?;
                 self.show(ctx).await?;
                 Ok(None)
             }
@@ -78,11 +84,11 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_start_at(self.id)
+                    .get_training_by_start_at(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.ledger
-                    .delete_training(&training, all)
+                    .delete_training(&mut ctx.session, &training, all)
                     .await?;
                 Ok(self.go_back.take())
             }
@@ -91,10 +97,13 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_start_at(self.id)
+                    .get_training_by_start_at(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                ctx.ledger.calendar.uncancel_training(&training).await?;
+                ctx.ledger
+                    .calendar
+                    .uncancel_training(&mut ctx.session, &training)
+                    .await?;
                 self.show(ctx).await?;
                 Ok(None)
             }
@@ -102,7 +111,7 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_start_at(self.id)
+                    .get_training_by_start_at(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 if training.status != TrainingStatus::OpenToSignup || training.is_full() {
@@ -114,7 +123,7 @@ impl View for TrainingView {
 
                 ctx.ledger
                     .calendar
-                    .sign_up_for_training(&training, ctx.me.id)
+                    .sign_up_for_training(&mut ctx.session, &training, ctx.me.id)
                     .await?;
                 self.show(ctx).await?;
                 Ok(None)
@@ -123,12 +132,12 @@ impl View for TrainingView {
                 let training = ctx
                     .ledger
                     .calendar
-                    .get_training_by_start_at(self.id)
+                    .get_training_by_start_at(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.ledger
                     .calendar
-                    .sign_out_from_training(&training, ctx.me.id)
+                    .sign_out_from_training(&mut ctx.session, &training, ctx.me.id)
                     .await?;
                 self.show(ctx).await?;
                 Ok(None)

@@ -34,7 +34,7 @@ impl View for Finish {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
-            .get_training_by_id(self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;
@@ -78,7 +78,13 @@ impl View for Finish {
 
                 match ctx
                     .ledger
-                    .add_training(self.id, date_time, instructor, is_one_time)
+                    .add_training(
+                        &mut ctx.session,
+                        self.id,
+                        date_time,
+                        instructor,
+                        is_one_time,
+                    )
                     .await
                 {
                     Ok(_) => {

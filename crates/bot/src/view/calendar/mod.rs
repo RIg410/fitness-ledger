@@ -41,7 +41,11 @@ impl CalendarView {
 #[async_trait]
 impl View for CalendarView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let week = ctx.ledger.calendar.get_week(self.week_id).await?;
+        let week = ctx
+            .ledger
+            .calendar
+            .get_week(&mut ctx.session, self.week_id)
+            .await?;
         let (text, keymap) = render_week(
             ctx,
             &week,
@@ -150,7 +154,11 @@ pub fn render_week(
         let date = day_id.local();
         let text = format!(
             "{}{}",
-            if day_id.week_day() == week_day { "🟢" } else { "" },
+            if day_id.week_day() == week_day {
+                "🟢"
+            } else {
+                ""
+            },
             render_weekday(&date)
         );
         row.push(InlineKeyboardButton::callback(

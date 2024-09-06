@@ -10,12 +10,6 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_ROOT_PASSWORD
     volumes:
       - "./data:/data/db"
-  mongosetup:
-    image: mongo
-    depends_on:
-      - mongo
-    restart: "no"
-    entrypoint: [ "bash", "-c", "sleep 20 && ./init.sh"] 
   # backend:
   #   build: .
   #   restart: always

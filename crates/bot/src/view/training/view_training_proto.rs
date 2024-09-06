@@ -37,7 +37,7 @@ impl View for ViewTrainingProto {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
-            .get_training_by_id(self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let (text, keymap) = render(ctx, &training, self.go_back.is_some()).await?;
@@ -77,7 +77,7 @@ impl View for ViewTrainingProto {
             TrainingProtoCallback::Description => {
                 let training = ctx
                     .ledger
-                    .get_training_by_id(self.id)
+                    .get_training_by_id(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.send_msg(&escape(&training.description)).await?;
