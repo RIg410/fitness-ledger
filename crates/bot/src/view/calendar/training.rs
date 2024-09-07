@@ -162,7 +162,8 @@ fn render(ctx: &Context, training: &Training, has_back: bool) -> (String, Inline
         )
     };
 
-    let tr_status = training.status(Local::now());
+    let now = Local::now();
+    let tr_status = training.status(now);
     let slot = training.get_slot();
 
     let msg = format!(

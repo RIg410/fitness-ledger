@@ -1,13 +1,13 @@
 use std::ops::Deref;
 
-use chrono::{DateTime, Local, Utc, Weekday};
+use chrono::{DateTime, Local, Utc};
 use eyre::{Error, Result};
 use model::{
-    day::{Collision, Day},
-    ids::{DayId, WeekId},
+    day::Day,
+    ids::DayId,
     rights::Rule,
     slot::Slot,
-    training::{self, Training, TrainingStatus},
+    training::{Training, TrainingStatus},
 };
 use mongodb::{bson::oid::ObjectId, ClientSession, SessionCursor};
 use storage::{calendar::CalendarStore, user::UserStore};
@@ -298,34 +298,6 @@ impl Calendar {
 
         Ok(None)
     }
-
-    // pub async fn is_free_time_slot(
-    //     &self,
-    //     session: &mut ClientSession,
-    //     start_at: DateTime<Local>,
-    // ) -> Result<bool, Error> {
-    //     let id = DayId::new(start_at);
-    //     let day = self.calendar.get_day(session, id).await?;
-    //     for slot in &day.training {
-    //         if slot.is_training_time(start_at) {
-    //             return Ok(false);
-    //         }
-    //     }
-    //     Ok(true)
-    // }
-
-    // pub async fn update_day(&self, session: &mut ClientSession, day: &Day) -> Result<()> {
-    //     self.calendar.update_day(session, day).await
-    // }
-
-    // pub async fn cursor(
-    //     &self,
-    //     session: &mut ClientSession,
-    //     from: DayId,
-    //     week_day: Weekday,
-    // ) -> Result<mongodb::SessionCursor<Day>> {
-    //     self.calendar.cursor(session, from, week_day).await
-    // }
 }
 
 #[derive(Debug)]
