@@ -1,5 +1,5 @@
 use bson::to_document;
-use chrono::{Datelike as _, Duration, Utc, Weekday};
+use chrono::{DateTime, Datelike as _, Duration, Utc, Weekday};
 use eyre::Result;
 use log::info;
 use model::{day::Day, ids::DayId, training::Training};
@@ -46,15 +46,22 @@ impl CalendarStore {
     pub async fn set_cancel_flag(
         &self,
         session: &mut ClientSession,
-        training_id: ObjectId,
+        start_at: DateTime<Utc>,
         flag: bool,
     ) -> Result<(), eyre::Error> {
-        let filter = doc! { "training._id": training_id };
-        let update = doc! { "$set": { "training.$.canceled": flag }, "$inc": { "version": 1 } };
-        self.days
+        info!("Set cancel flag: {:?} {}", start_at, flag);
+        let filter = doc! { "training.start_at": start_at };
+        let update = doc! { "$set": { "training.$.is_canceled": flag }, "$inc": { "version": 1 } };
+        let result = self
+            .days
             .update_one(filter, update)
             .session(&mut *session)
             .await?;
+
+        if result.modified_count == 0 {
+            return Err(eyre::eyre!("Training not found"));
+        }
+
         Ok(())
     }
 
@@ -159,11 +166,12 @@ impl CalendarStore {
     pub async fn delete_training(
         &self,
         session: &mut ClientSession,
-        training: &Training,
+        start_at: DateTime<Utc>,
     ) -> std::result::Result<(), eyre::Error> {
-        let filter = doc! { "training._id": training.id };
+        info!("Delete training: {:?}", start_at);
+        let filter = doc! { "training.start_at": start_at };
         let update =
-            doc! { "$pull": { "training": { "_id": training.id } }, "$inc": { "version": 1 } };
+            doc! { "$pull": { "training": { "start_at": start_at } }, "$inc": { "version": 1 } };
         self.days
             .update_one(filter, update)
             .session(&mut *session)

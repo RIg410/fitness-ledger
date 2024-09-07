@@ -203,10 +203,12 @@ _{}_
             "🗑️ Удалить эту тренировку",
             TCallback::Delete(false).to_data(),
         )]);
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "🗑️ Удалить все последующие",
-            TCallback::Delete(true).to_data(),
-        )]);
+        if !training.is_one_time {
+            keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+                "🗑️ Удалить все последующие",
+                TCallback::Delete(true).to_data(),
+            )]);
+        }
     }
 
     if is_client {

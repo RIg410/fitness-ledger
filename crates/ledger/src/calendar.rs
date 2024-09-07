@@ -68,7 +68,7 @@ impl Calendar {
 
         if let Some(training) = training {
             self.calendar
-                .set_cancel_flag(session, training.id, true)
+                .set_cancel_flag(session, training.start_at, true)
                 .await
         } else {
             Err(eyre::eyre!("Training not found"))
@@ -89,7 +89,7 @@ impl Calendar {
                 return Err(eyre::eyre!("Training is not cancelled"));
             }
             self.calendar
-                .set_cancel_flag(session, training.id, false)
+                .set_cancel_flag(session, training.start_at, false)
                 .await
         } else {
             return Err(eyre::eyre!("Training not found"));
@@ -107,15 +107,23 @@ impl Calendar {
             .get_training_by_start_at(session, training.get_slot().start_at())
             .await?
         {
-            self.calendar.delete_training(session, &training).await?;
-            todo!("delete_training")
-            // if all {
-            //     while let Some(training) =
-            //         self.calendar.find_next_training(session, &training).await?
-            //     {
-            //         self.calendar.delete_training(session, &training).await?;
-            //     }
-            // }
+            self.calendar
+                .delete_training(session, training.start_at)
+                .await?;
+
+            let day_id = DayId::from(training.get_slot().start_at());
+            if all {
+                let mut cursor = self.calendar.week_days_after(session, day_id).await?;
+                while let Some(day) = cursor.next(session).await {
+                    let day = day?;
+                    let training = day.training.iter().find(|slot| slot.id == training.id);
+                    if let Some(training) = training {
+                        self.calendar
+                            .delete_training(session, training.start_at)
+                            .await?;
+                    }
+                }
+            }
         } else {
             return Err(eyre::eyre!("Training not found:{}", training.id));
         }

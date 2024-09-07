@@ -31,7 +31,6 @@ impl Slot {
     }
 
     pub fn has_conflict(&self, other: &Slot) -> bool {
-        println!("Checking conflict between {:?} and {:?}", self, other);
         let this_start = self.start_at + chrono::Duration::milliseconds(1);
         let this_end = self.start_at + chrono::Duration::minutes(self.duration_min as i64)
             - chrono::Duration::milliseconds(1);
@@ -58,7 +57,7 @@ impl Slot {
     pub fn with_day(&self, day_id: crate::ids::DayId) -> Slot {
         let day_local = day_id.local();
         let start_at = self.start_at();
-        
+
         let start_at = day_local
             .with_hour(start_at.hour())
             .unwrap()
