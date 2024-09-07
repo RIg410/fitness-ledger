@@ -1,8 +1,8 @@
-use super::{render_msg, ScheduleTrainingPreset, View};
+use super::{render_msg, set_date_time::render_time_slot_collision, ScheduleTrainingPreset, View};
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
-use ledger::training::AddTrainingError;
+use ledger::calendar::ScheduleError;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,8 @@ impl View for Finish {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
-            .get_training_by_id(&mut ctx.session, self.id)
+            .programs
+            .get_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;
@@ -78,7 +79,8 @@ impl View for Finish {
 
                 match ctx
                     .ledger
-                    .add_training(
+                    .calendar
+                    .schedule(
                         &mut ctx.session,
                         self.id,
                         date_time,
@@ -115,14 +117,14 @@ pub enum FinishCallback {
     No,
 }
 
-fn error_msg(err: &AddTrainingError) -> String {
+fn error_msg(err: &ScheduleError) -> String {
     match err {
-        AddTrainingError::ProtoTrainingNotFound => "тренировка не найдена".to_string(),
-        AddTrainingError::InstructorNotFound => "Инструктор не найден".to_string(),
-        AddTrainingError::InstructorHasNoRights => {
+        ScheduleError::ProgramNotFound => "Тренировка не найдена".to_string(),
+        ScheduleError::InstructorNotFound => "Инструктор не найден".to_string(),
+        ScheduleError::InstructorHasNoRights => {
             "Инструктор не имеет прав на проведение тренировок".to_string()
         }
-        AddTrainingError::TimeSlotOccupied => "Время уже занято".to_string(),
-        AddTrainingError::Common(err) => escape(&format!("Ошибка: {:#}", err)),
+        ScheduleError::TimeSlotCollision(collision) => render_time_slot_collision(collision),
+        ScheduleError::Common(err) => escape(&format!("Ошибка: {:#}", err)),
     }
 }

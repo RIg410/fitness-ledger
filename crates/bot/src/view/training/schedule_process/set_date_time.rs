@@ -3,6 +3,7 @@ use crate::{context::Context, state::Widget, view::View};
 use async_trait::async_trait;
 use chrono::{DateTime, Datelike as _, Local, TimeZone, Timelike};
 use eyre::{Error, Result};
+use ledger::calendar::TimeSlotCollision;
 use log::warn;
 use mongodb::bson::oid::ObjectId;
 use teloxide::types::Message;
@@ -29,7 +30,8 @@ impl View for SetDateTime {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
-            .get_training_by_id(&mut ctx.session, self.id)
+            .programs
+            .get_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;
@@ -81,8 +83,13 @@ impl View for SetDateTime {
             let date_time = day.with_hour(parts.0).and_then(|d| d.with_minute(parts.1));
 
             if let Some(date_time) = date_time {
-                if !ctx.ledger.calendar.is_free_time_slot(&mut ctx.session, date_time).await? {
-                    ctx.send_msg("Это время уже занято").await?;
+                if let Some(collision) = ctx
+                    .ledger
+                    .calendar
+                    .check_time_slot(&mut ctx.session, self.id, date_time, preset.is_one_time.unwrap_or(true))
+                    .await?
+                {
+                    ctx.send_msg(&render_time_slot_collision(&collision)).await?;
                     preset.date_time = None;
                 } else {
                     preset.date_time = Some(date_time);
@@ -137,4 +144,12 @@ impl TimeParts {
             .single()
             .ok_or_else(|| eyre::eyre!("Invalid time"))
     }
+}
+
+pub fn render_time_slot_collision(collision: &TimeSlotCollision) -> String {
+    format!(
+        "Это время уже занято другой тренировкой: {}\n\nДата:{}",
+        collision.name,
+        collision.get_slot().start_at().format("%d\\.%m %H:%M")
+    )
 }

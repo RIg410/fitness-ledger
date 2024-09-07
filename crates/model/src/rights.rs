@@ -85,7 +85,7 @@ pub enum Rule {
 
 impl Rule {
     pub fn name(&self) -> String {
-        format!("{:?}", self).to_lowercase()
+        format!("{:?}", self)
     }
 
     pub fn list() -> Vec<Rule> {

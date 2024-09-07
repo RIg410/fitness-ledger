@@ -3,13 +3,13 @@ mod notifier;
 use eyre::Error;
 use ledger::Ledger;
 use log::info;
-use model::ids::DayId;
+use model::{ids::DayId, training::TrainingStatus};
 use std::time::Duration;
 use tokio::time::{self};
 
 pub fn start(ledger: Ledger) {
     tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(1 * 60));
+        let mut interval = time::interval(Duration::from_secs(5 * 60));
         loop {
             interval.tick().await;
             if let Err(err) = process(&ledger).await {
@@ -26,7 +26,16 @@ async fn process(ledger: &Ledger) -> Result<(), Error> {
         .calendar
         .get_day(&mut session, DayId::from(now))
         .await?;
-    for training in &mut day.training {}
+    for training in &mut day.training {
+        match training.status(now) {
+            TrainingStatus::OpenToSignup => {}
+            TrainingStatus::Full => {}
+            TrainingStatus::ClosedToSignup => {}
+            TrainingStatus::InProgress => {}
+            TrainingStatus::Cancelled => {}
+            TrainingStatus::Finished => {}
+        }
+    }
 
     Ok(())
 }

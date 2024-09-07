@@ -88,6 +88,7 @@ impl View for TrainingView {
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.ledger
+                    .calendar
                     .delete_training(&mut ctx.session, &training, all)
                     .await?;
                 Ok(self.go_back.take())
@@ -102,7 +103,7 @@ impl View for TrainingView {
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.ledger
                     .calendar
-                    .uncancel_training(&mut ctx.session, &training)
+                    .restore_training(&mut ctx.session, &training)
                     .await?;
                 self.show(ctx).await?;
                 Ok(None)
@@ -114,7 +115,7 @@ impl View for TrainingView {
                     .get_training_by_start_at(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                if training.status != TrainingStatus::OpenToSignup || training.is_full() {
+                if !training.status(Local::now()).can_sign_in() {
                     ctx.send_msg("Запись на тренировку закрыта").await?;
                     let id = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(id);
@@ -123,7 +124,7 @@ impl View for TrainingView {
 
                 ctx.ledger
                     .calendar
-                    .sign_up_for_training(&mut ctx.session, &training, ctx.me.id)
+                    .sign_up(&mut ctx.session, &training, ctx.me.id)
                     .await?;
                 self.show(ctx).await?;
                 Ok(None)
@@ -137,7 +138,7 @@ impl View for TrainingView {
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.ledger
                     .calendar
-                    .sign_out_from_training(&mut ctx.session, &training, ctx.me.id)
+                    .sign_out(&mut ctx.session, &training, ctx.me.id)
                     .await?;
                 self.show(ctx).await?;
                 Ok(None)
@@ -161,6 +162,9 @@ fn render(ctx: &Context, training: &Training, has_back: bool) -> (String, Inline
         )
     };
 
+    let tr_status = training.status(Local::now());
+    let slot = training.get_slot();
+
     let msg = format!(
         "
 💪 *Тренировка*: _{}_
@@ -169,9 +173,9 @@ fn render(ctx: &Context, training: &Training, has_back: bool) -> (String, Inline
 _{}_
 ",
         escape(&training.name),
-        training.start_at_local().format("%d\\.%m\\.%Y %H:%M"),
+        slot.start_at().format("%d\\.%m\\.%Y %H:%M"),
         cap,
-        status(&training.status, training.is_full()),
+        status(tr_status),
     );
     let mut keymap = InlineKeyboardMarkup::default();
     keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
@@ -180,15 +184,13 @@ _{}_
     )]);
 
     if ctx.has_right(Rule::CancelTraining) {
-        if training.status == TrainingStatus::OpenToSignup
-            || training.status == TrainingStatus::ClosedToSignup
-        {
+        if tr_status.can_be_canceled() {
             keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                 "⛔Отменить",
                 TCallback::Cancel.to_data(),
             )]);
         }
-        if training.status == TrainingStatus::Cancelled {
+        if tr_status.can_be_uncanceled() {
             keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                 "🔓 Вернуть",
                 TCallback::UnCancel.to_data(),
@@ -209,14 +211,14 @@ _{}_
 
     if is_client {
         if training.clients.contains(&ctx.me.id) {
-            if training.status == TrainingStatus::OpenToSignup {
+            if tr_status.can_sign_out() {
                 keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                     "🔓 Отменить запись",
                     TCallback::SignOut.to_data(),
                 )]);
             }
         } else {
-            if training.status == TrainingStatus::OpenToSignup || !training.is_full() {
+            if tr_status.can_sign_in() {
                 keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                     "🔒 Записаться",
                     TCallback::SignUp.to_data(),
@@ -244,15 +246,13 @@ enum TCallback {
     SignOut,
 }
 
-fn status(status: &TrainingStatus, is_full: bool) -> &str {
-    if is_full {
-        return "нет мест ✌️";
-    }
+fn status(status: TrainingStatus) -> &'static str {
     match status {
         TrainingStatus::OpenToSignup => "🟢Открыта для записи",
         TrainingStatus::ClosedToSignup => "🟠Запись закрыта",
         TrainingStatus::InProgress => "🤸🏼 Идет",
         TrainingStatus::Cancelled => "⛔Отменена",
         TrainingStatus::Finished => "✔️Завершена",
+        TrainingStatus::Full => "нет мест ✌️",
     }
 }

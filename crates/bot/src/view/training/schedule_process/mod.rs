@@ -3,7 +3,7 @@ use crate::{context::Context, state::Widget};
 use chrono::{DateTime, Local};
 use eyre::Result;
 use is_one_time::SetOneTime;
-use model::proto::TrainingProto;
+use model::program::Program;
 use mongodb::bson::oid::ObjectId;
 use set_date_time::SetDateTime;
 use set_instructor::SetInstructor;
@@ -24,10 +24,6 @@ pub struct ScheduleTrainingPreset {
 
 impl ScheduleTrainingPreset {
     pub fn into_next_view(self, id: ObjectId, go_back: Widget) -> Widget {
-        if self.date_time.is_none() {
-            return Box::new(SetDateTime::new(id, self, go_back));
-        }
-
         if self.instructor.is_none() {
             return Box::new(SetInstructor::new(id, self, go_back));
         }
@@ -36,13 +32,17 @@ impl ScheduleTrainingPreset {
             return Box::new(SetOneTime::new(id, self, go_back));
         }
 
+        if self.date_time.is_none() {
+            return Box::new(SetDateTime::new(id, self, go_back));
+        }
+
         Box::new(finish::Finish::new(id, self, go_back))
     }
 }
 
 pub async fn render_msg(
     ctx: &mut Context,
-    training: &TrainingProto,
+    training: &Program,
     preset: &ScheduleTrainingPreset,
 ) -> Result<String> {
     let date_time = if let Some(date_time) = preset.date_time {

@@ -1,7 +1,7 @@
 use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
 use eyre::Result;
-use model::{proto::TrainingProto, rights::Rule};
+use model::{program::Program, rights::Rule};
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
@@ -38,7 +38,7 @@ impl View for CreateTraining {
             InlineKeyboardMarkup::default().inline_keyboard(keymap),
         )
         .await?;
-        self.state = Some(State::SetName(TrainingProto::default()));
+        self.state = Some(State::SetName(Program::default()));
         Ok(())
     }
 
@@ -62,7 +62,8 @@ impl View for CreateTraining {
             State::SetName(mut training) => {
                 if ctx
                     .ledger
-                    .get_training_by_name(&mut ctx.session, msg)
+                    .programs
+                    .get_by_name(&mut ctx.session, msg)
                     .await?
                     .is_some()
                 {
@@ -92,12 +93,19 @@ impl View for CreateTraining {
                     State::SetDuration(training)
                 }
             }
-            State::SetCapacity(mut training) => {
+            State::SetCapacity(mut program) => {
                 if let Ok(capacity) = msg.parse::<u32>() {
-                    training.capacity = capacity;
+                    program.capacity = capacity;
                     ctx.ensure(Rule::CreateTraining)?;
                     ctx.ledger
-                        .create_training_proto(&mut ctx.session, &training)
+                        .programs
+                        .create(
+                            &mut ctx.session,
+                            program.name,
+                            program.description,
+                            program.duration_min,
+                            program.capacity,
+                        )
                         .await?;
                     ctx.send_msg("✅ Тренировка создана").await?;
                     let origin = ctx.send_msg("\\.").await?;
@@ -105,7 +113,7 @@ impl View for CreateTraining {
                     return Ok(self.go_back.take());
                 } else {
                     ctx.send_msg("Количество мест должно быть числом").await?;
-                    State::SetCapacity(training)
+                    State::SetCapacity(program)
                 }
             }
         });
@@ -128,10 +136,10 @@ impl View for CreateTraining {
 }
 
 pub enum State {
-    SetName(TrainingProto),
-    SetDescription(TrainingProto),
-    SetDuration(TrainingProto),
-    SetCapacity(TrainingProto),
+    SetName(Program),
+    SetDescription(Program),
+    SetDuration(Program),
+    SetCapacity(Program),
 }
 
 #[derive(Debug, Serialize, Deserialize)]

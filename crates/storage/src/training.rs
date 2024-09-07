@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bson::to_document;
 use eyre::Error;
 use futures_util::TryStreamExt as _;
-use model::proto::TrainingProto;
+use model::program::Program;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::UpdateOptions,
@@ -13,15 +13,15 @@ use mongodb::{
 const COLLECTION: &str = "training";
 
 #[derive(Clone)]
-pub struct TrainingStore {
-    pub(crate) store: Arc<Collection<TrainingProto>>,
+pub struct ProgramStore {
+    pub(crate) store: Arc<Collection<Program>>,
 }
 
-impl TrainingStore {
+impl ProgramStore {
     pub(crate) fn new(db: &mongodb::Database) -> Self {
         let store = db.collection(COLLECTION);
 
-        TrainingStore {
+        ProgramStore {
             store: Arc::new(store),
         }
     }
@@ -30,7 +30,7 @@ impl TrainingStore {
         &self,
         session: &mut ClientSession,
         id: ObjectId,
-    ) -> Result<Option<TrainingProto>, Error> {
+    ) -> Result<Option<Program>, Error> {
         Ok(self
             .store
             .find_one(doc! { "_id": id })
@@ -38,7 +38,7 @@ impl TrainingStore {
             .await?)
     }
 
-    pub async fn get_all(&self, session: &mut ClientSession) -> Result<Vec<TrainingProto>, Error> {
+    pub async fn get_all(&self, session: &mut ClientSession) -> Result<Vec<Program>, Error> {
         let mut cursor = self.store.find(doc! {}).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
@@ -47,7 +47,7 @@ impl TrainingStore {
         &self,
         session: &mut ClientSession,
         query: Option<&str>,
-    ) -> Result<Vec<TrainingProto>, Error> {
+    ) -> Result<Vec<Program>, Error> {
         let filter = if let Some(query) = query {
             doc! {
                 "name": { "$regex": query, "$options": "i" }
@@ -64,7 +64,7 @@ impl TrainingStore {
         &self,
         session: &mut ClientSession,
         name: &str,
-    ) -> Result<Option<TrainingProto>, Error> {
+    ) -> Result<Option<Program>, Error> {
         Ok(self
             .store
             .find_one(doc! { "name": { "$regex": name, "$options": "i" } })
@@ -72,11 +72,7 @@ impl TrainingStore {
             .await?)
     }
 
-    pub async fn insert(
-        &self,
-        session: &mut ClientSession,
-        proto: &TrainingProto,
-    ) -> Result<(), Error> {
+    pub async fn insert(&self, session: &mut ClientSession, proto: &Program) -> Result<(), Error> {
         let result = self
             .store
             .update_one(
@@ -93,13 +89,9 @@ impl TrainingStore {
         Ok(())
     }
 
-    pub async fn delete(
-        &self,
-        session: &mut ClientSession,
-        proto: &TrainingProto,
-    ) -> Result<(), Error> {
+    pub async fn delete(&self, session: &mut ClientSession, id: &ObjectId) -> Result<(), Error> {
         self.store
-            .delete_one(doc! { "id": proto.id })
+            .delete_one(doc! { "_id": id })
             .session(&mut *session)
             .await?;
         Ok(())
@@ -108,12 +100,12 @@ impl TrainingStore {
     pub async fn update_name(
         &self,
         session: &mut ClientSession,
-        proto: &TrainingProto,
+        id: &ObjectId,
         name: &str,
     ) -> Result<(), Error> {
         self.store
             .update_one(
-                doc! { "id": proto.id },
+                doc! { "_id": id },
                 doc! { "$set": { "name": name }, "$inc" : { "version": 1 } },
             )
             .session(&mut *session)
@@ -124,12 +116,12 @@ impl TrainingStore {
     pub async fn update_description(
         &self,
         session: &mut ClientSession,
-        proto: &TrainingProto,
+        id: &ObjectId,
         description: &str,
     ) -> Result<(), Error> {
         self.store
             .update_one(
-                doc! { "id": proto.id },
+                doc! { "_id": id },
                 doc! { "$set": { "description": description }, "$inc" : { "version": 1 } },
             )
             .session(&mut *session)
@@ -140,12 +132,12 @@ impl TrainingStore {
     pub async fn update_duration(
         &self,
         session: &mut ClientSession,
-        proto: &TrainingProto,
+        id: &ObjectId,
         duration: u32,
     ) -> Result<(), Error> {
         self.store
             .update_one(
-                doc! { "id": proto.id },
+                doc! { "_id": id },
                 doc! { "$set": { "duration_min": duration }, "$inc" : { "version": 1 } },
             )
             .session(&mut *session)
@@ -156,12 +148,12 @@ impl TrainingStore {
     pub async fn update_capacity(
         &self,
         session: &mut ClientSession,
-        proto: &TrainingProto,
+        id: &ObjectId,
         capacity: u32,
     ) -> Result<(), Error> {
         self.store
             .update_one(
-                doc! { "id": proto.id },
+                doc! { "_id": id },
                 doc! { "$set": { "capacity": capacity }, "$inc" : { "version": 1 } },
             )
             .session(&mut *session)

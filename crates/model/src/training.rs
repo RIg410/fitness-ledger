@@ -1,10 +1,13 @@
-use chrono::{DateTime, Datelike, Local, TimeZone as _, Timelike, Utc};
+use chrono::{DateTime, Datelike, Local, TimeZone as _, Timelike as _, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::ids::DayId;
+use crate::{ids::DayId, program::Program, slot::Slot};
+
+pub const CLOSE_SING_UP: u32 = 60;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[non_exhaustive]
 pub struct Training {
     #[serde(rename = "_id")]
     pub id: ObjectId,
@@ -17,29 +20,113 @@ pub struct Training {
     pub instructor: ObjectId,
     pub clients: Vec<ObjectId>,
     pub capacity: u32,
-    pub status: TrainingStatus,
     pub is_one_time: bool,
+    #[serde(default)]
+    pub is_canceled: bool,
+    #[serde(default)]
+    pub is_finished: bool,
 }
 
 impl Training {
-    pub fn start_at_local(&self) -> DateTime<Local> {
-        self.start_at.with_timezone(&Local)
+    pub fn new(
+        proto_id: ObjectId,
+        name: String,
+        description: String,
+        start_at: DateTime<Utc>,
+        duration_min: u32,
+        instructor: ObjectId,
+        capacity: u32,
+        is_one_time: bool,
+    ) -> Training {
+        Training {
+            id: ObjectId::new(),
+            proto_id,
+            name,
+            description,
+            start_at,
+            duration_min,
+            instructor,
+            clients: Vec::new(),
+            capacity,
+            is_one_time,
+            is_canceled: false,
+            is_finished: false,
+        }
     }
 
-    pub fn end_at(&self) -> DateTime<Local> {
-        self.start_at.with_timezone(&Local) + chrono::Duration::minutes(self.duration_min as i64)
+    pub fn with_program(
+        program: Program,
+        start_at: DateTime<Local>,
+        instructor: ObjectId,
+        is_one_time: bool,
+    ) -> Training {
+        Training {
+            id: ObjectId::new(),
+            proto_id: program.id,
+            name: program.name,
+            description: program.description,
+            start_at: start_at.with_timezone(&Utc),
+            duration_min: program.duration_min,
+            instructor,
+            clients: Vec::new(),
+            capacity: program.capacity,
+            is_one_time,
+            is_canceled: false,
+            is_finished: false,
+        }
     }
 
-    pub fn is_full(&self) -> bool {
-        self.clients.len() >= self.capacity as usize
+    pub fn with_day_and_training(day: DayId, training: Training) -> Training {
+        let start_time = training.get_slot().start_at();
+        let start_date = day.local();
+        let start_at = start_date
+            .with_hour(start_time.hour())
+            .unwrap()
+            .with_minute(start_time.minute())
+            .unwrap();
+
+        Training {
+            id: training.id,
+            proto_id: training.proto_id,
+            name: training.name,
+            description: training.description,
+            start_at: start_at.with_timezone(&Utc),
+            duration_min: training.duration_min,
+            instructor: training.instructor,
+            clients: training.clients,
+            capacity: training.capacity,
+            is_one_time: training.is_one_time,
+            is_canceled: training.is_canceled,
+            is_finished: training.is_finished,
+        }
     }
 
-    pub fn is_open_to_signup(&self) -> bool {
-        self.status == TrainingStatus::OpenToSignup
+    pub fn get_slot(&self) -> Slot {
+        Slot::new(self.start_at, self.duration_min)
     }
 
-    pub fn is_training_time(&self, time: DateTime<Local>) -> bool {
-        self.start_at < time && time < self.end_at()
+    pub fn status(&self, now: DateTime<Local>) -> TrainingStatus {
+        if self.is_finished {
+            TrainingStatus::Finished
+        } else if self.is_canceled {
+            TrainingStatus::Cancelled
+        } else {
+            if self.clients.len() >= self.capacity as usize {
+                TrainingStatus::Full
+            } else {
+                let start_at = self.get_slot().start_at();
+                let end_at = start_at + chrono::Duration::minutes(self.duration_min as i64);
+                if end_at < now {
+                    TrainingStatus::Finished
+                } else if start_at < now {
+                    TrainingStatus::InProgress
+                } else if start_at - chrono::Duration::minutes(CLOSE_SING_UP as i64) < now {
+                    TrainingStatus::ClosedToSignup
+                } else {
+                    TrainingStatus::OpenToSignup
+                }
+            }
+        }
     }
 
     pub fn set_date(&mut self, week_date: DateTime<Local>) -> Result<(), eyre::Error> {
@@ -54,57 +141,38 @@ impl Training {
         Ok(())
     }
 
-    pub fn start_at_on(&self, day_id: DayId) -> DateTime<Utc> {
-        let new_date = day_id.local().naive_local().date();
-        let start_date = self.start_at_local();
-        let start_at = new_date
-            .and_hms_opt(start_date.hour(), start_date.minute(), start_date.second())
-            .expect("Invalid date");
-        Local
-            .from_local_datetime(&start_at)
-            .single()
-            .unwrap()
-            .with_timezone(&Utc)
-    }
-
-    pub fn change_date(self, day_id: DayId) -> Training {
-        let new_date = day_id.local().naive_local().date();
-        let start_date = self.start_at_local();
-
-        let start_at = new_date
-            .and_hms_opt(start_date.hour(), start_date.minute(), start_date.second())
-            .expect("Invalid date");
-        let start_at = Local
-            .from_local_datetime(&start_at)
-            .single()
-            .unwrap()
-            .with_timezone(&Utc);
-
-        Training {
-            id: ObjectId::new(),
-            proto_id: self.proto_id,
-            name: self.name,
-            description: self.description,
-            start_at,
-            duration_min: self.duration_min,
-            instructor: self.instructor,
-            clients: Vec::new(),
-            capacity: self.capacity,
-            status: TrainingStatus::OpenToSignup,
-            is_one_time: self.is_one_time,
-        }
-    }
-
     pub fn day_id(&self) -> DayId {
         DayId::from(self.start_at)
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]
 pub enum TrainingStatus {
     OpenToSignup,
+    Full,
     ClosedToSignup,
     InProgress,
     Cancelled,
     Finished,
+}
+
+impl TrainingStatus {
+    pub fn can_be_canceled(&self) -> bool {
+        matches!(
+            self,
+            TrainingStatus::OpenToSignup | TrainingStatus::ClosedToSignup | TrainingStatus::Full
+        )
+    }
+
+    pub fn can_be_uncanceled(&self) -> bool {
+        matches!(self, TrainingStatus::Cancelled)
+    }
+
+    pub fn can_sign_out(&self) -> bool {
+        matches!(self, TrainingStatus::OpenToSignup | TrainingStatus::Full)
+    }
+
+    pub fn can_sign_in(&self) -> bool {
+        matches!(self, TrainingStatus::OpenToSignup)
+    }
 }

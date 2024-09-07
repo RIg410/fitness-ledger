@@ -26,56 +26,30 @@ impl Day {
         }
     }
 
-    pub fn day_id(&self) -> DayId {
-        unsafe { DayId::from_utc(self.date_time) }
-    }
+    pub fn check_collision(&self, new: &Training) -> Option<Collision> {
+        let new_slot = new.get_slot();
+        for old in &self.training {
+            if old.is_canceled {
+                continue;
+            }
 
-    pub fn add_training(&mut self, training: Training) -> bool {
-        let new_training_start_at = training.start_at_local();
-        let new_training_end_at = training.start_at_local()
-            + chrono::Duration::minutes(training.duration_min as i64)
-            + chrono::Duration::seconds(1);
-        let conflict = self
-            .training
-            .iter()
-            .map(|t| {
-                (
-                    t.start_at_local(),
-                    t.start_at_local() + chrono::Duration::minutes(t.duration_min as i64),
-                )
-            })
-            .any(|(start, end)| {
-                (new_training_start_at >= start && new_training_start_at < end)
-                    || (new_training_end_at > start && new_training_end_at <= end)
-            });
-        if !conflict {
-            self.training.push(training);
-            self.training.sort_by(|a, b| a.start_at.cmp(&b.start_at));
-            true
-        } else {
-            false
+            if old.get_slot().has_conflict(&new_slot) {
+                return Some(Collision {
+                    day_id: self.day_id(),
+                    training_id: old.id,
+                });
+            }
         }
+
+        None
     }
 
-    pub fn remove_training(&mut self, training_id: ObjectId) -> bool {
-        let index = self.training.iter().position(|t| t.id == training_id);
-        if let Some(index) = index {
-            self.training.remove(index);
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn day_date(&self) -> DateTime<Local> {
-        self.date_time.with_timezone(&Local)
-    }
-
-    pub fn copy(self, id: DayId) -> Day {
-        let training = self
+    pub fn copy_day(id: DayId, day: Day) -> Day {
+        let training = day
             .training
             .into_iter()
-            .map(|t| t.change_date(id))
+            .filter(|t| !t.is_one_time)
+            .map(|t| Training::with_day_and_training(id, t))
             .collect::<Vec<_>>();
 
         Day {
@@ -86,4 +60,17 @@ impl Day {
             version: 0,
         }
     }
+
+    pub fn day_id(&self) -> DayId {
+        unsafe { DayId::from_utc(self.date_time) }
+    }
+
+    pub fn day_date(&self) -> DateTime<Local> {
+        self.date_time.with_timezone(&Local)
+    }
+}
+
+pub struct Collision {
+    pub day_id: DayId,
+    pub training_id: ObjectId,
 }

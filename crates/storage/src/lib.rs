@@ -13,7 +13,7 @@ pub struct Storage {
     pub db: Db,
     pub users: UserStore,
     pub calendar: calendar::CalendarStore,
-    pub training: training::TrainingStore,
+    pub training: training::ProgramStore,
 }
 
 impl Storage {
@@ -21,7 +21,7 @@ impl Storage {
         let db = Db::new(uri, DB_NAME).await?;
         let users = UserStore::new(&db).await?;
         let schedule = calendar::CalendarStore::new(&db).await?;
-        let training = training::TrainingStore::new(&db);
+        let training = training::ProgramStore::new(&db);
         Ok(Storage {
             db,
             users,

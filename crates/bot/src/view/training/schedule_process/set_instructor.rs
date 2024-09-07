@@ -2,7 +2,7 @@ use super::{ScheduleTrainingPreset, View};
 use crate::{callback_data::Calldata, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
-use model::{proto::TrainingProto, user::User};
+use model::{program::Program, user::User};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -33,7 +33,8 @@ impl View for SetInstructor {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
-            .get_training_by_id(&mut ctx.session, self.id)
+            .programs
+            .get_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let (msg, keymap) = render(ctx, &training).await?;
@@ -69,7 +70,7 @@ impl View for SetInstructor {
     }
 }
 
-async fn render(ctx: &mut Context, training: &TrainingProto) -> Result<(String, InlineKeyboardMarkup)> {
+async fn render(ctx: &mut Context, training: &Program) -> Result<(String, InlineKeyboardMarkup)> {
     let msg = format!(
         "🫰Выберите инструктора для тренировки *{}*",
         escape(&training.name)

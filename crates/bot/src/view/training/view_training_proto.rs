@@ -7,7 +7,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use eyre::Result;
-use model::{ids::WeekId, proto::TrainingProto, rights::Rule};
+use model::{ids::WeekId, program::Program, rights::Rule};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -37,7 +37,8 @@ impl View for ViewTrainingProto {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
-            .get_training_by_id(&mut ctx.session, self.id)
+            .programs
+            .get_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let (text, keymap) = render(ctx, &training, self.go_back.is_some()).await?;
@@ -77,7 +78,8 @@ impl View for ViewTrainingProto {
             TrainingProtoCallback::Description => {
                 let training = ctx
                     .ledger
-                    .get_training_by_id(&mut ctx.session, self.id)
+                    .programs
+                    .get_by_id(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 ctx.send_msg(&escape(&training.description)).await?;
@@ -105,7 +107,7 @@ impl View for ViewTrainingProto {
 
 async fn render(
     ctx: &Context,
-    training: &TrainingProto,
+    training: &Program,
     go_back: bool,
 ) -> Result<(String, InlineKeyboardMarkup)> {
     let text = format!(

@@ -30,8 +30,8 @@ impl SetOneTime {
 impl View for SetOneTime {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
-            .ledger
-            .get_training_by_id(&mut ctx.session, self.id)
+            .ledger.programs
+            .get_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;

@@ -55,7 +55,7 @@ impl View for FindTraining {
 
 async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     let mut msg = "🤸🏻‍♂️  Подберем тренировку для вас:".to_owned();
-    let trainings = ctx.ledger.get_all_trainings(&mut ctx.session).await?;
+    let trainings = ctx.ledger.programs.get_all(&mut ctx.session).await?;
     if trainings.is_empty() {
         msg.push_str("\n\nУ нас пока нет тренировок");
     } else {

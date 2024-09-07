@@ -143,6 +143,7 @@ pub async fn render_week(
         (week_local + Duration::days(6)).format("%d\\.%m"),
     );
 
+    let now = Local::now();
     let selected_week_day = selected_day_id.week_day();
     let mut buttons = InlineKeyboardMarkup::default();
     let mut row = vec![];
@@ -190,12 +191,12 @@ pub async fn render_week(
             }
         }
 
-        let start_at = training.start_at_local();
+        let start_at = training.get_slot().start_at();
         let mut row = vec![];
         row.push(InlineKeyboardButton::callback(
             format!(
                 "{} {} {}",
-                render_training_status(&training.status, training.is_full()),
+                render_training_status(training.status(now)),
                 start_at.format("%H:%M"),
                 training.name.as_str(),
             ),
@@ -262,16 +263,14 @@ pub fn render_weekday(weekday: &DateTime<Local>) -> &'static str {
     }
 }
 
-pub fn render_training_status(training: &TrainingStatus, is_full: bool) -> &'static str {
-    if is_full {
-        return "🟣";
-    }
+pub fn render_training_status(training: TrainingStatus) -> &'static str {
     match training {
         TrainingStatus::Finished => "✔️",
         TrainingStatus::OpenToSignup => "🟢",
         TrainingStatus::ClosedToSignup => "🟠",
         TrainingStatus::InProgress => "🔵",
         TrainingStatus::Cancelled => "⛔",
+        TrainingStatus::Full => "🟣",
     }
 }
 

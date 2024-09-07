@@ -1,11 +1,12 @@
 use bson::to_document;
-use chrono::{Duration, Utc, Weekday};
+use chrono::{Datelike as _, Duration, Utc, Weekday};
 use eyre::Result;
+use log::info;
 use model::{day::Day, ids::DayId, training::Training};
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::{FindOneOptions, IndexOptions, UpdateOptions},
-    ClientSession, Collection, Database, IndexModel,
+    ClientSession, Collection, Database, IndexModel, SessionCursor,
 };
 use std::sync::Arc;
 
@@ -42,10 +43,25 @@ impl CalendarStore {
         Ok(self.days.find(filter).session(&mut *session).await?)
     }
 
-    pub async fn get_my_trainings(
+    pub async fn set_cancel_flag(
         &self,
         session: &mut ClientSession,
-        id: ObjectId,
+        training_id: ObjectId,
+        flag: bool,
+    ) -> Result<(), eyre::Error> {
+        let filter = doc! { "training._id": training_id };
+        let update = doc! { "$set": { "training.$.canceled": flag }, "$inc": { "version": 1 } };
+        self.days
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn find_trainings(
+        &self,
+        session: &mut ClientSession,
+        user_id: ObjectId,
         limit: usize,
         offset: usize,
     ) -> Result<Vec<Training>, eyre::Error> {
@@ -55,8 +71,8 @@ impl CalendarStore {
           "$and": [
             {
               "$or": [
-                { "training.instructor": id },
-                { "training.clients": { "$elemMatch": { "$eq": id } } }
+                { "training.instructor": user_id },
+                { "training.clients": { "$elemMatch": { "$eq": user_id } } }
               ]
             },
             { "date_time": { "$gte":  day_id.id()} }
@@ -72,7 +88,7 @@ impl CalendarStore {
                 if training.start_at + Duration::minutes(training.duration_min as i64) < now {
                     continue;
                 }
-                if training.instructor == id || training.clients.contains(&id) {
+                if training.instructor == user_id || training.clients.contains(&user_id) {
                     if skiped < offset {
                         skiped += 1;
                         continue;
@@ -125,7 +141,7 @@ impl CalendarStore {
                     .await?
                     .unwrap_or(Day::new(id));
 
-                let day = prev_day.copy(id);
+                let day = Day::copy_day(id, prev_day);
 
                 self.days
                     .update_one(
@@ -140,13 +156,46 @@ impl CalendarStore {
         }
     }
 
-    pub async fn update_day(
+    pub async fn delete_training(
         &self,
         session: &mut ClientSession,
-        day: &Day,
-    ) -> Result<(), eyre::Error> {
+        training: &Training,
+    ) -> std::result::Result<(), eyre::Error> {
+        let filter = doc! { "training._id": training.id };
+        let update =
+            doc! { "$pull": { "training": { "_id": training.id } }, "$inc": { "version": 1 } };
         self.days
-            .replace_one(doc! { "_id": day.id }, day)
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn week_days_after(
+        &self,
+        session: &mut ClientSession,
+        day: DayId,
+    ) -> Result<SessionCursor<Day>> {
+        let filter = doc! {
+            "date_time": { "$gt": day.id() },
+            "weekday": day.week_day().to_string(),
+        };
+        Ok(self.days.find(filter).session(&mut *session).await?)
+    }
+
+    pub async fn add_training(
+        &self,
+        session: &mut ClientSession,
+        training: &Training,
+    ) -> Result<(), eyre::Error> {
+        info!("Add training: {:?}", training);
+        let filter = doc! { "date_time": training.day_id().id() };
+        let update = doc! {
+            "$push": { "training": to_document(training)? },
+            "$inc": { "version": 1 }
+        };
+        self.days
+            .update_one(filter, update)
             .session(&mut *session)
             .await?;
         Ok(())

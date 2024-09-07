@@ -6,6 +6,7 @@ use crate::{
     view::calendar::{render_training_status, training::TrainingView, CallbackDateTime},
 };
 use async_trait::async_trait;
+use chrono::Local;
 use eyre::Result;
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
@@ -68,7 +69,7 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
     let trainings = ctx
         .ledger
         .calendar
-        .get_my_trainings(&mut ctx.session, ctx.me.id, 100, 0)
+        .get_users_trainings(&mut ctx.session, ctx.me.id, 100, 0)
         .await?;
 
     if trainings.is_empty() && !ctx.has_right(Rule::Train) {
@@ -90,16 +91,18 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
 ",
     );
 
+    let now = Local::now();
     for training in trainings[..std::cmp::min(15, trainings.len())].iter() {
         let mut row = vec![];
+        let slot = training.get_slot();
         row.push(InlineKeyboardButton::callback(
             format!(
                 "{} {} {}",
-                render_training_status(&training.status, training.is_full()),
-                training.start_at_local().format("%d.%m %H:%M"),
+                render_training_status(training.status(now)),
+                slot.start_at().format("%d.%m %H:%M"),
                 training.name.as_str(),
             ),
-            MyTrainingsCallback::SelectTraining(training.start_at_local().into()).to_data(),
+            MyTrainingsCallback::SelectTraining(slot.start_at().into()).to_data(),
         ));
         keyboard = keyboard.append_row(row);
     }

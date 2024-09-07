@@ -2,7 +2,7 @@ use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TrainingProto {
+pub struct Program {
     #[serde(rename = "_id")]
     pub id: ObjectId,
     pub name: String,
@@ -13,9 +13,9 @@ pub struct TrainingProto {
     pub version: u64,
 }
 
-impl Default for TrainingProto {
+impl Default for Program {
     fn default() -> Self {
-        TrainingProto {
+        Program {
             id: ObjectId::new(),
             name: String::new(),
             description: String::new(),

@@ -2,7 +2,12 @@ use super::{
     create_training::CreateTraining, schedule_process::ScheduleTrainingPreset,
     view_training_proto::ViewTrainingProto,
 };
-use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::{calendar::render_weekday, View}};
+use crate::{
+    callback_data::Calldata as _,
+    context::Context,
+    state::Widget,
+    view::{calendar::render_weekday, View},
+};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use eyre::{Error, Result};
@@ -93,7 +98,7 @@ async fn render(
     );
     let mut markup = InlineKeyboardMarkup::default();
 
-    let trainings = ctx.ledger.find_trainings(&mut ctx.session, None).await?;
+    let trainings = ctx.ledger.programs.find(&mut ctx.session, None).await?;
 
     for training in trainings {
         markup
