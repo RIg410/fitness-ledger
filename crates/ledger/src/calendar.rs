@@ -235,6 +235,10 @@ impl Calendar {
             }
         }
         let mut training = Training::with_program(program, start_at, instructor.id, is_one_time);
+        if training.status(Local::now()) != TrainingStatus::OpenToSignup {
+            return Err(ScheduleError::TooCloseToStart);
+        }
+
         self.calendar.add_training(session, &training).await?;
 
         if !is_one_time {
@@ -264,7 +268,6 @@ impl Calendar {
         start_at: DateTime<Local>,
         is_one_time: bool,
     ) -> Result<Option<TimeSlotCollision>> {
-        dbg!(program_id, start_at, is_one_time);
         let program = self
             .programs
             .get_by_id(session, program_id)
@@ -344,6 +347,8 @@ pub enum ScheduleError {
     InstructorNotFound,
     #[error("Instructor has no rights")]
     InstructorHasNoRights,
+    #[error("Too close to start")]
+    TooCloseToStart,
     #[error("Time slot collision:{0:?}")]
     TimeSlotCollision(TimeSlotCollision),
     #[error("Common error:{0}")]

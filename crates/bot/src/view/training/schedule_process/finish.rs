@@ -126,5 +126,8 @@ fn error_msg(err: &ScheduleError) -> String {
         }
         ScheduleError::TimeSlotCollision(collision) => render_time_slot_collision(collision),
         ScheduleError::Common(err) => escape(&format!("Ошибка: {:#}", err)),
+        ScheduleError::TooCloseToStart => {
+            "Нельзя добавить тренировку менее чем за 3 часа".to_string()
+        }
     }
 }
