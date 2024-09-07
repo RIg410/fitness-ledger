@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use chrono::{DateTime, Local, TimeZone as _, Timelike, Utc};
+use chrono::{DateTime, Local, Timelike, Utc};
 
 pub struct Slot {
     pub start_at: DateTime<Utc>,
