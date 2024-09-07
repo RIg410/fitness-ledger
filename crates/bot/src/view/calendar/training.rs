@@ -136,6 +136,12 @@ impl View for TrainingView {
                     .get_training_by_start_at(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
+                if !training.status(Local::now()).can_sign_out() {
+                    ctx.send_msg("Запись на тренировку закрыта").await?;
+                    let id = ctx.send_msg("\\.").await?;
+                    ctx.update_origin_msg_id(id);
+                    return Ok(None);
+                }
                 ctx.ledger
                     .calendar
                     .sign_out(&mut ctx.session, &training, ctx.me.id)
@@ -187,7 +193,7 @@ _{}_
     if ctx.has_right(Rule::CancelTraining) {
         if tr_status.can_be_canceled() {
             keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-                "⛔Отменить",
+                "⛔ Отменить",
                 TCallback::Cancel.to_data(),
             )]);
         }

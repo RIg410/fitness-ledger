@@ -1,5 +1,5 @@
 use bson::to_document;
-use chrono::{DateTime, Datelike as _, Duration, Utc, Weekday};
+use chrono::{DateTime, Duration, Utc, Weekday};
 use eyre::Result;
 use log::info;
 use model::{day::Day, ids::DayId, training::Training};
@@ -206,6 +206,54 @@ impl CalendarStore {
             .update_one(filter, update)
             .session(&mut *session)
             .await?;
+        Ok(())
+    }
+
+    pub async fn sign_up(
+        &self,
+        session: &mut ClientSession,
+        start_at: DateTime<Utc>,
+        user_id: ObjectId,
+    ) -> Result<(), eyre::Error> {
+        info!("Sign up: {:?} {}", start_at, user_id);
+        let filter = doc! { "training.start_at": start_at };
+        let update = doc! {
+            "$addToSet": { "training.$.clients": user_id },
+            "$inc": { "version": 1 }
+        };
+        let result = self
+            .days
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
+
+        if result.modified_count != 1 {
+            return Err(eyre::eyre!("Training not found"));
+        }
+        Ok(())
+    }
+
+    pub async fn sign_out(
+        &self,
+        session: &mut ClientSession,
+        start_at: DateTime<Utc>,
+        user_id: ObjectId,
+    ) -> Result<(), eyre::Error> {
+        info!("Sign out: {:?} {}", start_at, user_id);
+        let filter = doc! { "training.start_at": start_at };
+        let update = doc! {
+            "$pull": { "training.$.clients": user_id },
+            "$inc": { "version": 1 }
+        };
+        let result = self
+            .days
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
+
+        if result.modified_count != 1 {
+            return Err(eyre::eyre!("Training not found"));
+        }
         Ok(())
     }
 }

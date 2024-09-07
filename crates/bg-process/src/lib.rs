@@ -2,7 +2,6 @@ mod notifier;
 
 use eyre::Error;
 use ledger::Ledger;
-use log::info;
 use model::{ids::DayId, training::TrainingStatus};
 use std::time::Duration;
 use tokio::time::{self};
