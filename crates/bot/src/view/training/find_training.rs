@@ -1,7 +1,7 @@
 use super::{
     schedule_process::ScheduleTrainingPreset, view_training_proto::ViewTrainingProto, View,
 };
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuItem};
 use async_trait::async_trait;
 use eyre::Result;
 use mongodb::bson::oid::ObjectId;
@@ -61,15 +61,15 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     } else {
         msg.push_str("\n\nвот что у нас есть:");
     }
-    let mut keyboard = InlineKeyboardMarkup::default();
+    let mut keymap = InlineKeyboardMarkup::default();
     for proto in trainings {
-        keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             proto.name.clone(),
             FindTrainingCallback::SelectTraining(proto.id.bytes()).to_data(),
         )]);
     }
-
-    Ok((msg, keyboard))
+    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
+    Ok((msg, keymap))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

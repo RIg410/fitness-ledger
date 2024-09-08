@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use eyre::{bail, Ok, Result};
+use log::warn;
 use model::rights::Rule;
-use strum::{EnumIter, IntoEnumIterator};
-use teloxide::types::{BotCommand, KeyboardButton, KeyboardMarkup, Message};
+use strum::EnumIter;
+use teloxide::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 use crate::{context::Context, state::Widget};
 
@@ -11,35 +12,28 @@ use super::{
     users::UsersView, View,
 };
 
-const COLUMNS: usize = 2;
-
 pub struct MainMenuView;
+
+impl MainMenuView {
+    pub async fn send_self(&self, ctx: &mut Context) -> Result<(), eyre::Error> {
+        let mut keymap = InlineKeyboardMarkup::default();
+
+        keymap = keymap.append_row(vec![MainMenuItem::Profile.into()]);
+        keymap = keymap.append_row(vec![MainMenuItem::Trainings.into()]);
+        keymap = keymap.append_row(vec![MainMenuItem::Subscription.into()]);
+        if ctx.has_right(Rule::ViewUsers) {
+            keymap = keymap.append_row(vec![MainMenuItem::Users.into()]);
+        }
+
+        let id = ctx.send_msg_with_markup("🏠SoulFamily🤸🏼", keymap).await?;
+        ctx.update_origin_msg_id(id);
+        Ok(())
+    }
+}
 
 #[async_trait]
 impl View for MainMenuView {
-    async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let mut keymap = Vec::<Vec<KeyboardButton>>::with_capacity(3);
-
-        for item in MainMenuItem::iter() {
-            if MainMenuItem::Users == item && !ctx.has_right(Rule::ViewUsers) {
-                continue;
-            }
-
-            if let Some(last) = keymap.last() {
-                if last.len() == COLUMNS {
-                    keymap.push(Vec::with_capacity(COLUMNS));
-                }
-            } else {
-                keymap.push(Vec::with_capacity(COLUMNS));
-            }
-            keymap
-                .last_mut()
-                .unwrap()
-                .push(KeyboardButton::new(item.description()));
-        }
-        let keymap = KeyboardMarkup::new(keymap);
-        let id = ctx.send_replay_markup("\\.", keymap).await?;
-        ctx.update_origin_msg_id(id);
+    async fn show(&mut self, _: &mut Context) -> Result<(), eyre::Error> {
         Ok(())
     }
 
@@ -58,33 +52,52 @@ impl View for MainMenuView {
         } else {
             return Ok(None);
         };
+        if let Err(err) = ctx.delete_msg(msg.id).await {
+            warn!("{:#}", err);
+        }
 
-        let id = ctx.send_msg("\\.").await?;
-        ctx.update_origin_msg_id(id);
+        self.send_self(ctx).await?;
         Ok(Some(match command {
             MainMenuItem::Profile => Box::new(UserProfile::default()),
             MainMenuItem::Trainings => Box::new(TrainingMainView::default()),
             MainMenuItem::Users => Box::new(UsersView::default()),
             MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
+            MainMenuItem::Home => return Ok(None),
         }))
     }
 
     async fn handle_callback(
         &mut self,
-        _: &mut Context,
-        _: &str,
+        ctx: &mut Context,
+        msg: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        Ok(None)
+        let command = if let Some(command) = MainMenuItem::try_from(msg).ok() {
+            command
+        } else {
+            return Ok(None);
+        };
+        self.send_self(ctx).await?;
+        Ok(Some(match command {
+            MainMenuItem::Profile => Box::new(UserProfile::default()),
+            MainMenuItem::Trainings => Box::new(TrainingMainView::default()),
+            MainMenuItem::Users => Box::new(UsersView::default()),
+            MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
+            MainMenuItem::Home => Box::new(MainMenuView),
+        }))
     }
 }
 
 #[derive(EnumIter, Clone, Copy, Debug, PartialEq)]
 pub enum MainMenuItem {
+    Home,
     Profile,
     Trainings,
     Users,
     Subscription,
 }
+
+const HOME_DESCRIPTION: &str = "🏠";
+const HOME_NAME: &str = "/start";
 
 const PROFILE_DESCRIPTION: &str = "Профиль 🧑";
 const PROFILE_NAME: &str = "/profile";
@@ -105,6 +118,7 @@ impl MainMenuItem {
             MainMenuItem::Trainings => TRAININGS_DESCRIPTION,
             MainMenuItem::Users => USERS_DESCRIPTION,
             MainMenuItem::Subscription => SUBSCRIPTION_DESCRIPTION,
+            MainMenuItem::Home => HOME_DESCRIPTION,
         }
     }
 
@@ -114,7 +128,14 @@ impl MainMenuItem {
             MainMenuItem::Trainings => TRAININGS_NAME,
             MainMenuItem::Users => USERS_NAME,
             MainMenuItem::Subscription => SUBSCRIPTION_NAME,
+            MainMenuItem::Home => HOME_NAME,
         }
+    }
+}
+
+impl From<MainMenuItem> for InlineKeyboardButton {
+    fn from(value: MainMenuItem) -> Self {
+        InlineKeyboardButton::callback(value.description(), value.name())
     }
 }
 
@@ -136,6 +157,7 @@ impl TryFrom<&str> for MainMenuItem {
             TRAININGS_NAME | TRAININGS_DESCRIPTION => Ok(MainMenuItem::Trainings),
             USERS_NAME | USERS_DESCRIPTION => Ok(MainMenuItem::Users),
             SUBSCRIPTION_NAME | SUBSCRIPTION_DESCRIPTION => Ok(MainMenuItem::Subscription),
+            HOME_NAME | HOME_DESCRIPTION | "/home" => Ok(MainMenuItem::Home),
             _ => bail!("Unknown command"),
         }
     }

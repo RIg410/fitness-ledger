@@ -75,16 +75,15 @@ async fn render(ctx: &mut Context, training: &Program) -> Result<(String, Inline
         "🫰Выберите инструктора для тренировки *{}*",
         escape(&training.name)
     );
-    let mut markup = InlineKeyboardMarkup::default();
+    let mut keymap = InlineKeyboardMarkup::default();
 
     let instructors = ctx.ledger.users.instructors(&mut ctx.session).await?;
     for instructor in instructors {
-        markup
+        keymap
             .inline_keyboard
             .push(vec![make_instructor_button(&instructor)]);
     }
-
-    Ok((msg, markup))
+    Ok((msg, keymap))
 }
 
 fn make_instructor_button(instructor: &User) -> InlineKeyboardButton {

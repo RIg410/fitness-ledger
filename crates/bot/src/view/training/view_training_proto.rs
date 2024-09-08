@@ -3,7 +3,10 @@ use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::calendar::{CalendarView, Filter},
+    view::{
+        calendar::{CalendarView, Filter},
+        menu::MainMenuItem,
+    },
 };
 use async_trait::async_trait;
 use eyre::Result;
@@ -147,8 +150,10 @@ async fn render(
             TrainingProtoCallback::Back.to_data(),
         )]);
     }
-
-    Ok((text, InlineKeyboardMarkup::new(keymap)))
+    Ok((
+        text,
+        InlineKeyboardMarkup::new(keymap).append_row(vec![MainMenuItem::Home.into()]),
+    ))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

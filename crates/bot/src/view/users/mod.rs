@@ -1,3 +1,4 @@
+use super::menu::MainMenuItem;
 use super::{profile::user_type, View};
 use crate::callback_data::Calldata as _;
 use crate::view::users::profile::UserProfile;
@@ -33,7 +34,12 @@ impl View for UsersView {
         let users = ctx
             .ledger
             .users
-            .find(&mut ctx.session, &self.query.query, self.query.offset, LIMIT)
+            .find(
+                &mut ctx.session,
+                &self.query.query,
+                self.query.offset,
+                LIMIT,
+            )
             .await?;
         let (txt, markup) = render_message(count, &self.query.query, &users, self.query.offset);
         ctx.edit_origin(&txt, markup).await?;
@@ -120,10 +126,10 @@ fn render_message(
         escape(query)
     );
 
-    let mut markup = InlineKeyboardMarkup::default();
+    let mut keymap = InlineKeyboardMarkup::default();
 
     for user in users {
-        markup = markup.append_row(vec![make_button(user)]);
+        keymap = keymap.append_row(vec![make_button(user)]);
     }
 
     let mut raw = vec![];
@@ -143,9 +149,10 @@ fn render_message(
     }
 
     if raw.len() > 0 {
-        markup = markup.append_row(raw);
+        keymap = keymap.append_row(raw);
     }
-    (msg, markup)
+    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
+    (msg, keymap)
 }
 
 fn make_button(user: &User) -> InlineKeyboardButton {

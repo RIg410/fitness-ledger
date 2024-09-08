@@ -5,7 +5,7 @@ pub mod schedule_process;
 pub mod schedule_training;
 pub mod view_training_proto;
 
-use super::{calendar::CalendarView, View};
+use super::{calendar::CalendarView, menu::MainMenuItem, View};
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
@@ -59,21 +59,22 @@ impl View for TrainingMainView {
 
 pub fn render() -> (String, InlineKeyboardMarkup) {
     let msg = "🤸🏻‍♂️  Подберем тренировку для вас:".to_owned();
-    let mut keyboard = InlineKeyboardMarkup::default();
-    keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
+    let mut keymap = InlineKeyboardMarkup::default();
+    keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
         "🫶🏻 Мои тренировки",
         ScheduleLendingCallback::MyTrainings.to_data(),
     )]);
-    keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
+    keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
         "📅  Календарь",
         ScheduleLendingCallback::Schedule.to_data(),
     )]);
-    keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
+    keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
         "🔍 Найти тренировку",
         ScheduleLendingCallback::FindTraining.to_data(),
     )]);
 
-    (msg, keyboard)
+    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
+    (msg, keymap)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

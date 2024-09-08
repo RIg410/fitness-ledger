@@ -3,7 +3,7 @@ use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::calendar::{render_training_status, training::TrainingView, CallbackDateTime},
+    view::{calendar::{render_training_status, training::TrainingView, CallbackDateTime}, menu::MainMenuItem},
 };
 use async_trait::async_trait;
 use chrono::Local;
@@ -64,7 +64,7 @@ impl View for MyTrainings {
 async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeyboardMarkup)> {
     let mut msg = "🫶🏻 Мои тренировки:".to_owned();
 
-    let mut keyboard = InlineKeyboardMarkup::default();
+    let mut keymap = InlineKeyboardMarkup::default();
 
     let trainings = ctx
         .ledger
@@ -104,23 +104,23 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
             ),
             MyTrainingsCallback::SelectTraining(slot.start_at().into()).to_data(),
         ));
-        keyboard = keyboard.append_row(row);
+        keymap = keymap.append_row(row);
     }
     if !ctx.has_right(Rule::Train) {
-        keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🔍 Найти тренировку",
             MyTrainingsCallback::FindTraining.to_data(),
         )]);
     }
 
     if go_back {
-        keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🔙 Назад",
             MyTrainingsCallback::Back.to_data(),
         )]);
     }
-
-    Ok((msg, keyboard))
+    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
+    Ok((msg, keymap))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

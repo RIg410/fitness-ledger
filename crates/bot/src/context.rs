@@ -98,15 +98,15 @@ impl Context {
         &self,
         text: &str,
         markup: InlineKeyboardMarkup,
-    ) -> Result<(), eyre::Error> {
-        self.bot
+    ) -> Result<MessageId, eyre::Error> {
+        Ok(self
+            .bot
             .send_message(self.chat_id(), text)
             .parse_mode(teloxide::types::ParseMode::MarkdownV2)
             .reply_markup(markup)
             .await
             .context(format!("Failed to send message: {}", text))?
-            .id;
-        Ok(())
+            .id)
     }
 
     pub async fn reload_user(&mut self) -> Result<(), eyre::Error> {

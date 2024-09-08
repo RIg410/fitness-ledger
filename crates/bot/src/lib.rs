@@ -1,6 +1,3 @@
-// pub mod format;
-// mod process;
-// mod sessions;
 pub mod callback_data;
 mod context;
 mod state;
@@ -33,6 +30,7 @@ pub async fn start_bot(ledger: Ledger, token: String) -> Result<()> {
     let state = StateHolder::default();
 
     bot.set_my_commands(vec![
+        MainMenuItem::Home.into(),
         MainMenuItem::Profile.into(),
         MainMenuItem::Trainings.into(),
         MainMenuItem::Subscription.into(),
@@ -85,12 +83,23 @@ async fn message_handler(
             }
         };
 
-    match inner_message_handler(&mut ctx, widget, is_real_user, msg, state_holder).await {
+    match inner_message_handler(&mut ctx, widget, is_real_user, msg, &state_holder).await {
         Ok(_) => Ok(()),
         Err(err) => {
             error!("Failed to handle message: {:#}", err);
             if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
                 error!("send message error :{:#}", err);
+                let mut main_view = MainMenuView;
+                if let Err(err) = main_view.show(&mut ctx).await {
+                    error!("Failed to show main menu:{:#}", err);
+                }
+                state_holder.set_state(
+                    ctx.chat_id(),
+                    State {
+                        view: Some(Box::new(main_view)),
+                        origin: Some(ctx.origin()),
+                    },
+                );
             }
             Ok(())
         }
@@ -102,7 +111,7 @@ async fn inner_message_handler(
     widget: Option<Widget>,
     is_real_user: bool,
     msg: Message,
-    state_holder: StateHolder,
+    state_holder: &StateHolder,
 ) -> Result<(), eyre::Error> {
     if !ctx.is_active() {
         ctx.send_msg("Ваш аккаунт заблокирован").await?;
@@ -134,7 +143,6 @@ async fn inner_message_handler(
                     None => widget,
                 }
             } else {
-                main_view.show(ctx).await?;
                 Box::new(main_view)
             }
         }
@@ -170,13 +178,25 @@ async fn callback_handler(
     } else {
         return Ok(());
     };
-    match inner_callback_handler(&mut ctx, widget, is_real_user, q.data, state_holder, q.id).await {
+    match inner_callback_handler(&mut ctx, widget, is_real_user, q.data, &state_holder, q.id).await
+    {
         Ok(_) => Ok(()),
         Err(err) => {
-            error!("Failed to handle message: {:#}", err);
+            error!("Failed to handle callback: {:#}", err);
             if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
                 error!("send message error :{:#}", err);
             }
+            let mut main_view = MainMenuView;
+            if let Err(err) = main_view.show(&mut ctx).await {
+                error!("Failed to show main menu:{:#}", err);
+            }
+            state_holder.set_state(
+                ctx.chat_id(),
+                State {
+                    view: Some(Box::new(main_view)),
+                    origin: Some(ctx.origin()),
+                },
+            );
             Ok(())
         }
     }
@@ -187,7 +207,7 @@ async fn inner_callback_handler(
     widget: Option<Widget>,
     is_real_user: bool,
     data: Option<String>,
-    state_holder: StateHolder,
+    state_holder: &StateHolder,
     id: String,
 ) -> Result<(), eyre::Error> {
     if !ctx.is_active() {

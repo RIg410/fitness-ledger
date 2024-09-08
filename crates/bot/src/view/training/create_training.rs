@@ -1,4 +1,9 @@
-use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
+use crate::{
+    callback_data::Calldata as _,
+    context::Context,
+    state::Widget,
+    view::{menu::MainMenuItem, View},
+};
 use async_trait::async_trait;
 use eyre::Result;
 use model::{program::Program, rights::Rule};
@@ -35,7 +40,9 @@ impl View for CreateTraining {
 
         ctx.edit_origin(
             "📝 Введите название тренировки:\n_оно должно быть уникально_",
-            InlineKeyboardMarkup::default().inline_keyboard(keymap),
+            InlineKeyboardMarkup::default()
+                .inline_keyboard(keymap)
+                .append_row(vec![MainMenuItem::Home.into()]),
         )
         .await?;
         self.state = Some(State::SetName(Program::default()));

@@ -6,7 +6,7 @@ use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::{calendar::render_weekday, View},
+    view::{calendar::render_weekday, menu::MainMenuItem, View},
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
@@ -96,12 +96,12 @@ async fn render(
         day.format("%d\\.%m\\.%Y"),
         render_weekday(day)
     );
-    let mut markup = InlineKeyboardMarkup::default();
+    let mut keymap = InlineKeyboardMarkup::default();
 
     let trainings = ctx.ledger.programs.find(&mut ctx.session, None).await?;
 
     for training in trainings {
-        markup
+        keymap
             .inline_keyboard
             .push(vec![InlineKeyboardButton::callback(
                 training.name.clone(),
@@ -109,7 +109,7 @@ async fn render(
             )]);
     }
 
-    markup
+    keymap
         .inline_keyboard
         .push(vec![InlineKeyboardButton::callback(
             "🧘🏼 Создать новую тренировку",
@@ -117,14 +117,15 @@ async fn render(
         )]);
 
     if has_back {
-        markup
+        keymap
             .inline_keyboard
             .push(vec![InlineKeyboardButton::callback(
                 "⬅️ Назад",
                 Callback::Back.to_data(),
             )]);
     }
-    Ok((msg, markup))
+    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
+    Ok((msg, keymap))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

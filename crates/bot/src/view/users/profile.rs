@@ -13,7 +13,7 @@ use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::{profile::user_type, View},
+    view::{menu::MainMenuItem, profile::user_type, View},
 };
 
 use super::rights::UserRightsView;
@@ -117,9 +117,9 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
         ),
         user.balance
     );
-    let mut markup = InlineKeyboardMarkup::default();
+    let mut keymap = InlineKeyboardMarkup::default();
     if ctx.has_right(Rule::BlockUser) && ctx.me.tg_id != user.tg_id {
-        markup = markup.append_row(vec![InlineKeyboardButton::callback(
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             if user.is_active {
                 "❌ Заблокировать"
             } else {
@@ -130,26 +130,27 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
     }
 
     if ctx.has_right(Rule::EditUserInfo) {
-        markup = markup.append_row(vec![InlineKeyboardButton::callback(
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "✍️ Редактировать",
             UserCallback::Edit.to_data(),
         )]);
     }
 
     if ctx.has_right(Rule::EditUserRights) {
-        markup = markup.append_row(vec![InlineKeyboardButton::callback(
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🔒 Права",
             UserCallback::EditRights.to_data(),
         )]);
     }
 
     if back {
-        markup = markup.append_row(vec![InlineKeyboardButton::callback(
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "⬅️",
             UserCallback::Back.to_data(),
         )]);
     }
-    (msg, markup)
+    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
+    (msg, keymap)
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

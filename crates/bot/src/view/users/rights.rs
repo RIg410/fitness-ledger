@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::profile::user_type,
+    callback_data::Calldata as _, context::Context, state::Widget, view::{menu::MainMenuItem, profile::user_type},
 };
 
 use super::View;
@@ -78,11 +78,11 @@ impl View for UserRightsView {
 
 fn render_user_rights(user: &User, back: bool) -> (String, InlineKeyboardMarkup) {
     let mut msg = format!("{} 🔒Права:", user_type(user));
-    let mut keyboard = InlineKeyboardMarkup::default();
+    let mut keymap = InlineKeyboardMarkup::default();
 
     if !user.rights.is_full() {
         for (rule, is_active) in user.rights.get_all_rules().iter() {
-            keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
+            keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                 format!("{} {}", rule.name(), if *is_active { "✅" } else { "❌" }),
                 UserRightsCallback::EditRule(rule.id(), !is_active).to_data(),
             )]);
@@ -92,13 +92,14 @@ fn render_user_rights(user: &User, back: bool) -> (String, InlineKeyboardMarkup)
     }
 
     if back {
-        keyboard = keyboard.append_row(vec![InlineKeyboardButton::callback(
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "⬅️",
             UserRightsCallback::Back.to_data(),
         )]);
     }
 
-    (msg, keyboard)
+    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
+    (msg, keymap)
 }
 
 #[derive(Debug, Serialize, Deserialize)]

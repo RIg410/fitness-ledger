@@ -70,7 +70,7 @@ impl View for SignUpView {
                             .request(ButtonRequest::Contact)]]);
                     ctx.send_replay_markup(
                         "Нажмите на кнопку, чтобы отправить номер телефона\\.",
-                        keymap,
+                        keymap.one_time_keyboard(),
                     )
                     .await?;
                     Ok(None)

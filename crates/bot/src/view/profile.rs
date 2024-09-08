@@ -11,7 +11,7 @@ use teloxide::{
 
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 
-use super::View;
+use super::{menu::MainMenuItem, View};
 
 #[derive(Default)]
 pub struct UserProfile {
@@ -137,6 +137,7 @@ pub fn render_user_profile(_: &Context, user: &User) -> (String, InlineKeyboardM
         )]);
     }
 
+    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     (msg, keymap)
 }
 
