@@ -24,7 +24,7 @@ pub struct Training {
     #[serde(default)]
     pub is_canceled: bool,
     #[serde(default)]
-    pub is_finished: bool,
+    pub is_processed: bool,
 }
 
 impl Training {
@@ -50,7 +50,7 @@ impl Training {
             capacity,
             is_one_time,
             is_canceled: false,
-            is_finished: false,
+            is_processed: false,
         }
     }
 
@@ -72,7 +72,7 @@ impl Training {
             capacity: program.capacity,
             is_one_time,
             is_canceled: false,
-            is_finished: false,
+            is_processed: false,
         }
     }
 
@@ -97,7 +97,7 @@ impl Training {
             capacity: training.capacity,
             is_one_time: training.is_one_time,
             is_canceled: training.is_canceled,
-            is_finished: training.is_finished,
+            is_processed: training.is_processed,
         }
     }
 
@@ -106,27 +106,25 @@ impl Training {
     }
 
     pub fn status(&self, now: DateTime<Local>) -> TrainingStatus {
-        if self.is_finished {
-            TrainingStatus::Finished
-        } else if self.is_canceled {
+        if self.is_canceled {
             TrainingStatus::Cancelled
         } else {
-            if self.clients.len() >= self.capacity as usize {
-                TrainingStatus::Full
+            let start_at = self.get_slot().start_at();
+            let end_at = start_at + chrono::Duration::minutes(self.duration_min as i64);
+            if end_at < now {
+                TrainingStatus::Finished
+            } else if start_at < now {
+                TrainingStatus::InProgress
+            } else if start_at - chrono::Duration::minutes(CLOSE_SING_UP as i64) < now {
+                TrainingStatus::ClosedToSignup
             } else {
-                let start_at = self.get_slot().start_at();
-                let end_at = start_at + chrono::Duration::minutes(self.duration_min as i64);
-                if end_at < now {
-                    TrainingStatus::Finished
-                } else if start_at < now {
-                    TrainingStatus::InProgress
-                } else if start_at - chrono::Duration::minutes(CLOSE_SING_UP as i64) < now {
-                    TrainingStatus::ClosedToSignup
-                } else {
-                    TrainingStatus::OpenToSignup
-                }
+                TrainingStatus::OpenToSignup
             }
         }
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.clients.len() as u32 >= self.capacity
     }
 
     pub fn set_date(&mut self, week_date: DateTime<Local>) -> Result<(), eyre::Error> {
@@ -149,7 +147,6 @@ impl Training {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]
 pub enum TrainingStatus {
     OpenToSignup,
-    Full,
     ClosedToSignup,
     InProgress,
     Cancelled,
@@ -160,7 +157,7 @@ impl TrainingStatus {
     pub fn can_be_canceled(&self) -> bool {
         matches!(
             self,
-            TrainingStatus::OpenToSignup | TrainingStatus::ClosedToSignup | TrainingStatus::Full
+            TrainingStatus::OpenToSignup | TrainingStatus::ClosedToSignup
         )
     }
 
@@ -169,7 +166,7 @@ impl TrainingStatus {
     }
 
     pub fn can_sign_out(&self) -> bool {
-        matches!(self, TrainingStatus::OpenToSignup | TrainingStatus::Full)
+        matches!(self, TrainingStatus::OpenToSignup)
     }
 
     pub fn can_sign_in(&self) -> bool {

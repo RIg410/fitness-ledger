@@ -5,3 +5,6 @@ pub mod day;
 pub mod rights;
 pub mod user;
 pub mod slot;
+pub mod subscription;
+pub mod treasury;
+pub mod decimal;

@@ -1,6 +1,7 @@
 pub mod calendar;
 pub mod session;
 pub mod training;
+pub mod treasury;
 pub mod user;
 
 use eyre::Result;
@@ -14,6 +15,7 @@ pub struct Storage {
     pub users: UserStore,
     pub calendar: calendar::CalendarStore,
     pub training: training::ProgramStore,
+    pub treasury: treasury::TreasuryStore,
 }
 
 impl Storage {
@@ -22,11 +24,13 @@ impl Storage {
         let users = UserStore::new(&db).await?;
         let schedule = calendar::CalendarStore::new(&db).await?;
         let training = training::ProgramStore::new(&db);
+        let treasury = treasury::TreasuryStore::new(&db).await?;
         Ok(Storage {
             db,
             users,
             calendar: schedule,
             training,
+            treasury,
         })
     }
 }

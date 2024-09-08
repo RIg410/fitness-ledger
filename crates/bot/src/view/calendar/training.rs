@@ -182,7 +182,7 @@ _{}_
         escape(&training.name),
         slot.start_at().format("%d\\.%m\\.%Y %H:%M"),
         cap,
-        status(tr_status),
+        status(tr_status, training.is_full()),
     );
     let mut keymap = InlineKeyboardMarkup::default();
     keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
@@ -255,13 +255,18 @@ enum TCallback {
     SignOut,
 }
 
-fn status(status: TrainingStatus) -> &'static str {
+fn status(status: TrainingStatus, is_full: bool) -> &'static str {
     match status {
-        TrainingStatus::OpenToSignup => "🟢Открыта для записи",
+        TrainingStatus::OpenToSignup => {
+            if is_full {
+                "нет мест ✌️"
+            } else {
+                "🟢Открыта для записи"
+            }
+        }
         TrainingStatus::ClosedToSignup => "🟠Запись закрыта",
         TrainingStatus::InProgress => "🤸🏼 Идет",
         TrainingStatus::Cancelled => "⛔Отменена",
         TrainingStatus::Finished => "✔️Завершена",
-        TrainingStatus::Full => "нет мест ✌️",
     }
 }

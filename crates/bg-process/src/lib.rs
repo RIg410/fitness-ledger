@@ -2,7 +2,6 @@ mod notifier;
 
 use eyre::Error;
 use ledger::Ledger;
-use model::{ids::DayId, training::TrainingStatus};
 use std::time::Duration;
 use tokio::time::{self};
 
@@ -19,22 +18,7 @@ pub fn start(ledger: Ledger) {
 }
 
 async fn process(ledger: &Ledger) -> Result<(), Error> {
-    let now = chrono::Local::now();
     let mut session = ledger.db.start_session().await?;
-    let mut day = ledger
-        .calendar
-        .get_day(&mut session, DayId::from(now))
-        .await?;
-    for training in &mut day.training {
-        match training.status(now) {
-            TrainingStatus::OpenToSignup => {}
-            TrainingStatus::Full => {}
-            TrainingStatus::ClosedToSignup => {}
-            TrainingStatus::InProgress => {}
-            TrainingStatus::Cancelled => {}
-            TrainingStatus::Finished => {}
-        }
-    }
-
+    ledger.process(&mut session).await?;
     Ok(())
 }

@@ -3,7 +3,10 @@ use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::{calendar::{render_training_status, training::TrainingView, CallbackDateTime}, menu::MainMenuItem},
+    view::{
+        calendar::{render_training_status, training::TrainingView, CallbackDateTime},
+        menu::MainMenuItem,
+    },
 };
 use async_trait::async_trait;
 use chrono::Local;
@@ -98,7 +101,7 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
         row.push(InlineKeyboardButton::callback(
             format!(
                 "{} {} {}",
-                render_training_status(training.status(now)),
+                render_training_status(training.status(now), training.is_full()),
                 slot.start_at().format("%d.%m %H:%M"),
                 training.name.as_str(),
             ),

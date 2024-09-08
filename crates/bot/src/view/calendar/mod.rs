@@ -196,7 +196,7 @@ pub async fn render_week(
         row.push(InlineKeyboardButton::callback(
             format!(
                 "{} {} {}",
-                render_training_status(training.status(now)),
+                render_training_status(training.status(now), training.is_full()),
                 start_at.format("%H:%M"),
                 training.name.as_str(),
             ),
@@ -263,14 +263,19 @@ pub fn render_weekday(weekday: &DateTime<Local>) -> &'static str {
     }
 }
 
-pub fn render_training_status(training: TrainingStatus) -> &'static str {
+pub fn render_training_status(training: TrainingStatus, is_full: bool) -> &'static str {
     match training {
         TrainingStatus::Finished => "✔️",
-        TrainingStatus::OpenToSignup => "🟢",
+        TrainingStatus::OpenToSignup => {
+            if is_full {
+                "🟣"
+            } else {
+                "🟢"
+            }
+        }
         TrainingStatus::ClosedToSignup => "🟠",
         TrainingStatus::InProgress => "🔵",
         TrainingStatus::Cancelled => "⛔",
-        TrainingStatus::Full => "🟣",
     }
 }
 

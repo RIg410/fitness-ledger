@@ -256,4 +256,16 @@ impl CalendarStore {
         }
         Ok(())
     }
+
+    pub async fn days_to_process(
+        &self,
+        session: &mut ClientSession,
+    ) -> Result<mongodb::SessionCursor<Day>> {
+        let now = Utc::now() + Duration::minutes(5);
+        let filter = doc! {
+            "training.start_at": { "$lt": now },
+            "training.is_finished": { "$ne": true },
+        };
+        Ok(self.days.find(filter).session(&mut *session).await?)
+    }
 }

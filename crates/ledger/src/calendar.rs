@@ -14,7 +14,7 @@ use storage::{calendar::CalendarStore, user::UserStore};
 use thiserror::Error;
 use tx_macro::tx;
 
-use crate::training::Programs;
+use crate::programs::Programs;
 
 #[derive(Clone)]
 pub struct Calendar {
@@ -298,6 +298,13 @@ impl Calendar {
         }
 
         Ok(None)
+    }
+
+    pub async fn days_for_process(
+        &self,
+        session: &mut ClientSession,
+    ) -> Result<SessionCursor<Day>> {
+        self.calendar.days_to_process(session).await
     }
 }
 
