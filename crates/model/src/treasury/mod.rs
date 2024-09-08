@@ -14,12 +14,12 @@ use subs::SellSubscription;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TreasuryEvent {
     #[serde(rename = "_id")]
-    id: ObjectId,
+    pub id: ObjectId,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
-    date_time: DateTime<Utc>,
-    event: Event,
-    debit: Decimal,
-    credit: Decimal,
+    pub date_time: DateTime<Utc>,
+    pub event: Event,
+    pub debit: Decimal,
+    pub credit: Decimal,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

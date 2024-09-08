@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -10,6 +10,18 @@ pub struct Decimal(i64);
 impl Decimal {
     pub fn int(value: i64) -> Decimal {
         Decimal(value * 10i64.pow(DECIMALS as u32))
+    }
+
+    pub fn is_negative(&self) -> bool {
+        self.0 < 0
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+
+    pub fn zero() -> Decimal {
+        Decimal::int(0)
     }
 }
 
@@ -32,6 +44,14 @@ impl TryFrom<&str> for Decimal {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let val = value.parse::<f64>().map_err(|_| ParseDecimalError)?;
         Ok(Decimal((val * 10f64.powi(DECIMALS as i32)) as i64))
+    }
+}
+
+impl FromStr for Decimal {
+    type Err = ParseDecimalError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Decimal::try_from(s)
     }
 }
 
@@ -395,5 +415,48 @@ pub mod tests {
         let decimal2 = Decimal::from(-6.78);
         decimal1 /= decimal2;
         assert_eq!("-18.20", format!("{}", decimal1));
+    }
+
+    #[test]
+    fn test_equality() {
+        let decimal1 = Decimal::from(123.45);
+        let decimal2 = Decimal::from(123.45);
+        assert_eq!(decimal1, decimal2);
+
+        let decimal1 = Decimal::from(-123.45);
+        let decimal2 = Decimal::from(-123.45);
+        assert_eq!(decimal1, decimal2);
+
+        let decimal1 = Decimal::from(123.45);
+        let decimal2 = Decimal::from(678.90);
+        assert_ne!(decimal1, decimal2);
+
+        let decimal1 = Decimal::from(-123.45);
+        let decimal2 = Decimal::from(123.45);
+        assert_ne!(decimal1, decimal2);
+    }
+
+    #[test]
+    fn test_ordering() {
+        let decimal1 = Decimal::from(123.45);
+        let decimal2 = Decimal::from(678.90);
+        assert!(decimal1 < decimal2);
+
+        let decimal1 = Decimal::from(678.90);
+        let decimal2 = Decimal::from(123.45);
+        assert!(decimal1 > decimal2);
+
+        let decimal1 = Decimal::from(-123.45);
+        let decimal2 = Decimal::from(123.45);
+        assert!(decimal1 < decimal2);
+
+        let decimal1 = Decimal::from(123.45);
+        let decimal2 = Decimal::from(-123.45);
+        assert!(decimal1 > decimal2);
+
+        let decimal1 = Decimal::from(123.45);
+        let decimal2 = Decimal::from(123.45);
+        assert!(decimal1 <= decimal2);
+        assert!(decimal1 >= decimal2);
     }
 }

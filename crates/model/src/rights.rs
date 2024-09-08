@@ -81,6 +81,12 @@ pub enum Rule {
     CancelTraining,
     CreateTraining,
     EditSchedule,
+
+    // Subscription
+    CreateSubscription,
+    EditSubscription,
+    SellSubscription,
+    FreeSell,
 }
 
 impl Rule {

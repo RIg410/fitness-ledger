@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local};
-use eyre::Result;
+use eyre::{Error, Result};
 use log::{info, warn};
 use model::{
     rights::{Rights, Rule},
@@ -9,17 +9,14 @@ use mongodb::{bson::oid::ObjectId, ClientSession};
 use storage::user::UserStore;
 use tx_macro::tx;
 
-use crate::calendar::Calendar;
-
 #[derive(Clone)]
 pub struct Users {
     store: UserStore,
-    calendar: Calendar,
 }
 
 impl Users {
-    pub(crate) fn new(store: UserStore, calendar: Calendar) -> Self {
-        Users { store, calendar }
+    pub(crate) fn new(store: UserStore) -> Self {
+        Users { store }
     }
 
     pub async fn get_by_tg_id(
@@ -136,6 +133,16 @@ impl Users {
             info!("Removing rule {:?} from user {}", rule, tg_id);
         }
 
+        Ok(())
+    }
+
+    pub(crate) async fn increment_balance(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+        amount: u32,
+    ) -> Result<(), Error> {
+        self.store.increment_balance(session, tg_id, amount).await?;
         Ok(())
     }
 }

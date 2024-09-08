@@ -59,7 +59,7 @@ impl View for UsersView {
             query = "".to_string();
         }
 
-        self.query = Query { query, offset: 0 };
+        self.query = Query { query: remove_non_alphanumeric(&query), offset: 0 };
         self.show(ctx).await?;
         Ok(None)
     }
@@ -172,4 +172,8 @@ enum Callback {
     Next,
     Prev,
     Select(i64),
+}
+
+fn remove_non_alphanumeric(input: &str) -> String {
+    input.chars().filter(|c| c.is_alphanumeric()).collect()
 }

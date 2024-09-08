@@ -1,5 +1,5 @@
 use super::UserInfo;
-use crate::subscription::Subscription;
+use crate::{decimal::Decimal, subscription::Subscription};
 use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -8,8 +8,9 @@ pub struct SubscriptionInfo {
     pub id: ObjectId,
     pub name: String,
     pub items: u32,
-    pub price: u32,
+    pub price: Decimal,
     pub version: u32,
+    pub free: bool,
 }
 
 impl From<Subscription> for SubscriptionInfo {
@@ -20,13 +21,14 @@ impl From<Subscription> for SubscriptionInfo {
             items: subscription.items,
             price: subscription.price,
             version: subscription.version,
+            free: false,
         }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SellSubscription {
-    seller: UserInfo,
-    buyer: UserInfo,
-    info: SubscriptionInfo,
+    pub seller: UserInfo,
+    pub buyer: UserInfo,
+    pub info: SubscriptionInfo,
 }

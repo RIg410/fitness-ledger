@@ -1,6 +1,6 @@
 use bson::to_document;
 use chrono::{DateTime, Local};
-use eyre::{Error, Result};
+use eyre::{eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
 use log::info;
 use model::rights;
@@ -124,13 +124,18 @@ impl UserStore {
     ) -> Result<()> {
         info!("Incrementing balance for user {}: {}", tg_id, amount);
         let amount = amount as i32;
-        self.users
+        let result = self
+            .users
             .update_one(
                 doc! { "tg_id": tg_id },
-                doc! { "$inc": { "balance": amount }, "$inc": { "version": 1 } },
+                doc! { "$inc": { "balance": amount,  "version": 1 } },
             )
             .session(&mut *session)
             .await?;
+
+        if result.modified_count != 1 {
+            return Err(eyre!("Failed to modify balance"));
+        }
         Ok(())
     }
 
