@@ -4,17 +4,17 @@ services:
     image: mongo
     restart: always
     ports:
-      - 27017:27017
+      - 127.0.0.1:27017:27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_ROOT_PASSWORD
+      HOST: $HOST
     volumes:
       - "./data:/data/db"
-  # backend:
-  #   build: .
-  #   restart: always
-  #   environment:
-  #     MONGO_URL: $MONGO_URL
-  #     TG_TOKEN: $TG_TOKEN
-  #     RUST_LOG: $RUST_LOG
-
+  backend:
+    build: .
+    restart: always
+    environment:
+      MONGO_URL: $MONGO_URL
+      TG_TOKEN: $TG_TOKEN
+      RUST_LOG: $RUST_LOG

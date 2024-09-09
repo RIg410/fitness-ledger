@@ -5,7 +5,7 @@ use mongodb::ClientSession;
 use teloxide::{
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester,
-    types::{ChatId, InlineKeyboardMarkup, KeyboardMarkup, MessageId},
+    types::{ChatId, InlineKeyboardMarkup, KeyboardMarkup, MessageId, ReplyMarkup},
     ApiError, Bot, RequestError,
 };
 
@@ -124,7 +124,7 @@ impl Context {
     pub async fn send_replay_markup(
         &self,
         text: &str,
-        markup: KeyboardMarkup,
+        markup: ReplyMarkup,
     ) -> Result<MessageId, eyre::Error> {
         Ok(self
             .bot

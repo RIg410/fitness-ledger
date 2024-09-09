@@ -6,7 +6,9 @@ use ledger::Ledger;
 use log::info;
 use model::user::UserName;
 use mongodb::ClientSession;
-use teloxide::types::{ButtonRequest, Contact, KeyboardButton, KeyboardMarkup, Message};
+use teloxide::types::{
+    ButtonRequest, Contact, KeyboardButton, KeyboardMarkup, KeyboardRemove, Message, ReplyMarkup,
+};
 
 const GREET_START: &str =
     "Добрый день\\. Приветствуем вас в нашей семье\\.\nПожалуйста, оставьте ваш номер телефона\\.";
@@ -50,7 +52,11 @@ impl View for SignUpView {
                     KeyboardMarkup::new(vec![vec![
                         KeyboardButton::new("📱 Отправить номер").request(ButtonRequest::Contact)
                     ]]);
-                ctx.send_replay_markup(GREET_START, keymap).await?;
+                ctx.send_replay_markup(
+                    GREET_START,
+                    ReplyMarkup::Keyboard(keymap.one_time_keyboard()),
+                )
+                .await?;
                 self.state = State::RequestPhone;
                 Ok(None)
             }
@@ -59,10 +65,15 @@ impl View for SignUpView {
                     create_user(&ctx.ledger, msg.chat.id.0, contact, from, &mut ctx.session)
                         .await
                         .context("Failed to create user")?;
-                    ctx.send_msg("Добро пожаловать\\!").await?;
+                    ctx.send_replay_markup(
+                        "Добро пожаловать\\!",
+                        ReplyMarkup::KeyboardRemove(KeyboardRemove::new()),
+                    )
+                    .await?;
 
                     ctx.reload_user().await?;
                     let view = Box::new(MainMenuView);
+                    view.send_self(ctx).await?;
                     return Ok(Some(view));
                 } else {
                     let keymap =
@@ -70,7 +81,7 @@ impl View for SignUpView {
                             .request(ButtonRequest::Contact)]]);
                     ctx.send_replay_markup(
                         "Нажмите на кнопку, чтобы отправить номер телефона\\.",
-                        keymap.one_time_keyboard(),
+                        ReplyMarkup::Keyboard(keymap.one_time_keyboard()),
                     )
                     .await?;
                     Ok(None)
