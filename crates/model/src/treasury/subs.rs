@@ -28,7 +28,6 @@ impl From<Subscription> for SubscriptionInfo {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SellSubscription {
-    pub seller: UserInfo,
     pub buyer: UserInfo,
     pub info: SubscriptionInfo,
 }

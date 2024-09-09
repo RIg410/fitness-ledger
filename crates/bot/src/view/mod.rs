@@ -4,6 +4,7 @@ use eyre::Result;
 use teloxide::types::Message;
 
 pub mod calendar;
+pub mod finance;
 pub mod menu;
 pub mod profile;
 pub mod signup;

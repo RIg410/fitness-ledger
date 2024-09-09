@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bson::doc;
 use eyre::Error;
 use model::treasury::TreasuryEvent;
-use mongodb::{options::IndexOptions, Collection, IndexModel};
+use mongodb::{options::IndexOptions, ClientSession, Collection, IndexModel};
 
 const COLLECTION: &str = "treasury";
 
@@ -25,8 +25,12 @@ impl TreasuryStore {
         })
     }
 
-    pub async fn insert(&self, event: TreasuryEvent) -> Result<(), Error> {
-        self.store.insert_one(event).await?;
+    pub async fn insert(
+        &self,
+        session: &mut ClientSession,
+        event: TreasuryEvent,
+    ) -> Result<(), Error> {
+        self.store.insert_one(event).session(session).await?;
         Ok(())
     }
 }

@@ -1,9 +1,11 @@
-use chrono::Utc;
+use chrono::{Local, Utc};
 use eyre::Error;
 use model::{
     decimal::Decimal,
     subscription::Subscription,
     treasury::{
+        income::Income,
+        outcome::Outcome,
         subs::{SellSubscription, SubscriptionInfo},
         Event, TreasuryEvent,
     },
@@ -32,7 +34,6 @@ impl Treasury {
         let debit = sell.debit();
 
         let sub = SellSubscription {
-            seller: seller.into(),
             buyer: buyer.into(),
             info: sell.into(),
         };
@@ -43,9 +44,52 @@ impl Treasury {
             event: Event::SellSubscription(sub),
             debit,
             credit: Decimal::zero(),
+            user: seller.into(),
         };
 
-        self.store.insert(event).await?;
+        self.store.insert(session, event).await?;
+        Ok(())
+    }
+
+    pub async fn payment(
+        &self,
+        session: &mut ClientSession,
+        user: User,
+        amount: Decimal,
+        description: String,
+        date_time: &chrono::DateTime<Local>,
+    ) -> Result<(), Error> {
+        let event = TreasuryEvent {
+            id: ObjectId::new(),
+            date_time: date_time.with_timezone(&Utc),
+            event: Event::Outcome(Outcome { description }),
+            debit: amount,
+            credit: Decimal::zero(),
+            user: user.into(),
+        };
+
+        self.store.insert(session, event).await?;
+        Ok(())
+    }
+
+    pub async fn deposit(
+        &self,
+        session: &mut ClientSession,
+        user: User,
+        amount: Decimal,
+        description: String,
+        date_time: &chrono::DateTime<Local>,
+    ) -> Result<(), Error> {
+        let event = TreasuryEvent {
+            id: ObjectId::new(),
+            date_time: date_time.with_timezone(&Utc),
+            event: Event::Income(Income { description }),
+            debit: amount,
+            credit: Decimal::zero(),
+            user: user.into(),
+        };
+
+        self.store.insert(session, event).await?;
         Ok(())
     }
 }

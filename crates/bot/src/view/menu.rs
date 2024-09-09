@@ -7,8 +7,8 @@ use teloxide::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Me
 use crate::{context::Context, state::Widget};
 
 use super::{
-    profile::UserProfile, subscription::SubscriptionView, training::TrainingMainView,
-    users::UsersView, View,
+    finance::FinanceView, profile::UserProfile, subscription::SubscriptionView,
+    training::TrainingMainView, users::UsersView, View,
 };
 
 pub struct MainMenuView;
@@ -22,6 +22,10 @@ impl MainMenuView {
         keymap = keymap.append_row(vec![MainMenuItem::Subscription.into()]);
         if ctx.has_right(Rule::ViewUsers) {
             keymap = keymap.append_row(vec![MainMenuItem::Users.into()]);
+        }
+
+        if ctx.has_right(Rule::ViewFinance) {
+            keymap = keymap.append_row(vec![MainMenuItem::FinanceView.into()]);
         }
 
         let id = ctx.send_msg_with_markup("🏠SoulFamily🤸🏼", keymap).await?;
@@ -58,6 +62,7 @@ impl View for MainMenuView {
             MainMenuItem::Trainings => Box::new(TrainingMainView::default()),
             MainMenuItem::Users => Box::new(UsersView::default()),
             MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
+            MainMenuItem::FinanceView => Box::new(FinanceView),
             MainMenuItem::Home => return Ok(None),
         }))
     }
@@ -79,6 +84,7 @@ impl View for MainMenuView {
             MainMenuItem::Users => Box::new(UsersView::default()),
             MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
             MainMenuItem::Home => Box::new(MainMenuView),
+            MainMenuItem::FinanceView => Box::new(FinanceView),
         }))
     }
 }
@@ -90,6 +96,7 @@ pub enum MainMenuItem {
     Trainings,
     Users,
     Subscription,
+    FinanceView,
 }
 
 const HOME_DESCRIPTION: &str = "🏠";
@@ -107,6 +114,9 @@ const USERS_NAME: &str = "/users";
 const SUBSCRIPTION_DESCRIPTION: &str = "Абонементы 💳";
 const SUBSCRIPTION_NAME: &str = "/subscription";
 
+const FINANCE_DESCRIPTION: &str = "Финансы 💰";
+const FINANCE_NAME: &str = "/finance";
+
 impl MainMenuItem {
     pub fn description(&self) -> &'static str {
         match self {
@@ -115,6 +125,7 @@ impl MainMenuItem {
             MainMenuItem::Users => USERS_DESCRIPTION,
             MainMenuItem::Subscription => SUBSCRIPTION_DESCRIPTION,
             MainMenuItem::Home => HOME_DESCRIPTION,
+            MainMenuItem::FinanceView => FINANCE_DESCRIPTION,
         }
     }
 
@@ -125,6 +136,7 @@ impl MainMenuItem {
             MainMenuItem::Users => USERS_NAME,
             MainMenuItem::Subscription => SUBSCRIPTION_NAME,
             MainMenuItem::Home => HOME_NAME,
+            MainMenuItem::FinanceView => FINANCE_NAME,
         }
     }
 }
@@ -154,6 +166,7 @@ impl TryFrom<&str> for MainMenuItem {
             USERS_NAME | USERS_DESCRIPTION => Ok(MainMenuItem::Users),
             SUBSCRIPTION_NAME | SUBSCRIPTION_DESCRIPTION => Ok(MainMenuItem::Subscription),
             HOME_NAME | HOME_DESCRIPTION | "/home" => Ok(MainMenuItem::Home),
+            FINANCE_NAME | FINANCE_DESCRIPTION => Ok(MainMenuItem::FinanceView),
             _ => bail!("Unknown command"),
         }
     }

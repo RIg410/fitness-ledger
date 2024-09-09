@@ -17,6 +17,7 @@ pub struct TreasuryEvent {
     pub id: ObjectId,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub date_time: DateTime<Utc>,
+    pub user: UserInfo,
     pub event: Event,
     pub debit: Decimal,
     pub credit: Decimal,

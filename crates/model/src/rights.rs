@@ -87,6 +87,12 @@ pub enum Rule {
     EditSubscription,
     SellSubscription,
     FreeSell,
+
+    //Finance
+    ViewFinance,
+    MakePayment,
+    MakeDeposit,
+    FinanceHistoricalDate,
 }
 
 impl Rule {
