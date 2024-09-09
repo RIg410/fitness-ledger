@@ -101,7 +101,11 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
         row.push(InlineKeyboardButton::callback(
             format!(
                 "{} {} {}",
-                render_training_status(training.status(now), training.is_full()),
+                render_training_status(
+                    training.status(now),
+                    training.is_full(),
+                    training.clients.contains(&ctx.me.id)
+                ),
                 slot.start_at().format("%d.%m %H:%M"),
                 training.name.as_str(),
             ),

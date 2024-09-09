@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use eyre::{bail, Ok, Result};
-use log::warn;
 use model::rights::Rule;
 use strum::EnumIter;
 use teloxide::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message};

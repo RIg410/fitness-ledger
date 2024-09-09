@@ -134,7 +134,7 @@ pub async fn render_week(
 ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖
 🟢\\- запись открыта ⛔\\- тренировка отменена
 🟠\\- запись закрыта ✔️\\- тренировка прошла
-🔵\\- тренировка идет
+🔵\\- тренировка идет ❤️\\- моя тренировка
 ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖
 ",
         month(&week_local),
@@ -196,7 +196,11 @@ pub async fn render_week(
         row.push(InlineKeyboardButton::callback(
             format!(
                 "{} {} {}",
-                render_training_status(training.status(now), training.is_full()),
+                render_training_status(
+                    training.status(now),
+                    training.is_full(),
+                    training.clients.contains(&ctx.me.id)
+                ),
                 start_at.format("%H:%M"),
                 training.name.as_str(),
             ),
@@ -263,11 +267,19 @@ pub fn render_weekday(weekday: &DateTime<Local>) -> &'static str {
     }
 }
 
-pub fn render_training_status(training: TrainingStatus, is_full: bool) -> &'static str {
+pub fn render_training_status(training: TrainingStatus, is_full: bool, my: bool) -> &'static str {
     match training {
-        TrainingStatus::Finished => "✔️",
+        TrainingStatus::Finished => {
+            if my {
+                "✔️❤️"
+            } else {
+                "✔️"
+            }
+        }
         TrainingStatus::OpenToSignup => {
-            if is_full {
+            if my {
+                "❤️"
+            } else if is_full {
                 "🟣"
             } else {
                 "🟢"
@@ -275,7 +287,13 @@ pub fn render_training_status(training: TrainingStatus, is_full: bool) -> &'stat
         }
         TrainingStatus::ClosedToSignup => "🟠",
         TrainingStatus::InProgress => "🔵",
-        TrainingStatus::Cancelled => "⛔",
+        TrainingStatus::Cancelled => {
+            if my {
+                "⛔💔"
+            } else {
+                "⛔"
+            }
+        }
     }
 }
 

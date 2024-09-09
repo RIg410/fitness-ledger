@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ids::DayId, program::Program, slot::Slot};
 
-pub const CLOSE_SING_UP: u32 = 60 * 3; // 3 hours
+pub const CLOSE_SING_UP: u32 = 10; // 3 hours
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[non_exhaustive]
