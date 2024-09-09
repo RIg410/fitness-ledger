@@ -107,6 +107,10 @@ impl Calendar {
             .get_training_by_start_at(session, training.get_slot().start_at())
             .await?
         {
+            if training.clients.len() > 0 {
+                return Err(eyre::eyre!("Training has clients"));
+            }
+
             self.calendar
                 .delete_training(session, training.start_at)
                 .await?;
@@ -128,58 +132,6 @@ impl Calendar {
             return Err(eyre::eyre!("Training not found:{}", training.id));
         }
 
-        Ok(())
-    }
-
-    #[tx]
-    pub async fn sign_up(
-        &self,
-        session: &mut ClientSession,
-        training: &Training,
-        client: ObjectId,
-    ) -> Result<(), SignUpError> {
-        let training = self
-            .get_training_by_start_at(session, training.get_slot().start_at())
-            .await?
-            .ok_or_else(|| SignUpError::TrainingNotFound)?;
-        let status = training.status(Local::now());
-        if !status.can_sign_in() {
-            return Err(SignUpError::TrainingNotOpenToSignUp(status));
-        }
-
-        if training.clients.contains(&client) {
-            return Err(SignUpError::ClientAlreadySignedUp);
-        }
-
-        self.calendar
-            .sign_up(session, training.start_at, client)
-            .await?;
-        Ok(())
-    }
-
-    #[tx]
-    pub async fn sign_out(
-        &self,
-        session: &mut ClientSession,
-        training: &Training,
-        client: ObjectId,
-    ) -> Result<(), SignOutError> {
-        let training = self
-            .get_training_by_start_at(session, training.get_slot().start_at())
-            .await?
-            .ok_or_else(|| SignOutError::TrainingNotFound)?;
-        let status = training.status(Local::now());
-        if !status.can_sign_out() {
-            return Err(SignOutError::TrainingNotOpenToSignOut);
-        }
-
-        if !training.clients.contains(&client) {
-            return Err(SignOutError::ClientNotSignedUp);
-        }
-
-        self.calendar
-            .sign_out(session, training.start_at, client)
-            .await?;
         Ok(())
     }
 
@@ -308,6 +260,34 @@ impl Calendar {
     }
 }
 
+impl Calendar {
+    pub(crate) async fn sign_up(
+        &self,
+        session: &mut ClientSession,
+        start_at: DateTime<Utc>,
+        user_id: ObjectId,
+    ) -> Result<()> {
+        self.calendar.sign_up(session, start_at, user_id).await
+    }
+
+    pub(crate) async fn sign_out(
+        &self,
+        session: &mut ClientSession,
+        start_at: DateTime<Utc>,
+        user_id: ObjectId,
+    ) -> Result<()> {
+        self.calendar.sign_out(session, start_at, user_id).await
+    }
+
+    pub(crate) async fn finalized(
+        &self,
+        session: &mut ClientSession,
+        start_at: DateTime<Utc>,
+    ) -> Result<()> {
+        self.calendar.finalized(session, start_at).await
+    }
+}
+
 #[derive(Debug)]
 pub struct TimeSlotCollision(Training);
 
@@ -348,26 +328,6 @@ impl From<mongodb::error::Error> for ScheduleError {
 }
 
 #[derive(Debug, Error)]
-pub enum SignUpError {
-    #[error("Training not found")]
-    TrainingNotFound,
-    #[error("Training is not open to sign up")]
-    TrainingNotOpenToSignUp(TrainingStatus),
-    #[error("Client already signed up")]
-    ClientAlreadySignedUp,
-    #[error("Not enough fonds")]
-    NotEnoughFonds,
-    #[error("Common error:{0}")]
-    Common(#[from] eyre::Error),
-}
-
-impl From<mongodb::error::Error> for SignUpError {
-    fn from(e: mongodb::error::Error) -> Self {
-        SignUpError::Common(e.into())
-    }
-}
-
-#[derive(Debug, Error)]
 pub enum SignOutError {
     #[error("Training not found")]
     TrainingNotFound,
@@ -377,6 +337,10 @@ pub enum SignOutError {
     ClientNotSignedUp,
     #[error("Common error:{0}")]
     Common(#[from] eyre::Error),
+    #[error("Not enough reserved balance")]
+    NotEnoughReservedBalance,
+    #[error("User not found")]
+    UserNotFound,
 }
 
 impl From<mongodb::error::Error> for SignOutError {

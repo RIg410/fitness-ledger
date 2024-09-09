@@ -1,5 +1,8 @@
-use calendar::Calendar;
-use eyre::{eyre, Result};
+use std::usize;
+
+use calendar::{Calendar, SignOutError};
+use chrono::Local;
+use eyre::{bail, eyre, Result};
 use log::{error, info};
 use model::decimal::Decimal;
 use model::training::{Training, TrainingStatus};
@@ -47,34 +50,127 @@ impl Ledger {
         }
     }
 
-    pub async fn process(&self, session: &mut ClientSession) -> Result<()> {
-        let mut cursor = self.calendar.days_for_process(session).await?;
-        let now = chrono::Local::now();
-        while let Some(day) = cursor.next(session).await {
-            let day = day?;
-            for training in day.training {
-                if training.is_processed {
+    #[tx]
+    pub async fn block_user(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+        is_active: bool,
+    ) -> Result<()> {
+        if !is_active {
+            let user = self
+                .users
+                .get_by_tg_id(session, tg_id)
+                .await?
+                .ok_or_else(|| eyre!("User not found"))?;
+            let mut reserved_balance = user.reserved_balance;
+            let users_training = self
+                .calendar
+                .get_users_trainings(session, user.id, usize::MAX, 0)
+                .await?;
+            for training in users_training {
+                if !training.clients.contains(&user.id) {
                     continue;
                 }
-
-                let result = match training.status(now) {
-                    TrainingStatus::OpenToSignup | TrainingStatus::ClosedToSignup => continue,
-                    TrainingStatus::InProgress | TrainingStatus::Finished => {
-                        self.process_finished(session, training).await
+                match training.status(Local::now()) {
+                    TrainingStatus::OpenToSignup
+                    | TrainingStatus::ClosedToSignup
+                    | TrainingStatus::InProgress => {
+                        //no-op
                     }
-                    TrainingStatus::Cancelled => {
-                        if training.get_slot().start_at() < now {
-                            self.process_canceled(session, training).await
-                        } else {
-                            continue;
-                        }
+                    TrainingStatus::Finished | TrainingStatus::Cancelled => {
+                        continue;
                     }
-                };
-                if let Err(err) = result {
-                    error!("Failed to finalize: training:{:#}. Training", err);
                 }
+
+                if reserved_balance == 0 {
+                    bail!("Not enough reserved balance");
+                }
+                reserved_balance -= 1;
+
+                self.users.unblock_balance(session, user.tg_id, 1).await?;
+                self.calendar
+                    .sign_out(session, training.start_at, user.id)
+                    .await?;
             }
         }
+
+        self.users.block_user(session, tg_id, is_active).await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn sign_up(
+        &self,
+        session: &mut ClientSession,
+        training: &Training,
+        client: ObjectId,
+    ) -> Result<(), SignUpError> {
+        let training = self
+            .calendar
+            .get_training_by_start_at(session, training.get_slot().start_at())
+            .await?
+            .ok_or_else(|| SignUpError::TrainingNotFound)?;
+        let status = training.status(Local::now());
+        if !status.can_sign_in() {
+            return Err(SignUpError::TrainingNotOpenToSignUp(status));
+        }
+
+        if training.clients.contains(&client) {
+            return Err(SignUpError::ClientAlreadySignedUp);
+        }
+
+        let user = self
+            .users
+            .get(session, client)
+            .await?
+            .ok_or_else(|| SignUpError::UserNotFound)?;
+        if user.balance == 0 {
+            return Err(SignUpError::NotEnoughBalance);
+        }
+        self.users.reserve_balance(session, user.tg_id, 1).await?;
+
+        self.calendar
+            .sign_up(session, training.start_at, client)
+            .await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn sign_out(
+        &self,
+        session: &mut ClientSession,
+        training: &Training,
+        client: ObjectId,
+    ) -> Result<(), SignOutError> {
+        let training = self
+            .calendar
+            .get_training_by_start_at(session, training.get_slot().start_at())
+            .await?
+            .ok_or_else(|| SignOutError::TrainingNotFound)?;
+        let status = training.status(Local::now());
+        if !status.can_sign_out() {
+            return Err(SignOutError::TrainingNotOpenToSignOut);
+        }
+
+        if !training.clients.contains(&client) {
+            return Err(SignOutError::ClientNotSignedUp);
+        }
+
+        let user = self
+            .users
+            .get(session, client)
+            .await?
+            .ok_or_else(|| SignOutError::UserNotFound)?;
+        if user.reserved_balance == 0 {
+            return Err(SignOutError::NotEnoughReservedBalance);
+        }
+
+        self.users.unblock_balance(session, user.tg_id, 1).await?;
+
+        self.calendar
+            .sign_out(session, training.start_at, client)
+            .await?;
         Ok(())
     }
 
@@ -145,6 +241,37 @@ impl Ledger {
         Ok(())
     }
 
+    pub async fn process(&self, session: &mut ClientSession) -> Result<()> {
+        let mut cursor = self.calendar.days_for_process(session).await?;
+        let now = chrono::Local::now();
+        while let Some(day) = cursor.next(session).await {
+            let day = day?;
+            for training in day.training {
+                if training.is_processed {
+                    continue;
+                }
+
+                let result = match training.status(now) {
+                    TrainingStatus::OpenToSignup | TrainingStatus::ClosedToSignup => continue,
+                    TrainingStatus::InProgress | TrainingStatus::Finished => {
+                        self.process_finished(session, training).await
+                    }
+                    TrainingStatus::Cancelled => {
+                        if training.get_slot().start_at() < now {
+                            self.process_canceled(session, training).await
+                        } else {
+                            continue;
+                        }
+                    }
+                };
+                if let Err(err) = result {
+                    error!("Failed to finalize: training:{:#}. Training", err);
+                }
+            }
+        }
+        Ok(())
+    }
+
     #[tx]
     async fn process_finished(
         &self,
@@ -152,7 +279,20 @@ impl Ledger {
         training: Training,
     ) -> Result<()> {
         info!("Finalize training:{:?}", training);
-
+        for client in training.clients {
+            let user = self
+                .users
+                .get(session, client)
+                .await?
+                .ok_or_else(|| eyre!("User not found"))?;
+            if user.reserved_balance == 0 {
+                return Err(eyre!("Not enough reserved balance:{}", user.tg_id));
+            }
+            self.users
+                .charge_reserved_balance(session, user.tg_id, 1)
+                .await?;
+        }
+        self.calendar.finalized(session, training.start_at).await?;
         Ok(())
     }
 
@@ -163,7 +303,19 @@ impl Ledger {
         training: Training,
     ) -> Result<()> {
         info!("Finalize canceled training:{:?}", training);
+        for client in training.clients {
+            let user = self
+                .users
+                .get(session, client)
+                .await?
+                .ok_or_else(|| eyre!("User not found"))?;
+            if user.reserved_balance == 0 {
+                return Err(eyre!("Not enough reserved balance:{}", user.tg_id));
+            }
 
+            self.users.unblock_balance(session, user.tg_id, 1).await?;
+        }
+        self.calendar.finalized(session, training.start_at).await?;
         Ok(())
     }
 }
@@ -183,5 +335,27 @@ pub enum SellSubscriptionError {
 impl From<mongodb::error::Error> for SellSubscriptionError {
     fn from(value: mongodb::error::Error) -> Self {
         SellSubscriptionError::Common(value.into())
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum SignUpError {
+    #[error("Training not found")]
+    TrainingNotFound,
+    #[error("Training is not open to sign up")]
+    TrainingNotOpenToSignUp(TrainingStatus),
+    #[error("Client already signed up")]
+    ClientAlreadySignedUp,
+    #[error("User not found")]
+    UserNotFound,
+    #[error("Common error:{0}")]
+    Common(#[from] eyre::Error),
+    #[error("Not enough balance")]
+    NotEnoughBalance,
+}
+
+impl From<mongodb::error::Error> for SignUpError {
+    fn from(e: mongodb::error::Error) -> Self {
+        SignUpError::Common(e.into())
     }
 }

@@ -119,11 +119,19 @@ impl View for TrainingView {
                     ctx.send_msg("Запись на тренировку закрыта").await?;
                     let id = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(id);
+                    self.show(ctx).await?;
+                    return Ok(None);
+                }
+
+                if ctx.me.balance < 1 {
+                    ctx.send_msg("Недостаточно средств на балансе").await?;
+                    let id = ctx.send_msg("\\.").await?;
+                    ctx.update_origin_msg_id(id);
+                    self.show(ctx).await?;
                     return Ok(None);
                 }
 
                 ctx.ledger
-                    .calendar
                     .sign_up(&mut ctx.session, &training, ctx.me.id)
                     .await?;
                 self.show(ctx).await?;
@@ -140,10 +148,10 @@ impl View for TrainingView {
                     ctx.send_msg("Запись на тренировку закрыта").await?;
                     let id = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(id);
+                    self.show(ctx).await?;
                     return Ok(None);
                 }
                 ctx.ledger
-                    .calendar
                     .sign_out(&mut ctx.session, &training, ctx.me.id)
                     .await?;
                 self.show(ctx).await?;

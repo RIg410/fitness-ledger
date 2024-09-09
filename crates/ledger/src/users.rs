@@ -1,6 +1,6 @@
 use chrono::{DateTime, Local};
 use eyre::{Error, Result};
-use log::{info, warn};
+use log::info;
 use model::{
     rights::{Rights, Rule},
     user::{User, UserName},
@@ -83,6 +83,10 @@ impl Users {
         self.store.get_instructors(session).await
     }
 
+    pub async fn get(&self, session: &mut ClientSession, id: ObjectId) -> Result<Option<User>> {
+        self.store.get_by_id(session, id).await
+    }
+
     pub async fn set_user_birthday(
         &self,
         session: &mut ClientSession,
@@ -105,19 +109,6 @@ impl Users {
         Ok(())
     }
 
-    #[tx]
-    pub async fn block_user(
-        &self,
-        session: &mut ClientSession,
-        tg_id: i64,
-        is_active: bool,
-    ) -> Result<()> {
-        info!("Blocking user: {}", tg_id);
-        warn!("remove subscription!!!!");
-        self.store.block(session, tg_id, is_active).await?;
-        Ok(())
-    }
-
     pub async fn edit_user_rule(
         &self,
         session: &mut ClientSession,
@@ -135,6 +126,38 @@ impl Users {
 
         Ok(())
     }
+}
+
+impl Users {
+    pub(crate) async fn block_user(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+        is_active: bool,
+    ) -> Result<()> {
+        self.store.block(session, tg_id, is_active).await?;
+        Ok(())
+    }
+
+    pub(crate) async fn reserve_balance(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+        amount: u32,
+    ) -> Result<(), Error> {
+        self.store.reserve_balance(session, tg_id, amount).await?;
+        Ok(())
+    }
+
+    pub(crate) async fn unblock_balance(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+        amount: u32,
+    ) -> Result<(), Error> {
+        self.store.unblock_balance(session, tg_id, amount).await?;
+        Ok(())
+    }
 
     pub(crate) async fn increment_balance(
         &self,
@@ -143,6 +166,18 @@ impl Users {
         amount: u32,
     ) -> Result<(), Error> {
         self.store.increment_balance(session, tg_id, amount).await?;
+        Ok(())
+    }
+
+    pub(crate) async fn charge_reserved_balance(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+        amount: u32,
+    ) -> Result<(), Error> {
+        self.store
+            .charge_reserved_balance(session, tg_id, amount)
+            .await?;
         Ok(())
     }
 }

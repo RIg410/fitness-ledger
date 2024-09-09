@@ -268,4 +268,27 @@ impl CalendarStore {
         };
         Ok(self.days.find(filter).session(&mut *session).await?)
     }
+
+    pub async fn finalized(
+        &self,
+        session: &mut ClientSession,
+        start_at: DateTime<Utc>,
+    ) -> Result<()> {
+        info!("Finalized: {:?}", start_at);
+        let filter = doc! { "training.start_at": start_at };
+        let update = doc! {
+            "$set": { "training.$.is_finished": true },
+            "$inc": { "version": 1 }
+        };
+        let result = self
+            .days
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
+
+        if result.modified_count != 1 {
+            return Err(eyre::eyre!("Training not found"));
+        }
+        Ok(())
+    }
 }

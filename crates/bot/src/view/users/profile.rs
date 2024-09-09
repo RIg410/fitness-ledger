@@ -71,7 +71,6 @@ impl View for UserProfile {
                     .await?
                     .ok_or_else(|| eyre::eyre!("User not found"))?;
                 ctx.ledger
-                    .users
                     .block_user(&mut ctx.session, self.tg_id, !user.is_active)
                     .await?;
                 ctx.reload_user().await?;

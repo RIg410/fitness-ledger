@@ -52,9 +52,6 @@ impl View for MainMenuView {
         } else {
             return Ok(None);
         };
-        if let Err(err) = ctx.delete_msg(msg.id).await {
-            warn!("{:#}", err);
-        }
 
         self.send_self(ctx).await?;
         Ok(Some(match command {

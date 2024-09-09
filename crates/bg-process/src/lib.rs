@@ -1,5 +1,3 @@
-mod notifier;
-
 use eyre::Error;
 use ledger::Ledger;
 use std::time::Duration;

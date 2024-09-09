@@ -147,12 +147,14 @@ impl UserStore {
     ) -> Result<()> {
         info!("Reserving balance for user {}: {}", tg_id, amount);
         let amount = amount as i32;
-        let updated = self.users
-                .update_one(
-                    doc! { "tg_id": tg_id, "balance": { "$gte": amount } },
-                    doc! { "$inc": { "balance": -amount, "reserved_balance": amount }, "$inc": { "version": 1 } },
-                ).session(&mut *session)
-                .await?;
+        let updated = self
+            .users
+            .update_one(
+                doc! { "tg_id": tg_id, "balance": { "$gte": amount } },
+                doc! { "$inc": { "balance": -amount, "reserved_balance": amount, "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
 
         if updated.modified_count == 0 {
             return Err(Error::msg("User not found or insufficient balance"));
@@ -171,7 +173,7 @@ impl UserStore {
         self.users
             .update_one(
                 doc! { "tg_id": tg_id },
-                doc! { "$inc": { "reserved_balance": -amount }, "$inc": { "version": 1 } },
+                doc! { "$inc": { "reserved_balance": -amount, "version": 1 } },
             )
             .session(&mut *session)
             .await?;
@@ -186,11 +188,13 @@ impl UserStore {
     ) -> Result<()> {
         info!("Unblocking balance for user {}: {}", tg_id, amount);
         let amount = amount as i32;
-        let result = self.users
+        let result = self
+            .users
             .update_one(
                 doc! { "tg_id": tg_id, "reserved_balance": { "$gte": amount } },
-                doc! { "$inc": { "reserved_balance": -amount, "balance": amount }, "$inc": { "version": 1 } },
-            ).session(&mut *session)
+                doc! { "$inc": { "reserved_balance": -amount, "balance": amount , "version": 1} },
+            )
+            .session(&mut *session)
             .await?;
         if result.modified_count == 0 {
             return Err(Error::msg(
