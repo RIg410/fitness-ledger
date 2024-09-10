@@ -179,11 +179,13 @@ pub async fn render_week(
         ));
     }
     buttons = buttons.append_row(row);
-    let day = ctx
+    let mut day = ctx
         .ledger
         .calendar
         .get_day(&mut ctx.session, selected_day_id)
         .await?;
+    day.training
+        .sort_by(|a, b| a.get_slot().start_at().cmp(&b.get_slot().start_at()));
     for training in &day.training {
         if let Some(proto_id) = &filter.proto_id {
             if training.proto_id != *proto_id {
