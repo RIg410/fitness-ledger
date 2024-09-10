@@ -1,7 +1,6 @@
 use chrono::{DateTime, Datelike as _, Local, TimeZone as _, Utc, Weekday};
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct WeekId(DateTime<Utc>);
 

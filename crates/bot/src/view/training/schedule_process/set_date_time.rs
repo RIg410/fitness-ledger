@@ -86,10 +86,16 @@ impl View for SetDateTime {
                 if let Some(collision) = ctx
                     .ledger
                     .calendar
-                    .check_time_slot(&mut ctx.session, self.id, date_time, preset.is_one_time.unwrap_or(true))
+                    .check_time_slot(
+                        &mut ctx.session,
+                        self.id,
+                        date_time,
+                        preset.is_one_time.unwrap_or(true),
+                    )
                     .await?
                 {
-                    ctx.send_msg(&render_time_slot_collision(&collision)).await?;
+                    ctx.send_msg(&render_time_slot_collision(&collision))
+                        .await?;
                     preset.date_time = None;
                 } else {
                     preset.date_time = Some(date_time);

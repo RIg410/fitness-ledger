@@ -1,7 +1,9 @@
 use super::{
     schedule_process::ScheduleTrainingPreset, view_training_proto::ViewTrainingProto, View,
 };
-use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuItem};
+use crate::{
+    callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuItem,
+};
 use async_trait::async_trait;
 use eyre::Result;
 use mongodb::bson::oid::ObjectId;

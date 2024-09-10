@@ -5,6 +5,7 @@ use teloxide::types::Message;
 
 pub mod calendar;
 pub mod finance;
+pub mod form;
 pub mod menu;
 pub mod profile;
 pub mod signup;
@@ -32,7 +33,6 @@ pub trait View {
         data: &str,
     ) -> Result<Option<Widget>, eyre::Error>;
 }
-
 
 // use async_trait::async_trait;
 // use teloxide::types::Message;

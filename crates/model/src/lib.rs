@@ -1,10 +1,10 @@
-pub mod training;
+pub mod day;
+pub mod decimal;
 pub mod ids;
 pub mod program;
-pub mod day;
 pub mod rights;
-pub mod user;
 pub mod slot;
 pub mod subscription;
+pub mod training;
 pub mod treasury;
-pub mod decimal;
+pub mod user;

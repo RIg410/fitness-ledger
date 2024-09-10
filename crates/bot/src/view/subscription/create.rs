@@ -1,4 +1,4 @@
-use std::{mem, num::NonZero};
+use std::mem;
 
 use super::View;
 use crate::{
@@ -7,7 +7,7 @@ use crate::{
 use async_trait::async_trait;
 use eyre::Result;
 use ledger::subscriptions::CreateSubscriptionError;
-use model::{decimal::Decimal, rights::Rule};
+use model::{rights::Rule, subscription::Subscription};
 use serde::{Deserialize, Serialize};
 use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
@@ -17,6 +17,7 @@ use teloxide::{
 pub struct CreateSubscription {
     go_back: Option<Widget>,
     state: State,
+    subscription: Subscription,
 }
 
 impl CreateSubscription {
@@ -24,27 +25,84 @@ impl CreateSubscription {
         CreateSubscription {
             go_back: Some(go_back),
             state: State::SetName,
+            subscription: Subscription::default(),
         }
+    }
+
+    fn render_state(&self) -> String {
+        let none = "❓".to_string();
+        let (name, items, price, days, freeze) = match self.state {
+            State::SetName => (None, None, None, None, None),
+            State::SetItems => (
+                Some(self.subscription.name.as_str()),
+                None,
+                None,
+                None,
+                None,
+            ),
+            State::SetPrice => (
+                Some(self.subscription.name.as_str()),
+                Some(self.subscription.items),
+                None,
+                None,
+                None,
+            ),
+            State::SetExpirationDaysDays => (
+                Some(self.subscription.name.as_str()),
+                Some(self.subscription.items),
+                Some(self.subscription.price),
+                None,
+                None,
+            ),
+            State::SetFreezeDays => (
+                Some(self.subscription.name.as_str()),
+                Some(self.subscription.items),
+                Some(self.subscription.price),
+                Some(self.subscription.expiration_days),
+                None,
+            ),
+            State::Finish => (
+                Some(self.subscription.name.as_str()),
+                Some(self.subscription.items),
+                Some(self.subscription.price),
+                Some(self.subscription.expiration_days),
+                Some(self.subscription.freeze_days),
+            ),
+        };
+
+        format!("📌 Тариф: _{}_\nКоличество занятий:_{}_\nЦена:_{}_\nСрок действия:_{}_\nЗаморозка:_{}_\n",
+                    escape(name.unwrap_or(&none)),
+                    items.map(|i|i.to_string()).unwrap_or_else(||none.clone()),
+                    price.map(|i|i.to_string().replace(".", ",")).unwrap_or_else(||none.clone()),
+                    days.map(|i|i.to_string()).unwrap_or_else(||none.clone()),
+                    freeze.map(|i|i.to_string()).unwrap_or_else(||none.clone()),
+                )
     }
 }
 
 #[async_trait]
 impl View for CreateSubscription {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let mut text = render_state(&self.state);
+        let mut text = self.render_state();
         text.push_str(&escape("-------------------\n"));
         let mut keymap = InlineKeyboardMarkup::default();
-        match &self.state {
+        match self.state {
             State::SetName => {
                 text.push_str("*Введите название абонемента*");
             }
-            State::SetItems(_) => {
+            State::SetItems => {
                 text.push_str("*Введите количество занятий в абонементе*");
             }
-            State::SetPrice(_, _) => {
+            State::SetPrice => {
                 text.push_str("*Введите стоимость абонемента*");
             }
-            State::Finish(_, _, _) => {
+            State::SetExpirationDaysDays => {
+                text.push_str("*Введите срок действия абонемента\\(дни\\)*");
+            }
+            State::SetFreezeDays => {
+                text.push_str("*Введите количество дней заморозки абонемента\\(дни\\)*");
+            }
+            State::Finish => {
                 text.push_str("*Все верно?*");
                 keymap = keymap.append_row(vec![
                     InlineKeyboardButton::callback(
@@ -73,7 +131,7 @@ impl View for CreateSubscription {
             return Ok(None);
         };
 
-        self.state = match mem::take(&mut self.state) {
+        self.state = match self.state {
             State::SetName => {
                 let name = text.to_string();
                 let sub = ctx
@@ -86,27 +144,48 @@ impl View for CreateSubscription {
                         .await?;
                     return Ok(None);
                 }
-                State::SetItems(text.to_string())
+                self.subscription.name = text.to_string();
+                State::SetItems
             }
-            State::SetItems(name) => {
+            State::SetItems => {
                 if let Ok(items) = text.parse() {
-                    State::SetPrice(name.clone(), items)
+                    self.subscription.items = items;
+                    State::SetPrice
                 } else {
                     ctx.send_msg("Введите число").await?;
-                    State::SetItems(name)
+                    State::SetItems
                 }
             }
-            State::SetPrice(name, items) => {
+            State::SetPrice => {
                 if let Ok(price) = text.parse() {
-                    State::Finish(name.clone(), items.clone(), price)
+                    self.subscription.price = price;
+                    State::SetExpirationDaysDays
                 } else {
                     ctx.send_msg("Введите число").await?;
-                    State::SetPrice(name, items)
+                    State::SetPrice
                 }
             }
-            State::Finish(name, items, price) => {
+            State::SetExpirationDaysDays => {
+                if let Ok(expiration_days) = text.parse() {
+                    self.subscription.expiration_days = expiration_days;
+                    State::SetFreezeDays
+                } else {
+                    ctx.send_msg("Введите число").await?;
+                    State::SetExpirationDaysDays
+                }
+            }
+            State::SetFreezeDays => {
+                if let Ok(freeze_days) = text.parse() {
+                    self.subscription.freeze_days = freeze_days;
+                    State::Finish
+                } else {
+                    ctx.send_msg("Введите число").await?;
+                    State::SetFreezeDays
+                }
+            }
+            State::Finish => {
                 ctx.delete_msg(message.id).await?;
-                State::Finish(name, items, price)
+                State::Finish
             }
         };
         self.show(ctx).await?;
@@ -115,91 +194,59 @@ impl View for CreateSubscription {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let state = mem::take(&mut self.state).inner();
-        if let Some((name, items, price)) = state {
-            match CreateCallback::from_data(data)? {
-                CreateCallback::Create => {
-                    ctx.ensure(Rule::CreateSubscription)?;
-                    let result = ctx
-                        .ledger
-                        .subscriptions
-                        .create_subscription(&mut ctx.session, name, items.get(), price)
-                        .await;
-                    match result {
-                        Ok(_) => {
-                            ctx.send_msg("✅Абонемент создан").await?;
-                            Ok(self.go_back.take())
-                        }
-                        Err(CreateSubscriptionError::NameAlreadyExists) => {
-                            ctx.send_msg(&"Не удалось создать абонемент: Имя уже занято")
-                                .await?;
-                            Ok(None)
-                        }
-                        Err(CreateSubscriptionError::InvalidPrice) => {
-                            ctx.send_msg("Не удалось создать абонемент: Неверная цена")
-                                .await?;
-                            Ok(None)
-                        }
-                        Err(CreateSubscriptionError::InvalidItems) => {
-                            ctx.send_msg(
-                                "Не удалось создать абонемент: Неверное количество занятий",
-                            )
-                            .await?;
-                            Ok(None)
-                        }
-                        Err(CreateSubscriptionError::Common(err)) => Err(err),
+        match CreateCallback::from_data(data)? {
+            CreateCallback::Create => {
+                ctx.ensure(Rule::CreateSubscription)?;
+                let sub = mem::take(&mut self.subscription);
+                let result = ctx
+                    .ledger
+                    .subscriptions
+                    .create_subscription(
+                        &mut ctx.session,
+                        sub.name,
+                        sub.items,
+                        sub.price,
+                        sub.expiration_days,
+                        sub.freeze_days,
+                    )
+                    .await;
+                match result {
+                    Ok(_) => {
+                        ctx.send_msg("✅Абонемент создан").await?;
+                        Ok(self.go_back.take())
                     }
+                    Err(CreateSubscriptionError::NameAlreadyExists) => {
+                        ctx.send_msg(&"Не удалось создать абонемент: Имя уже занято")
+                            .await?;
+                        Ok(None)
+                    }
+                    Err(CreateSubscriptionError::InvalidPrice) => {
+                        ctx.send_msg("Не удалось создать абонемент: Неверная цена")
+                            .await?;
+                        Ok(None)
+                    }
+                    Err(CreateSubscriptionError::InvalidItems) => {
+                        ctx.send_msg("Не удалось создать абонемент: Неверное количество занятий")
+                            .await?;
+                        Ok(None)
+                    }
+                    Err(CreateSubscriptionError::Common(err)) => Err(err),
                 }
-                CreateCallback::Cancel => Ok(self.go_back.take()),
             }
-        } else {
-            self.show(ctx).await?;
-            Ok(None)
+            CreateCallback::Cancel => Ok(self.go_back.take()),
         }
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 enum State {
     #[default]
     SetName,
-    SetItems(String),
-    SetPrice(String, NonZero<u32>),
-    Finish(String, NonZero<u32>, Decimal),
-}
-
-impl State {
-    fn inner(self) -> Option<(String, NonZero<u32>, Decimal)> {
-        match self {
-            State::Finish(name, items, price) => Some((name, items, price)),
-            _ => None,
-        }
-    }
-}
-
-fn render_state(state: &State) -> String {
-    match state {
-        State::SetName => {
-            format!("📌 Тариф: _❓_\nКоличество занятий:_❓_\nЦена:_❓_\n")
-        }
-        State::SetItems(name) => {
-            format!("📌 Тариф: _{}_\nКоличество занятий:_❓_\nЦена:_❓_\n", name)
-        }
-        State::SetPrice(name, items) => {
-            format!(
-                "📌 Тариф: _{}_\nКоличество занятий:_{}_\nЦена:_❓_\n",
-                name, items
-            )
-        }
-        State::Finish(name, items, price) => {
-            format!(
-                "📌 Тариф: _{}_\nКоличество занятий:_{}_\nЦена:_{}_\n",
-                name,
-                items,
-                price.to_string().replace(".", ",")
-            )
-        }
-    }
+    SetItems,
+    SetPrice,
+    SetExpirationDaysDays,
+    SetFreezeDays,
+    Finish,
 }
 
 #[derive(Serialize, Deserialize)]

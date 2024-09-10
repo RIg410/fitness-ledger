@@ -1,9 +1,9 @@
 pub mod calendar;
 pub mod session;
+pub mod subscription;
 pub mod training;
 pub mod treasury;
 pub mod user;
-pub mod subscription;
 
 use eyre::Result;
 use session::Db;

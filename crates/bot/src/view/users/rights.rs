@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::{menu::MainMenuItem, profile::user_type},
+    callback_data::Calldata as _,
+    context::Context,
+    state::Widget,
+    view::{menu::MainMenuItem, profile::user_type},
 };
 
 use super::View;

@@ -5,7 +5,7 @@ use mongodb::ClientSession;
 use teloxide::{
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester,
-    types::{ChatId, InlineKeyboardMarkup, KeyboardMarkup, MessageId, ReplyMarkup},
+    types::{ChatId, InlineKeyboardMarkup, MessageId, ReplyMarkup},
     ApiError, Bot, RequestError,
 };
 

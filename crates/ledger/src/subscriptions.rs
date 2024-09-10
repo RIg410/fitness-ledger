@@ -23,7 +23,11 @@ impl Subscriptions {
         Ok(self.store.get_by_name(session, name).await?)
     }
 
-    pub async fn get(&self, session: &mut ClientSession, id: ObjectId) -> Result<Option<Subscription>, Error> {
+    pub async fn get(
+        &self,
+        session: &mut ClientSession,
+        id: ObjectId,
+    ) -> Result<Option<Subscription>, Error> {
         Ok(self.store.get_by_id(session, id).await?)
     }
 
@@ -48,6 +52,8 @@ impl Subscriptions {
         name: String,
         items: u32,
         price: Decimal,
+        freeze_days: u32,
+        expiration_days: u32,
     ) -> Result<(), CreateSubscriptionError> {
         if self.get_by_name(session, &name).await?.is_some() {
             return Err(CreateSubscriptionError::NameAlreadyExists);
@@ -60,7 +66,10 @@ impl Subscriptions {
             return Err(CreateSubscriptionError::InvalidPrice);
         }
         self.store
-            .insert(session, Subscription::new(name, items, price))
+            .insert(
+                session,
+                Subscription::new(name, items, price, expiration_days, freeze_days),
+            )
             .await?;
         Ok(())
     }

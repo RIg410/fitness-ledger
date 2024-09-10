@@ -59,7 +59,10 @@ impl View for UsersView {
             query = "".to_string();
         }
 
-        self.query = Query { query: remove_non_alphanumeric(&query), offset: 0 };
+        self.query = Query {
+            query: remove_non_alphanumeric(&query),
+            offset: 0,
+        };
         self.show(ctx).await?;
         Ok(None)
     }
