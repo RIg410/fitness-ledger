@@ -48,7 +48,7 @@ impl Users {
         }
 
         let user = User {
-            tg_id: tg_id,
+            tg_id,
             name,
             rights,
             phone,
@@ -58,6 +58,9 @@ impl Users {
             is_active: true,
             id: ObjectId::new(),
             reserved_balance: 0,
+            subscriptions: vec![],
+            freeze_days: 0,
+            freeze: None,
             version: 0,
         };
         self.store.insert(session, user).await?;

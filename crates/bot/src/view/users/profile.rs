@@ -32,7 +32,13 @@ impl UserProfile {
 #[async_trait]
 impl View for UserProfile {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let (msg, keymap) = render_user_profile(&ctx, &ctx.me, self.go_back.is_some());
+        let user = ctx
+            .ledger
+            .users
+            .get_by_tg_id(&mut ctx.session, self.tg_id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("User not found:{}", self.tg_id))?;
+        let (msg, keymap) = render_user_profile(&ctx, &user, self.go_back.is_some());
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }

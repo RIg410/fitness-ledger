@@ -139,6 +139,10 @@ impl UserStore {
         Ok(())
     }
 
+    // pub async fn add_subscription(&self, session: &mut ClientSession, tg_id: i64, sub: Subscription) -> Result<()> {
+
+    // }
+
     pub async fn reserve_balance(
         &self,
         session: &mut ClientSession,

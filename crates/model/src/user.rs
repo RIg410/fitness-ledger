@@ -1,5 +1,5 @@
 use super::rights::Rights;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Utc};
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,12 @@ pub struct User {
     pub reserved_balance: u32,
     #[serde(default = "default_is_active")]
     pub is_active: bool,
+    #[serde(default)]
+    pub freeze: Option<Freeze>,
+    #[serde(default)]
+    pub subscriptions: Vec<UserSubscription>,
+    #[serde(default)]
+    pub freeze_days: u32,
     #[serde(default)]
     pub version: u64,
 }
@@ -41,6 +47,9 @@ impl User {
             is_active: true,
             reserved_balance: 0,
             version: 0,
+            subscriptions: vec![],
+            freeze_days: 0,
+            freeze: None,
         }
     }
 }
@@ -50,8 +59,26 @@ fn default_is_active() -> bool {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Freeze {
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub freeze_start: DateTime<Utc>,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub freeze_end: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserName {
     pub tg_user_name: Option<String>,
     pub first_name: String,
     pub last_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UserSubscription {
+    pub id: ObjectId,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub start_date: DateTime<Utc>,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub end_date: DateTime<Utc>,
+    pub items: u32,
 }
