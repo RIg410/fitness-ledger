@@ -13,6 +13,7 @@ use teloxide::{
 };
 pub mod profile;
 pub mod rights;
+pub mod freeze;
 
 pub const LIMIT: u64 = 7;
 

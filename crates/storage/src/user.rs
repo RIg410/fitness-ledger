@@ -1,10 +1,11 @@
 use bson::to_document;
-use chrono::{DateTime, Local};
-use eyre::{eyre, Error, Result};
+use chrono::{DateTime, Local, Utc};
+use eyre::{bail, eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
 use log::info;
 use model::rights;
-use model::user::User;
+use model::subscription::Subscription;
+use model::user::{Freeze, User, UserSubscription};
 use mongodb::bson::to_bson;
 use mongodb::options::UpdateOptions;
 use mongodb::{
@@ -116,19 +117,29 @@ impl UserStore {
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn increment_balance(
+    pub async fn add_subscription(
         &self,
         session: &mut ClientSession,
         tg_id: i64,
-        amount: u32,
+        sub: Subscription,
     ) -> Result<()> {
-        info!("Incrementing balance for user {}: {}", tg_id, amount);
-        let amount = amount as i32;
+        info!("Add subscription for user {}: {:?}", tg_id, sub);
+        let freeze_days = sub.freeze_days as i32;
+        let amount = sub.items as i32;
+        let start_date = self
+            .get_last_user_subscription(session, tg_id)
+            .await?
+            .map(|sub| sub.end_date)
+            .unwrap_or_else(|| Local::now().with_timezone(&Utc))
+            + chrono::Duration::seconds(1);
+
+        let user_subscription = UserSubscription::with_sub(start_date, sub);
+
         let result = self
             .users
             .update_one(
                 doc! { "tg_id": tg_id },
-                doc! { "$inc": { "balance": amount,  "version": 1 } },
+                doc! { "$inc": { "balance": amount, "freeze_days": freeze_days, "version": 1 }, "$push": { "subscriptions": to_document(&user_subscription)? } },
             )
             .session(&mut *session)
             .await?;
@@ -139,9 +150,78 @@ impl UserStore {
         Ok(())
     }
 
-    // pub async fn add_subscription(&self, session: &mut ClientSession, tg_id: i64, sub: Subscription) -> Result<()> {
+    pub async fn get_last_user_subscription(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+    ) -> Result<Option<UserSubscription>> {
+        let mut user = self
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        user.subscriptions
+            .sort_by(|a, b| a.end_date.cmp(&b.end_date));
+        Ok(user.subscriptions.last().cloned())
+    }
 
-    // }
+    pub async fn find_users_to_unfreeze(
+        &self,
+        session: &mut ClientSession,
+    ) -> Result<Vec<User>, Error> {
+        let filter = doc! {
+            "freeze.freeze_end": { "$lte": Local::now().with_timezone(&Utc) }
+        };
+        let mut cursor = self.users.find(filter).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
+    }
+
+    pub async fn unfreeze(&self, session: &mut ClientSession, tg_id: i64) -> Result<()> {
+        info!("Unfreeze account:{}", tg_id);
+        let result = self
+            .users
+            .update_one(
+                doc! { "tg_id": tg_id },
+                doc! { "$unset": { "freeze": "" }, "$inc": { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+
+        if result.modified_count != 1 {
+            return Err(eyre!("Failed to unfreeze account"));
+        }
+        Ok(())
+    }
+
+    pub async fn freeze(&self, session: &mut ClientSession, tg_id: i64, days: u32) -> Result<()> {
+        info!("Freeze account:{}", tg_id);
+        let mut user = self
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found:{}", tg_id))?;
+        user.version += 1;
+
+        if user.freeze_days < days {
+            bail!("Insufficient freeze days");
+        }
+        user.freeze_days -= days;
+
+        for sub in user.subscriptions.iter_mut() {
+            sub.end_date += chrono::Duration::days(days as i64);
+        }
+        user.freeze = Some(Freeze {
+            freeze_start: Local::now().with_timezone(&Utc),
+            freeze_end: Local::now().with_timezone(&Utc) + chrono::Duration::days(days as i64),
+        });
+
+        self.users
+            .update_one(
+                doc! { "tg_id": tg_id },
+                doc! { "$set": to_document(&user)? },
+            )
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
 
     pub async fn reserve_balance(
         &self,
@@ -150,6 +230,7 @@ impl UserStore {
         amount: u32,
     ) -> Result<()> {
         info!("Reserving balance for user {}: {}", tg_id, amount);
+
         let amount = amount as i32;
         let updated = self
             .users
@@ -160,7 +241,7 @@ impl UserStore {
             .session(&mut *session)
             .await?;
 
-        if updated.modified_count == 0 {
+        if updated.modified_count != 1 {
             return Err(Error::msg("User not found or insufficient balance"));
         }
         Ok(())
@@ -173,11 +254,26 @@ impl UserStore {
         amount: u32,
     ) -> Result<()> {
         info!("Charging blocked balance for user {}: {}", tg_id, amount);
-        let amount = amount as i32;
+        let mut user = self
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        if user.reserved_balance < amount {
+            bail!("Insufficient reserved balance");
+        }
+        user.version += 1;
+        user.reserved_balance -= amount;
+        user.subscriptions
+            .sort_by(|a, b| a.end_date.cmp(&b.end_date));
+        if let Some(sub) = user.subscriptions.first_mut() {
+            sub.items = sub.items.saturating_sub(amount);
+        }
+        user.subscriptions.retain(|sub| sub.items > 0);
+
         self.users
             .update_one(
                 doc! { "tg_id": tg_id },
-                doc! { "$inc": { "reserved_balance": -amount, "version": 1 } },
+                doc! { "$set": to_document(&user)? },
             )
             .session(&mut *session)
             .await?;

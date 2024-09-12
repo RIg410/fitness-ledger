@@ -116,7 +116,7 @@ impl View for TrainingView {
                     .await?
                     .ok_or_else(|| eyre::eyre!("Training not found"))?;
                 if !training.status(Local::now()).can_sign_in() {
-                    ctx.send_msg("Запись на тренировку закрыта").await?;
+                    ctx.send_msg("Запись на тренировку закрыта💔").await?;
                     let id = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(id);
                     self.show(ctx).await?;
@@ -124,7 +124,14 @@ impl View for TrainingView {
                 }
 
                 if ctx.me.balance < 1 {
-                    ctx.send_msg("Недостаточно средств на балансе").await?;
+                    ctx.send_msg("Недостаточно средств на балансе🥺").await?;
+                    let id = ctx.send_msg("\\.").await?;
+                    ctx.update_origin_msg_id(id);
+                    self.show(ctx).await?;
+                    return Ok(None);
+                }
+                if ctx.me.freeze.is_some() {
+                    ctx.send_msg("Ваш абонемент заморожен🥶").await?;
                     let id = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(id);
                     self.show(ctx).await?;

@@ -1,3 +1,5 @@
+use crate::subscription::Subscription;
+
 use super::rights::Rights;
 use chrono::{DateTime, Local, Utc};
 use mongodb::bson::doc;
@@ -74,11 +76,25 @@ pub struct UserName {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[non_exhaustive]
 pub struct UserSubscription {
-    pub id: ObjectId,
+    pub subscription_id: ObjectId,
+    pub name: String,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub start_date: DateTime<Utc>,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub end_date: DateTime<Utc>,
     pub items: u32,
+}
+
+impl UserSubscription {
+    pub fn with_sub(start_date: DateTime<Utc>, sub: Subscription) -> Self {
+        UserSubscription {
+            subscription_id: sub.id,
+            name: sub.name,
+            start_date: start_date,
+            end_date: start_date + chrono::Duration::days(sub.expiration_days as i64),
+            items: sub.items,
+        }
+    }
 }

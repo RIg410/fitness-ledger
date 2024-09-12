@@ -4,14 +4,11 @@ use ledger::SetDateError;
 use log::warn;
 use model::{rights::Rule, user::User};
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
-    utils::markdown::escape,
-};
+use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 
-use super::{menu::MainMenuItem, View};
+use super::{menu::MainMenuItem, users::profile::render_profile_msg, View};
 
 #[derive(Default)]
 pub struct UserProfile {
@@ -103,32 +100,8 @@ fn parse_date(date: Option<&str>) -> Result<DateTime<Local>, eyre::Error> {
 }
 
 pub fn render_user_profile(_: &Context, user: &User) -> (String, InlineKeyboardMarkup) {
-    let empty = "?".to_string();
-    let msg = format!(
-        "
-    {} Пользователь : _{}_
-        Имя : _{}_
-        Телефон : _{}_
-        Дата рождения : _{}_
-        ➖➖➖➖➖➖➖➖➖➖
-        *Баланс : _{}_ занятий*
-        *Зарезервировано : _{}_ занятий*
-        ➖➖➖➖➖➖➖➖➖➖
-    ",
-        user_type(user),
-        escape(user.name.tg_user_name.as_ref().unwrap_or_else(|| &empty)),
-        escape(&user.name.first_name),
-        escape(&user.phone),
-        escape(
-            &user
-                .birthday
-                .as_ref()
-                .map(|d| d.format("%d.%m.%Y").to_string())
-                .unwrap_or_else(|| empty.clone())
-        ),
-        user.balance,
-        user.reserved_balance
-    );
+    let msg = render_profile_msg(user);
+
     let mut keymap = InlineKeyboardMarkup::default();
     if user.birthday.is_none() {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
@@ -142,7 +115,9 @@ pub fn render_user_profile(_: &Context, user: &User) -> (String, InlineKeyboardM
 }
 
 pub fn user_type(user: &User) -> &str {
-    if !user.is_active {
+    if user.freeze.is_some() {
+        "❄️"
+    } else if !user.is_active {
         "⚫"
     } else if user.rights.is_full() {
         "🔴"

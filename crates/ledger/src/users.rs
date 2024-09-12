@@ -1,8 +1,9 @@
 use chrono::{DateTime, Local};
-use eyre::{Error, Result};
+use eyre::{bail, eyre, Error, Result};
 use log::info;
 use model::{
     rights::{Rights, Rule},
+    subscription::Subscription,
     user::{User, UserName},
 };
 use mongodb::{bson::oid::ObjectId, ClientSession};
@@ -129,6 +130,32 @@ impl Users {
 
         Ok(())
     }
+
+    pub async fn find_users_to_unfreeze(&self, session: &mut ClientSession) -> Result<Vec<User>> {
+        self.store.find_users_to_unfreeze(session).await
+    }
+
+    #[tx]
+    pub async fn freeze(&self, session: &mut ClientSession, tg_id: i64, days: u32) -> Result<()> {
+        let user = self
+            .store
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+
+        if user.freeze_days < days {
+            bail!("Not enough days.");
+        }
+        if user.freeze.is_some() {
+            bail!("Already frozen");
+        }
+        self.store.freeze(session, tg_id, days).await?;
+        Ok(())
+    }
+
+    pub(crate) async fn unfreeze(&self, session: &mut ClientSession, tg_id: i64) -> Result<()> {
+        self.store.unfreeze(session, tg_id).await
+    }
 }
 
 impl Users {
@@ -162,13 +189,13 @@ impl Users {
         Ok(())
     }
 
-    pub(crate) async fn increment_balance(
+    pub(crate) async fn add_subscription(
         &self,
         session: &mut ClientSession,
         tg_id: i64,
-        amount: u32,
+        sub: Subscription,
     ) -> Result<(), Error> {
-        self.store.increment_balance(session, tg_id, amount).await?;
+        self.store.add_subscription(session, tg_id, sub).await?;
         Ok(())
     }
 

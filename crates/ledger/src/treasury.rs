@@ -113,7 +113,7 @@ impl From<Sell> for SubscriptionInfo {
             Sell::Sub(sub) => sub.into(),
             Sell::Free(items, price) => SubscriptionInfo {
                 id: ObjectId::new(),
-                name: "free".to_string(),
+                name: items.to_string(),
                 items,
                 price,
                 version: 0,

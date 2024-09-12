@@ -74,6 +74,7 @@ pub enum Rule {
     EditUserRights,
     BlockUser,
     EditUserInfo,
+    FreezeUsers,
 
     // Training
     Train,
