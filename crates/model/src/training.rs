@@ -96,8 +96,8 @@ impl Training {
             clients: vec![],
             capacity: training.capacity,
             is_one_time: training.is_one_time,
-            is_canceled: training.is_canceled,
-            is_processed: training.is_processed,
+            is_canceled: false,
+            is_processed: false,
         }
     }
 

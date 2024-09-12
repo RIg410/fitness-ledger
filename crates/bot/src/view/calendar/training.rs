@@ -186,9 +186,16 @@ impl View for TrainingView {
                         .await?
                         .ok_or_else(|| eyre::eyre!("User not found"))?;
                     msg.push_str(&format!(
-                        "✅_{}_ _{}_\n",
+                        "✅_{}_ _{}_{}\n",
                         escape(&user.name.first_name),
-                        escape(&user.name.last_name.unwrap_or_else(|| "-".to_string()))
+                        escape(&user.name.last_name.unwrap_or_else(|| "-".to_string())),
+                        escape(
+                            &user
+                                .name
+                                .tg_user_name
+                                .map(|n| format!("@{}", n))
+                                .unwrap_or_else(|| "".to_string())
+                        )
                     ));
                 }
                 ctx.send_msg(&msg).await?;
