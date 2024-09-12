@@ -93,7 +93,7 @@ impl Training {
             start_at: start_at.with_timezone(&Utc),
             duration_min: training.duration_min,
             instructor: training.instructor,
-            clients: training.clients,
+            clients: vec![],
             capacity: training.capacity,
             is_one_time: training.is_one_time,
             is_canceled: training.is_canceled,
