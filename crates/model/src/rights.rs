@@ -62,6 +62,10 @@ impl Rights {
             .map(|rule| (*rule, self.has_rule(*rule)))
             .collect()
     }
+
+    pub fn is_admin(&self) -> bool {
+        self.full
+    }
 }
 
 #[derive(FromRepr, EnumIter, Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -75,6 +79,7 @@ pub enum Rule {
     BlockUser,
     EditUserInfo,
     FreezeUsers,
+    ChangeBalance,
 
     // Training
     Train,

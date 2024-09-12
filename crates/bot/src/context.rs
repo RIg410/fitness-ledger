@@ -46,6 +46,10 @@ impl Context {
         self.origin
     }
 
+    pub fn is_admin(&self) -> bool {
+        self.me.rights.is_admin()
+    }
+
     pub fn update_origin_msg_id(&mut self, id: MessageId) {
         self.origin.message_id = id;
     }

@@ -86,6 +86,14 @@ async fn message_handler(
     match inner_message_handler(&mut ctx, widget, is_real_user, msg, &state_holder).await {
         Ok(_) => Ok(()),
         Err(err) => {
+            if ctx.is_admin() {
+                if let Err(err) = ctx
+                    .send_msg(&escape(&format!("Failed to handle message: {:#}", err)))
+                    .await
+                {
+                    error!("send message error :{:#}", err);
+                }
+            }
             error!("Failed to handle message: {:#}", err);
             if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
                 error!("send message error :{:#}", err);
@@ -182,6 +190,15 @@ async fn callback_handler(
     {
         Ok(_) => Ok(()),
         Err(err) => {
+            if ctx.is_admin() {
+                if let Err(err) = ctx
+                    .send_msg(&escape(&format!("Failed to handle callback: {:#}", err)))
+                    .await
+                {
+                    error!("send message error :{:#}", err);
+                }
+            }
+
             error!("Failed to handle callback: {:#}", err);
             if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
                 error!("send message error :{:#}", err);

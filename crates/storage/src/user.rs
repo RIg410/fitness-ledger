@@ -432,4 +432,25 @@ impl UserStore {
             .await?;
         Ok(result.modified_count > 0)
     }
+
+    pub async fn change_balance(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+        amount: i32,
+    ) -> Result<()> {
+        info!("Changing balance for user {}: {}", tg_id, amount);
+        let result = self
+            .users
+            .update_one(
+                doc! { "tg_id": tg_id },
+                doc! { "$inc": { "balance": amount, "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        if result.modified_count == 0 {
+            return Err(Error::msg("User not found"));
+        }
+        Ok(())
+    }
 }

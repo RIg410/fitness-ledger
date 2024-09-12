@@ -111,6 +111,29 @@ impl View for UserProfile {
                     Some(Box::new(new_user_new)),
                 ))))
             }
+            Callback::ChangeBalance(amount) => {
+                ctx.ensure(Rule::ChangeBalance)?;
+                let user = ctx
+                    .ledger
+                    .users
+                    .get_by_tg_id(&mut ctx.session, self.tg_id)
+                    .await?
+                    .ok_or_else(|| eyre::eyre!("User not found"))?;
+
+                if amount < 0 {
+                    if user.balance < amount.abs() as u32 {
+                        return Err(eyre::eyre!("Not enough balance"));
+                    }
+                }
+
+                ctx.ledger
+                    .users
+                    .change_balance(&mut ctx.session, user.tg_id, amount)
+                    .await?;
+                ctx.reload_user().await?;
+                self.show(ctx).await?;
+                Ok(None)
+            }
         }
     }
 }
@@ -128,6 +151,17 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
                 )]);
             }
         }
+    }
+
+    if ctx.has_right(Rule::ChangeBalance) {
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+            "Списать баланс 💸",
+            Callback::ChangeBalance(-1).to_data(),
+        )]);
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+            "Пополнить баланс 💰",
+            Callback::ChangeBalance(1).to_data(),
+        )]);
     }
 
     if ctx.has_right(Rule::BlockUser) && ctx.me.tg_id != user.tg_id {
@@ -172,6 +206,7 @@ pub enum Callback {
     Edit,
     EditRights,
     Freeze,
+    ChangeBalance(i32),
 }
 
 fn render_sub(sub: &UserSubscription) -> String {

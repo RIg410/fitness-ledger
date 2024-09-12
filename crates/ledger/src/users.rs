@@ -156,6 +156,16 @@ impl Users {
     pub(crate) async fn unfreeze(&self, session: &mut ClientSession, tg_id: i64) -> Result<()> {
         self.store.unfreeze(session, tg_id).await
     }
+
+    #[tx]
+    pub async fn change_balance(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+        amount: i32,
+    ) -> Result<()> {
+        self.store.change_balance(session, tg_id, amount).await
+    }
 }
 
 impl Users {
