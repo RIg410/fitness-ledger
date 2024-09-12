@@ -1,5 +1,3 @@
-use std::usize;
-
 use calendar::{Calendar, SignOutError};
 use chrono::Local;
 use eyre::{bail, eyre, Result};

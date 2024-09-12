@@ -121,7 +121,7 @@ impl CalendarStore {
             .session(&mut *session)
             .await?;
         match day {
-            Some(day) => return Ok(day),
+            Some(day) => Ok(day),
             None => {
                 let now = Utc::now();
                 if id.id() < now - chrono::Duration::days(10) {
@@ -158,7 +158,7 @@ impl CalendarStore {
                     .session(&mut *session)
                     .with_options(UpdateOptions::builder().upsert(true).build())
                     .await?;
-                return Ok(day);
+                Ok(day)
             }
         }
     }

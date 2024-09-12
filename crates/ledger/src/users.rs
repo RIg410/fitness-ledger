@@ -101,7 +101,7 @@ impl Users {
             .store
             .get_by_tg_id(session, id)
             .await
-            .map_err(|err| SetDateError::Common(err))?;
+            .map_err(SetDateError::Common)?;
         let user = user.ok_or(SetDateError::UserNotFound)?;
         if user.birthday.is_some() {
             return Err(SetDateError::AlreadySet);
@@ -109,7 +109,7 @@ impl Users {
         self.store
             .set_birthday(session, user.tg_id, date)
             .await
-            .map_err(|err| SetDateError::Common(err))?;
+            .map_err(SetDateError::Common)?;
         Ok(())
     }
 

@@ -3,9 +3,9 @@ use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-pub fn encode_data<T: ?Sized>(data: &T, type_id: u32) -> String
+pub fn encode_data<T>(data: &T, type_id: u32) -> String
 where
-    T: Serialize,
+    T: Serialize + ?Sized,
 {
     hex::encode(bincode::serialize(&(data, type_id)).unwrap())
 }

@@ -66,6 +66,8 @@ impl DayId {
         DayId(date.with_timezone(&Utc))
     }
 
+    /// Create DayId from Utc DateTime
+    /// # Safety 
     pub unsafe fn from_utc(date_time: DateTime<Utc>) -> Self {
         DayId(date_time)
     }

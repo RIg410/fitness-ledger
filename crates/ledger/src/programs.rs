@@ -19,7 +19,7 @@ impl Programs {
         session: &mut ClientSession,
         query: Option<&str>,
     ) -> Result<Vec<Program>, Error> {
-        Ok(self.store.find(session, query).await?)
+        self.store.find(session, query).await
     }
 
     pub async fn get_by_name(
@@ -27,7 +27,7 @@ impl Programs {
         session: &mut ClientSession,
         name: &str,
     ) -> Result<Option<Program>, Error> {
-        Ok(self.store.get_by_name(session, name).await?)
+        self.store.get_by_name(session, name).await
     }
 
     pub async fn get_by_id(
@@ -35,11 +35,11 @@ impl Programs {
         session: &mut ClientSession,
         id: ObjectId,
     ) -> Result<Option<Program>, Error> {
-        Ok(self.store.get_by_id(session, id).await?)
+        self.store.get_by_id(session, id).await
     }
 
     pub async fn get_all(&self, session: &mut ClientSession) -> Result<Vec<Program>, Error> {
-        Ok(self.store.get_all(session).await?)
+        self.store.get_all(session).await
     }
 
     #[tx]
@@ -64,6 +64,6 @@ impl Programs {
             return Err(eyre::eyre!("Training with this name already exists"));
         }
 
-        Ok(self.store.insert(session, &proto).await?)
+        self.store.insert(session, &proto).await
     }
 }

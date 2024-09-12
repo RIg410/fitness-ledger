@@ -17,10 +17,7 @@ pub struct UserRightsView {
 
 impl UserRightsView {
     pub fn new(tg_id: i64, go_back: Option<Widget>) -> UserRightsView {
-        UserRightsView {
-            tg_id: tg_id,
-            go_back: go_back,
-        }
+        UserRightsView { tg_id, go_back }
     }
 }
 

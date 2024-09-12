@@ -107,7 +107,7 @@ impl Calendar {
             .get_training_by_start_at(session, training.get_slot().start_at())
             .await?
         {
-            if training.clients.len() > 0 {
+            if !training.clients.is_empty() {
                 return Err(eyre::eyre!("Training has clients"));
             }
 

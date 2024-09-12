@@ -35,7 +35,7 @@ impl User {
     pub fn new(tg_id: i64) -> User {
         User {
             id: ObjectId::new(),
-            tg_id: tg_id,
+            tg_id,
             name: UserName {
                 tg_user_name: None,
                 first_name: "".to_owned(),
@@ -92,7 +92,7 @@ impl UserSubscription {
         UserSubscription {
             subscription_id: sub.id,
             name: sub.name,
-            start_date: start_date,
+            start_date,
             end_date: start_date + chrono::Duration::days(sub.expiration_days as i64),
             items: sub.items,
         }

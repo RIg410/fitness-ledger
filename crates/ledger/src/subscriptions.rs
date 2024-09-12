@@ -20,7 +20,7 @@ impl Subscriptions {
         session: &mut ClientSession,
         name: &str,
     ) -> Result<Option<Subscription>, Error> {
-        Ok(self.store.get_by_name(session, name).await?)
+        self.store.get_by_name(session, name).await
     }
 
     pub async fn get(
@@ -28,7 +28,7 @@ impl Subscriptions {
         session: &mut ClientSession,
         id: ObjectId,
     ) -> Result<Option<Subscription>, Error> {
-        Ok(self.store.get_by_id(session, id).await?)
+        self.store.get_by_id(session, id).await
     }
 
     pub async fn get_all(&self, session: &mut ClientSession) -> Result<Vec<Subscription>, Error> {
