@@ -220,6 +220,22 @@ impl Users {
             .await?;
         Ok(())
     }
+
+    pub(crate) async fn find_subscription_to_expire(
+        &self,
+        session: &mut ClientSession,
+    ) -> Result<Vec<User>> {
+        self.store.find_subscription_to_expire(session).await
+    }
+
+    #[tx]
+    pub(crate) async fn expire_subscription(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+    ) -> Result<()> {
+        self.store.expire_subscription(session, tg_id).await
+    }
 }
 
 pub enum SetDateError {

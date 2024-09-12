@@ -453,4 +453,42 @@ impl UserStore {
         }
         Ok(())
     }
+
+    pub async fn find_subscription_to_expire(
+        &self,
+        session: &mut ClientSession,
+    ) -> Result<Vec<User>, Error> {
+        let filter = doc! {
+            "subscriptions.end_date": { "$lte": Local::now().with_timezone(&Utc) }
+        };
+        let mut cursor = self.users.find(filter).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
+    }
+
+    pub async fn expire_subscription(&self, session: &mut ClientSession, tg_id: i64) -> Result<()> {
+        let now = Local::now().with_timezone(&Utc);
+        info!("Expire subscription for user {}", tg_id);
+        let mut user = self
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        user.version += 1;
+
+        user.subscriptions
+            .iter()
+            .filter(|sub| sub.end_date < now)
+            .for_each(|sub| {
+                user.balance = user.balance.saturating_sub(sub.items);
+            });
+
+        user.subscriptions.retain(|sub| sub.end_date >= now);    
+        self.users
+            .update_one(
+                doc! { "tg_id": tg_id },
+                doc! { "$set": to_document(&user)? },
+            )
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
 }

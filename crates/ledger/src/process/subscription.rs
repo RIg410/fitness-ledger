@@ -12,6 +12,17 @@ impl SubscriptionBg {
     }
 
     pub async fn process(&self, session: &mut ClientSession) -> Result<()> {
+        let users = self
+            .ledger
+            .users
+            .find_subscription_to_expire(session)
+            .await?;
+        for user in users {
+            self.ledger
+                .users
+                .expire_subscription(session, user.tg_id)
+                .await?;
+        }
         Ok(())
     }
 }

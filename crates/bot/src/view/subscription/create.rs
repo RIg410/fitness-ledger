@@ -105,10 +105,7 @@ impl View for CreateSubscription {
             State::Finish => {
                 text.push_str("*Все верно?*");
                 keymap = keymap.append_row(vec![
-                    InlineKeyboardButton::callback(
-                        "✅ Сохранить",
-                        Callback::Create.to_data(),
-                    ),
+                    InlineKeyboardButton::callback("✅ Сохранить", Callback::Create.to_data()),
                     InlineKeyboardButton::callback("❌ Отмена", Callback::Cancel.to_data()),
                 ]);
             }

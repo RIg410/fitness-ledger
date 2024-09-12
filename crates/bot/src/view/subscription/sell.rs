@@ -1,6 +1,9 @@
 use super::{confirm::ConfirmSell, View};
 use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::{menu::MainMenuItem, users::profile::user_type},
+    callback_data::Calldata as _,
+    context::Context,
+    state::Widget,
+    view::{menu::MainMenuItem, users::profile::user_type},
 };
 use async_trait::async_trait;
 use eyre::{eyre, Error, Result};
