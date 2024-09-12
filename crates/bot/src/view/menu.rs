@@ -7,8 +7,11 @@ use teloxide::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Me
 use crate::{context::Context, state::Widget};
 
 use super::{
-    finance::FinanceView, profile::UserProfile, subscription::SubscriptionView,
-    training::TrainingMainView, users::UsersView, View,
+    finance::FinanceView,
+    subscription::SubscriptionView,
+    training::TrainingMainView,
+    users::{profile::UserProfile, UsersView},
+    View,
 };
 
 pub struct MainMenuView;
@@ -58,7 +61,7 @@ impl View for MainMenuView {
 
         self.send_self(ctx).await?;
         Ok(Some(match command {
-            MainMenuItem::Profile => Box::new(UserProfile::default()),
+            MainMenuItem::Profile => Box::new(UserProfile::new(ctx.me.tg_id, None)),
             MainMenuItem::Trainings => Box::new(TrainingMainView::default()),
             MainMenuItem::Users => Box::new(UsersView::default()),
             MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
@@ -79,7 +82,7 @@ impl View for MainMenuView {
         };
         self.send_self(ctx).await?;
         Ok(Some(match command {
-            MainMenuItem::Profile => Box::new(UserProfile::default()),
+            MainMenuItem::Profile => Box::new(UserProfile::new(ctx.me.tg_id, None)),
             MainMenuItem::Trainings => Box::new(TrainingMainView::default()),
             MainMenuItem::Users => Box::new(UsersView::default()),
             MainMenuItem::Subscription => Box::new(SubscriptionView::default()),

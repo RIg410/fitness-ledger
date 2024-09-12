@@ -1,11 +1,12 @@
 use super::menu::MainMenuItem;
-use super::{profile::user_type, View};
+use super::View;
 use crate::callback_data::Calldata as _;
 use crate::view::users::profile::UserProfile;
 use crate::{context::Context, state::Widget};
 use async_trait::async_trait;
 use model::rights::Rule;
 use model::user::User;
+use profile::user_type;
 use serde::{Deserialize, Serialize};
 use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},

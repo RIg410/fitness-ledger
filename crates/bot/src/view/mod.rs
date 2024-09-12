@@ -7,7 +7,6 @@ pub mod calendar;
 pub mod finance;
 pub mod form;
 pub mod menu;
-pub mod profile;
 pub mod signup;
 pub mod subscription;
 pub mod training;

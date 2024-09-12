@@ -4,7 +4,7 @@ use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::{menu::MainMenuItem, profile::user_type, View},
+    view::{menu::MainMenuItem, View},
 };
 use async_trait::async_trait;
 use chrono::Local;
@@ -225,4 +225,18 @@ pub fn render_profile_msg(user: &User) -> String {
     }
     msg.push_str("➖➖➖➖➖➖➖➖➖➖");
     msg
+}
+
+pub fn user_type(user: &User) -> &str {
+    if user.freeze.is_some() {
+        "❄️"
+    } else if !user.is_active {
+        "⚫"
+    } else if user.rights.is_full() {
+        "🔴"
+    } else if user.rights.has_rule(Rule::Train) {
+        "🔵"
+    } else {
+        "🟢"
+    }
 }
