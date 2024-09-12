@@ -47,9 +47,13 @@ impl View for SubscriptionOption {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = SubscriptionCallback::from_data(data)?;
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
         match cb {
-            SubscriptionCallback::Delete => {
+            Callback::Delete => {
                 ctx.ensure(Rule::EditSubscription)?;
                 ctx.ledger
                     .subscriptions
@@ -59,7 +63,7 @@ impl View for SubscriptionOption {
                     return Ok(Some(widget));
                 }
             }
-            SubscriptionCallback::Sell => {
+            Callback::Sell => {
                 ctx.ensure(Rule::SellSubscription)?;
                 let back = Box::new(SubscriptionOption {
                     go_back: self.go_back.take(),
@@ -68,7 +72,7 @@ impl View for SubscriptionOption {
                 let widget = Box::new(SellView::new(Sell::with_id(self.id), back));
                 return Ok(Some(widget));
             }
-            SubscriptionCallback::Back => {
+            Callback::Back => {
                 if let Some(widget) = self.go_back.take() {
                     return Ok(Some(widget));
                 }
@@ -100,20 +104,20 @@ async fn render_sub(
     if ctx.has_right(Rule::EditSubscription) {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "❌ Удалить",
-            SubscriptionCallback::Delete.to_data(),
+            Callback::Delete.to_data(),
         )]);
     }
 
     if ctx.has_right(Rule::SellSubscription) {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🛒 Продать",
-            SubscriptionCallback::Sell.to_data(),
+            Callback::Sell.to_data(),
         )]);
     }
 
     keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
         "🔙 Назад",
-        SubscriptionCallback::Back.to_data(),
+        Callback::Back.to_data(),
     )]);
 
     keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
@@ -121,7 +125,7 @@ async fn render_sub(
 }
 
 #[derive(Serialize, Deserialize)]
-enum SubscriptionCallback {
+enum Callback {
     Delete,
     Sell,
     Back,

@@ -107,9 +107,9 @@ impl View for CreateSubscription {
                 keymap = keymap.append_row(vec![
                     InlineKeyboardButton::callback(
                         "✅ Сохранить",
-                        CreateCallback::Create.to_data(),
+                        Callback::Create.to_data(),
                     ),
-                    InlineKeyboardButton::callback("❌ Отмена", CreateCallback::Cancel.to_data()),
+                    InlineKeyboardButton::callback("❌ Отмена", Callback::Cancel.to_data()),
                 ]);
             }
         }
@@ -194,8 +194,13 @@ impl View for CreateSubscription {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        match CreateCallback::from_data(data)? {
-            CreateCallback::Create => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::Create => {
                 ctx.ensure(Rule::CreateSubscription)?;
                 let sub = mem::take(&mut self.subscription);
                 let result = ctx
@@ -233,7 +238,7 @@ impl View for CreateSubscription {
                     Err(CreateSubscriptionError::Common(err)) => Err(err),
                 }
             }
-            CreateCallback::Cancel => Ok(self.go_back.take()),
+            Callback::Cancel => Ok(self.go_back.take()),
         }
     }
 }
@@ -250,7 +255,7 @@ enum State {
 }
 
 #[derive(Serialize, Deserialize)]
-enum CreateCallback {
+enum Callback {
     Create,
     Cancel,
 }

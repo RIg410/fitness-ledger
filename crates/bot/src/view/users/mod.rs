@@ -11,9 +11,9 @@ use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
+pub mod freeze;
 pub mod profile;
 pub mod rights;
-pub mod freeze;
 
 pub const LIMIT: u64 = 7;
 
@@ -75,7 +75,13 @@ impl View for UsersView {
     ) -> Result<Option<Widget>, eyre::Error> {
         ctx.ensure(Rule::ViewUsers)?;
 
-        match Callback::from_data(data)? {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+
+        match cb {
             Callback::Next => {
                 self.query.offset += LIMIT;
                 self.show(ctx).await?;

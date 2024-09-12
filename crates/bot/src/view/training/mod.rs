@@ -36,11 +36,14 @@ impl View for TrainingMainView {
     }
 
     async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Option<Widget>> {
-        match ScheduleLendingCallback::from_data(data)? {
-            ScheduleLendingCallback::MyTrainings => {
-                return Ok(Some(Box::new(MyTrainings::default())))
-            }
-            ScheduleLendingCallback::Schedule => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::MyTrainings => return Ok(Some(Box::new(MyTrainings::default()))),
+            Callback::Schedule => {
                 let widget = Box::new(CalendarView::new(
                     WeekId::default(),
                     Some(Box::new(TrainingMainView)),
@@ -49,7 +52,7 @@ impl View for TrainingMainView {
                 ));
                 return Ok(Some(widget));
             }
-            ScheduleLendingCallback::FindTraining => {
+            Callback::FindTraining => {
                 let widget = Box::new(FindTraining::default());
                 return Ok(Some(widget));
             }
@@ -62,15 +65,15 @@ pub fn render() -> (String, InlineKeyboardMarkup) {
     let mut keymap = InlineKeyboardMarkup::default();
     keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
         "🫶🏻 Мои тренировки",
-        ScheduleLendingCallback::MyTrainings.to_data(),
+        Callback::MyTrainings.to_data(),
     )]);
     keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
         "📅  Календарь",
-        ScheduleLendingCallback::Schedule.to_data(),
+        Callback::Schedule.to_data(),
     )]);
     keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
         "🔍 Найти тренировку",
-        ScheduleLendingCallback::FindTraining.to_data(),
+        Callback::FindTraining.to_data(),
     )]);
 
     keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
@@ -78,7 +81,7 @@ pub fn render() -> (String, InlineKeyboardMarkup) {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum ScheduleLendingCallback {
+pub enum Callback {
     MyTrainings,
     Schedule,
     FindTraining,

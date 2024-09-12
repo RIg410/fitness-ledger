@@ -39,8 +39,13 @@ impl View for FindTraining {
     }
 
     async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Option<Widget>> {
-        match FindTrainingCallback::from_data(data)? {
-            FindTrainingCallback::SelectTraining(id) => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::SelectTraining(id) => {
                 let id = ObjectId::from_bytes(id);
                 let back = FindTraining::new(self.go_back.take());
                 let view = Box::new(ViewTrainingProto::new(
@@ -50,7 +55,7 @@ impl View for FindTraining {
                 ));
                 Ok(Some(view))
             }
-            FindTrainingCallback::Back => Ok(self.go_back.take()),
+            Callback::Back => Ok(self.go_back.take()),
         }
     }
 }
@@ -67,7 +72,7 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     for proto in trainings {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             proto.name.clone(),
-            FindTrainingCallback::SelectTraining(proto.id.bytes()).to_data(),
+            Callback::SelectTraining(proto.id.bytes()).to_data(),
         )]);
     }
     keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
@@ -75,7 +80,7 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum FindTrainingCallback {
+pub enum Callback {
     SelectTraining([u8; 12]),
     Back,
 }

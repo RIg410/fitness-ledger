@@ -44,16 +44,21 @@ impl View for MyTrainings {
     }
 
     async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Option<Widget>> {
-        match MyTrainingsCallback::from_data(data)? {
-            MyTrainingsCallback::Back => Ok(self.go_back.take()),
-            MyTrainingsCallback::SelectTraining(date) => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::Back => Ok(self.go_back.take()),
+            Callback::SelectTraining(date) => {
                 let widget = Box::new(TrainingView::new(
                     date.into(),
                     Some(Box::new(MyTrainings::new(self.go_back.take()))),
                 ));
                 Ok(Some(widget))
             }
-            MyTrainingsCallback::FindTraining => {
+            Callback::FindTraining => {
                 let this = Box::new(MyTrainings {
                     go_back: self.go_back.take(),
                 });
@@ -109,21 +114,21 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
                 slot.start_at().format("%d.%m %H:%M"),
                 training.name.as_str(),
             ),
-            MyTrainingsCallback::SelectTraining(slot.start_at().into()).to_data(),
+            Callback::SelectTraining(slot.start_at().into()).to_data(),
         ));
         keymap = keymap.append_row(row);
     }
     if !ctx.has_right(Rule::Train) {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🔍 Найти тренировку",
-            MyTrainingsCallback::FindTraining.to_data(),
+            Callback::FindTraining.to_data(),
         )]);
     }
 
     if go_back {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🔙 Назад",
-            MyTrainingsCallback::Back.to_data(),
+            Callback::Back.to_data(),
         )]);
     }
     keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
@@ -131,7 +136,7 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum MyTrainingsCallback {
+pub enum Callback {
     Back,
     SelectTraining(CallbackDateTime),
     FindTraining,

@@ -69,26 +69,31 @@ impl View for CalendarView {
         ctx: &mut Context,
         data: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        match CalendarCallback::from_data(data)? {
-            CalendarCallback::GoToWeek(week) => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::GoToWeek(week) => {
                 self.week_id = WeekId::from(week);
                 self.selected_day = self.week_id.day(self.selected_day.week_day());
                 self.show(ctx).await?;
                 Ok(None)
             }
-            CalendarCallback::SelectDay(day) => {
+            Callback::SelectDay(day) => {
                 self.selected_day = DayId::from(day);
                 self.show(ctx).await?;
                 Ok(None)
             }
-            CalendarCallback::Back => {
+            Callback::Back => {
                 if let Some(widget) = self.go_back.take() {
                     Ok(Some(widget))
                 } else {
                     Ok(None)
                 }
             }
-            CalendarCallback::SelectTraining(id) => {
+            Callback::SelectTraining(id) => {
                 return Ok(Some(Box::new(TrainingView::new(
                     id.into(),
                     Some(Box::new(CalendarView::new(
@@ -99,7 +104,7 @@ impl View for CalendarView {
                     ))),
                 ))));
             }
-            CalendarCallback::AddTraining => {
+            Callback::AddTraining => {
                 ctx.ensure(Rule::EditSchedule)?;
                 let widget = Box::new(CalendarView::new(
                     self.week_id,
@@ -160,7 +165,7 @@ pub async fn render_week(
         );
         row.push(InlineKeyboardButton::callback(
             text,
-            CalendarCallback::SelectDay(date.into()).to_data(),
+            Callback::SelectDay(date.into()).to_data(),
         ));
     }
     buttons = buttons.append_row(row);
@@ -168,14 +173,14 @@ pub async fn render_week(
     if has_prev {
         row.push(InlineKeyboardButton::callback(
             "⬅️ предыдущая неделя",
-            CalendarCallback::GoToWeek(week_id.prev().local().into()).to_data(),
+            Callback::GoToWeek(week_id.prev().local().into()).to_data(),
         ));
     }
 
     if hes_next {
         row.push(InlineKeyboardButton::callback(
             "➡️ cледующая неделя",
-            CalendarCallback::GoToWeek(week_id.next().local().into()).to_data(),
+            Callback::GoToWeek(week_id.next().local().into()).to_data(),
         ));
     }
     buttons = buttons.append_row(row);
@@ -206,21 +211,21 @@ pub async fn render_week(
                 start_at.format("%H:%M"),
                 training.name.as_str(),
             ),
-            CalendarCallback::SelectTraining(start_at.into()).to_data(),
+            Callback::SelectTraining(start_at.into()).to_data(),
         ));
         buttons = buttons.append_row(row);
     }
     if ctx.has_right(Rule::EditSchedule) {
         buttons = buttons.append_row(vec![InlineKeyboardButton::callback(
             "📝  запланировать тренировку",
-            CalendarCallback::AddTraining.to_data(),
+            Callback::AddTraining.to_data(),
         )]);
     }
 
     if has_back {
         buttons = buttons.append_row(vec![InlineKeyboardButton::callback(
             "Назад",
-            CalendarCallback::Back.to_data(),
+            Callback::Back.to_data(),
         )]);
     }
 
@@ -300,7 +305,7 @@ pub fn render_training_status(training: TrainingStatus, is_full: bool, my: bool)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-enum CalendarCallback {
+enum Callback {
     GoToWeek(CallbackDateTime),
     SelectDay(CallbackDateTime),
     SelectTraining(CallbackDateTime),

@@ -1,14 +1,16 @@
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
-pub fn encode_data<T: ?Sized>(data: &T) -> String
+pub fn encode_data<T: ?Sized>(data: &T, type_id: u32) -> String
 where
     T: Serialize,
 {
-    hex::encode(bincode::serialize(data).unwrap())
+    hex::encode(bincode::serialize(&(data, type_id)).unwrap())
 }
 
-pub fn decode_data<T>(data: &str) -> Result<T, eyre::Error>
+pub fn decode_data<T>(data: &str) -> Result<(T, u32), eyre::Error>
 where
     T: DeserializeOwned,
 {
@@ -17,7 +19,7 @@ where
 
 pub trait Calldata {
     fn to_data(&self) -> String;
-    fn from_data(data: &str) -> Result<Self, eyre::Error>
+    fn from_data(data: &str) -> Option<Self>
     where
         Self: Sized;
 }
@@ -27,10 +29,21 @@ where
     T: Serialize + DeserializeOwned,
 {
     fn to_data(&self) -> String {
-        encode_data(self)
+        encode_data(self, type_id::<T>())
     }
 
-    fn from_data(data: &str) -> Result<Self, eyre::Error> {
-        decode_data(data)
+    fn from_data(data: &str) -> Option<Self> {
+        let (data, id) = decode_data(data).ok()?;
+        if id != type_id::<T>() {
+            return None;
+        }
+        Some(data)
     }
+}
+
+fn type_id<T>() -> u32 {
+    let type_name = std::any::type_name::<T>();
+    let mut hasher = DefaultHasher::new();
+    type_name.hash(&mut hasher);
+    (hasher.finish() % u32::MAX as u64) as u32
 }

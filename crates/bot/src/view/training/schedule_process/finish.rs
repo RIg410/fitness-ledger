@@ -44,8 +44,8 @@ impl View for Finish {
         ctx.send_msg(&msg).await?;
         let msg = format!("Все верно?");
         let keymap = vec![vec![
-            InlineKeyboardButton::callback("✅ Сохранить", FinishCallback::Yes.to_data()),
-            InlineKeyboardButton::callback("❌ Отмена", FinishCallback::No.to_data()),
+            InlineKeyboardButton::callback("✅ Сохранить", Callback::Yes.to_data()),
+            InlineKeyboardButton::callback("❌ Отмена", Callback::No.to_data()),
         ]];
         ctx.send_msg_with_markup(
             &msg,
@@ -65,8 +65,13 @@ impl View for Finish {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        match FinishCallback::from_data(data)? {
-            FinishCallback::Yes => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::Yes => {
                 ctx.ensure(Rule::EditSchedule)?;
                 let preset = self
                     .preset
@@ -104,7 +109,7 @@ impl View for Finish {
                     }
                 }
             }
-            FinishCallback::No => {
+            Callback::No => {
                 //no-op
             }
         }
@@ -117,7 +122,7 @@ impl View for Finish {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum FinishCallback {
+pub enum Callback {
     Yes,
     No,
 }

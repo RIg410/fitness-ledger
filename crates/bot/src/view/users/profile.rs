@@ -60,10 +60,14 @@ impl View for UserProfile {
         ctx: &mut Context,
         data: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        let cb = UserCallback::from_data(data)?;
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
 
         match cb {
-            UserCallback::Back => {
+            Callback::Back => {
                 if let Some(back) = self.go_back.take() {
                     return Ok(Some(back));
                 } else {
@@ -71,7 +75,7 @@ impl View for UserProfile {
                     Ok(None)
                 }
             }
-            UserCallback::BlockUnblock => {
+            Callback::BlockUnblock => {
                 ctx.ensure(Rule::BlockUser)?;
                 let user = ctx
                     .ledger
@@ -86,8 +90,8 @@ impl View for UserProfile {
                 self.show(ctx).await?;
                 Ok(None)
             }
-            UserCallback::Edit => Ok(None),
-            UserCallback::EditRights => {
+            Callback::Edit => Ok(None),
+            Callback::EditRights => {
                 ctx.ensure(Rule::EditUserRights)?;
                 let mut new_user_new = UserProfile::new(0, None);
                 mem::swap(self, &mut new_user_new);
@@ -96,7 +100,7 @@ impl View for UserProfile {
                     Some(Box::new(new_user_new)),
                 ))))
             }
-            UserCallback::Freeze => {
+            Callback::Freeze => {
                 if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
                     return Err(eyre::eyre!("User has no rights to perform this action"));
                 }
@@ -120,7 +124,7 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
             if user.freeze_days != 0 {
                 keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                     "Заморозить ❄",
-                    UserCallback::Freeze.to_data(),
+                    Callback::Freeze.to_data(),
                 )]);
             }
         }
@@ -133,28 +137,28 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
             } else {
                 "✅ Разблокировать"
             },
-            UserCallback::BlockUnblock.to_data(),
+            Callback::BlockUnblock.to_data(),
         )]);
     }
 
     if ctx.has_right(Rule::EditUserInfo) {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "✍️ Редактировать",
-            UserCallback::Edit.to_data(),
+            Callback::Edit.to_data(),
         )]);
     }
 
     if ctx.has_right(Rule::EditUserRights) {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🔒 Права",
-            UserCallback::EditRights.to_data(),
+            Callback::EditRights.to_data(),
         )]);
     }
 
     if back {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "⬅️",
-            UserCallback::Back.to_data(),
+            Callback::Back.to_data(),
         )]);
     }
     keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
@@ -162,7 +166,7 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum UserCallback {
+pub enum Callback {
     Back,
     BlockUnblock,
     Edit,

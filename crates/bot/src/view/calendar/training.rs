@@ -49,9 +49,14 @@ impl View for TrainingView {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        match TCallback::from_data(data)? {
-            TCallback::Back => Ok(self.go_back.take()),
-            TCallback::Description => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::Back => Ok(self.go_back.take()),
+            Callback::Description => {
                 let training = ctx
                     .ledger
                     .calendar
@@ -64,7 +69,7 @@ impl View for TrainingView {
                 self.show(ctx).await?;
                 Ok(None)
             }
-            TCallback::Cancel => {
+            Callback::Cancel => {
                 ctx.ensure(Rule::CancelTraining)?;
                 let training = ctx
                     .ledger
@@ -79,7 +84,7 @@ impl View for TrainingView {
                 self.show(ctx).await?;
                 Ok(None)
             }
-            TCallback::Delete(all) => {
+            Callback::Delete(all) => {
                 ctx.ensure(Rule::EditSchedule)?;
                 let training = ctx
                     .ledger
@@ -93,7 +98,7 @@ impl View for TrainingView {
                     .await?;
                 Ok(self.go_back.take())
             }
-            TCallback::UnCancel => {
+            Callback::UnCancel => {
                 ctx.ensure(Rule::CancelTraining)?;
                 let training = ctx
                     .ledger
@@ -108,7 +113,7 @@ impl View for TrainingView {
                 self.show(ctx).await?;
                 Ok(None)
             }
-            TCallback::SignUp => {
+            Callback::SignUp => {
                 let training = ctx
                     .ledger
                     .calendar
@@ -144,7 +149,7 @@ impl View for TrainingView {
                 self.show(ctx).await?;
                 Ok(None)
             }
-            TCallback::SignOut => {
+            Callback::SignOut => {
                 let training = ctx
                     .ledger
                     .calendar
@@ -164,7 +169,7 @@ impl View for TrainingView {
                 self.show(ctx).await?;
                 Ok(None)
             }
-            TCallback::ClientList => {
+            Callback::ClientList => {
                 ctx.ensure(Rule::Train)?;
                 let mut msg = "*Список клиентов:*\n".to_string();
                 let training = ctx
@@ -230,13 +235,13 @@ _{}_
     let mut keymap = InlineKeyboardMarkup::default();
     keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
         "📝 Описание",
-        TCallback::Description.to_data(),
+        Callback::Description.to_data(),
     )]);
 
     if !is_client {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🗒 Список клиентов",
-            TCallback::ClientList.to_data(),
+            Callback::ClientList.to_data(),
         )]);
     }
 
@@ -244,13 +249,13 @@ _{}_
         if tr_status.can_be_canceled() {
             keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                 "⛔ Отменить",
-                TCallback::Cancel.to_data(),
+                Callback::Cancel.to_data(),
             )]);
         }
         if tr_status.can_be_uncanceled() {
             keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                 "🔓 Вернуть",
-                TCallback::UnCancel.to_data(),
+                Callback::UnCancel.to_data(),
             )]);
         }
     }
@@ -258,12 +263,12 @@ _{}_
     if ctx.has_right(Rule::EditSchedule) {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🗑️ Удалить эту тренировку",
-            TCallback::Delete(false).to_data(),
+            Callback::Delete(false).to_data(),
         )]);
         if !training.is_one_time {
             keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                 "🗑️ Удалить все последующие",
-                TCallback::Delete(true).to_data(),
+                Callback::Delete(true).to_data(),
             )]);
         }
     }
@@ -273,14 +278,14 @@ _{}_
             if tr_status.can_sign_out() {
                 keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                     "🔓 Отменить запись",
-                    TCallback::SignOut.to_data(),
+                    Callback::SignOut.to_data(),
                 )]);
             }
         } else {
             if tr_status.can_sign_in() {
                 keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                     "🔒 Записаться",
-                    TCallback::SignUp.to_data(),
+                    Callback::SignUp.to_data(),
                 )]);
             }
         }
@@ -288,14 +293,14 @@ _{}_
     if has_back {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🔙 Назад",
-            TCallback::Back.to_data(),
+            Callback::Back.to_data(),
         )]);
     }
     (msg, keymap)
 }
 
 #[derive(Serialize, Deserialize)]
-enum TCallback {
+enum Callback {
     Back,
     Description,
     Delete(bool),

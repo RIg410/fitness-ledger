@@ -45,18 +45,23 @@ impl View for SubscriptionView {
         ctx: &mut Context,
         msg: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        match SubscriptionCallback::from_data(msg)? {
-            SubscriptionCallback::Select(id) => {
+        let cb = if let Some(cb) = Callback::from_data(msg) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::Select(id) => {
                 let view =
                     SubscriptionOption::new(ObjectId::from_bytes(id), Box::new(SubscriptionView));
                 Ok(Some(Box::new(view)))
             }
-            SubscriptionCallback::CreateSubscription => {
+            Callback::CreateSubscription => {
                 ctx.ensure(Rule::CreateSubscription)?;
                 let widget = Box::new(CreateSubscription::new(Box::new(SubscriptionView)));
                 Ok(Some(widget))
             }
-            SubscriptionCallback::FreeSell => {
+            Callback::FreeSell => {
                 ctx.ensure(Rule::FreeSell)?;
                 let widget = Box::new(FeeSellView::new(Box::new(SubscriptionView)));
                 Ok(Some(widget))
@@ -84,7 +89,7 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
         if can_sell {
             keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                 subscription.name.clone(),
-                SubscriptionCallback::Select(subscription.id.bytes()).to_data(),
+                Callback::Select(subscription.id.bytes()).to_data(),
             )]);
         }
     }
@@ -95,14 +100,14 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     if ctx.has_right(Rule::FreeSell) {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🤑 Свободная продажа",
-            SubscriptionCallback::FreeSell.to_data(),
+            Callback::FreeSell.to_data(),
         )]);
     }
 
     if ctx.has_right(Rule::CreateSubscription) {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🗒 Создать тариф",
-            SubscriptionCallback::CreateSubscription.to_data(),
+            Callback::CreateSubscription.to_data(),
         )]);
     }
 
@@ -111,7 +116,7 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-enum SubscriptionCallback {
+enum Callback {
     Select([u8; 12]),
     CreateSubscription,
     FreeSell,

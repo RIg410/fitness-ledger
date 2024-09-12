@@ -59,7 +59,12 @@ impl View for SellView {
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
         ctx.ensure(Rule::SellSubscription)?;
-        match Callback::from_data(data)? {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
             Callback::Next => {
                 self.offset += LIMIT;
                 self.show(ctx).await?;

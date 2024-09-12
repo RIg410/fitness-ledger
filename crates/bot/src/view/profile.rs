@@ -75,7 +75,13 @@ impl View for UserProfile {
         ctx: &mut Context,
         data: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        match Callback::from_data(data)? {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+
+        match cb {
             Callback::SetDate => {
                 self.wait_for_date = true;
                 ctx.send_msg("Введите дату рождения в формате ДД\\.ММ\\.ГГГГ")

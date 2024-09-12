@@ -55,15 +55,21 @@ impl View for UserRightsView {
         ctx: &mut Context,
         data: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
-        match UserRightsCallback::from_data(data)? {
-            UserRightsCallback::Back => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+
+        match cb {
+            Callback::Back => {
                 if let Some(back) = self.go_back.take() {
                     return Ok(Some(back));
                 } else {
                     Ok(None)
                 }
             }
-            UserRightsCallback::EditRule(rule_id, is_active) => {
+            Callback::EditRule(rule_id, is_active) => {
                 ctx.ensure(Rule::EditUserRights)?;
 
                 let rule = Rule::try_from(rule_id)?;
@@ -87,7 +93,7 @@ fn render_user_rights(user: &User, back: bool) -> (String, InlineKeyboardMarkup)
         for (rule, is_active) in user.rights.get_all_rules().iter() {
             keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                 format!("{} {}", rule.name(), if *is_active { "✅" } else { "❌" }),
-                UserRightsCallback::EditRule(rule.id(), !is_active).to_data(),
+                Callback::EditRule(rule.id(), !is_active).to_data(),
             )]);
         }
     } else {
@@ -97,7 +103,7 @@ fn render_user_rights(user: &User, back: bool) -> (String, InlineKeyboardMarkup)
     if back {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "⬅️",
-            UserRightsCallback::Back.to_data(),
+            Callback::Back.to_data(),
         )]);
     }
 
@@ -106,7 +112,7 @@ fn render_user_rights(user: &User, back: bool) -> (String, InlineKeyboardMarkup)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum UserRightsCallback {
+pub enum Callback {
     Back,
     EditRule(u8, bool),
 }

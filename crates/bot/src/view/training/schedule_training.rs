@@ -50,7 +50,12 @@ impl View for ScheduleTraining {
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
         ctx.ensure(Rule::EditSchedule)?;
-        match Callback::from_data(data)? {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
             Callback::Back => {
                 if let Some(widget) = self.go_back.take() {
                     return Ok(Some(widget));

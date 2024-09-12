@@ -48,8 +48,12 @@ impl View for ConfirmSell {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let callback = Callback::from_data(data)?;
-        match callback {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
             Callback::Sell => {
                 let result = match self.sell {
                     Sell::Sub(sub) => {

@@ -52,8 +52,13 @@ impl View for SetInstructor {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        match InstructorCallback::from_data(data)? {
-            InstructorCallback::SelectInstructor(instructor_id) => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::SelectInstructor(instructor_id) => {
                 let instructor = ctx
                     .ledger
                     .users
@@ -96,13 +101,10 @@ fn make_instructor_button(instructor: &User) -> InlineKeyboardButton {
             .as_ref()
             .unwrap_or(&"".to_string())
     );
-    InlineKeyboardButton::callback(
-        name,
-        InstructorCallback::SelectInstructor(instructor.tg_id).to_data(),
-    )
+    InlineKeyboardButton::callback(name, Callback::SelectInstructor(instructor.tg_id).to_data())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-enum InstructorCallback {
+enum Callback {
     SelectInstructor(i64),
 }

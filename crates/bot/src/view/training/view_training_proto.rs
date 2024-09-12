@@ -59,8 +59,14 @@ impl View for ViewTrainingProto {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        match TrainingProtoCallback::from_data(data)? {
-            TrainingProtoCallback::Schedule => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+
+        match cb {
+            Callback::Schedule => {
                 ctx.ensure(Rule::EditSchedule)?;
                 let preset = self.preset.clone();
                 let view = preset.into_next_view(
@@ -73,12 +79,12 @@ impl View for ViewTrainingProto {
                 );
                 return Ok(Some(view));
             }
-            TrainingProtoCallback::Back => {
+            Callback::Back => {
                 if let Some(widget) = self.go_back.take() {
                     return Ok(Some(widget));
                 }
             }
-            TrainingProtoCallback::Description => {
+            Callback::Description => {
                 let training = ctx
                     .ledger
                     .programs
@@ -90,7 +96,7 @@ impl View for ViewTrainingProto {
                 ctx.update_origin_msg_id(id);
                 self.show(ctx).await?;
             }
-            TrainingProtoCallback::FindTraining => {
+            Callback::FindTraining => {
                 let back =
                     ViewTrainingProto::new(self.id, self.preset.clone(), self.go_back.take());
                 let view = CalendarView::new(
@@ -127,27 +133,27 @@ async fn render(
     let mut keymap = Vec::new();
     keymap.push(vec![InlineKeyboardButton::callback(
         "📝Описание",
-        TrainingProtoCallback::Description.to_data(),
+        Callback::Description.to_data(),
     )]);
 
     if ctx.has_right(Rule::EditSchedule) {
         keymap.push(vec![InlineKeyboardButton::callback(
             "📅Запланировать",
-            TrainingProtoCallback::Schedule.to_data(),
+            Callback::Schedule.to_data(),
         )]);
     }
 
     if !ctx.has_right(Rule::Train) {
         keymap.push(vec![InlineKeyboardButton::callback(
             "📅Расписание",
-            TrainingProtoCallback::FindTraining.to_data(),
+            Callback::FindTraining.to_data(),
         )]);
     }
 
     if go_back {
         keymap.push(vec![InlineKeyboardButton::callback(
             "⬅️Назад",
-            TrainingProtoCallback::Back.to_data(),
+            Callback::Back.to_data(),
         )]);
     }
     Ok((
@@ -157,7 +163,7 @@ async fn render(
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum TrainingProtoCallback {
+pub enum Callback {
     Schedule,
     Description,
     Back,

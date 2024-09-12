@@ -40,8 +40,8 @@ impl View for SetOneTime {
         let msg = "Это разовая тренировка или регулярная?".to_string();
         let mut keymap = InlineKeyboardMarkup::default();
         keymap.inline_keyboard.push(vec![
-            InlineKeyboardButton::callback("разовая", SetOneTimeCallback::OneTime.to_data()),
-            InlineKeyboardButton::callback("регулярная", SetOneTimeCallback::Regular.to_data()),
+            InlineKeyboardButton::callback("разовая", Callback::OneTime.to_data()),
+            InlineKeyboardButton::callback("регулярная", Callback::Regular.to_data()),
         ]);
         ctx.send_msg_with_markup(&msg, keymap).await?;
         Ok(())
@@ -57,11 +57,16 @@ impl View for SetOneTime {
     }
 
     async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Option<Widget>> {
-        match SetOneTimeCallback::from_data(data)? {
-            SetOneTimeCallback::OneTime => {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::OneTime => {
                 self.preset.as_mut().unwrap().is_one_time = Some(true);
             }
-            SetOneTimeCallback::Regular => {
+            Callback::Regular => {
                 self.preset.as_mut().unwrap().is_one_time = Some(false);
             }
         };
@@ -73,7 +78,7 @@ impl View for SetOneTime {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub enum SetOneTimeCallback {
+pub enum Callback {
     OneTime,
     Regular,
 }

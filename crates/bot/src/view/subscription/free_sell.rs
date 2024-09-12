@@ -45,8 +45,8 @@ impl View for FeeSellView {
             State::Finish(_, _) => {
                 text.push_str("*Все верно?*");
                 keymap = keymap.append_row(vec![
-                    InlineKeyboardButton::callback("✅ Да", FreeSellCallback::Sell.to_data()),
-                    InlineKeyboardButton::callback("❌ Нет", FreeSellCallback::Cancel.to_data()),
+                    InlineKeyboardButton::callback("✅ Да", Callback::Sell.to_data()),
+                    InlineKeyboardButton::callback("❌ Нет", Callback::Cancel.to_data()),
                 ]);
             }
         }
@@ -98,8 +98,13 @@ impl View for FeeSellView {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
         let state = mem::take(&mut self.state).inner();
         if let Some((items, price)) = state {
-            match FreeSellCallback::from_data(data)? {
-                FreeSellCallback::Sell => {
+            let cb = if let Some(cb) = Callback::from_data(data) {
+                cb
+            } else {
+                return Ok(None);
+            };
+            match cb {
+                Callback::Sell => {
                     ctx.ensure(Rule::FreeSell)?;
                     let back = Box::new(FeeSellView {
                         go_back: self.go_back.take(),
@@ -108,7 +113,7 @@ impl View for FeeSellView {
                     let widget = Box::new(SellView::new(Sell::free(price, items.get()), back));
                     return Ok(Some(widget));
                 }
-                FreeSellCallback::Cancel => Ok(self.go_back.take()),
+                Callback::Cancel => Ok(self.go_back.take()),
             }
         } else {
             self.show(ctx).await?;
@@ -118,7 +123,7 @@ impl View for FeeSellView {
 }
 
 #[derive(Serialize, Deserialize)]
-enum FreeSellCallback {
+enum Callback {
     Sell,
     Cancel,
 }

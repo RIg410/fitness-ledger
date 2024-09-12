@@ -46,8 +46,12 @@ impl View for FinanceView {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let data = Calldata::from_data(data)?;
-        match data {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
             Callback::Payment => {
                 ctx.ensure(Rule::MakePayment)?;
                 let payment = InOut::new(Some(Box::new(FinanceView)), Io::Payment);
