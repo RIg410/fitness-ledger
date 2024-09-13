@@ -116,9 +116,17 @@ impl Training {
             } else if start_at < now {
                 TrainingStatus::InProgress
             } else if start_at - chrono::Duration::minutes(CLOSE_SING_UP as i64) < now {
-                TrainingStatus::ClosedToSignup
+                if self.clients.is_empty() {
+                    TrainingStatus::ClosedToSignup
+                } else {
+                    TrainingStatus::OpenToSignup {
+                        close_sign_out: true,
+                    }
+                }
             } else {
-                TrainingStatus::OpenToSignup
+                TrainingStatus::OpenToSignup {
+                    close_sign_out: false,
+                }
             }
         }
     }
@@ -146,7 +154,7 @@ impl Training {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]
 pub enum TrainingStatus {
-    OpenToSignup,
+    OpenToSignup { close_sign_out: bool },
     ClosedToSignup,
     InProgress,
     Cancelled,
@@ -157,7 +165,7 @@ impl TrainingStatus {
     pub fn can_be_canceled(&self) -> bool {
         matches!(
             self,
-            TrainingStatus::OpenToSignup | TrainingStatus::ClosedToSignup
+            TrainingStatus::OpenToSignup { .. } | TrainingStatus::ClosedToSignup
         )
     }
 
@@ -166,10 +174,14 @@ impl TrainingStatus {
     }
 
     pub fn can_sign_out(&self) -> bool {
-        matches!(self, TrainingStatus::OpenToSignup)
+        if let TrainingStatus::OpenToSignup { close_sign_out } = self {
+            !close_sign_out
+        } else {
+            false
+        }
     }
 
     pub fn can_sign_in(&self) -> bool {
-        matches!(self, TrainingStatus::OpenToSignup)
+        matches!(self, TrainingStatus::OpenToSignup { .. })
     }
 }

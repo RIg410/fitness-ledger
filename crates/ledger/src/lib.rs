@@ -73,15 +73,10 @@ impl Ledger {
                 if !training.clients.contains(&user.id) {
                     continue;
                 }
-                match training.status(Local::now()) {
-                    TrainingStatus::OpenToSignup
-                    | TrainingStatus::ClosedToSignup
-                    | TrainingStatus::InProgress => {
-                        //no-op
-                    }
-                    TrainingStatus::Finished | TrainingStatus::Cancelled => {
-                        continue;
-                    }
+
+                let status = training.status(Local::now());
+                if !status.can_sign_out() {
+                    continue;
                 }
 
                 if reserved_balance == 0 {
@@ -89,7 +84,9 @@ impl Ledger {
                 }
                 reserved_balance -= 1;
 
-                self.users.unblock_balance(session, user.tg_id, 1).await?;
+                self.users
+                    .unblock_balance(session, user.tg_id, reserved_balance)
+                    .await?;
                 self.calendar
                     .sign_out(session, training.start_at, user.id)
                     .await?;

@@ -320,7 +320,7 @@ enum Callback {
 
 fn status(status: TrainingStatus, is_full: bool) -> &'static str {
     match status {
-        TrainingStatus::OpenToSignup => {
+        TrainingStatus::OpenToSignup { .. } => {
             if is_full {
                 "нет мест ✌️"
             } else {

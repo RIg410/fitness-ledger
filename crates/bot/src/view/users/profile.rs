@@ -154,14 +154,16 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
     }
 
     if ctx.has_right(Rule::ChangeBalance) {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "Списать баланс 💸",
-            Callback::ChangeBalance(-1).to_data(),
-        )]);
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "Пополнить баланс 💰",
-            Callback::ChangeBalance(1).to_data(),
-        )]);
+        keymap = keymap.append_row(vec![
+            InlineKeyboardButton::callback(
+                "Списать баланс 💸",
+                Callback::ChangeBalance(-1).to_data(),
+            ),
+            InlineKeyboardButton::callback(
+                "Пополнить баланс 💰",
+                Callback::ChangeBalance(1).to_data(),
+            ),
+        ]);
     }
 
     if ctx.has_right(Rule::BlockUser) && ctx.me.tg_id != user.tg_id {

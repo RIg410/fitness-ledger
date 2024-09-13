@@ -188,7 +188,7 @@ impl Calendar {
             }
         }
         let mut training = Training::with_program(program, start_at, instructor.id, is_one_time);
-        if training.status(Local::now()) != TrainingStatus::OpenToSignup {
+        if !training.status(Local::now()).can_sign_in() {
             return Err(ScheduleError::TooCloseToStart);
         }
 

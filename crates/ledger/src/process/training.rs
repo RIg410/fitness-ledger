@@ -25,7 +25,9 @@ impl TriningBg {
                 }
 
                 let result = match training.status(now) {
-                    TrainingStatus::OpenToSignup | TrainingStatus::ClosedToSignup => continue,
+                    TrainingStatus::OpenToSignup { .. } | TrainingStatus::ClosedToSignup => {
+                        continue
+                    }
                     TrainingStatus::InProgress | TrainingStatus::Finished => {
                         self.process_finished(session, training).await
                     }
