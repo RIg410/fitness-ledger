@@ -2,9 +2,7 @@ use super::{
     sell::{Sell, SellView},
     View,
 };
-use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuItem,
-};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
 use model::{decimal::Decimal, rights::Rule};
@@ -51,7 +49,6 @@ impl View for FeeSellView {
             }
         }
 
-        keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
         let id = ctx.send_msg_with_markup(&text, keymap).await?;
         ctx.update_origin_msg_id(id);
         Ok(())

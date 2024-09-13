@@ -1,7 +1,5 @@
 use super::{render_msg, set_date_time::render_time_slot_collision, ScheduleTrainingPreset, View};
-use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuItem,
-};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
 use ledger::calendar::ScheduleError;
@@ -47,11 +45,8 @@ impl View for Finish {
             InlineKeyboardButton::callback("✅ Сохранить", Callback::Yes.to_data()),
             InlineKeyboardButton::callback("❌ Отмена", Callback::No.to_data()),
         ]];
-        ctx.send_msg_with_markup(
-            &msg,
-            InlineKeyboardMarkup::new(keymap).append_row(vec![MainMenuItem::Home.into()]),
-        )
-        .await?;
+        ctx.send_msg_with_markup(&msg, InlineKeyboardMarkup::new(keymap))
+            .await?;
         Ok(())
     }
 

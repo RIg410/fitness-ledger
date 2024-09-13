@@ -3,10 +3,7 @@ use super::{
     View,
 };
 use crate::{
-    callback_data::Calldata as _,
-    context::Context,
-    state::Widget,
-    view::{menu::MainMenuItem, users::profile::user_type},
+    callback_data::Calldata as _, context::Context, state::Widget, view::users::profile::user_type,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
@@ -148,8 +145,6 @@ async fn render(
         "🔙 Назад",
         Callback::Back.to_data(),
     )]);
-
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     Ok((msg, keymap))
 }
 

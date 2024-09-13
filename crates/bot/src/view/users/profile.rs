@@ -1,11 +1,6 @@
 use std::mem;
 
-use crate::{
-    callback_data::Calldata as _,
-    context::Context,
-    state::Widget,
-    view::{menu::MainMenuItem, View},
-};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
 use chrono::Local;
 use log::warn;
@@ -19,7 +14,9 @@ use teloxide::{
     utils::markdown::escape,
 };
 
-use super::{freeze::FreezeProfile, rights::UserRightsView, set_birthday::SetBirthday, set_fio::SetFio};
+use super::{
+    freeze::FreezeProfile, rights::UserRightsView, set_birthday::SetBirthday, set_fio::SetFio,
+};
 
 pub struct UserProfile {
     tg_id: i64,
@@ -216,7 +213,6 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
     if back {
         keymap = keymap.append_row(Callback::Back.btn_row("⬅️"));
     }
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     (msg, keymap)
 }
 

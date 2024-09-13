@@ -1,7 +1,5 @@
 use super::View;
-use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuItem,
-};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::{eyre, Context as _, Result};
 use model::rights::Rule;
@@ -43,7 +41,7 @@ impl View for FreezeProfile {
                         "Осталось дней заморозок:_{}_\nНа сколько дней заморозить абонемент?",
                         user.freeze_days
                     ),
-                    InlineKeyboardMarkup::default().append_row(vec![MainMenuItem::Home.into()]),
+                    InlineKeyboardMarkup::default(),
                 )
                 .await?;
             }
@@ -57,7 +55,7 @@ impl View for FreezeProfile {
                         "Замораживаем Ваш абонемент\\. Количество дней:_{}_\nВсе верно?",
                         self.days
                     ),
-                    InlineKeyboardMarkup::new(keymap).append_row(vec![MainMenuItem::Home.into()]),
+                    InlineKeyboardMarkup::new(keymap),
                 )
                 .await?;
             }

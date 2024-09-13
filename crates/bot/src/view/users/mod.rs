@@ -1,4 +1,3 @@
-use super::menu::MainMenuItem;
 use super::View;
 use crate::callback_data::Calldata as _;
 use crate::view::users::profile::UserProfile;
@@ -20,7 +19,7 @@ pub mod set_fio;
 
 pub const LIMIT: u64 = 7;
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct UsersView {
     query: Query,
 }
@@ -164,7 +163,6 @@ fn render_message(
     if raw.len() > 0 {
         keymap = keymap.append_row(raw);
     }
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     (msg, keymap)
 }
 

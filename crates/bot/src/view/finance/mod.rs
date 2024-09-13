@@ -1,6 +1,6 @@
 pub mod in_out;
 
-use super::{menu::MainMenuItem, View};
+use super::View;
 use crate::{callback_data::Calldata, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
@@ -31,7 +31,6 @@ impl View for FinanceView {
             )]);
         }
 
-        keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
         ctx.edit_origin(&text, keymap).await?;
         Ok(())
     }

@@ -3,7 +3,7 @@ use super::{
     client::{ClientView, Reason},
     View,
 };
-use crate::{callback_data::Calldata, context::Context, state::Widget, view::menu::MainMenuItem};
+use crate::{callback_data::Calldata, context::Context, state::Widget};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use eyre::{bail, Result};
@@ -142,7 +142,6 @@ impl View for ClientList {
             keymap = keymap.append_row(vec![Callback::Back.button("⬅️ Назад".to_string())]);
         }
 
-        keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }

@@ -1,9 +1,7 @@
 use super::View;
 use crate::{
-    callback_data::Calldata,
-    context::Context,
-    state::Widget,
-    view::{menu::MainMenuItem, users::profile::render_profile_msg},
+    callback_data::Calldata, context::Context, state::Widget,
+    view::users::profile::render_profile_msg,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
@@ -144,10 +142,7 @@ impl View for ClientView {
             }
         }
 
-        keymap = keymap.append_row(vec![
-            Callback::GoBack.button("🔙 Назад".to_string()),
-            MainMenuItem::Home.into(),
-        ]);
+        keymap = keymap.append_row(vec![Callback::GoBack.button("🔙 Назад".to_string())]);
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }

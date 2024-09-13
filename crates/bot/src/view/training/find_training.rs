@@ -1,9 +1,7 @@
 use super::{
     schedule_process::ScheduleTrainingPreset, view_training_proto::ViewTrainingProto, View,
 };
-use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuItem,
-};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
 use mongodb::bson::oid::ObjectId;
@@ -75,7 +73,6 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
             Callback::SelectTraining(proto.id.bytes()).to_data(),
         )]);
     }
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     Ok((msg, keymap))
 }
 

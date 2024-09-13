@@ -3,9 +3,7 @@ use model::{rights::Rule, user::User};
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
-use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuItem,
-};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 
 use super::{profile::user_type, View};
 
@@ -101,7 +99,6 @@ fn render_user_rights(user: &User, back: bool) -> (String, InlineKeyboardMarkup)
         )]);
     }
 
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     (msg, keymap)
 }
 

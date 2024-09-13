@@ -10,7 +10,7 @@ use super::{
     finance::FinanceView,
     subscription::SubscriptionView,
     training::TrainingMainView,
-    users::{profile::UserProfile, UsersView},
+    users::{profile::UserProfile, Query, UsersView},
     View,
 };
 
@@ -63,7 +63,7 @@ impl View for MainMenuView {
         Ok(Some(match command {
             MainMenuItem::Profile => Box::new(UserProfile::new(ctx.me.tg_id, None)),
             MainMenuItem::Trainings => Box::new(TrainingMainView::default()),
-            MainMenuItem::Users => Box::new(UsersView::default()),
+            MainMenuItem::Users => Box::new(UsersView::new(Query::default())),
             MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
             MainMenuItem::FinanceView => Box::new(FinanceView),
             MainMenuItem::Home => return Ok(None),
@@ -84,7 +84,7 @@ impl View for MainMenuView {
         Ok(Some(match command {
             MainMenuItem::Profile => Box::new(UserProfile::new(ctx.me.tg_id, None)),
             MainMenuItem::Trainings => Box::new(TrainingMainView::default()),
-            MainMenuItem::Users => Box::new(UsersView::default()),
+            MainMenuItem::Users => Box::new(UsersView::new(Default::default())),
             MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
             MainMenuItem::Home => Box::new(MainMenuView),
             MainMenuItem::FinanceView => Box::new(FinanceView),

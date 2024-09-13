@@ -3,10 +3,7 @@ use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::{
-        calendar::{render_training_status, training::TrainingView, CallbackDateTime},
-        menu::MainMenuItem,
-    },
+    view::calendar::{render_training_status, training::TrainingView, CallbackDateTime},
 };
 use async_trait::async_trait;
 use chrono::Local;
@@ -131,7 +128,6 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
             Callback::Back.to_data(),
         )]);
     }
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     Ok((msg, keymap))
 }
 

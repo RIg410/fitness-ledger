@@ -1,7 +1,5 @@
 use super::View;
-use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuItem,
-};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
 use serde::{Deserialize, Serialize};
@@ -26,7 +24,6 @@ impl View for SetFio {
         if self.go_back.is_some() {
             keymap = keymap.append_row(Callback::Back.btn_row("⬅️"));
         }
-        keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
         ctx.edit_origin("Введите имя и фамилию", keymap).await?;
         Ok(())
     }

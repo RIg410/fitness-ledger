@@ -4,7 +4,7 @@ pub mod free_sell;
 pub mod sell;
 pub mod view;
 
-use super::{menu::MainMenuItem, View};
+use super::View;
 use crate::{callback_data::Calldata, context::Context, state::Widget};
 use async_trait::async_trait;
 use create::CreateSubscription;
@@ -111,7 +111,6 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
         )]);
     }
 
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     Ok((msg.to_string(), keymap))
 }
 

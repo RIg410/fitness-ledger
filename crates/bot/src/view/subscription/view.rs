@@ -2,9 +2,7 @@ use super::{
     sell::{Sell, SellView},
     View,
 };
-use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuItem,
-};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::{Error, Result};
 use model::rights::Rule;
@@ -120,7 +118,6 @@ async fn render_sub(
         Callback::Back.to_data(),
     )]);
 
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     Ok((msg, keymap))
 }
 

@@ -3,10 +3,7 @@ use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::{
-        calendar::{CalendarView, Filter},
-        menu::MainMenuItem,
-    },
+    view::calendar::{CalendarView, Filter},
 };
 use async_trait::async_trait;
 use eyre::Result;
@@ -156,10 +153,7 @@ async fn render(
             Callback::Back.to_data(),
         )]);
     }
-    Ok((
-        text,
-        InlineKeyboardMarkup::new(keymap).append_row(vec![MainMenuItem::Home.into()]),
-    ))
+    Ok((text, InlineKeyboardMarkup::new(keymap)))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

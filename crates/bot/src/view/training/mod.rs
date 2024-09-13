@@ -5,7 +5,7 @@ pub mod schedule_process;
 pub mod schedule_training;
 pub mod view_training_proto;
 
-use super::{calendar::CalendarView, menu::MainMenuItem, View};
+use super::{calendar::CalendarView, View};
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
@@ -76,7 +76,6 @@ pub fn render() -> (String, InlineKeyboardMarkup) {
         Callback::FindTraining.to_data(),
     )]);
 
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     (msg, keymap)
 }
 

@@ -6,7 +6,7 @@ use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::{calendar::render_weekday, menu::MainMenuItem, View},
+    view::{calendar::render_weekday, View},
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
@@ -129,7 +129,6 @@ async fn render(
                 Callback::Back.to_data(),
             )]);
     }
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     Ok((msg, keymap))
 }
 

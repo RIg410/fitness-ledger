@@ -9,6 +9,8 @@ use teloxide::{
     ApiError, Bot, RequestError,
 };
 
+use crate::view::menu::MainMenuItem;
+
 pub struct Context {
     pub bot: Bot,
     pub me: User,
@@ -64,9 +66,9 @@ impl Context {
     pub async fn edit_origin(
         &self,
         text: &str,
-        markup: InlineKeyboardMarkup,
+        mut markup: InlineKeyboardMarkup,
     ) -> Result<(), eyre::Error> {
-        //markup = markup.append_row(vec![MainMenuItem::Home.into()]);
+        markup = markup.append_row(vec![MainMenuItem::Home.into()]);
         let update_result = self
             .bot
             .edit_message_text(self.chat_id(), self.origin.message_id, text)

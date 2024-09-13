@@ -1,9 +1,6 @@
 use super::{sell::Sell, View};
 use crate::{
-    callback_data::Calldata as _,
-    context::Context,
-    state::Widget,
-    view::menu::{MainMenuItem, MainMenuView},
+    callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuView,
 };
 use async_trait::async_trait;
 use eyre::{eyre, Error, Result};
@@ -142,7 +139,6 @@ async fn render(
         InlineKeyboardButton::callback("✅ Да", Callback::Sell.to_data()),
         InlineKeyboardButton::callback("❌ Отмена", Callback::Cancel.to_data()),
     ]);
-    keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     Ok((text, keymap))
 }
 
