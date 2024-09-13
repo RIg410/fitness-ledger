@@ -73,4 +73,58 @@ pub enum Action {
     CreateProgram {
         program: Program,
     },
+    FreeSellSub {
+        seller: i64,
+        buyer: i64,
+        price: Decimal,
+        item: u32,
+    },
+    SellSub {
+        seller: i64,
+        buyer: i64,
+        subscription: Subscription,
+    },
+    SignOut {
+        name: String,
+        id: ObjectId,
+        proto_id: ObjectId,
+        start_at: DateTime<Utc>,
+        user_id: i64,
+    },
+    SignUp {
+        name: String,
+        id: ObjectId,
+        proto_id: ObjectId,
+        start_at: DateTime<Utc>,
+        user_id: i64,
+    },
+    BlockUser {
+        tg_id: i64,
+        is_active: bool,
+    },
+    CancelTraining {
+        name: String,
+        id: ObjectId,
+        proto_id: ObjectId,
+        start_at: DateTime<Utc>,
+    },
+    RestoreTraining {
+        name: String,
+        id: ObjectId,
+        proto_id: ObjectId,
+        start_at: DateTime<Utc>,
+    },
+    DeleteTraining {
+        name: String,
+        id: ObjectId,
+        proto_id: ObjectId,
+        start_at: DateTime<Utc>,
+        all: bool,
+    },
+    Schedule {
+        name: String,
+        id: ObjectId,
+        proto_id: ObjectId,
+        start_at: DateTime<Utc>,
+    },
 }

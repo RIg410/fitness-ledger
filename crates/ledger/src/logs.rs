@@ -9,6 +9,7 @@ use model::{
     rights::Rule,
     session::Session,
     subscription::Subscription,
+    training::Training,
     treasury::Sell,
     user::UserName,
 };
@@ -247,6 +248,167 @@ impl Logs {
             date_time: chrono::Local::now().with_timezone(&Utc),
             action: Action::CreateProgram { program },
         };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn sell_free_subscription(
+        &self,
+        session: &mut Session,
+        price: Decimal,
+        item: u32,
+        buyer: i64,
+        seller: i64,
+    ) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::FreeSellSub {
+                seller,
+                buyer,
+                price,
+                item,
+            },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn sell_subscription(
+        &self,
+        session: &mut Session,
+        subscription: Subscription,
+        buyer: i64,
+        seller: i64,
+    ) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::SellSub {
+                seller,
+                buyer,
+                subscription,
+            },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn sign_out(&self, session: &mut Session, training: Training, tg_id: i64) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::SignOut {
+                name: training.name,
+                id: training.id,
+                proto_id: training.proto_id,
+                start_at: training.start_at,
+                user_id: tg_id,
+            },
+        };
+
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn sign_up(&self, session: &mut Session, training: Training, tg_id: i64) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::SignUp {
+                name: training.name,
+                id: training.id,
+                proto_id: training.proto_id,
+                start_at: training.start_at,
+                user_id: tg_id,
+            },
+        };
+
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn block_user(&self, session: &mut Session, tg_id: i64, is_active: bool) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::BlockUser { tg_id, is_active },
+        };
+
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn cancel_training(&self, session: &mut Session, training: &Training) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::CancelTraining {
+                name: training.name.clone(),
+                id: training.id,
+                proto_id: training.proto_id,
+                start_at: training.start_at,
+            },
+        };
+
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn restore_training(&self, session: &mut Session, training: &Training) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::RestoreTraining {
+                name: training.name.clone(),
+                id: training.id,
+                proto_id: training.proto_id,
+                start_at: training.start_at,
+            },
+        };
+
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn delete_training(&self, session: &mut Session, training: &Training, all: bool) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::DeleteTraining {
+                name: training.name.clone(),
+                id: training.id,
+                proto_id: training.proto_id,
+                start_at: training.start_at,
+                all,
+            },
+        };
+
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn schedule(&self, session: &mut Session, training: &Training) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::Schedule {
+                name: training.name.clone(),
+                id: training.id,
+                proto_id: training.proto_id,
+                start_at: training.start_at,
+            },
+        };
+
         if let Err(err) = self.store.store(session, entry).await {
             log::error!("Failed to store log entry: {}", err);
         }

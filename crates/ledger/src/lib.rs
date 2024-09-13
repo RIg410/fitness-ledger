@@ -42,7 +42,7 @@ impl Ledger {
     pub fn new(storage: Storage) -> Self {
         let logs = logs::Logs::new(storage.logs);
         let programs = Programs::new(storage.training, logs.clone());
-        let calendar = Calendar::new(storage.calendar, storage.users.clone(), programs.clone());
+        let calendar = Calendar::new(storage.calendar, storage.users.clone(), programs.clone(), logs.clone());
         let users = Users::new(storage.users, logs.clone());
         let treasury = Treasury::new(storage.treasury, logs.clone());
         let subscriptions = Subscriptions::new(storage.subscriptions, logs.clone());
@@ -98,7 +98,7 @@ impl Ledger {
                     .await?;
             }
         }
-
+        self.logs.block_user(session, tg_id, is_active).await;
         self.users.block_user(session, tg_id, is_active).await?;
         Ok(())
     }
@@ -142,6 +142,7 @@ impl Ledger {
         self.calendar
             .sign_up(session, training.start_at, client)
             .await?;
+        self.logs.sign_up(session, training, user.tg_id).await;
         Ok(())
     }
 
@@ -185,6 +186,7 @@ impl Ledger {
         self.calendar
             .sign_out(session, training.start_at, client)
             .await?;
+        self.logs.sign_out(session, training, user.tg_id).await;
         Ok(())
     }
 
@@ -213,6 +215,10 @@ impl Ledger {
             .get(session, subscription)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
+
+        self.logs
+            .sell_subscription(session, subscription.clone(), buyer.tg_id, seller.tg_id)
+            .await;
 
         self.users
             .add_subscription(session, buyer.tg_id, subscription.clone())
@@ -245,6 +251,9 @@ impl Ledger {
             .await?
             .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
 
+        self.logs
+            .sell_free_subscription(session, price, item, buyer.tg_id, seller.tg_id)
+            .await;
         self.users
             .add_subscription(
                 session,
@@ -256,7 +265,7 @@ impl Ledger {
                     price,
                     version: 0,
                     freeze_days: 0,
-                    expiration_days: 40,
+                    expiration_days: 30,
                 },
             )
             .await?;
