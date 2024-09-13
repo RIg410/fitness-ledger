@@ -2,6 +2,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use teloxide::types::InlineKeyboardButton;
 
 pub fn encode_data<T>(data: &T, type_id: u32) -> String
 where
@@ -22,6 +23,10 @@ pub trait Calldata {
     fn from_data(data: &str) -> Option<Self>
     where
         Self: Sized;
+
+    fn button(&self, name: String) -> InlineKeyboardButton {
+        InlineKeyboardButton::callback(name, self.to_data())
+    }
 }
 
 impl<T> Calldata for T

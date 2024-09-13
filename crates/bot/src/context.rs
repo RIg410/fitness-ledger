@@ -1,4 +1,4 @@
-use eyre::Context as _;
+use eyre::{Context as _, Error};
 use ledger::Ledger;
 use model::{rights::Rule, user::User};
 use mongodb::ClientSession;
@@ -32,6 +32,13 @@ impl Context {
             origin,
             session,
         }
+    }
+
+    pub async fn send_err(&mut self, err: &str) -> Result<(), Error> {
+        self.send_msg(err).await?;
+        let id = self.send_msg("\\.").await?;
+        self.update_origin_msg_id(id);
+        Ok(())
     }
 
     pub fn is_active(&self) -> bool {

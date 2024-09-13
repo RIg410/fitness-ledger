@@ -4,7 +4,7 @@ use eyre::{bail, eyre, Result};
 use log::error;
 use model::decimal::Decimal;
 use model::subscription::Subscription;
-use model::training::{Training, TrainingStatus};
+use model::training::{self, Training, TrainingStatus};
 use mongodb::bson::oid::ObjectId;
 use mongodb::ClientSession;
 use storage::session::Db;
@@ -140,6 +140,7 @@ impl Ledger {
         session: &mut ClientSession,
         training: &Training,
         client: ObjectId,
+        forced: bool,
     ) -> Result<(), SignOutError> {
         let training = self
             .calendar
@@ -147,7 +148,11 @@ impl Ledger {
             .await?
             .ok_or_else(|| SignOutError::TrainingNotFound)?;
         let status = training.status(Local::now());
-        if !status.can_sign_out() {
+        if !forced && !status.can_sign_out() {
+            return Err(SignOutError::TrainingNotOpenToSignOut);
+        }
+
+        if training.is_processed {
             return Err(SignOutError::TrainingNotOpenToSignOut);
         }
 

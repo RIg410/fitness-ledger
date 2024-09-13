@@ -87,6 +87,7 @@ pub enum Rule {
     CancelTraining,
     CreateTraining,
     EditSchedule,
+    EditTrainingClientsList,
 
     // Subscription
     CreateSubscription,

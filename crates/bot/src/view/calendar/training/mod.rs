@@ -2,6 +2,7 @@ use super::View;
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
+use client_list::ClientList;
 use eyre::Result;
 use model::{
     rights::Rule,
@@ -13,6 +14,8 @@ use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
+
+mod client_list;
 
 pub struct TrainingView {
     id: DateTime<Local>,
@@ -141,7 +144,7 @@ impl TrainingView {
             return Ok(None);
         }
         ctx.ledger
-            .sign_out(&mut ctx.session, &training, ctx.me.id)
+            .sign_out(&mut ctx.session, &training, ctx.me.id, false)
             .await?;
         self.show(ctx).await?;
         Ok(None)
@@ -149,38 +152,11 @@ impl TrainingView {
 
     async fn client_list(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         ctx.ensure(Rule::Train)?;
-        let mut msg = "*Список клиентов:*\n".to_string();
-        let training = ctx
-            .ledger
-            .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        for client in &training.clients {
-            let user = ctx
-                .ledger
-                .users
-                .get(&mut ctx.session, *client)
-                .await?
-                .ok_or_else(|| eyre::eyre!("User not found"))?;
-            msg.push_str(&format!(
-                "✅_{}_ _{}_{}\n",
-                escape(&user.name.first_name),
-                escape(&user.name.last_name.unwrap_or_else(|| "-".to_string())),
-                escape(
-                    &user
-                        .name
-                        .tg_user_name
-                        .map(|n| format!("@{}", n))
-                        .unwrap_or_else(|| "".to_string())
-                )
-            ));
-        }
-        ctx.send_msg(&msg).await?;
-        let id = ctx.send_msg("\\.").await?;
-        ctx.update_origin_msg_id(id);
-        self.show(ctx).await?;
-        Ok(None)
+        let this = TrainingView::new(self.id, self.go_back.take());
+        Ok(Some(Box::new(ClientList::new(
+            self.id,
+            Some(Box::new(this)),
+        ))))
     }
 }
 

@@ -25,12 +25,10 @@ impl TriningBg {
                 }
 
                 let result = match training.status(now) {
-                    TrainingStatus::OpenToSignup { .. } | TrainingStatus::ClosedToSignup => {
-                        continue
-                    }
-                    TrainingStatus::InProgress | TrainingStatus::Finished => {
-                        self.process_finished(session, training).await
-                    }
+                    TrainingStatus::OpenToSignup { .. }
+                    | TrainingStatus::ClosedToSignup
+                    | TrainingStatus::InProgress => continue,
+                    TrainingStatus::Finished => self.process_finished(session, training).await,
                     TrainingStatus::Cancelled => {
                         if training.get_slot().start_at() < now {
                             self.process_canceled(session, training).await
