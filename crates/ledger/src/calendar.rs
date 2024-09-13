@@ -6,10 +6,11 @@ use model::{
     day::Day,
     ids::DayId,
     rights::Rule,
+    session::Session,
     slot::Slot,
     training::{Training, TrainingStatus},
 };
-use mongodb::{bson::oid::ObjectId, ClientSession, SessionCursor};
+use mongodb::{bson::oid::ObjectId, SessionCursor};
 use storage::{calendar::CalendarStore, user::UserStore};
 use thiserror::Error;
 use tx_macro::tx;
@@ -32,13 +33,13 @@ impl Calendar {
         }
     }
 
-    pub async fn get_day(&self, session: &mut ClientSession, day: DayId) -> Result<Day> {
+    pub async fn get_day(&self, session: &mut Session, day: DayId) -> Result<Day> {
         self.calendar.get_day(session, day).await
     }
 
     pub async fn week_days_after(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         day: DayId,
     ) -> Result<SessionCursor<Day>> {
         self.calendar.week_days_after(session, day).await
@@ -46,7 +47,7 @@ impl Calendar {
 
     pub async fn get_training_by_start_at(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         id: DateTime<Local>,
     ) -> Result<Option<Training>, Error> {
         let day = self.get_day(session, DayId::from(id)).await?;
@@ -58,11 +59,7 @@ impl Calendar {
     }
 
     #[tx]
-    pub async fn cancel_training(
-        &self,
-        session: &mut ClientSession,
-        training: &Training,
-    ) -> Result<()> {
+    pub async fn cancel_training(&self, session: &mut Session, training: &Training) -> Result<()> {
         let mut day = self.get_day(session, training.day_id()).await?;
         let training = day.training.iter_mut().find(|slot| slot.id == training.id);
 
@@ -76,11 +73,7 @@ impl Calendar {
     }
 
     #[tx]
-    pub async fn restore_training(
-        &self,
-        session: &mut ClientSession,
-        training: &Training,
-    ) -> Result<()> {
+    pub async fn restore_training(&self, session: &mut Session, training: &Training) -> Result<()> {
         let mut day = self.get_day(session, training.day_id()).await?;
         let training = day.training.iter_mut().find(|slot| slot.id == training.id);
 
@@ -99,7 +92,7 @@ impl Calendar {
     #[tx]
     pub async fn delete_training(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         training: &Training,
         all: bool,
     ) -> Result<()> {
@@ -137,7 +130,7 @@ impl Calendar {
 
     pub async fn get_users_trainings(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         client: ObjectId,
         limit: usize,
         offset: usize,
@@ -150,7 +143,7 @@ impl Calendar {
     #[tx]
     pub async fn schedule(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         object_id: ObjectId,
         start_at: DateTime<Local>,
         instructor: i64,
@@ -216,7 +209,7 @@ impl Calendar {
 
     pub async fn check_time_slot(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         program_id: ObjectId,
         start_at: DateTime<Local>,
         is_one_time: bool,
@@ -252,10 +245,7 @@ impl Calendar {
         Ok(None)
     }
 
-    pub async fn days_for_process(
-        &self,
-        session: &mut ClientSession,
-    ) -> Result<SessionCursor<Day>> {
+    pub async fn days_for_process(&self, session: &mut Session) -> Result<SessionCursor<Day>> {
         self.calendar.days_to_process(session).await
     }
 }
@@ -263,7 +253,7 @@ impl Calendar {
 impl Calendar {
     pub(crate) async fn sign_up(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         start_at: DateTime<Utc>,
         user_id: ObjectId,
     ) -> Result<()> {
@@ -272,7 +262,7 @@ impl Calendar {
 
     pub(crate) async fn sign_out(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         start_at: DateTime<Utc>,
         user_id: ObjectId,
     ) -> Result<()> {
@@ -281,7 +271,7 @@ impl Calendar {
 
     pub(crate) async fn finalized(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         start_at: DateTime<Utc>,
     ) -> Result<()> {
         self.calendar.finalized(session, start_at).await

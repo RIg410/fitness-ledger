@@ -10,6 +10,7 @@ pub mod signup;
 pub mod subscription;
 pub mod training;
 pub mod users;
+pub mod logs;
 
 #[async_trait]
 pub trait View {

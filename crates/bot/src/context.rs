@@ -1,7 +1,6 @@
 use eyre::{Context as _, Error};
 use ledger::Ledger;
-use model::{rights::Rule, user::User};
-use mongodb::ClientSession;
+use model::{rights::Rule, session::Session, user::User};
 use teloxide::{
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester,
@@ -16,17 +15,11 @@ pub struct Context {
     pub me: User,
     pub ledger: Ledger,
     origin: Origin,
-    pub session: ClientSession,
+    pub session: Session,
 }
 
 impl Context {
-    pub fn new(
-        bot: Bot,
-        me: User,
-        ledger: Ledger,
-        origin: Origin,
-        session: ClientSession,
-    ) -> Context {
+    pub fn new(bot: Bot, me: User, ledger: Ledger, origin: Origin, session: Session) -> Context {
         Context {
             bot,
             me,

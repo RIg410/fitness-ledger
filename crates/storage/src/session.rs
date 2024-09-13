@@ -1,8 +1,9 @@
 use std::ops::Deref;
 
-use bson::doc;
+use bson::{doc, oid::ObjectId};
 use eyre::{Context as _, Error};
-use mongodb::{Client, ClientSession, Database};
+use model::session::Session;
+use mongodb::{Client, Database};
 
 #[derive(Clone)]
 pub struct Db {
@@ -22,8 +23,9 @@ impl Db {
         Ok(Db { client, db })
     }
 
-    pub async fn start_session(&self) -> Result<ClientSession, Error> {
-        Ok(self.client.start_session().await?)
+    pub async fn start_session(&self) -> Result<Session, Error> {
+        let session = self.client.start_session().await?;
+        Ok(Session::new(session, ObjectId::new()))
     }
 }
 

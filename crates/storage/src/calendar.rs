@@ -2,11 +2,11 @@ use bson::to_document;
 use chrono::{DateTime, Duration, Utc, Weekday};
 use eyre::Result;
 use log::info;
-use model::{day::Day, ids::DayId, training::Training};
+use model::{day::Day, ids::DayId, session::Session, training::Training};
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::{FindOneOptions, IndexOptions, UpdateOptions},
-    ClientSession, Collection, Database, IndexModel, SessionCursor,
+    Collection, Database, IndexModel, SessionCursor,
 };
 use std::sync::Arc;
 
@@ -32,7 +32,7 @@ impl CalendarStore {
 
     pub async fn cursor(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         from: DayId,
         week_day: Weekday,
     ) -> Result<mongodb::SessionCursor<Day>> {
@@ -45,7 +45,7 @@ impl CalendarStore {
 
     pub async fn set_cancel_flag(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         start_at: DateTime<Utc>,
         flag: bool,
     ) -> Result<(), eyre::Error> {
@@ -67,7 +67,7 @@ impl CalendarStore {
 
     pub async fn find_trainings(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         user_id: ObjectId,
         limit: usize,
         offset: usize,
@@ -110,11 +110,7 @@ impl CalendarStore {
         Ok(trainings)
     }
 
-    pub async fn get_day(
-        &self,
-        session: &mut ClientSession,
-        id: DayId,
-    ) -> Result<Day, eyre::Error> {
+    pub async fn get_day(&self, session: &mut Session, id: DayId) -> Result<Day, eyre::Error> {
         let day = self
             .days
             .find_one(doc! { "date_time": id.id() })
@@ -165,7 +161,7 @@ impl CalendarStore {
 
     pub async fn delete_training(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         start_at: DateTime<Utc>,
     ) -> std::result::Result<(), eyre::Error> {
         info!("Delete training: {:?}", start_at);
@@ -181,7 +177,7 @@ impl CalendarStore {
 
     pub async fn week_days_after(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         day: DayId,
     ) -> Result<SessionCursor<Day>> {
         let filter = doc! {
@@ -193,7 +189,7 @@ impl CalendarStore {
 
     pub async fn add_training(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         training: &Training,
     ) -> Result<(), eyre::Error> {
         info!("Add training: {:?}", training);
@@ -211,7 +207,7 @@ impl CalendarStore {
 
     pub async fn sign_up(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         start_at: DateTime<Utc>,
         user_id: ObjectId,
     ) -> Result<(), eyre::Error> {
@@ -235,7 +231,7 @@ impl CalendarStore {
 
     pub async fn sign_out(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         start_at: DateTime<Utc>,
         user_id: ObjectId,
     ) -> Result<(), eyre::Error> {
@@ -259,7 +255,7 @@ impl CalendarStore {
 
     pub async fn days_to_process(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
     ) -> Result<mongodb::SessionCursor<Day>> {
         let now = Utc::now() + Duration::minutes(5);
         let filter = doc! {
@@ -269,11 +265,7 @@ impl CalendarStore {
         Ok(self.days.find(filter).session(&mut *session).await?)
     }
 
-    pub async fn finalized(
-        &self,
-        session: &mut ClientSession,
-        start_at: DateTime<Utc>,
-    ) -> Result<()> {
+    pub async fn finalized(&self, session: &mut Session, start_at: DateTime<Utc>) -> Result<()> {
         info!("Finalized: {:?}", start_at);
         let filter = doc! { "training.start_at": start_at };
         let update = doc! {

@@ -2,31 +2,32 @@ use chrono::{Local, Utc};
 use eyre::Error;
 use model::{
     decimal::Decimal,
-    subscription::Subscription,
+    session::Session,
     treasury::{
-        income::Income,
-        outcome::Outcome,
-        subs::{SellSubscription, SubscriptionInfo},
-        Event, TreasuryEvent,
+        income::Income, outcome::Outcome, subs::SellSubscription, Event, Sell, TreasuryEvent,
     },
     user::User,
 };
-use mongodb::{bson::oid::ObjectId, ClientSession};
+use mongodb::bson::oid::ObjectId;
 use storage::treasury::TreasuryStore;
+use tx_macro::tx;
+
+use crate::logs::Logs;
 
 #[derive(Clone)]
 pub struct Treasury {
     store: TreasuryStore,
+    logs: Logs,
 }
 
 impl Treasury {
-    pub fn new(store: TreasuryStore) -> Self {
-        Treasury { store }
+    pub fn new(store: TreasuryStore, logs: Logs) -> Self {
+        Treasury { store, logs }
     }
 
-    pub async fn sell(
+    pub(crate) async fn sell(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         seller: User,
         buyer: User,
         sell: Sell,
@@ -46,19 +47,22 @@ impl Treasury {
             credit: Decimal::zero(),
             user: seller.into(),
         };
-
         self.store.insert(session, event).await?;
         Ok(())
     }
 
+    #[tx]
     pub async fn payment(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         user: User,
         amount: Decimal,
         description: String,
         date_time: &chrono::DateTime<Local>,
     ) -> Result<(), Error> {
+        self.logs
+            .payment(session, user.id, amount, description.clone(), date_time)
+            .await;
         let event = TreasuryEvent {
             id: ObjectId::new(),
             date_time: date_time.with_timezone(&Utc),
@@ -72,14 +76,18 @@ impl Treasury {
         Ok(())
     }
 
+    #[tx]
     pub async fn deposit(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         user: User,
         amount: Decimal,
         description: String,
         date_time: &chrono::DateTime<Local>,
     ) -> Result<(), Error> {
+        self.logs
+            .deposit(session, user.id, amount, description.clone(), date_time)
+            .await;
         let event = TreasuryEvent {
             id: ObjectId::new(),
             date_time: date_time.with_timezone(&Utc),
@@ -91,34 +99,5 @@ impl Treasury {
 
         self.store.insert(session, event).await?;
         Ok(())
-    }
-}
-
-pub enum Sell {
-    Sub(Subscription),
-    Free(u32, Decimal),
-}
-impl Sell {
-    fn debit(&self) -> Decimal {
-        match self {
-            Sell::Sub(sub) => sub.price,
-            Sell::Free(_, price) => *price,
-        }
-    }
-}
-
-impl From<Sell> for SubscriptionInfo {
-    fn from(value: Sell) -> Self {
-        match value {
-            Sell::Sub(sub) => sub.into(),
-            Sell::Free(items, price) => SubscriptionInfo {
-                id: ObjectId::new(),
-                name: items.to_string(),
-                items,
-                price,
-                version: 0,
-                free: true,
-            },
-        }
     }
 }

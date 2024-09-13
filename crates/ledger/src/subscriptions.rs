@@ -1,23 +1,26 @@
 use eyre::Error;
-use model::{decimal::Decimal, subscription::Subscription};
-use mongodb::{bson::oid::ObjectId, ClientSession};
+use model::{decimal::Decimal, session::Session, subscription::Subscription};
+use mongodb::bson::oid::ObjectId;
 use storage::subscription::SubscriptionsStore;
 use thiserror::Error;
 use tx_macro::tx;
 
+use crate::logs::Logs;
+
 #[derive(Clone)]
 pub struct Subscriptions {
     pub store: SubscriptionsStore,
+    pub logs: Logs,
 }
 
 impl Subscriptions {
-    pub fn new(store: SubscriptionsStore) -> Self {
-        Subscriptions { store }
+    pub fn new(store: SubscriptionsStore, logs: Logs) -> Self {
+        Subscriptions { store, logs }
     }
 
     pub async fn get_by_name(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         name: &str,
     ) -> Result<Option<Subscription>, Error> {
         self.store.get_by_name(session, name).await
@@ -25,13 +28,13 @@ impl Subscriptions {
 
     pub async fn get(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         id: ObjectId,
     ) -> Result<Option<Subscription>, Error> {
         self.store.get_by_id(session, id).await
     }
 
-    pub async fn get_all(&self, session: &mut ClientSession) -> Result<Vec<Subscription>, Error> {
+    pub async fn get_all(&self, session: &mut Session) -> Result<Vec<Subscription>, Error> {
         let mut cursor = self.store.cursor(session).await?;
         let mut result = Vec::new();
         while let Some(subscription) = cursor.next(session).await {
@@ -40,7 +43,13 @@ impl Subscriptions {
         Ok(result)
     }
 
-    pub async fn delete(&self, session: &mut ClientSession, id: ObjectId) -> Result<(), Error> {
+    #[tx]
+    pub async fn delete(&self, session: &mut Session, id: ObjectId) -> Result<(), Error> {
+        let sub = self
+            .get(session, id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Subscription not found"))?;
+        self.logs.delete_sub(session, sub).await;
         self.store.delete(session, id).await?;
         Ok(())
     }
@@ -48,7 +57,7 @@ impl Subscriptions {
     #[tx]
     pub async fn create_subscription(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         name: String,
         items: u32,
         price: Decimal,
@@ -65,12 +74,9 @@ impl Subscriptions {
         if price <= Decimal::zero() {
             return Err(CreateSubscriptionError::InvalidPrice);
         }
-        self.store
-            .insert(
-                session,
-                Subscription::new(name, items, price, expiration_days, freeze_days),
-            )
-            .await?;
+        let sub = Subscription::new(name, items, price, expiration_days, freeze_days);
+        self.logs.create_sub(session, sub.clone()).await;
+        self.store.insert(session, sub).await?;
         Ok(())
     }
 }

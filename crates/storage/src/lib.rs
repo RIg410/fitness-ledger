@@ -1,4 +1,5 @@
 pub mod calendar;
+pub mod logs;
 pub mod session;
 pub mod subscription;
 pub mod training;
@@ -6,6 +7,7 @@ pub mod treasury;
 pub mod user;
 
 use eyre::Result;
+use logs::LogStore;
 use session::Db;
 use user::UserStore;
 
@@ -18,6 +20,7 @@ pub struct Storage {
     pub training: training::ProgramStore,
     pub treasury: treasury::TreasuryStore,
     pub subscriptions: subscription::SubscriptionsStore,
+    pub logs: LogStore,
 }
 
 impl Storage {
@@ -28,6 +31,7 @@ impl Storage {
         let training = training::ProgramStore::new(&db);
         let treasury = treasury::TreasuryStore::new(&db).await?;
         let subscriptions = subscription::SubscriptionsStore::new(&db);
+        let logs = logs::LogStore::new(&db).await?;
         Ok(Storage {
             db,
             users,
@@ -35,6 +39,7 @@ impl Storage {
             training,
             treasury,
             subscriptions,
+            logs,
         })
     }
 }

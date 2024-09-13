@@ -4,15 +4,16 @@ use eyre::{bail, eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
 use log::info;
 use model::rights;
+use model::session::Session;
 use model::subscription::Subscription;
 use model::user::{Freeze, User, UserSubscription};
 use mongodb::bson::to_bson;
 use mongodb::options::UpdateOptions;
+use mongodb::IndexModel;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     Collection, Database,
 };
-use mongodb::{ClientSession, IndexModel};
 use std::sync::Arc;
 
 const COLLECTION: &str = "users";
@@ -33,11 +34,7 @@ impl UserStore {
         })
     }
 
-    pub async fn get_by_tg_id(
-        &self,
-        session: &mut ClientSession,
-        tg_id: i64,
-    ) -> Result<Option<User>> {
+    pub async fn get_by_tg_id(&self, session: &mut Session, tg_id: i64) -> Result<Option<User>> {
         Ok(self
             .users
             .find_one(doc! { "tg_id": tg_id })
@@ -45,11 +42,7 @@ impl UserStore {
             .await?)
     }
 
-    pub async fn get_by_id(
-        &self,
-        session: &mut ClientSession,
-        id: ObjectId,
-    ) -> Result<Option<User>> {
+    pub async fn get_by_id(&self, session: &mut Session, id: ObjectId) -> Result<Option<User>> {
         Ok(self
             .users
             .find_one(doc! { "_id": id })
@@ -57,7 +50,7 @@ impl UserStore {
             .await?)
     }
 
-    pub async fn insert(&self, session: &mut ClientSession, user: User) -> Result<()> {
+    pub async fn insert(&self, session: &mut Session, user: User) -> Result<()> {
         info!("Inserting user: {:?}", user);
         let result = self
             .users
@@ -75,7 +68,7 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn count(&self, session: &mut ClientSession) -> Result<u64> {
+    pub async fn count(&self, session: &mut Session) -> Result<u64> {
         Ok(self
             .users
             .count_documents(doc! {})
@@ -85,7 +78,7 @@ impl UserStore {
 
     pub async fn find(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         keywords: &[&str],
         offset: u64,
         limit: u64,
@@ -119,7 +112,7 @@ impl UserStore {
 
     pub async fn add_subscription(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         sub: Subscription,
     ) -> Result<()> {
@@ -152,7 +145,7 @@ impl UserStore {
 
     pub async fn get_last_user_subscription(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
     ) -> Result<Option<UserSubscription>> {
         let mut user = self
@@ -164,10 +157,7 @@ impl UserStore {
         Ok(user.subscriptions.last().cloned())
     }
 
-    pub async fn find_users_to_unfreeze(
-        &self,
-        session: &mut ClientSession,
-    ) -> Result<Vec<User>, Error> {
+    pub async fn find_users_to_unfreeze(&self, session: &mut Session) -> Result<Vec<User>, Error> {
         let filter = doc! {
             "freeze.freeze_end": { "$lte": Local::now().with_timezone(&Utc) }
         };
@@ -175,7 +165,7 @@ impl UserStore {
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn unfreeze(&self, session: &mut ClientSession, tg_id: i64) -> Result<()> {
+    pub async fn unfreeze(&self, session: &mut Session, tg_id: i64) -> Result<()> {
         info!("Unfreeze account:{}", tg_id);
         let result = self
             .users
@@ -192,7 +182,7 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn freeze(&self, session: &mut ClientSession, tg_id: i64, days: u32) -> Result<()> {
+    pub async fn freeze(&self, session: &mut Session, tg_id: i64, days: u32) -> Result<()> {
         info!("Freeze account:{}", tg_id);
         let mut user = self
             .get_by_tg_id(session, tg_id)
@@ -225,7 +215,7 @@ impl UserStore {
 
     pub async fn reserve_balance(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         amount: u32,
     ) -> Result<()> {
@@ -249,7 +239,7 @@ impl UserStore {
 
     pub async fn charge_reserved_balance(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         amount: u32,
     ) -> Result<()> {
@@ -282,7 +272,7 @@ impl UserStore {
 
     pub async fn unblock_balance(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         amount: u32,
     ) -> Result<()> {
@@ -306,7 +296,7 @@ impl UserStore {
 
     pub async fn set_first_name(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         first_name: &str,
     ) -> Result<bool> {
@@ -324,7 +314,7 @@ impl UserStore {
 
     pub async fn set_last_name(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         last_name: &str,
     ) -> Result<bool> {
@@ -342,7 +332,7 @@ impl UserStore {
 
     pub async fn set_tg_user_name(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         tg_user_name: &str,
     ) -> Result<bool> {
@@ -358,7 +348,7 @@ impl UserStore {
         Ok(result.modified_count > 0)
     }
 
-    pub async fn get_instructors(&self, session: &mut ClientSession) -> Result<Vec<User>, Error> {
+    pub async fn get_instructors(&self, session: &mut Session) -> Result<Vec<User>, Error> {
         let filter = doc! { "rights.rights": "Train" };
         let mut cursor = self.users.find(filter).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
@@ -366,7 +356,7 @@ impl UserStore {
 
     pub async fn set_birthday(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         birthday: DateTime<Local>,
     ) -> Result<bool> {
@@ -382,12 +372,7 @@ impl UserStore {
         Ok(result.modified_count > 0)
     }
 
-    pub async fn block(
-        &self,
-        session: &mut ClientSession,
-        tg_id: i64,
-        is_active: bool,
-    ) -> Result<bool> {
+    pub async fn block(&self, session: &mut Session, tg_id: i64, is_active: bool) -> Result<bool> {
         info!("Blocking user {}: {}", tg_id, is_active);
         let result = self
             .users
@@ -402,7 +387,7 @@ impl UserStore {
 
     pub async fn add_rule(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         rule: &rights::Rule,
     ) -> Result<bool> {
@@ -418,7 +403,7 @@ impl UserStore {
 
     pub async fn remove_rule(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         rule: &rights::Rule,
     ) -> Result<bool> {
@@ -435,7 +420,7 @@ impl UserStore {
 
     pub async fn change_balance(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         amount: i32,
     ) -> Result<()> {
@@ -456,7 +441,7 @@ impl UserStore {
 
     pub async fn find_subscription_to_expire(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
     ) -> Result<Vec<User>, Error> {
         let filter = doc! {
             "subscriptions.end_date": { "$lte": Local::now().with_timezone(&Utc) }
@@ -465,7 +450,7 @@ impl UserStore {
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn expire_subscription(&self, session: &mut ClientSession, tg_id: i64) -> Result<()> {
+    pub async fn expire_subscription(&self, session: &mut Session, tg_id: i64) -> Result<()> {
         let now = Local::now().with_timezone(&Utc);
         info!("Expire subscription for user {}", tg_id);
         let mut user = self
@@ -481,7 +466,7 @@ impl UserStore {
                 user.balance = user.balance.saturating_sub(sub.items);
             });
 
-        user.subscriptions.retain(|sub| sub.end_date >= now);    
+        user.subscriptions.retain(|sub| sub.end_date >= now);
         self.users
             .update_one(
                 doc! { "tg_id": tg_id },

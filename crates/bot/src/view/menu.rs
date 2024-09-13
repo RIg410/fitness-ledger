@@ -8,6 +8,7 @@ use crate::{context::Context, state::Widget};
 
 use super::{
     finance::FinanceView,
+    logs::LogsView,
     subscription::SubscriptionView,
     training::TrainingMainView,
     users::{profile::UserProfile, Query, UsersView},
@@ -29,6 +30,10 @@ impl MainMenuView {
 
         if ctx.has_right(Rule::ViewFinance) {
             keymap = keymap.append_row(vec![MainMenuItem::FinanceView.into()]);
+        }
+
+        if ctx.has_right(Rule::ViewLogs) {
+            keymap = keymap.append_row(vec![MainMenuItem::LogView.into()]);
         }
 
         let id = ctx.send_msg_with_markup("🏠SoulFamily🤸🏼", keymap).await?;
@@ -61,11 +66,12 @@ impl View for MainMenuView {
 
         self.send_self(ctx).await?;
         Ok(Some(match command {
-            MainMenuItem::Profile => Box::new(UserProfile::new(ctx.me.tg_id, None)),
-            MainMenuItem::Trainings => Box::new(TrainingMainView::default()),
-            MainMenuItem::Users => Box::new(UsersView::new(Query::default())),
-            MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
-            MainMenuItem::FinanceView => Box::new(FinanceView),
+            MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id, None).boxed(),
+            MainMenuItem::Trainings => TrainingMainView::default().boxed(),
+            MainMenuItem::Users => UsersView::new(Query::default()).boxed(),
+            MainMenuItem::Subscription => SubscriptionView::default().boxed(),
+            MainMenuItem::FinanceView => FinanceView.boxed(),
+            MainMenuItem::LogView => LogsView::default().boxed(),
             MainMenuItem::Home => return Ok(None),
         }))
     }
@@ -82,12 +88,13 @@ impl View for MainMenuView {
         };
         self.send_self(ctx).await?;
         Ok(Some(match command {
-            MainMenuItem::Profile => Box::new(UserProfile::new(ctx.me.tg_id, None)),
-            MainMenuItem::Trainings => Box::new(TrainingMainView::default()),
-            MainMenuItem::Users => Box::new(UsersView::new(Default::default())),
-            MainMenuItem::Subscription => Box::new(SubscriptionView::default()),
-            MainMenuItem::Home => Box::new(MainMenuView),
-            MainMenuItem::FinanceView => Box::new(FinanceView),
+            MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id, None).boxed(),
+            MainMenuItem::Trainings => TrainingMainView::default().boxed(),
+            MainMenuItem::Users => UsersView::new(Default::default()).boxed(),
+            MainMenuItem::Subscription => SubscriptionView::default().boxed(),
+            MainMenuItem::Home => MainMenuView.boxed(),
+            MainMenuItem::FinanceView => FinanceView.boxed(),
+            MainMenuItem::LogView => LogsView::default().boxed(),
         }))
     }
 }
@@ -100,6 +107,7 @@ pub enum MainMenuItem {
     Users,
     Subscription,
     FinanceView,
+    LogView,
 }
 
 const HOME_DESCRIPTION: &str = "🏠";
@@ -120,6 +128,9 @@ const SUBSCRIPTION_NAME: &str = "/subscription";
 const FINANCE_DESCRIPTION: &str = "Финансы 💰";
 const FINANCE_NAME: &str = "/finance";
 
+const LOG_DESCRIPTION: &str = "Логи 📜";
+const LOG_NAME: &str = "/log";
+
 impl MainMenuItem {
     pub fn description(&self) -> &'static str {
         match self {
@@ -129,6 +140,7 @@ impl MainMenuItem {
             MainMenuItem::Subscription => SUBSCRIPTION_DESCRIPTION,
             MainMenuItem::Home => HOME_DESCRIPTION,
             MainMenuItem::FinanceView => FINANCE_DESCRIPTION,
+            MainMenuItem::LogView => LOG_DESCRIPTION,
         }
     }
 
@@ -140,6 +152,7 @@ impl MainMenuItem {
             MainMenuItem::Subscription => SUBSCRIPTION_NAME,
             MainMenuItem::Home => HOME_NAME,
             MainMenuItem::FinanceView => FINANCE_NAME,
+            MainMenuItem::LogView => LOG_NAME,
         }
     }
 }
@@ -170,6 +183,7 @@ impl TryFrom<&str> for MainMenuItem {
             SUBSCRIPTION_NAME | SUBSCRIPTION_DESCRIPTION => Ok(MainMenuItem::Subscription),
             HOME_NAME | HOME_DESCRIPTION | "/home" => Ok(MainMenuItem::Home),
             FINANCE_NAME | FINANCE_DESCRIPTION => Ok(MainMenuItem::FinanceView),
+            LOG_NAME | LOG_DESCRIPTION => Ok(MainMenuItem::LogView),
             _ => bail!("Unknown command"),
         }
     }

@@ -1,6 +1,6 @@
 use crate::Ledger;
 use eyre::Result;
-use mongodb::ClientSession;
+use model::session::Session;
 
 pub struct SubscriptionBg {
     ledger: Ledger,
@@ -11,7 +11,7 @@ impl SubscriptionBg {
         SubscriptionBg { ledger }
     }
 
-    pub async fn process(&self, session: &mut ClientSession) -> Result<()> {
+    pub async fn process(&self, session: &mut Session) -> Result<()> {
         let users = self
             .ledger
             .users

@@ -309,7 +309,7 @@ async fn build_context(
     } else {
         (User::new(tg_id.0), false)
     };
-
+    session.set_actor(user.id);
     let state = state_holder
         .get_state(tg_id)
         .unwrap_or_else(|| State::default());

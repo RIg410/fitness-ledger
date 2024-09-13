@@ -2,15 +2,18 @@ use calendar::{Calendar, SignOutError};
 use chrono::Local;
 use eyre::{bail, eyre, Result};
 use log::error;
+use logs::Logs;
 use model::decimal::Decimal;
+use model::session::Session;
 use model::subscription::Subscription;
 use model::training::{Training, TrainingStatus};
+use model::treasury::Sell;
 use mongodb::bson::oid::ObjectId;
-use mongodb::ClientSession;
 use storage::session::Db;
 use storage::Storage;
 
 pub mod calendar;
+pub mod logs;
 pub mod process;
 pub mod programs;
 pub mod subscriptions;
@@ -32,15 +35,17 @@ pub struct Ledger {
     pub programs: Programs,
     pub treasury: Treasury,
     pub subscriptions: Subscriptions,
+    pub logs: Logs,
 }
 
 impl Ledger {
     pub fn new(storage: Storage) -> Self {
-        let programs = Programs::new(storage.training);
+        let logs = logs::Logs::new(storage.logs);
+        let programs = Programs::new(storage.training, logs.clone());
         let calendar = Calendar::new(storage.calendar, storage.users.clone(), programs.clone());
-        let users = Users::new(storage.users);
-        let treasury = Treasury::new(storage.treasury);
-        let subscriptions = Subscriptions::new(storage.subscriptions);
+        let users = Users::new(storage.users, logs.clone());
+        let treasury = Treasury::new(storage.treasury, logs.clone());
+        let subscriptions = Subscriptions::new(storage.subscriptions, logs.clone());
         Ledger {
             users,
             calendar,
@@ -48,13 +53,14 @@ impl Ledger {
             db: storage.db,
             treasury,
             subscriptions,
+            logs,
         }
     }
 
     #[tx]
     pub async fn block_user(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         is_active: bool,
     ) -> Result<()> {
@@ -100,7 +106,7 @@ impl Ledger {
     #[tx]
     pub async fn sign_up(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         training: &Training,
         client: ObjectId,
         forced: bool,
@@ -142,7 +148,7 @@ impl Ledger {
     #[tx]
     pub async fn sign_out(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         training: &Training,
         client: ObjectId,
         forced: bool,
@@ -185,7 +191,7 @@ impl Ledger {
     #[tx]
     pub async fn sell_subscription(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         subscription: ObjectId,
         buyer: i64,
         seller: i64,
@@ -213,7 +219,7 @@ impl Ledger {
             .await?;
 
         self.treasury
-            .sell(session, seller, buyer, treasury::Sell::Sub(subscription))
+            .sell(session, seller, buyer, Sell::Sub(subscription))
             .await?;
         Ok(())
     }
@@ -221,7 +227,7 @@ impl Ledger {
     #[tx]
     pub async fn sell_free_subscription(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         price: Decimal,
         item: u32,
         buyer: i64,
@@ -256,7 +262,7 @@ impl Ledger {
             .await?;
 
         self.treasury
-            .sell(session, seller, buyer, treasury::Sell::Free(item, price))
+            .sell(session, seller, buyer, Sell::Free(item, price))
             .await?;
         Ok(())
     }

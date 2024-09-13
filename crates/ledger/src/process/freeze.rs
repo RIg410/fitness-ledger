@@ -2,7 +2,7 @@ use crate::Ledger;
 use chrono::Local;
 use eyre::Result;
 use log::{info, warn};
-use mongodb::ClientSession;
+use model::session::Session;
 
 pub struct FreezeBg {
     ledger: Ledger,
@@ -13,7 +13,7 @@ impl FreezeBg {
         FreezeBg { ledger }
     }
 
-    pub async fn process(&self, session: &mut ClientSession) -> Result<()> {
+    pub async fn process(&self, session: &mut Session) -> Result<()> {
         let users = self.ledger.users.find_users_to_unfreeze(session).await?;
         let now = Local::now();
         for user in users {

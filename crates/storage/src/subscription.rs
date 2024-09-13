@@ -4,8 +4,8 @@ use crate::session::Db;
 use bson::{doc, oid::ObjectId};
 use eyre::Error;
 use log::info;
-use model::subscription::Subscription;
-use mongodb::{ClientSession, Collection};
+use model::{session::Session, subscription::Subscription};
+use mongodb::Collection;
 
 const TABLE_NAME: &str = "subscriptions";
 
@@ -23,7 +23,7 @@ impl SubscriptionsStore {
 
     pub async fn insert(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         subscription: Subscription,
     ) -> Result<(), Error> {
         info!("Inserting subscription: {:?}", subscription);
@@ -34,7 +34,7 @@ impl SubscriptionsStore {
         Ok(())
     }
 
-    pub async fn delete(&self, session: &mut ClientSession, id: ObjectId) -> Result<(), Error> {
+    pub async fn delete(&self, session: &mut Session, id: ObjectId) -> Result<(), Error> {
         self.collection
             .delete_one(doc! { "_id": id })
             .session(&mut *session)
@@ -44,14 +44,14 @@ impl SubscriptionsStore {
 
     pub async fn cursor(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
     ) -> Result<mongodb::SessionCursor<Subscription>, Error> {
         Ok(self.collection.find(doc! {}).session(&mut *session).await?)
     }
 
     pub async fn get_by_id(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         id: ObjectId,
     ) -> Result<Option<Subscription>, Error> {
         Ok(self
@@ -63,7 +63,7 @@ impl SubscriptionsStore {
 
     pub async fn get_by_name(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         name: &str,
     ) -> Result<Option<Subscription>, Error> {
         Ok(self

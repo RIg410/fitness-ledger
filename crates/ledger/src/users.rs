@@ -1,37 +1,37 @@
+use crate::logs::Logs;
 use chrono::{DateTime, Local};
 use eyre::{bail, eyre, Error, Result};
 use log::info;
 use model::{
     rights::{Rights, Rule},
+    session::Session,
     subscription::Subscription,
     user::{User, UserName},
 };
-use mongodb::{bson::oid::ObjectId, ClientSession};
+use mongodb::bson::oid::ObjectId;
 use storage::user::UserStore;
+use thiserror::Error;
 use tx_macro::tx;
 
 #[derive(Clone)]
 pub struct Users {
     store: UserStore,
+    logs: Logs,
 }
 
 impl Users {
-    pub(crate) fn new(store: UserStore) -> Self {
-        Users { store }
+    pub(crate) fn new(store: UserStore, logs: Logs) -> Self {
+        Users { store, logs }
     }
 
-    pub async fn get_by_tg_id(
-        &self,
-        session: &mut ClientSession,
-        tg_id: i64,
-    ) -> Result<Option<User>> {
+    pub async fn get_by_tg_id(&self, session: &mut Session, tg_id: i64) -> Result<Option<User>> {
         self.store.get_by_tg_id(session, tg_id).await
     }
 
     #[tx]
     pub async fn create(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         name: UserName,
         phone: String,
@@ -50,9 +50,9 @@ impl Users {
 
         let user = User {
             tg_id,
-            name,
+            name: name.clone(),
             rights,
-            phone,
+            phone: phone.clone(),
             birthday: None,
             reg_date: chrono::Local::now(),
             balance: 0,
@@ -65,16 +65,17 @@ impl Users {
             version: 0,
         };
         self.store.insert(session, user).await?;
+        self.logs.create_user(session, tg_id, name, phone).await;
         Ok(())
     }
 
-    pub async fn count(&self, session: &mut ClientSession) -> Result<u64> {
+    pub async fn count(&self, session: &mut Session) -> Result<u64> {
         self.store.count(session).await
     }
 
     pub async fn find(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         query: &str,
         limit: u64,
         offset: u64,
@@ -83,21 +84,22 @@ impl Users {
         self.store.find(session, &keywords, limit, offset).await
     }
 
-    pub async fn instructors(&self, session: &mut ClientSession) -> Result<Vec<User>> {
+    pub async fn instructors(&self, session: &mut Session) -> Result<Vec<User>> {
         self.store.get_instructors(session).await
     }
 
-    pub async fn get(&self, session: &mut ClientSession, id: ObjectId) -> Result<Option<User>> {
+    pub async fn get(&self, session: &mut Session, id: ObjectId) -> Result<Option<User>> {
         self.store.get_by_id(session, id).await
     }
 
+    #[tx]
     pub async fn set_user_birthday(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         id: i64,
         date: DateTime<Local>,
         forced: bool,
-    ) -> std::result::Result<(), SetDateError> {
+    ) -> Result<(), SetDateError> {
         let user = self
             .store
             .get_by_tg_id(session, id)
@@ -107,6 +109,7 @@ impl Users {
         if !forced && user.birthday.is_some() {
             return Err(SetDateError::AlreadySet);
         }
+        self.logs.set_user_birthday(session, id, date).await;
         self.store
             .set_birthday(session, user.tg_id, date)
             .await
@@ -114,13 +117,17 @@ impl Users {
         Ok(())
     }
 
+    #[tx]
     pub async fn edit_user_rule(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         rule: Rule,
         is_active: bool,
     ) -> Result<()> {
+        self.logs
+            .edit_user_rule(session, tg_id, rule, is_active)
+            .await;
         if is_active {
             self.store.add_rule(session, tg_id, &rule).await?;
             info!("Adding rule {:?} to user {}", rule, tg_id);
@@ -132,12 +139,12 @@ impl Users {
         Ok(())
     }
 
-    pub async fn find_users_to_unfreeze(&self, session: &mut ClientSession) -> Result<Vec<User>> {
+    pub async fn find_users_to_unfreeze(&self, session: &mut Session) -> Result<Vec<User>> {
         self.store.find_users_to_unfreeze(session).await
     }
 
     #[tx]
-    pub async fn freeze(&self, session: &mut ClientSession, tg_id: i64, days: u32) -> Result<()> {
+    pub async fn freeze(&self, session: &mut Session, tg_id: i64, days: u32) -> Result<()> {
         let user = self
             .store
             .get_by_tg_id(session, tg_id)
@@ -150,32 +157,39 @@ impl Users {
         if user.freeze.is_some() {
             bail!("Already frozen");
         }
+
+        self.logs.freeze(session, tg_id, days).await;
         self.store.freeze(session, tg_id, days).await?;
         Ok(())
     }
 
-    pub(crate) async fn unfreeze(&self, session: &mut ClientSession, tg_id: i64) -> Result<()> {
+    pub(crate) async fn unfreeze(&self, session: &mut Session, tg_id: i64) -> Result<()> {
+        self.logs.unfreeze(session, tg_id).await;
         self.store.unfreeze(session, tg_id).await
     }
 
     #[tx]
     pub async fn change_balance(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         amount: i32,
     ) -> Result<()> {
+        self.logs.change_balance(session, tg_id, amount).await;
         self.store.change_balance(session, tg_id, amount).await
     }
 
     #[tx]
     pub async fn set_name(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         first_name: &str,
         last_name: &str,
     ) -> Result<()> {
+        self.logs
+            .set_user_name(session, tg_id, first_name, last_name)
+            .await;
         self.store
             .set_first_name(session, tg_id, first_name)
             .await?;
@@ -187,7 +201,7 @@ impl Users {
 impl Users {
     pub(crate) async fn block_user(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         is_active: bool,
     ) -> Result<()> {
@@ -197,7 +211,7 @@ impl Users {
 
     pub(crate) async fn reserve_balance(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         amount: u32,
     ) -> Result<(), Error> {
@@ -207,7 +221,7 @@ impl Users {
 
     pub(crate) async fn unblock_balance(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         amount: u32,
     ) -> Result<(), Error> {
@@ -217,7 +231,7 @@ impl Users {
 
     pub(crate) async fn add_subscription(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         sub: Subscription,
     ) -> Result<(), Error> {
@@ -227,7 +241,7 @@ impl Users {
 
     pub(crate) async fn charge_reserved_balance(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
         amount: u32,
     ) -> Result<(), Error> {
@@ -239,7 +253,7 @@ impl Users {
 
     pub(crate) async fn find_subscription_to_expire(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
     ) -> Result<Vec<User>> {
         self.store.find_subscription_to_expire(session).await
     }
@@ -247,15 +261,31 @@ impl Users {
     #[tx]
     pub(crate) async fn expire_subscription(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         tg_id: i64,
     ) -> Result<()> {
         self.store.expire_subscription(session, tg_id).await
     }
 }
 
+#[derive(Debug, Error)]
 pub enum SetDateError {
+    #[error("User not found")]
     UserNotFound,
+    #[error("Birthday already set")]
     AlreadySet,
+    #[error(transparent)]
     Common(eyre::Error),
+}
+
+impl From<mongodb::error::Error> for SetDateError {
+    fn from(e: mongodb::error::Error) -> Self {
+        SetDateError::Common(e.into())
+    }
+}
+
+impl From<eyre::Error> for SetDateError {
+    fn from(e: eyre::Error) -> Self {
+        SetDateError::Common(e)
+    }
 }

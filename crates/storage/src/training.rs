@@ -3,11 +3,11 @@ use std::sync::Arc;
 use bson::to_document;
 use eyre::Error;
 use futures_util::TryStreamExt as _;
-use model::program::Program;
+use model::{program::Program, session::Session};
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::UpdateOptions,
-    ClientSession, Collection,
+    Collection,
 };
 
 const COLLECTION: &str = "training";
@@ -28,7 +28,7 @@ impl ProgramStore {
 
     pub async fn get_by_id(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         id: ObjectId,
     ) -> Result<Option<Program>, Error> {
         Ok(self
@@ -38,14 +38,14 @@ impl ProgramStore {
             .await?)
     }
 
-    pub async fn get_all(&self, session: &mut ClientSession) -> Result<Vec<Program>, Error> {
+    pub async fn get_all(&self, session: &mut Session) -> Result<Vec<Program>, Error> {
         let mut cursor = self.store.find(doc! {}).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
     pub async fn find(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         query: Option<&str>,
     ) -> Result<Vec<Program>, Error> {
         let filter = if let Some(query) = query {
@@ -62,7 +62,7 @@ impl ProgramStore {
 
     pub async fn get_by_name(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         name: &str,
     ) -> Result<Option<Program>, Error> {
         Ok(self
@@ -72,7 +72,7 @@ impl ProgramStore {
             .await?)
     }
 
-    pub async fn insert(&self, session: &mut ClientSession, proto: &Program) -> Result<(), Error> {
+    pub async fn insert(&self, session: &mut Session, proto: &Program) -> Result<(), Error> {
         let result = self
             .store
             .update_one(
@@ -89,7 +89,7 @@ impl ProgramStore {
         Ok(())
     }
 
-    pub async fn delete(&self, session: &mut ClientSession, id: &ObjectId) -> Result<(), Error> {
+    pub async fn delete(&self, session: &mut Session, id: &ObjectId) -> Result<(), Error> {
         self.store
             .delete_one(doc! { "_id": id })
             .session(&mut *session)
@@ -99,7 +99,7 @@ impl ProgramStore {
 
     pub async fn update_name(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         id: &ObjectId,
         name: &str,
     ) -> Result<(), Error> {
@@ -115,7 +115,7 @@ impl ProgramStore {
 
     pub async fn update_description(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         id: &ObjectId,
         description: &str,
     ) -> Result<(), Error> {
@@ -131,7 +131,7 @@ impl ProgramStore {
 
     pub async fn update_duration(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         id: &ObjectId,
         duration: u32,
     ) -> Result<(), Error> {
@@ -147,7 +147,7 @@ impl ProgramStore {
 
     pub async fn update_capacity(
         &self,
-        session: &mut ClientSession,
+        session: &mut Session,
         id: &ObjectId,
         capacity: u32,
     ) -> Result<(), Error> {

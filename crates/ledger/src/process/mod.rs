@@ -1,7 +1,7 @@
 use crate::Ledger;
 use eyre::{Context, Result};
 use freeze::FreezeBg;
-use mongodb::ClientSession;
+use model::session::Session;
 use subscription::SubscriptionBg;
 use training::TriningBg;
 
@@ -26,7 +26,7 @@ impl BgProcessor {
         }
     }
 
-    pub async fn process(&self, session: &mut ClientSession) -> Result<()> {
+    pub async fn process(&self, session: &mut Session) -> Result<()> {
         self.training
             .process(session)
             .await

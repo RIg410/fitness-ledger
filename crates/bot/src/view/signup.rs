@@ -4,8 +4,7 @@ use async_trait::async_trait;
 use eyre::{bail, Context as _};
 use ledger::Ledger;
 use log::info;
-use model::user::UserName;
-use mongodb::ClientSession;
+use model::{session::Session, user::UserName};
 use teloxide::types::{
     ButtonRequest, Contact, KeyboardButton, KeyboardMarkup, KeyboardRemove, Message, ReplyMarkup,
 };
@@ -108,7 +107,7 @@ pub async fn create_user(
     chat_id: i64,
     contact: &Contact,
     from: &teloxide::types::User,
-    session: &mut ClientSession,
+    session: &mut Session,
 ) -> Result<(), eyre::Error> {
     info!("Creating user with chat_id: {}", chat_id);
     let user = ledger.users.get_by_tg_id(session, from.id.0 as i64).await?;

@@ -100,6 +100,9 @@ pub enum Rule {
     MakePayment,
     MakeDeposit,
     FinanceHistoricalDate,
+
+    //Logs
+    ViewLogs,
 }
 
 impl Rule {
