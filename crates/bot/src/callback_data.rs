@@ -24,8 +24,11 @@ pub trait Calldata {
     where
         Self: Sized;
 
-    fn button(&self, name: String) -> InlineKeyboardButton {
+    fn button<N: Into<String>>(&self, name: N) -> InlineKeyboardButton {
         InlineKeyboardButton::callback(name, self.to_data())
+    }
+    fn btn_row<N: Into<String>>(&self, name: N) -> Vec<InlineKeyboardButton> {
+        vec![self.button(name)]
     }
 }
 

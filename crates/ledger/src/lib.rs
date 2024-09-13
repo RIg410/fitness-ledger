@@ -4,7 +4,7 @@ use eyre::{bail, eyre, Result};
 use log::error;
 use model::decimal::Decimal;
 use model::subscription::Subscription;
-use model::training::{self, Training, TrainingStatus};
+use model::training::{Training, TrainingStatus};
 use mongodb::bson::oid::ObjectId;
 use mongodb::ClientSession;
 use storage::session::Db;

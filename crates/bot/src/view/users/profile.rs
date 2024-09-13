@@ -15,7 +15,7 @@ use model::{
 };
 use serde::{Deserialize, Serialize};
 use teloxide::{
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    types::{InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
 
@@ -29,6 +29,70 @@ pub struct UserProfile {
 impl UserProfile {
     pub fn new(tg_id: i64, go_back: Option<Widget>) -> UserProfile {
         UserProfile { tg_id, go_back }
+    }
+
+    async fn block_user(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+        ctx.ensure(Rule::BlockUser)?;
+        let user = ctx
+            .ledger
+            .users
+            .get_by_tg_id(&mut ctx.session, self.tg_id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("User not found"))?;
+        ctx.ledger
+            .block_user(&mut ctx.session, self.tg_id, !user.is_active)
+            .await?;
+        ctx.reload_user().await?;
+        self.show(ctx).await?;
+        Ok(None)
+    }
+
+    async fn change_balance(
+        &mut self,
+        ctx: &mut Context,
+        amount: i32,
+    ) -> Result<Option<Widget>, eyre::Error> {
+        ctx.ensure(Rule::ChangeBalance)?;
+        let user = ctx
+            .ledger
+            .users
+            .get_by_tg_id(&mut ctx.session, self.tg_id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("User not found"))?;
+
+        if amount < 0 {
+            if user.balance < amount.abs() as u32 {
+                return Err(eyre::eyre!("Not enough balance"));
+            }
+        }
+
+        ctx.ledger
+            .users
+            .change_balance(&mut ctx.session, user.tg_id, amount)
+            .await?;
+        ctx.reload_user().await?;
+        self.show(ctx).await?;
+        Ok(None)
+    }
+
+    async fn freeze_user(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+        if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
+            return Err(eyre::eyre!("User has no rights to perform this action"));
+        }
+        let mut new_user_new = UserProfile::new(0, None);
+        mem::swap(self, &mut new_user_new);
+        Ok(Some(
+            FreezeProfile::new(new_user_new.tg_id, Some(new_user_new.boxed())).boxed(),
+        ))
+    }
+
+    async fn edit_rights(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+        ctx.ensure(Rule::EditUserRights)?;
+        let mut new_user_new = UserProfile::new(0, None);
+        mem::swap(self, &mut new_user_new);
+        Ok(Some(
+            UserRightsView::new(new_user_new.tg_id, Some(new_user_new.boxed())).boxed(),
+        ))
     }
 }
 
@@ -75,65 +139,11 @@ impl View for UserProfile {
                     Ok(None)
                 }
             }
-            Callback::BlockUnblock => {
-                ctx.ensure(Rule::BlockUser)?;
-                let user = ctx
-                    .ledger
-                    .users
-                    .get_by_tg_id(&mut ctx.session, self.tg_id)
-                    .await?
-                    .ok_or_else(|| eyre::eyre!("User not found"))?;
-                ctx.ledger
-                    .block_user(&mut ctx.session, self.tg_id, !user.is_active)
-                    .await?;
-                ctx.reload_user().await?;
-                self.show(ctx).await?;
-                Ok(None)
-            }
+            Callback::BlockUnblock => self.block_user(ctx).await,
             Callback::Edit => Ok(None),
-            Callback::EditRights => {
-                ctx.ensure(Rule::EditUserRights)?;
-                let mut new_user_new = UserProfile::new(0, None);
-                mem::swap(self, &mut new_user_new);
-                Ok(Some(Box::new(UserRightsView::new(
-                    new_user_new.tg_id,
-                    Some(Box::new(new_user_new)),
-                ))))
-            }
-            Callback::Freeze => {
-                if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
-                    return Err(eyre::eyre!("User has no rights to perform this action"));
-                }
-                let mut new_user_new = UserProfile::new(0, None);
-                mem::swap(self, &mut new_user_new);
-                Ok(Some(Box::new(FreezeProfile::new(
-                    new_user_new.tg_id,
-                    Some(Box::new(new_user_new)),
-                ))))
-            }
-            Callback::ChangeBalance(amount) => {
-                ctx.ensure(Rule::ChangeBalance)?;
-                let user = ctx
-                    .ledger
-                    .users
-                    .get_by_tg_id(&mut ctx.session, self.tg_id)
-                    .await?
-                    .ok_or_else(|| eyre::eyre!("User not found"))?;
-
-                if amount < 0 {
-                    if user.balance < amount.abs() as u32 {
-                        return Err(eyre::eyre!("Not enough balance"));
-                    }
-                }
-
-                ctx.ledger
-                    .users
-                    .change_balance(&mut ctx.session, user.tg_id, amount)
-                    .await?;
-                ctx.reload_user().await?;
-                self.show(ctx).await?;
-                Ok(None)
-            }
+            Callback::EditRights => self.edit_rights(ctx).await,
+            Callback::Freeze => self.freeze_user(ctx).await,
+            Callback::ChangeBalance(amount) => self.change_balance(ctx, amount).await,
         }
     }
 }
@@ -145,57 +155,33 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
     if ctx.has_right(Rule::FreezeUsers) || ctx.me.tg_id == user.tg_id {
         if user.freeze.is_none() {
             if user.freeze_days != 0 {
-                keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-                    "Заморозить ❄",
-                    Callback::Freeze.to_data(),
-                )]);
+                keymap = keymap.append_row(Callback::Freeze.btn_row("Заморозить ❄"));
             }
         }
     }
 
     if ctx.has_right(Rule::ChangeBalance) {
         keymap = keymap.append_row(vec![
-            InlineKeyboardButton::callback(
-                "Списать баланс 💸",
-                Callback::ChangeBalance(-1).to_data(),
-            ),
-            InlineKeyboardButton::callback(
-                "Пополнить баланс 💰",
-                Callback::ChangeBalance(1).to_data(),
-            ),
+            Callback::ChangeBalance(-1).button("Списать баланс 💸"),
+            Callback::ChangeBalance(1).button("Пополнить баланс 💰"),
         ]);
     }
 
     if ctx.has_right(Rule::BlockUser) && ctx.me.tg_id != user.tg_id {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            if user.is_active {
-                "❌ Заблокировать"
-            } else {
-                "✅ Разблокировать"
-            },
-            Callback::BlockUnblock.to_data(),
-        )]);
+        keymap = keymap.append_row(Callback::BlockUnblock.btn_row(if user.is_active {
+            "❌ Заблокировать"
+        } else {
+            "✅ Разблокировать"
+        }));
     }
-
     if ctx.has_right(Rule::EditUserInfo) {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "✍️ Редактировать",
-            Callback::Edit.to_data(),
-        )]);
+        keymap = keymap.append_row(Callback::Edit.btn_row("✍️ Редактировать"))
     }
-
     if ctx.has_right(Rule::EditUserRights) {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "🔒 Права",
-            Callback::EditRights.to_data(),
-        )]);
+        keymap = keymap.append_row(Callback::EditRights.btn_row("🔒 Права"));
     }
-
     if back {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "⬅️",
-            Callback::Back.to_data(),
-        )]);
+        keymap = keymap.append_row(Callback::Back.btn_row("⬅️"));
     }
     keymap = keymap.append_row(vec![MainMenuItem::Home.into()]);
     (msg, keymap)
