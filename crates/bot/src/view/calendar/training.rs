@@ -23,6 +23,165 @@ impl TrainingView {
     pub fn new(id: DateTime<Local>, go_back: Option<Widget>) -> Self {
         Self { id, go_back }
     }
+
+    async fn go_back(&mut self, _: &mut Context) -> Result<Option<Widget>> {
+        Ok(self.go_back.take())
+    }
+
+    async fn description(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        ctx.send_msg(&escape(&training.description)).await?;
+        let id = ctx.send_msg("\\.").await?;
+        ctx.update_origin_msg_id(id);
+        self.show(ctx).await?;
+        Ok(None)
+    }
+
+    async fn cancel_training(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+        ctx.ensure(Rule::CancelTraining)?;
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        ctx.ledger
+            .calendar
+            .cancel_training(&mut ctx.session, &training)
+            .await?;
+        self.show(ctx).await?;
+        Ok(None)
+    }
+
+    async fn delete_training(&mut self, ctx: &mut Context, all: bool) -> Result<Option<Widget>> {
+        ctx.ensure(Rule::EditSchedule)?;
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        ctx.ledger
+            .calendar
+            .delete_training(&mut ctx.session, &training, all)
+            .await?;
+        Ok(self.go_back.take())
+    }
+
+    async fn restore_training(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+        ctx.ensure(Rule::CancelTraining)?;
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        ctx.ledger
+            .calendar
+            .restore_training(&mut ctx.session, &training)
+            .await?;
+        self.show(ctx).await?;
+        Ok(None)
+    }
+
+    async fn sign_up(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        if !training.status(Local::now()).can_sign_in() {
+            ctx.send_msg("Запись на тренировку закрыта💔").await?;
+            let id = ctx.send_msg("\\.").await?;
+            ctx.update_origin_msg_id(id);
+            self.show(ctx).await?;
+            return Ok(None);
+        }
+
+        if ctx.me.balance < 1 {
+            ctx.send_msg("Недостаточно средств на балансе🥺").await?;
+            let id = ctx.send_msg("\\.").await?;
+            ctx.update_origin_msg_id(id);
+            self.show(ctx).await?;
+            return Ok(None);
+        }
+        if ctx.me.freeze.is_some() {
+            ctx.send_msg("Ваш абонемент заморожен🥶").await?;
+            let id = ctx.send_msg("\\.").await?;
+            ctx.update_origin_msg_id(id);
+            self.show(ctx).await?;
+            return Ok(None);
+        }
+
+        ctx.ledger
+            .sign_up(&mut ctx.session, &training, ctx.me.id)
+            .await?;
+        self.show(ctx).await?;
+        Ok(None)
+    }
+
+    async fn sign_out(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        if !training.status(Local::now()).can_sign_out() {
+            ctx.send_msg("Запись на тренировку закрыта").await?;
+            let id = ctx.send_msg("\\.").await?;
+            ctx.update_origin_msg_id(id);
+            self.show(ctx).await?;
+            return Ok(None);
+        }
+        ctx.ledger
+            .sign_out(&mut ctx.session, &training, ctx.me.id)
+            .await?;
+        self.show(ctx).await?;
+        Ok(None)
+    }
+
+    async fn client_list(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+        ctx.ensure(Rule::Train)?;
+        let mut msg = "*Список клиентов:*\n".to_string();
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        for client in &training.clients {
+            let user = ctx
+                .ledger
+                .users
+                .get(&mut ctx.session, *client)
+                .await?
+                .ok_or_else(|| eyre::eyre!("User not found"))?;
+            msg.push_str(&format!(
+                "✅_{}_ _{}_{}\n",
+                escape(&user.name.first_name),
+                escape(&user.name.last_name.unwrap_or_else(|| "-".to_string())),
+                escape(
+                    &user
+                        .name
+                        .tg_user_name
+                        .map(|n| format!("@{}", n))
+                        .unwrap_or_else(|| "".to_string())
+                )
+            ));
+        }
+        ctx.send_msg(&msg).await?;
+        let id = ctx.send_msg("\\.").await?;
+        ctx.update_origin_msg_id(id);
+        self.show(ctx).await?;
+        Ok(None)
+    }
 }
 
 #[async_trait]
@@ -55,155 +214,14 @@ impl View for TrainingView {
             return Ok(None);
         };
         match cb {
-            Callback::Back => Ok(self.go_back.take()),
-            Callback::Description => {
-                let training = ctx
-                    .ledger
-                    .calendar
-                    .get_training_by_start_at(&mut ctx.session, self.id)
-                    .await?
-                    .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                ctx.send_msg(&escape(&training.description)).await?;
-                let id = ctx.send_msg("\\.").await?;
-                ctx.update_origin_msg_id(id);
-                self.show(ctx).await?;
-                Ok(None)
-            }
-            Callback::Cancel => {
-                ctx.ensure(Rule::CancelTraining)?;
-                let training = ctx
-                    .ledger
-                    .calendar
-                    .get_training_by_start_at(&mut ctx.session, self.id)
-                    .await?
-                    .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                ctx.ledger
-                    .calendar
-                    .cancel_training(&mut ctx.session, &training)
-                    .await?;
-                self.show(ctx).await?;
-                Ok(None)
-            }
-            Callback::Delete(all) => {
-                ctx.ensure(Rule::EditSchedule)?;
-                let training = ctx
-                    .ledger
-                    .calendar
-                    .get_training_by_start_at(&mut ctx.session, self.id)
-                    .await?
-                    .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                ctx.ledger
-                    .calendar
-                    .delete_training(&mut ctx.session, &training, all)
-                    .await?;
-                Ok(self.go_back.take())
-            }
-            Callback::UnCancel => {
-                ctx.ensure(Rule::CancelTraining)?;
-                let training = ctx
-                    .ledger
-                    .calendar
-                    .get_training_by_start_at(&mut ctx.session, self.id)
-                    .await?
-                    .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                ctx.ledger
-                    .calendar
-                    .restore_training(&mut ctx.session, &training)
-                    .await?;
-                self.show(ctx).await?;
-                Ok(None)
-            }
-            Callback::SignUp => {
-                let training = ctx
-                    .ledger
-                    .calendar
-                    .get_training_by_start_at(&mut ctx.session, self.id)
-                    .await?
-                    .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                if !training.status(Local::now()).can_sign_in() {
-                    ctx.send_msg("Запись на тренировку закрыта💔").await?;
-                    let id = ctx.send_msg("\\.").await?;
-                    ctx.update_origin_msg_id(id);
-                    self.show(ctx).await?;
-                    return Ok(None);
-                }
-
-                if ctx.me.balance < 1 {
-                    ctx.send_msg("Недостаточно средств на балансе🥺").await?;
-                    let id = ctx.send_msg("\\.").await?;
-                    ctx.update_origin_msg_id(id);
-                    self.show(ctx).await?;
-                    return Ok(None);
-                }
-                if ctx.me.freeze.is_some() {
-                    ctx.send_msg("Ваш абонемент заморожен🥶").await?;
-                    let id = ctx.send_msg("\\.").await?;
-                    ctx.update_origin_msg_id(id);
-                    self.show(ctx).await?;
-                    return Ok(None);
-                }
-
-                ctx.ledger
-                    .sign_up(&mut ctx.session, &training, ctx.me.id)
-                    .await?;
-                self.show(ctx).await?;
-                Ok(None)
-            }
-            Callback::SignOut => {
-                let training = ctx
-                    .ledger
-                    .calendar
-                    .get_training_by_start_at(&mut ctx.session, self.id)
-                    .await?
-                    .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                if !training.status(Local::now()).can_sign_out() {
-                    ctx.send_msg("Запись на тренировку закрыта").await?;
-                    let id = ctx.send_msg("\\.").await?;
-                    ctx.update_origin_msg_id(id);
-                    self.show(ctx).await?;
-                    return Ok(None);
-                }
-                ctx.ledger
-                    .sign_out(&mut ctx.session, &training, ctx.me.id)
-                    .await?;
-                self.show(ctx).await?;
-                Ok(None)
-            }
-            Callback::ClientList => {
-                ctx.ensure(Rule::Train)?;
-                let mut msg = "*Список клиентов:*\n".to_string();
-                let training = ctx
-                    .ledger
-                    .calendar
-                    .get_training_by_start_at(&mut ctx.session, self.id)
-                    .await?
-                    .ok_or_else(|| eyre::eyre!("Training not found"))?;
-                for client in &training.clients {
-                    let user = ctx
-                        .ledger
-                        .users
-                        .get(&mut ctx.session, *client)
-                        .await?
-                        .ok_or_else(|| eyre::eyre!("User not found"))?;
-                    msg.push_str(&format!(
-                        "✅_{}_ _{}_{}\n",
-                        escape(&user.name.first_name),
-                        escape(&user.name.last_name.unwrap_or_else(|| "-".to_string())),
-                        escape(
-                            &user
-                                .name
-                                .tg_user_name
-                                .map(|n| format!("@{}", n))
-                                .unwrap_or_else(|| "".to_string())
-                        )
-                    ));
-                }
-                ctx.send_msg(&msg).await?;
-                let id = ctx.send_msg("\\.").await?;
-                ctx.update_origin_msg_id(id);
-                self.show(ctx).await?;
-                Ok(None)
-            }
+            Callback::Back => self.go_back(ctx).await,
+            Callback::Description => self.description(ctx).await,
+            Callback::Cancel => self.cancel_training(ctx).await,
+            Callback::Delete(all) => self.delete_training(ctx, all).await,
+            Callback::UnCancel => self.restore_training(ctx).await,
+            Callback::SignUp => self.sign_up(ctx).await,
+            Callback::SignOut => self.sign_out(ctx).await,
+            Callback::ClientList => self.client_list(ctx).await,
         }
     }
 }
@@ -268,16 +286,18 @@ _{}_
     }
 
     if ctx.has_right(Rule::EditSchedule) {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+        let mut keys = vec![];
+        keys.push(InlineKeyboardButton::callback(
             "🗑️ Удалить эту тренировку",
             Callback::Delete(false).to_data(),
-        )]);
+        ));
         if !training.is_one_time {
-            keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+            keys.push(InlineKeyboardButton::callback(
                 "🗑️ Удалить все последующие",
                 Callback::Delete(true).to_data(),
-            )]);
+            ));
         }
+        keymap = keymap.append_row(keys);
     }
 
     if is_client {
