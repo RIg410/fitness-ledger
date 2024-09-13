@@ -270,7 +270,7 @@ async fn inner_callback_handler(
                     None => widget,
                 }
             } else {
-                main_view.show(ctx).await?;
+                main_view.send_self(ctx).await?;
                 Box::new(main_view)
             }
         }
