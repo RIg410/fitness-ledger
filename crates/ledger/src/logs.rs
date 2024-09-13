@@ -81,7 +81,7 @@ impl Logs {
         &self,
         session: &mut Session,
         date_time: DateTime<chrono::Local>,
-    ) -> Result<()> {
+    ) -> Result<u64> {
         self.store.gc(session, date_time).await
     }
 

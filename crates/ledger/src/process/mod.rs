@@ -1,11 +1,13 @@
 use crate::Ledger;
 use eyre::{Context, Result};
 use freeze::FreezeBg;
+use logs::LogsBg;
 use model::session::Session;
 use subscription::SubscriptionBg;
 use training::TriningBg;
 
 pub mod freeze;
+pub mod logs;
 pub mod subscription;
 pub mod training;
 
@@ -14,6 +16,7 @@ pub struct BgProcessor {
     pub training: TriningBg,
     pub freeze: FreezeBg,
     pub subscriptions: SubscriptionBg,
+    pub logs: LogsBg,
 }
 
 impl BgProcessor {
@@ -22,6 +25,7 @@ impl BgProcessor {
             training: TriningBg::new(ledger.clone()),
             freeze: FreezeBg::new(ledger.clone()),
             subscriptions: SubscriptionBg::new(ledger.clone()),
+            logs: LogsBg::new(ledger.clone()),
             ledger,
         }
     }
@@ -41,6 +45,7 @@ impl BgProcessor {
             .process(session)
             .await
             .context("subscriptions_process")?;
+        self.logs.process(session).await.context("log_gc_proc")?;
         Ok(())
     }
 }

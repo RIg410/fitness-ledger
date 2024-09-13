@@ -52,11 +52,16 @@ impl LogStore {
         Ok(logs)
     }
 
-    pub async fn gc(&self, session: &mut Session, date_time: DateTime<Local>) -> Result<(), Error> {
-        self.store
+    pub async fn gc(
+        &self,
+        session: &mut Session,
+        date_time: DateTime<Local>,
+    ) -> Result<u64, Error> {
+        let result = self
+            .store
             .delete_many(doc! { "date_time": { "$lt": date_time.with_timezone(&Utc) } })
             .session(session)
             .await?;
-        Ok(())
+        Ok(result.deleted_count)
     }
 }
