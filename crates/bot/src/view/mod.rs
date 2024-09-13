@@ -5,7 +5,6 @@ use teloxide::types::Message;
 
 pub mod calendar;
 pub mod finance;
-pub mod form;
 pub mod menu;
 pub mod signup;
 pub mod subscription;

@@ -61,6 +61,7 @@ impl From<DateTime<Local>> for WeekId {
 pub struct DayId(DateTime<Utc>);
 
 impl DayId {
+    #[allow(deprecated)]
     pub fn new(date_time: DateTime<Local>) -> Self {
         let date = date_time.date().and_hms(0, 0, 0);
         DayId(date.with_timezone(&Utc))
