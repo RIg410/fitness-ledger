@@ -19,7 +19,7 @@ use teloxide::{
     utils::markdown::escape,
 };
 
-use super::{freeze::FreezeProfile, rights::UserRightsView};
+use super::{freeze::FreezeProfile, rights::UserRightsView, set_birthday::SetBirthday, set_fio::SetFio};
 
 pub struct UserProfile {
     tg_id: i64,
@@ -94,6 +94,34 @@ impl UserProfile {
             UserRightsView::new(new_user_new.tg_id, Some(new_user_new.boxed())).boxed(),
         ))
     }
+
+    async fn set_birthday(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+        if ctx.has_right(Rule::EditUserInfo) || ctx.me.tg_id == self.tg_id {
+            Ok(Some(
+                SetBirthday::new(
+                    self.tg_id,
+                    Some(UserProfile::new(self.tg_id, self.go_back.take()).boxed()),
+                )
+                .boxed(),
+            ))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn set_fio(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+        if ctx.has_right(Rule::EditUserInfo) {
+            Ok(Some(
+                SetFio::new(
+                    self.tg_id,
+                    Some(UserProfile::new(self.tg_id, self.go_back.take()).boxed()),
+                )
+                .boxed(),
+            ))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 #[async_trait]
@@ -140,10 +168,11 @@ impl View for UserProfile {
                 }
             }
             Callback::BlockUnblock => self.block_user(ctx).await,
-            Callback::Edit => Ok(None),
+            Callback::EditFio => self.set_fio(ctx).await,
             Callback::EditRights => self.edit_rights(ctx).await,
             Callback::Freeze => self.freeze_user(ctx).await,
             Callback::ChangeBalance(amount) => self.change_balance(ctx, amount).await,
+            Callback::SetBirthday => self.set_birthday(ctx).await,
         }
     }
 }
@@ -174,8 +203,12 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
             "✅ Разблокировать"
         }));
     }
+    if ctx.has_right(Rule::EditUserInfo) || (ctx.me.id == user.id && user.birthday.is_none()) {
+        keymap = keymap.append_row(Callback::SetBirthday.btn_row("Установить дату рождения"));
+    }
+
     if ctx.has_right(Rule::EditUserInfo) {
-        keymap = keymap.append_row(Callback::Edit.btn_row("✍️ Редактировать"))
+        keymap = keymap.append_row(Callback::EditFio.btn_row("✍️ Редактировать ФИО"));
     }
     if ctx.has_right(Rule::EditUserRights) {
         keymap = keymap.append_row(Callback::EditRights.btn_row("🔒 Права"));
@@ -191,7 +224,8 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
 pub enum Callback {
     Back,
     BlockUnblock,
-    Edit,
+    EditFio,
+    SetBirthday,
     EditRights,
     Freeze,
     ChangeBalance(i32),

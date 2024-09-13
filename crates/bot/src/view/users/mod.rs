@@ -15,6 +15,8 @@ use teloxide::{
 pub mod freeze;
 pub mod profile;
 pub mod rights;
+pub mod set_birthday;
+pub mod set_fio;
 
 pub const LIMIT: u64 = 7;
 

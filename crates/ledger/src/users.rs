@@ -96,6 +96,7 @@ impl Users {
         session: &mut ClientSession,
         id: i64,
         date: DateTime<Local>,
+        forced: bool,
     ) -> std::result::Result<(), SetDateError> {
         let user = self
             .store
@@ -103,7 +104,7 @@ impl Users {
             .await
             .map_err(SetDateError::Common)?;
         let user = user.ok_or(SetDateError::UserNotFound)?;
-        if user.birthday.is_some() {
+        if !forced && user.birthday.is_some() {
             return Err(SetDateError::AlreadySet);
         }
         self.store
@@ -165,6 +166,21 @@ impl Users {
         amount: i32,
     ) -> Result<()> {
         self.store.change_balance(session, tg_id, amount).await
+    }
+
+    #[tx]
+    pub async fn set_name(
+        &self,
+        session: &mut ClientSession,
+        tg_id: i64,
+        first_name: &str,
+        last_name: &str,
+    ) -> Result<()> {
+        self.store
+            .set_first_name(session, tg_id, first_name)
+            .await?;
+        self.store.set_last_name(session, tg_id, last_name).await?;
+        Ok(())
     }
 }
 

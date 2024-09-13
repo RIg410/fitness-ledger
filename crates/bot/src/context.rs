@@ -66,6 +66,7 @@ impl Context {
         text: &str,
         markup: InlineKeyboardMarkup,
     ) -> Result<(), eyre::Error> {
+        //markup = markup.append_row(vec![MainMenuItem::Home.into()]);
         let update_result = self
             .bot
             .edit_message_text(self.chat_id(), self.origin.message_id, text)

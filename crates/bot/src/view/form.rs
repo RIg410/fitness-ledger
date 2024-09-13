@@ -10,3 +10,4 @@ pub enum Dialog {
     Text {},
     Callback {},
 }
+
