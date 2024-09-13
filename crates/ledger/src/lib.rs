@@ -103,6 +103,7 @@ impl Ledger {
         session: &mut ClientSession,
         training: &Training,
         client: ObjectId,
+        forced: bool,
     ) -> Result<(), SignUpError> {
         let training = self
             .calendar
@@ -110,7 +111,11 @@ impl Ledger {
             .await?
             .ok_or_else(|| SignUpError::TrainingNotFound)?;
         let status = training.status(Local::now());
-        if !status.can_sign_in() {
+        if !forced && !status.can_sign_in() {
+            return Err(SignUpError::TrainingNotOpenToSignUp(status));
+        }
+
+        if training.is_processed {
             return Err(SignUpError::TrainingNotOpenToSignUp(status));
         }
 

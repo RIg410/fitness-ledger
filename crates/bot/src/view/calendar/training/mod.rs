@@ -16,6 +16,8 @@ use teloxide::{
 };
 
 mod client_list;
+mod client;
+mod add_client;
 
 pub struct TrainingView {
     id: DateTime<Local>,
@@ -123,7 +125,7 @@ impl TrainingView {
         }
 
         ctx.ledger
-            .sign_up(&mut ctx.session, &training, ctx.me.id)
+            .sign_up(&mut ctx.session, &training, ctx.me.id, false)
             .await?;
         self.show(ctx).await?;
         Ok(None)

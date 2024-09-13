@@ -1,4 +1,8 @@
-use super::View;
+use super::{
+    add_client::AddClientView,
+    client::{ClientView, Reason},
+    View,
+};
 use crate::{callback_data::Calldata, context::Context, state::Widget, view::menu::MainMenuItem};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
@@ -25,6 +29,19 @@ impl ClientList {
 
     pub fn go_back(&mut self, _: &mut Context) -> Result<Option<Widget>> {
         Ok(self.go_back.take())
+    }
+
+    pub async fn view_user_profile(&mut self, id: ObjectId) -> Result<Option<Widget>> {
+        let back = ClientList::new(self.start_at, self.go_back.take()).boxed();
+        let view = ClientView::new(id, self.start_at, Reason::RemoveClient, Some(back)).boxed();
+        Ok(Some(view))
+    }
+
+    pub async fn add_client(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+        ctx.ensure(Rule::EditTrainingClientsList)?;
+        let back = ClientList::new(self.start_at, self.go_back.take()).boxed();
+        let view = AddClientView::new(self.start_at, back).boxed();
+        Ok(Some(view))
     }
 
     pub async fn delete_client(
@@ -110,7 +127,7 @@ impl View for ClientList {
                 user.name.tg_user_name.unwrap_or_default()
             );
             let mut row = Vec::with_capacity(2);
-            row.push(Callback::SelectClient(user.tg_id).button(format!("👤 {}", user_name)));
+            row.push(Callback::SelectClient(user.id.bytes()).button(format!("👤 {}", user_name)));
             if ctx.has_right(Rule::EditTrainingClientsList) && !training.is_processed {
                 row.push(Callback::DeleteClient(user.id.bytes()).button("❌".to_string()))
             }
@@ -146,8 +163,8 @@ impl View for ClientList {
             return Ok(None);
         };
         match cb {
-            Callback::SelectClient(id) => todo!(),
-            Callback::AddClient => todo!(),
+            Callback::SelectClient(id) => self.view_user_profile(ObjectId::from_bytes(id)).await,
+            Callback::AddClient => self.add_client(ctx).await,
             Callback::DeleteClient(id) => self.delete_client(ctx, ObjectId::from_bytes(id)).await,
             Callback::Back => self.go_back(ctx),
         }
@@ -156,7 +173,7 @@ impl View for ClientList {
 
 #[derive(Serialize, Deserialize)]
 enum Callback {
-    SelectClient(i64),
+    SelectClient([u8; 12]),
     AddClient,
     DeleteClient([u8; 12]),
     Back,

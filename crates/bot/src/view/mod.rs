@@ -31,6 +31,13 @@ pub trait View {
         ctx: &mut Context,
         data: &str,
     ) -> Result<Option<Widget>, eyre::Error>;
+
+    fn boxed(self) -> Widget
+    where
+        Self: Sized + Send + Sync + 'static,
+    {
+        Box::new(self)
+    }
 }
 
 // use async_trait::async_trait;
