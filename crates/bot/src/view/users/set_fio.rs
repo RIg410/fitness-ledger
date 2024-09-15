@@ -53,8 +53,14 @@ impl View for SetFio {
         Ok(self.go_back.take())
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Option<Widget>> {
-        Ok(None)
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Option<Widget>> {
+        if let Some(cb) = Callback::from_data(data) {
+            match cb {
+                Callback::Back => Ok(self.go_back.take()),
+            }
+        } else {
+            Ok(None)
+        }
     }
 }
 
