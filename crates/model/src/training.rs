@@ -24,6 +24,7 @@ pub struct Training {
     #[serde(default)]
     pub is_canceled: bool,
     #[serde(default)]
+    #[serde(rename = "is_finished")]
     pub is_processed: bool,
 }
 

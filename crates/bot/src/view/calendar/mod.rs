@@ -208,6 +208,7 @@ pub async fn render_week(
                 "{} {} {}",
                 render_training_status(
                     training.status(now),
+                    training.is_processed,
                     training.is_full(),
                     training.clients.contains(&ctx.me.id)
                 ),
@@ -277,31 +278,44 @@ pub fn render_weekday(weekday: &DateTime<Local>) -> &'static str {
     }
 }
 
-pub fn render_training_status(training: TrainingStatus, is_full: bool, my: bool) -> &'static str {
-    match training {
-        TrainingStatus::Finished => {
-            if my {
-                "✔️❤️"
-            } else {
-                "✔️"
-            }
+pub fn render_training_status(
+    training: TrainingStatus,
+    is_processed: bool,
+    is_full: bool,
+    my: bool,
+) -> &'static str {
+    if is_processed {
+        if my {
+            "✔️❤️"
+        } else {
+            "✔️"
         }
-        TrainingStatus::OpenToSignup { .. } => {
-            if my {
-                "❤️"
-            } else if is_full {
-                "🟣"
-            } else {
-                "🟢"
+    } else {
+        match training {
+            TrainingStatus::Finished => {
+                if my {
+                    "✅❤️"
+                } else {
+                    "✅"
+                }
             }
-        }
-        TrainingStatus::ClosedToSignup => "🟠",
-        TrainingStatus::InProgress => "🔵",
-        TrainingStatus::Cancelled => {
-            if my {
-                "⛔💔"
-            } else {
-                "⛔"
+            TrainingStatus::OpenToSignup { .. } => {
+                if my {
+                    "❤️"
+                } else if is_full {
+                    "🟣"
+                } else {
+                    "🟢"
+                }
+            }
+            TrainingStatus::ClosedToSignup => "🟠",
+            TrainingStatus::InProgress => "🔵",
+            TrainingStatus::Cancelled => {
+                if my {
+                    "⛔💔"
+                } else {
+                    "⛔"
+                }
             }
         }
     }

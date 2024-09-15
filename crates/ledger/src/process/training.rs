@@ -1,7 +1,10 @@
 use crate::Ledger;
 use eyre::{eyre, Result};
 use log::{error, info};
-use model::{session::Session, training::{Training, TrainingStatus}};
+use model::{
+    session::Session,
+    training::{Training, TrainingStatus},
+};
 use tx_macro::tx;
 
 pub struct TriningBg {
@@ -18,6 +21,7 @@ impl TriningBg {
         let now = chrono::Local::now();
         while let Some(day) = cursor.next(session).await {
             let day = day?;
+            info!("{:?}", day);
             for training in day.training {
                 if training.is_processed {
                     continue;
@@ -45,11 +49,7 @@ impl TriningBg {
     }
 
     #[tx]
-    async fn process_finished(
-        &self,
-        session: &mut Session,
-        training: Training,
-    ) -> Result<()> {
+    async fn process_finished(&self, session: &mut Session, training: Training) -> Result<()> {
         info!("Finalize training:{:?}", training);
         for client in training.clients {
             let user = self

@@ -6,7 +6,7 @@ use log::info;
 use model::rights;
 use model::session::Session;
 use model::subscription::Subscription;
-use model::user::{Freeze, User, UserSubscription};
+use model::user::{Freeze, User, UserPreCell, UserSubscription};
 use mongodb::bson::to_bson;
 use mongodb::options::UpdateOptions;
 use mongodb::IndexModel;
@@ -252,7 +252,7 @@ impl UserStore {
             bail!("Insufficient reserved balance");
         }
         user.version += 1;
-        user.reserved_balance -= amount;
+        user.reserved_balance = user.reserved_balance.saturating_sub(amount);
         user.subscriptions
             .sort_by(|a, b| a.end_date.cmp(&b.end_date));
         if let Some(sub) = user.subscriptions.first_mut() {

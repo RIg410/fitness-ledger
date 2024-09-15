@@ -1,6 +1,7 @@
 use crate::Ledger;
 use eyre::{Context, Result};
 use freeze::FreezeBg;
+use log::{debug, error};
 use logs::LogsBg;
 use model::session::Session;
 use subscription::SubscriptionBg;
@@ -31,21 +32,37 @@ impl BgProcessor {
     }
 
     pub async fn process(&self, session: &mut Session) -> Result<()> {
-        self.training
+        debug!("training process");
+        let result = self
+            .training
             .process(session)
             .await
-            .context("training_process")?;
+            .context("training_process");
+        if let Err(err) = result {
+            error!("Failed to training proc error:{:#?}", err);
+        }
 
-        self.freeze
-            .process(session)
-            .await
-            .context("freeze_process")?;
+        debug!("freeze process");
+        let result = self.freeze.process(session).await.context("freeze_process");
+        if let Err(err) = result {
+            error!("Failed to training proc error:{:#?}", err);
+        }
 
-        self.subscriptions
+        debug!("subscriptions process");
+        let result = self
+            .subscriptions
             .process(session)
             .await
-            .context("subscriptions_process")?;
-        self.logs.process(session).await.context("log_gc_proc")?;
+            .context("subscriptions_process");
+        if let Err(err) = result {
+            error!("Failed to training proc error:{:#?}", err);
+        }
+
+        debug!("logs process");
+        let result = self.logs.process(session).await.context("log_gc_proc");
+        if let Err(err) = result {
+            error!("Failed to training proc error:{:#?}", err);
+        }
         Ok(())
     }
 }

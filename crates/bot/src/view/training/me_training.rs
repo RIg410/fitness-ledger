@@ -105,6 +105,7 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
                 "{} {} {}",
                 render_training_status(
                     training.status(now),
+                    training.is_processed,
                     training.is_full(),
                     training.clients.contains(&ctx.me.id)
                 ),
