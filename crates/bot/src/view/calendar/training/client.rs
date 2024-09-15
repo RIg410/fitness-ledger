@@ -126,7 +126,13 @@ impl View for ClientView {
             .get(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("User not found:{}", self.id))?;
-        let msg = render_profile_msg(&user);
+
+        let training = ctx
+            .ledger
+            .calendar
+            .get_users_trainings(&mut ctx.session, user.id, 100, 0)
+            .await?;
+        let msg = render_profile_msg(&user, ctx.has_right(Rule::ViewProfile), &training);
         let mut keymap = InlineKeyboardMarkup::default();
 
         match self.reason {

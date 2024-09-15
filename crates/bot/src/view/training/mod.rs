@@ -1,6 +1,6 @@
 pub mod create_training;
 pub mod find_training;
-pub mod me_training;
+pub mod client_training;
 pub mod schedule_process;
 pub mod schedule_training;
 pub mod view_training_proto;
@@ -10,7 +10,7 @@ use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
 use find_training::FindTraining;
-use me_training::MyTrainings;
+use client_training::ClientTrainings;
 use model::ids::WeekId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
@@ -35,14 +35,16 @@ impl View for TrainingMainView {
         Ok(None)
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Option<Widget>> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
         let cb = if let Some(cb) = Callback::from_data(data) {
             cb
         } else {
             return Ok(None);
         };
         match cb {
-            Callback::MyTrainings => return Ok(Some(Box::new(MyTrainings::default()))),
+            Callback::MyTrainings => {
+                return Ok(Some(Box::new(ClientTrainings::new(ctx.me.id, None))))
+            }
             Callback::Schedule => {
                 let widget = Box::new(CalendarView::new(
                     WeekId::default(),

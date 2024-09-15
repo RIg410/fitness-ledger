@@ -1,11 +1,18 @@
 use std::mem;
 
-use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
+use crate::{
+    callback_data::Calldata as _,
+    context::Context,
+    state::Widget,
+    view::{training::client_training::ClientTrainings, View},
+};
 use async_trait::async_trait;
 use chrono::Local;
+use eyre::eyre;
 use log::warn;
 use model::{
     rights::Rule,
+    training::Training,
     user::{User, UserSubscription},
 };
 use serde::{Deserialize, Serialize};
@@ -106,6 +113,23 @@ impl UserProfile {
         }
     }
 
+    async fn training_list(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+        let user = ctx
+            .ledger
+            .users
+            .get_by_tg_id(&mut ctx.session, self.tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found:{}", self.tg_id))?;
+
+        Ok(Some(
+            ClientTrainings::new(
+                user.id,
+                Some(UserProfile::new(self.tg_id, self.go_back.take()).boxed()),
+            )
+            .boxed(),
+        ))
+    }
+
     async fn set_fio(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
             Ok(Some(
@@ -130,7 +154,12 @@ impl View for UserProfile {
             .get_by_tg_id(&mut ctx.session, self.tg_id)
             .await?
             .ok_or_else(|| eyre::eyre!("User not found:{}", self.tg_id))?;
-        let (msg, keymap) = render_user_profile(&ctx, &user, self.go_back.is_some());
+        let trainings = ctx
+            .ledger
+            .calendar
+            .get_users_trainings(&mut ctx.session, user.id, 100, 0)
+            .await?;
+        let (msg, keymap) = render_user_profile(&ctx, &user, &trainings, self.go_back.is_some());
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
@@ -170,12 +199,18 @@ impl View for UserProfile {
             Callback::Freeze => self.freeze_user(ctx).await,
             Callback::ChangeBalance(amount) => self.change_balance(ctx, amount).await,
             Callback::SetBirthday => self.set_birthday(ctx).await,
+            Callback::TrainingList => self.training_list(ctx).await,
         }
     }
 }
 
-fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, InlineKeyboardMarkup) {
-    let msg = render_profile_msg(user);
+fn render_user_profile(
+    ctx: &Context,
+    user: &User,
+    trainings: &Vec<Training>,
+    back: bool,
+) -> (String, InlineKeyboardMarkup) {
+    let msg = render_profile_msg(user, ctx.has_right(Rule::ViewProfile), trainings);
 
     let mut keymap = InlineKeyboardMarkup::default();
     if ctx.has_right(Rule::FreezeUsers) || ctx.me.tg_id == user.tg_id {
@@ -192,6 +227,8 @@ fn render_user_profile(ctx: &Context, user: &User, back: bool) -> (String, Inlin
             Callback::ChangeBalance(1).button("Пополнить баланс 💰"),
         ]);
     }
+
+    keymap = keymap.append_row(Callback::TrainingList.btn_row("Записи 📝"));
 
     if ctx.has_right(Rule::BlockUser) && ctx.me.tg_id != user.tg_id {
         keymap = keymap.append_row(Callback::BlockUnblock.btn_row(if user.is_active {
@@ -224,6 +261,7 @@ pub enum Callback {
     SetBirthday,
     EditRights,
     Freeze,
+    TrainingList,
     ChangeBalance(i32),
 }
 
@@ -236,8 +274,15 @@ fn render_sub(sub: &UserSubscription) -> String {
     )
 }
 
-pub fn render_profile_msg(user: &User) -> String {
+pub fn render_profile_msg(user: &User, sys_info: bool, trainings: &Vec<Training>) -> String {
     let empty = "?".to_string();
+
+    let sys_info = if sys_info {
+        format!("*Резерв : _{}_ занятий*", user.reserved_balance)
+    } else {
+        "".to_owned()
+    };
+
     let mut msg = format!(
         "
 {} Пользователь : _@{}_
@@ -246,7 +291,7 @@ pub fn render_profile_msg(user: &User) -> String {
 Дата рождения : _{}_
 ➖➖➖➖➖➖➖➖➖➖
 *Баланс : _{}_ занятий*
-*Резерв : _{}_ занятий*
+{}
 *Осталось дней заморозок: _{}_*
 ➖➖➖➖➖➖➖➖➖➖
     ",
@@ -262,10 +307,21 @@ pub fn render_profile_msg(user: &User) -> String {
                 .unwrap_or_else(|| empty.clone())
         ),
         user.balance,
-        user.reserved_balance,
+        sys_info,
         user.freeze_days
     );
 
+    if !trainings.is_empty() {
+        msg.push_str("Записи:\n");
+        for training in trainings {
+            msg.push_str(&escape(&format!(
+                "{} {}\n",
+                training.start_at.format("%d.%m %H:%M"),
+                training.name
+            )))
+        }
+        msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
+    }
     let mut subs = user.subscriptions.iter().collect::<Vec<_>>();
     subs.sort_by(|a, b| a.end_date.cmp(&b.end_date));
     msg.push_str("Абонементы:\n");

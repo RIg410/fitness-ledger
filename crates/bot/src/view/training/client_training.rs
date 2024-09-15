@@ -9,24 +9,25 @@ use async_trait::async_trait;
 use chrono::Local;
 use eyre::Result;
 use model::rights::Rule;
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
-#[derive(Default)]
-pub struct MyTrainings {
+pub struct ClientTrainings {
+    id: ObjectId,
     go_back: Option<Widget>,
 }
 
-impl MyTrainings {
-    pub fn new(go_back: Option<Widget>) -> Self {
-        Self { go_back }
+impl ClientTrainings {
+    pub fn new(id: ObjectId, go_back: Option<Widget>) -> Self {
+        Self { id, go_back }
     }
 }
 
 #[async_trait]
-impl View for MyTrainings {
+impl View for ClientTrainings {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let (msg, keyboard) = render(ctx, self.go_back.is_some()).await?;
+        let (msg, keyboard) = render(ctx, self.id, self.go_back.is_some()).await?;
         ctx.edit_origin(&msg, keyboard).await?;
         Ok(())
     }
@@ -51,12 +52,13 @@ impl View for MyTrainings {
             Callback::SelectTraining(date) => {
                 let widget = Box::new(TrainingView::new(
                     date.into(),
-                    Some(Box::new(MyTrainings::new(self.go_back.take()))),
+                    Some(Box::new(ClientTrainings::new(self.id, self.go_back.take()))),
                 ));
                 Ok(Some(widget))
             }
             Callback::FindTraining => {
-                let this = Box::new(MyTrainings {
+                let this = Box::new(ClientTrainings {
+                    id: self.id,
                     go_back: self.go_back.take(),
                 });
                 let widget = Box::new(FindTraining::new(Some(this)));
@@ -66,7 +68,11 @@ impl View for MyTrainings {
     }
 }
 
-async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeyboardMarkup)> {
+async fn render(
+    ctx: &mut Context,
+    id: ObjectId,
+    go_back: bool,
+) -> Result<(String, InlineKeyboardMarkup)> {
     let mut msg = "🫶🏻 Мои тренировки:".to_owned();
 
     let mut keymap = InlineKeyboardMarkup::default();
@@ -74,7 +80,7 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
     let trainings = ctx
         .ledger
         .calendar
-        .get_users_trainings(&mut ctx.session, ctx.me.id, 100, 0)
+        .get_users_trainings(&mut ctx.session, id, 100, 0)
         .await?;
 
     if trainings.is_empty() && !ctx.has_right(Rule::Train) {
@@ -89,8 +95,10 @@ async fn render(ctx: &mut Context, go_back: bool) -> Result<(String, InlineKeybo
     msg.push_str(
         "
 ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖
-🟢\\- запись открыта ⛔\\- тренировка отменена
-🟠\\- запись закрыта ✔️\\- тренировка прошла
+🟢\\- запись открыта 
+⛔\\- тренировка отменена
+🟠\\- запись закрыта 
+✔️\\- тренировка прошла
 🔵\\- тренировка идет
 ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖
 ",
