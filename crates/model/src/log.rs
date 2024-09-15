@@ -126,6 +126,7 @@ pub enum Action {
         id: ObjectId,
         proto_id: ObjectId,
         start_at: DateTime<Utc>,
+        #[serde(default)]
         instructor: ObjectId,
     },
     FinalizedTraining {
@@ -134,6 +135,7 @@ pub enum Action {
         proto_id: ObjectId,
         start_at: DateTime<Utc>,
         clients: Vec<ObjectId>,
+        #[serde(default)]
         instructor: ObjectId,
     },
     FinalizedCanceledTraining {
@@ -142,6 +144,7 @@ pub enum Action {
         proto_id: ObjectId,
         start_at: DateTime<Utc>,
         clients: Vec<ObjectId>,
+        #[serde(default)]
         instructor: ObjectId,
     },
 }

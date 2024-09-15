@@ -12,8 +12,9 @@ use eyre::eyre;
 use log::warn;
 use model::{
     rights::Rule,
+    subscription::{Status, UserSubscription},
     training::Training,
-    user::{User, UserSubscription},
+    user::User,
 };
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -213,7 +214,10 @@ fn render_user_profile(
     let msg = render_profile_msg(user, ctx.has_right(Rule::ViewProfile), trainings);
 
     let mut keymap = InlineKeyboardMarkup::default();
-    if ctx.has_right(Rule::FreezeUsers) || ctx.me.tg_id == user.tg_id {
+    if ctx.has_right(Rule::FreezeUsers)
+        || ctx.me.tg_id == user.tg_id
+        || !user.subscriptions.is_empty()
+    {
         if user.freeze.is_none() {
             if user.freeze_days != 0 {
                 keymap = keymap.append_row(Callback::Freeze.btn_row("Заморозить ❄"));
@@ -266,12 +270,24 @@ pub enum Callback {
 }
 
 fn render_sub(sub: &UserSubscription) -> String {
-    format!(
-        "🎟_{}_\nОсталось занятий:_{}_\nДействует до:_{}_\n",
-        escape(&sub.name),
-        sub.items,
-        sub.end_date.with_timezone(&Local).format("%d\\.%m\\.%Y")
-    )
+    match sub.status {
+        Status::NotActive => {
+            format!(
+                "🎟_{}_\nОсталось занятий:_{}_\nНе активен\\. \n",
+                escape(&sub.name),
+                sub.items,
+            )
+        }
+        Status::Active { start_date } => {
+            let end_date = start_date + chrono::Duration::days(i64::from(sub.days));
+            format!(
+                "🎟_{}_\nОсталось занятий:_{}_\nДействует до:_{}_\n",
+                escape(&sub.name),
+                sub.items,
+                end_date.with_timezone(&Local).format("%d\\.%m\\.%Y")
+            )
+        }
+    }
 }
 
 pub fn render_profile_msg(user: &User, sys_info: bool, trainings: &Vec<Training>) -> String {
@@ -294,7 +310,7 @@ pub fn render_profile_msg(user: &User, sys_info: bool, trainings: &Vec<Training>
 {}
 *Осталось дней заморозок: _{}_*
 ➖➖➖➖➖➖➖➖➖➖
-    ",
+",
         user_type(user),
         escape(user.name.tg_user_name.as_ref().unwrap_or_else(|| &empty)),
         escape(&user.name.first_name),
@@ -323,14 +339,21 @@ pub fn render_profile_msg(user: &User, sys_info: bool, trainings: &Vec<Training>
         msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
     }
     let mut subs = user.subscriptions.iter().collect::<Vec<_>>();
-    subs.sort_by(|a, b| a.end_date.cmp(&b.end_date));
+    subs.sort_by(|a, b| a.status.cmp(&b.status));
     msg.push_str("Абонементы:\n");
     if !subs.is_empty() {
         for sub in subs {
             msg.push_str(&render_sub(sub));
         }
     } else {
-        msg.push_str("*нет действующих абонентов*🥺\n");
+        if user.balance == 0 && user.reserved_balance == 0 {
+            msg.push_str("*нет абонементов*🥺\n");
+        } else {
+            msg.push_str(&format!(
+                "🎟_тестовый_\nОсталось занятий:_{}_\n",
+                user.balance + user.reserved_balance
+            ));
+        }
     }
     msg.push_str("➖➖➖➖➖➖➖➖➖➖");
     msg

@@ -1,12 +1,12 @@
 use bson::to_document;
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Duration, Local, Utc};
 use eyre::{bail, eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
 use log::info;
 use model::rights;
 use model::session::Session;
-use model::subscription::Subscription;
-use model::user::{Freeze, User, UserPreCell, UserSubscription};
+use model::subscription::{Status, Subscription, UserSubscription};
+use model::user::{Freeze, User};
 use mongodb::bson::to_bson;
 use mongodb::options::UpdateOptions;
 use mongodb::IndexModel;
@@ -119,20 +119,21 @@ impl UserStore {
         info!("Add subscription for user {}: {:?}", tg_id, sub);
         let freeze_days = sub.freeze_days as i32;
         let amount = sub.items as i32;
-        let start_date = self
-            .get_last_user_subscription(session, tg_id)
-            .await?
-            .map(|sub| sub.end_date)
-            .unwrap_or_else(|| Local::now().with_timezone(&Utc))
-            + chrono::Duration::seconds(1);
-
-        let user_subscription = UserSubscription::with_sub(start_date, sub);
 
         let result = self
             .users
             .update_one(
                 doc! { "tg_id": tg_id },
-                doc! { "$inc": { "balance": amount, "freeze_days": freeze_days, "version": 1 }, "$push": { "subscriptions": to_document(&user_subscription)? } },
+                doc! {
+                "$inc": {
+                    "balance": amount,
+                    "freeze_days": freeze_days,
+                     "version": 1
+                    },
+                    "$push": {
+                        "subscriptions": to_document(&UserSubscription::from(sub))?
+                    }
+                },
             )
             .session(&mut *session)
             .await?;
@@ -141,20 +142,6 @@ impl UserStore {
             return Err(eyre!("Failed to modify balance"));
         }
         Ok(())
-    }
-
-    pub async fn get_last_user_subscription(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-    ) -> Result<Option<UserSubscription>> {
-        let mut user = self
-            .get_by_tg_id(session, tg_id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-        user.subscriptions
-            .sort_by(|a, b| a.end_date.cmp(&b.end_date));
-        Ok(user.subscriptions.last().cloned())
     }
 
     pub async fn find_users_to_unfreeze(&self, session: &mut Session) -> Result<Vec<User>, Error> {
@@ -196,7 +183,16 @@ impl UserStore {
         user.freeze_days -= days;
 
         for sub in user.subscriptions.iter_mut() {
-            sub.end_date += chrono::Duration::days(days as i64);
+            match sub.status {
+                Status::NotActive => {
+                    //no-op
+                }
+                Status::Active { start_date } => {
+                    sub.status = Status::Active {
+                        start_date: start_date + Duration::days(days as i64),
+                    }
+                }
+            }
         }
         user.freeze = Some(Freeze {
             freeze_start: Local::now().with_timezone(&Utc),
@@ -218,15 +214,33 @@ impl UserStore {
         session: &mut Session,
         tg_id: i64,
         amount: u32,
+        sign_up_date: DateTime<Utc>,
     ) -> Result<()> {
         info!("Reserving balance for user {}: {}", tg_id, amount);
+        let mut user = self
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        user.version += 1;
+        if user.balance < amount as u32 {
+            bail!("Insufficient balance");
+        }
+        user.balance -= amount as u32;
+        user.reserved_balance += amount as u32;
 
-        let amount = amount as i32;
+        let has_active = user.subscriptions.iter().any(|s| s.is_active());
+        if !has_active {
+            user.subscriptions.sort_by(|a, b| a.status.cmp(&b.status));
+            if let Some(sub) = user.subscriptions.first_mut() {
+                sub.activate(sign_up_date);
+            }
+        }
+
         let updated = self
             .users
             .update_one(
-                doc! { "tg_id": tg_id, "balance": { "$gte": amount } },
-                doc! { "$inc": { "balance": -amount, "reserved_balance": amount, "version": 1 } },
+                doc! { "tg_id": tg_id },
+                doc! { "$set": to_document(&user)? },
             )
             .session(&mut *session)
             .await?;
@@ -253,9 +267,9 @@ impl UserStore {
         }
         user.version += 1;
         user.reserved_balance = user.reserved_balance.saturating_sub(amount);
-        user.subscriptions
-            .sort_by(|a, b| a.end_date.cmp(&b.end_date));
-        if let Some(sub) = user.subscriptions.first_mut() {
+
+        let active = user.subscriptions.iter_mut().find(|s| s.is_active());
+        if let Some(sub) = active {
             sub.items = sub.items.saturating_sub(amount);
         }
         user.subscriptions.retain(|sub| sub.items > 0);
@@ -461,12 +475,12 @@ impl UserStore {
 
         user.subscriptions
             .iter()
-            .filter(|sub| sub.end_date < now)
+            .filter(|sub| sub.is_expired(now))
             .for_each(|sub| {
-                user.balance = user.balance.saturating_sub(sub.items);
+                user.balance -= sub.items;
             });
 
-        user.subscriptions.retain(|sub| sub.end_date >= now);
+        user.subscriptions.retain(|sub| !sub.is_expired(now));
         self.users
             .update_one(
                 doc! { "tg_id": tg_id },

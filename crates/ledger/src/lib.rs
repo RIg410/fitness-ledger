@@ -42,7 +42,12 @@ impl Ledger {
     pub fn new(storage: Storage) -> Self {
         let logs = logs::Logs::new(storage.logs);
         let programs = Programs::new(storage.training, logs.clone());
-        let calendar = Calendar::new(storage.calendar, storage.users.clone(), programs.clone(), logs.clone());
+        let calendar = Calendar::new(
+            storage.calendar,
+            storage.users.clone(),
+            programs.clone(),
+            logs.clone(),
+        );
         let users = Users::new(storage.users, logs.clone());
         let treasury = Treasury::new(storage.treasury, logs.clone());
         let subscriptions = Subscriptions::new(storage.subscriptions, logs.clone());
@@ -137,7 +142,9 @@ impl Ledger {
         if user.balance == 0 {
             return Err(SignUpError::NotEnoughBalance);
         }
-        self.users.reserve_balance(session, user.tg_id, 1).await?;
+        self.users
+            .reserve_balance(session, user.tg_id, 1, training.start_at)
+            .await?;
 
         self.calendar
             .sign_up(session, training.start_at, client)

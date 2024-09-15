@@ -1,5 +1,5 @@
 use crate::logs::Logs;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Utc};
 use eyre::{bail, eyre, Error, Result};
 use log::info;
 use model::{
@@ -214,8 +214,9 @@ impl Users {
         session: &mut Session,
         tg_id: i64,
         amount: u32,
+        sign_up_date: DateTime<Utc>,
     ) -> Result<(), Error> {
-        self.store.reserve_balance(session, tg_id, amount).await?;
+        self.store.reserve_balance(session, tg_id, amount, sign_up_date).await?;
         Ok(())
     }
 
