@@ -490,4 +490,20 @@ impl UserStore {
             .await?;
         Ok(())
     }
+
+    pub async fn set_phone(&self, session: &mut Session, tg_id: i64, phone: &str) -> Result<()> {
+        info!("Setting phone for user {}: {}", tg_id, phone);
+        let result = self
+            .users
+            .update_one(
+                doc! { "tg_id": tg_id },
+                doc! { "$set": { "phone": phone }, "$inc": { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        if result.modified_count == 0 {
+            return Err(Error::msg("User not found"));
+        }
+        Ok(())
+    }
 }

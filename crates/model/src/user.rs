@@ -1,5 +1,5 @@
-use crate::subscription::UserSubscription;
 use super::rights::Rights;
+use crate::subscription::UserSubscription;
 use chrono::{DateTime, Local, Utc};
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
@@ -80,4 +80,65 @@ pub struct UserPreCell {
     pub id: ObjectId,
     pub subscription: UserSubscription,
     pub phone: String,
+}
+
+pub fn sanitize_phone(phone: &str) -> String {
+    phone
+        .chars()
+        .filter_map(|c| if c.is_digit(10) { Some(c) } else { None })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::user::sanitize_phone;
+
+    #[test]
+    fn test_sanitize_phone_with_special_characters() {
+        let phone = "+1 (234) 567-8900";
+        let sanitized = sanitize_phone(phone);
+        assert_eq!(sanitized, "12345678900");
+    }
+
+    #[test]
+    fn test_sanitize_phone_with_spaces() {
+        let phone = "123 456 7890";
+        let sanitized = sanitize_phone(phone);
+        assert_eq!(sanitized, "1234567890");
+    }
+
+    #[test]
+    fn test_sanitize_phone_with_dashes() {
+        let phone = "123-456-7890";
+        let sanitized = sanitize_phone(phone);
+        assert_eq!(sanitized, "1234567890");
+    }
+
+    #[test]
+    fn test_sanitize_phone_with_dots() {
+        let phone = "123.456.7890";
+        let sanitized = sanitize_phone(phone);
+        assert_eq!(sanitized, "1234567890");
+    }
+
+    #[test]
+    fn test_sanitize_phone_with_letters() {
+        let phone = "123-abc-7890";
+        let sanitized = sanitize_phone(phone);
+        assert_eq!(sanitized, "1237890");
+    }
+
+    #[test]
+    fn test_sanitize_phone_with_empty_string() {
+        let phone = "";
+        let sanitized = sanitize_phone(phone);
+        assert_eq!(sanitized, "");
+    }
+
+    #[test]
+    fn test_sanitize_phone_with_only_special_characters() {
+        let phone = "+-()";
+        let sanitized = sanitize_phone(phone);
+        assert_eq!(sanitized, "");
+    }
 }

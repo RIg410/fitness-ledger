@@ -24,6 +24,7 @@ use teloxide::{
 
 use super::{
     freeze::FreezeProfile, rights::UserRightsView, set_birthday::SetBirthday, set_fio::SetFio,
+    set_phone::SetPhone,
 };
 
 pub struct UserProfile {
@@ -144,6 +145,20 @@ impl UserProfile {
             Ok(None)
         }
     }
+
+    async fn set_phone(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+        if ctx.has_right(Rule::EditUserInfo) {
+            Ok(Some(
+                SetPhone::new(
+                    self.tg_id,
+                    Some(UserProfile::new(self.tg_id, self.go_back.take()).boxed()),
+                )
+                .boxed(),
+            ))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 #[async_trait]
@@ -200,6 +215,7 @@ impl View for UserProfile {
             Callback::Freeze => self.freeze_user(ctx).await,
             Callback::ChangeBalance(amount) => self.change_balance(ctx, amount).await,
             Callback::SetBirthday => self.set_birthday(ctx).await,
+            Callback::EditPhone => self.set_phone(ctx).await,
             Callback::TrainingList => self.training_list(ctx).await,
         }
     }
@@ -247,6 +263,7 @@ fn render_user_profile(
 
     if ctx.has_right(Rule::EditUserInfo) {
         keymap = keymap.append_row(Callback::EditFio.btn_row("✍️ Редактировать ФИО"));
+        keymap = keymap.append_row(Callback::EditPhone.btn_row("✍️ Редактировать телефон"));
     }
     if ctx.has_right(Rule::EditUserRights) {
         keymap = keymap.append_row(Callback::EditRights.btn_row("🔒 Права"));
@@ -262,6 +279,7 @@ pub enum Callback {
     Back,
     BlockUnblock,
     EditFio,
+    EditPhone,
     SetBirthday,
     EditRights,
     Freeze,

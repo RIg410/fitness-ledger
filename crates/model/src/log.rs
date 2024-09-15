@@ -147,4 +147,8 @@ pub enum Action {
         #[serde(default)]
         instructor: ObjectId,
     },
+    SetPhone {
+        tg_id: i64,
+        phone: String,
+    },
 }

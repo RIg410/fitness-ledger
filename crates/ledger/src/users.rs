@@ -6,7 +6,7 @@ use model::{
     rights::{Rights, Rule},
     session::Session,
     subscription::Subscription,
-    user::{User, UserName},
+    user::{sanitize_phone, User, UserName},
 };
 use mongodb::bson::oid::ObjectId;
 use storage::user::UserStore;
@@ -36,6 +36,7 @@ impl Users {
         name: UserName,
         phone: String,
     ) -> Result<()> {
+        let phone = sanitize_phone(&phone);
         let is_first_user = self.store.count(session).await? == 0;
         let rights = if is_first_user {
             Rights::full()
@@ -196,6 +197,14 @@ impl Users {
         self.store.set_last_name(session, tg_id, last_name).await?;
         Ok(())
     }
+
+    #[tx]
+    pub async fn set_phone(&self, session: &mut Session, tg_id: i64, phone: &str) -> Result<()> {
+        let phone = sanitize_phone(phone);
+        self.store.set_phone(session, tg_id, &phone).await?;
+        self.logs.set_phone(session, tg_id, phone).await;
+        Ok(())
+    }
 }
 
 impl Users {
@@ -216,7 +225,9 @@ impl Users {
         amount: u32,
         sign_up_date: DateTime<Utc>,
     ) -> Result<(), Error> {
-        self.store.reserve_balance(session, tg_id, amount, sign_up_date).await?;
+        self.store
+            .reserve_balance(session, tg_id, amount, sign_up_date)
+            .await?;
         Ok(())
     }
 
