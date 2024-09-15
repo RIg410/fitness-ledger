@@ -21,7 +21,6 @@ impl TriningBg {
         let now = chrono::Local::now();
         while let Some(day) = cursor.next(session).await {
             let day = day?;
-            info!("{:?}", day);
             for training in day.training {
                 if training.is_processed {
                     continue;
@@ -51,11 +50,11 @@ impl TriningBg {
     #[tx]
     async fn process_finished(&self, session: &mut Session, training: Training) -> Result<()> {
         info!("Finalize training:{:?}", training);
-        for client in training.clients {
+        for client in &training.clients {
             let user = self
                 .ledger
                 .users
-                .get(session, client)
+                .get(session, *client)
                 .await?
                 .ok_or_else(|| eyre!("User not found"))?;
             if user.reserved_balance == 0 {
@@ -70,21 +69,18 @@ impl TriningBg {
             .calendar
             .finalized(session, training.start_at)
             .await?;
+        self.ledger.logs.process_finished(session, &training).await;
         Ok(())
     }
 
     #[tx]
-    async fn process_canceled(
-        &self,
-        session: &mut Session,
-        training: Training,
-    ) -> Result<()> {
+    async fn process_canceled(&self, session: &mut Session, training: Training) -> Result<()> {
         info!("Finalize canceled training:{:?}", training);
-        for client in training.clients {
+        for client in &training.clients {
             let user = self
                 .ledger
                 .users
-                .get(session, client)
+                .get(session, *client)
                 .await?
                 .ok_or_else(|| eyre!("User not found"))?;
             if user.reserved_balance == 0 {
@@ -100,6 +96,7 @@ impl TriningBg {
             .calendar
             .finalized(session, training.start_at)
             .await?;
+        self.ledger.logs.process_canceled(session, &training).await;
         Ok(())
     }
 }

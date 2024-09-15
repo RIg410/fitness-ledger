@@ -406,6 +406,45 @@ impl Logs {
                 id: training.id,
                 proto_id: training.proto_id,
                 start_at: training.start_at,
+                instructor: training.instructor,
+            },
+        };
+
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn process_finished(&self, session: &mut Session, training: &Training) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::FinalizedTraining {
+                name: training.name.clone(),
+                id: training.id,
+                proto_id: training.proto_id,
+                start_at: training.start_at,
+                clients: training.clients.clone(),
+                instructor: training.instructor,
+            },
+        };
+
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+     pub async fn process_canceled(&self, session: &mut Session, training: &Training) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::FinalizedCanceledTraining {
+                name: training.name.clone(),
+                id: training.id,
+                proto_id: training.proto_id,
+                start_at: training.start_at,
+                clients: training.clients.clone(),
+                instructor: training.instructor,
             },
         };
 

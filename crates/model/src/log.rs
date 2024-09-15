@@ -126,5 +126,22 @@ pub enum Action {
         id: ObjectId,
         proto_id: ObjectId,
         start_at: DateTime<Utc>,
+        instructor: ObjectId,
+    },
+    FinalizedTraining {
+        name: String,
+        id: ObjectId,
+        proto_id: ObjectId,
+        start_at: DateTime<Utc>,
+        clients: Vec<ObjectId>,
+        instructor: ObjectId,
+    },
+    FinalizedCanceledTraining {
+        name: String,
+        id: ObjectId,
+        proto_id: ObjectId,
+        start_at: DateTime<Utc>,
+        clients: Vec<ObjectId>,
+        instructor: ObjectId,
     },
 }
