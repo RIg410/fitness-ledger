@@ -287,6 +287,29 @@ impl Logs {
         }
     }
 
+    pub async fn presell_free_subscription(
+        &self,
+        session: &mut Session,
+        price: Decimal,
+        item: u32,
+        phone: String,
+        seller: i64,
+    ) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::PreFreeSellSub {
+                seller,
+                phone,
+                price,
+                item,
+            },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
     pub async fn sell_subscription(
         &self,
         session: &mut Session,
@@ -300,6 +323,27 @@ impl Logs {
             action: Action::SellSub {
                 seller,
                 buyer,
+                subscription,
+            },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn presell_subscription(
+        &self,
+        session: &mut Session,
+        subscription: Subscription,
+        phone: String,
+        seller: i64,
+    ) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::PreSellSub {
+                seller,
+                phone,
                 subscription,
             },
         };
@@ -445,7 +489,7 @@ impl Logs {
         }
     }
 
-     pub async fn process_canceled(&self, session: &mut Session, training: &Training) {
+    pub async fn process_canceled(&self, session: &mut Session, training: &Training) {
         let entry = model::log::LogEntry {
             actor: session.actor(),
             date_time: chrono::Local::now().with_timezone(&Utc),

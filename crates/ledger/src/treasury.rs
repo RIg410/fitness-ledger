@@ -5,6 +5,7 @@ use model::{
     session::Session,
     treasury::{
         income::Income, outcome::Outcome, subs::SellSubscription, Event, Sell, TreasuryEvent,
+        UserInfo,
     },
     user::User,
 };
@@ -36,6 +37,32 @@ impl Treasury {
 
         let sub = SellSubscription {
             buyer: buyer.into(),
+            info: sell.into(),
+        };
+
+        let event = TreasuryEvent {
+            id: ObjectId::new(),
+            date_time: Utc::now(),
+            event: Event::SellSubscription(sub),
+            debit,
+            credit: Decimal::zero(),
+            user: seller.into(),
+        };
+        self.store.insert(session, event).await?;
+        Ok(())
+    }
+
+    pub(crate) async fn presell(
+        &self,
+        session: &mut Session,
+        seller: User,
+        phone: String,
+        sell: Sell,
+    ) -> Result<(), Error> {
+        let debit = sell.debit();
+
+        let sub = SellSubscription {
+            buyer: UserInfo::from_phone(phone),
             info: sell.into(),
         };
 

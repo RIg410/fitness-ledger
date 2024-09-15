@@ -1,10 +1,13 @@
-use std::{fmt::Display, str::FromStr};
+use std::{
+    fmt::{Debug, Display},
+    str::FromStr,
+};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 const DECIMALS: u8 = 2;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Decimal(i64);
 
 impl Decimal {
@@ -22,6 +25,13 @@ impl Decimal {
 
     pub fn zero() -> Decimal {
         Decimal::int(0)
+    }
+}
+
+impl Debug for Decimal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = self.0 as f64 / 10i64.pow(DECIMALS as u32) as f64;
+        write!(f, "{:.2}", value)
     }
 }
 

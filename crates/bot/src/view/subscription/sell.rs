@@ -1,4 +1,4 @@
-use super::{confirm::ConfirmSell, View};
+use super::{confirm::ConfirmSell, presell::PreSellView, View};
 use crate::{
     callback_data::Calldata as _, context::Context, state::Widget, view::users::profile::user_type,
 };
@@ -29,6 +29,30 @@ impl SellView {
             query: "".to_string(),
             offset: 0,
         }
+    }
+
+    pub fn select(&mut self, user_id: i64, _: &mut Context) -> Result<Option<Widget>> {
+        let back = SellView {
+            go_back: self.go_back.take(),
+            sell: self.sell,
+            query: self.query.clone(),
+            offset: self.offset,
+        }
+        .boxed();
+        return Ok(Some(
+            ConfirmSell::new(user_id, self.sell, Some(back)).boxed(),
+        ));
+    }
+
+    pub fn presell(&mut self) -> Result<Option<Widget>> {
+        let back = Box::new(SellView {
+            go_back: self.go_back.take(),
+            sell: self.sell,
+            query: self.query.clone(),
+            offset: self.offset,
+        });
+        let view = Box::new(PreSellView::new(self.sell, Some(back)));
+        return Ok(Some(view));
     }
 }
 
@@ -72,16 +96,7 @@ impl View for SellView {
                 self.show(ctx).await?;
                 Ok(None)
             }
-            Callback::Select(user_id) => {
-                let back = Box::new(SellView {
-                    go_back: self.go_back.take(),
-                    sell: self.sell,
-                    query: self.query.clone(),
-                    offset: self.offset,
-                });
-                let view = Box::new(ConfirmSell::new(user_id, self.sell, Some(back)));
-                return Ok(Some(view));
-            }
+            Callback::Select(user_id) => self.select(user_id, ctx),
             Callback::Back => {
                 if let Some(back) = self.go_back.take() {
                     Ok(Some(back))
@@ -89,6 +104,7 @@ impl View for SellView {
                     Ok(None)
                 }
             }
+            Callback::PreSell => self.presell(),
         }
     }
 }
@@ -132,8 +148,9 @@ async fn render(
         keymap = keymap.append_row(vec![make_button(user)]);
     }
 
-    let mut raw = vec![];
+    keymap = keymap.append_row(Callback::PreSell.btn_row("Новый пользователь 🪪"));
 
+    let mut raw = vec![];
     if offset > 0 {
         raw.push(InlineKeyboardButton::callback(
             "⬅️",
@@ -198,4 +215,5 @@ enum Callback {
     Prev,
     Back,
     Select(i64),
+    PreSell,
 }

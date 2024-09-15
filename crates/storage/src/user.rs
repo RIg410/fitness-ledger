@@ -506,4 +506,16 @@ impl UserStore {
         }
         Ok(())
     }
+
+    pub async fn get_by_phone(
+        &self,
+        session: &mut Session,
+        phone: &str,
+    ) -> std::result::Result<Option<User>, Error> {
+        Ok(self
+            .users
+            .find_one(doc! { "phone": phone })
+            .session(&mut *session)
+            .await?)
+    }
 }

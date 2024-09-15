@@ -9,19 +9,30 @@ use model::{
     user::{sanitize_phone, User, UserName},
 };
 use mongodb::bson::oid::ObjectId;
-use storage::user::UserStore;
+use storage::{pre_sell::PreSellStore, user::UserStore};
 use thiserror::Error;
 use tx_macro::tx;
 
 #[derive(Clone)]
 pub struct Users {
     store: UserStore,
+    presell: PreSellStore,
     logs: Logs,
 }
 
 impl Users {
-    pub(crate) fn new(store: UserStore, logs: Logs) -> Self {
-        Users { store, logs }
+    pub(crate) fn new(store: UserStore, presell: PreSellStore, logs: Logs) -> Self {
+        Users {
+            store,
+            logs,
+            presell,
+        }
+    }
+
+    pub async fn find_by_phone(&self, session: &mut Session, phone: &str) -> Result<Option<User>> {
+        self.store
+            .get_by_phone(session, &sanitize_phone(phone))
+            .await
     }
 
     pub async fn get_by_tg_id(&self, session: &mut Session, tg_id: i64) -> Result<Option<User>> {
@@ -49,6 +60,13 @@ impl Users {
             return Err(eyre::eyre!("User {} already exists", tg_id));
         }
 
+        let subscriptions = if let Some(presell) = self.presell.get(session, &phone).await? {
+            self.presell.delete(session, &phone).await?;
+            vec![presell.subscription]
+        } else {
+            vec![]
+        };
+
         let user = User {
             tg_id,
             name: name.clone(),
@@ -60,7 +78,7 @@ impl Users {
             is_active: true,
             id: ObjectId::new(),
             reserved_balance: 0,
-            subscriptions: vec![],
+            subscriptions,
             freeze_days: 0,
             freeze: None,
             version: 0,

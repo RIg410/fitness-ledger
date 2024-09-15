@@ -8,7 +8,9 @@ use model::session::Session;
 use model::subscription::Subscription;
 use model::training::{Training, TrainingStatus};
 use model::treasury::Sell;
+use model::user::{sanitize_phone, UserPreSell};
 use mongodb::bson::oid::ObjectId;
+use storage::pre_sell::PreSellStore;
 use storage::session::Db;
 use storage::Storage;
 
@@ -35,6 +37,7 @@ pub struct Ledger {
     pub programs: Programs,
     pub treasury: Treasury,
     pub subscriptions: Subscriptions,
+    pub presell: PreSellStore,
     pub logs: Logs,
 }
 
@@ -48,9 +51,10 @@ impl Ledger {
             programs.clone(),
             logs.clone(),
         );
-        let users = Users::new(storage.users, logs.clone());
+        let users = Users::new(storage.users, storage.presell.clone(), logs.clone());
         let treasury = Treasury::new(storage.treasury, logs.clone());
         let subscriptions = Subscriptions::new(storage.subscriptions, logs.clone());
+        let presell = storage.presell.clone();
         Ledger {
             users,
             calendar,
@@ -59,6 +63,7 @@ impl Ledger {
             treasury,
             subscriptions,
             logs,
+            presell,
         }
     }
 
@@ -238,6 +243,53 @@ impl Ledger {
     }
 
     #[tx]
+    pub async fn presell_subscription(
+        &self,
+        session: &mut Session,
+        subscription: ObjectId,
+        phone: String,
+        seller: i64,
+    ) -> Result<(), SellSubscriptionError> {
+        let phone = sanitize_phone(&phone);
+        let seller = self
+            .users
+            .get_by_tg_id(session, seller)
+            .await?
+            .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
+        let bayer = self.users.find_by_phone(session, &phone).await?;
+        if bayer.is_some() {
+            error!("User with phone {} already exists", phone);
+            return Err(SellSubscriptionError::InvalidParams);
+        }
+
+        let subscription = self
+            .subscriptions
+            .get(session, subscription)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+
+        self.logs
+            .presell_subscription(session, subscription.clone(), phone.clone(), seller.tg_id)
+            .await;
+
+        self.presell
+            .add(
+                session,
+                UserPreSell {
+                    id: ObjectId::new(),
+                    subscription: subscription.clone().into(),
+                    phone: phone.clone(),
+                },
+            )
+            .await?;
+
+        self.treasury
+            .presell(session, seller, phone, Sell::Sub(subscription))
+            .await?;
+        Ok(())
+    }
+
+    #[tx]
     pub async fn sell_free_subscription(
         &self,
         session: &mut Session,
@@ -279,6 +331,56 @@ impl Ledger {
 
         self.treasury
             .sell(session, seller, buyer, Sell::Free(item, price))
+            .await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn presell_free_subscription(
+        &self,
+        session: &mut Session,
+        price: Decimal,
+        item: u32,
+        phone: String,
+        seller: i64,
+    ) -> Result<(), SellSubscriptionError> {
+        let phone = sanitize_phone(&phone);
+        let seller = self
+            .users
+            .get_by_tg_id(session, seller)
+            .await?
+            .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
+        let bayer = self.users.find_by_phone(session, &phone).await?;
+        if bayer.is_some() {
+            error!("User with phone {} already exists", phone);
+            return Err(SellSubscriptionError::InvalidParams);
+        }
+        self.logs
+            .presell_free_subscription(session, price, item, phone.clone(), seller.tg_id)
+            .await;
+
+        self.presell
+            .add(
+                session,
+                UserPreSell {
+                    id: ObjectId::new(),
+                    subscription: Subscription {
+                        id: ObjectId::new(),
+                        name: item.to_string(),
+                        items: item,
+                        price,
+                        version: 0,
+                        freeze_days: 0,
+                        expiration_days: 30,
+                    }
+                    .into(),
+                    phone: phone.clone(),
+                },
+            )
+            .await?;
+
+        self.treasury
+            .presell(session, seller, phone, Sell::Free(item, price))
             .await?;
         Ok(())
     }

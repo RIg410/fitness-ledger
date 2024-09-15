@@ -75,7 +75,7 @@ pub struct UserName {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UserPreCell {
+pub struct UserPreSell {
     #[serde(rename = "_id")]
     pub id: ObjectId,
     pub subscription: UserSubscription,

@@ -151,4 +151,15 @@ pub enum Action {
         tg_id: i64,
         phone: String,
     },
+    PreSellSub {
+        seller: i64,
+        phone: String,
+        subscription: Subscription,
+    },
+    PreFreeSellSub {
+        seller: i64,
+        phone: String,
+        price: Decimal,
+        item: u32,
+    },
 }

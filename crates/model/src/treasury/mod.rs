@@ -53,6 +53,19 @@ impl From<User> for UserInfo {
     }
 }
 
+impl UserInfo {
+    pub fn from_phone(phone: String) -> Self {
+        UserInfo {
+            id: ObjectId::new(),
+            tg_id: 0,
+            name: None,
+            first_name: "".to_owned(),
+            last_name: None,
+            phone,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Sell {
     Sub(Subscription),
