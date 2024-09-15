@@ -98,3 +98,11 @@ impl UserSubscription {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UserPreCell {
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
+    pub subscription: UserSubscription,
+    pub phone: String,
+}

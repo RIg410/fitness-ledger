@@ -5,6 +5,7 @@ pub mod subscription;
 pub mod training;
 pub mod treasury;
 pub mod user;
+pub mod pre_cell;
 
 use eyre::Result;
 use logs::LogStore;
