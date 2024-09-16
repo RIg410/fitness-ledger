@@ -73,7 +73,6 @@ impl Users {
             rights,
             phone: phone.clone(),
             birthday: None,
-            reg_date: chrono::Local::now(),
             balance: 0,
             is_active: true,
             id: ObjectId::new(),
@@ -82,6 +81,8 @@ impl Users {
             freeze_days: 0,
             freeze: None,
             version: 0,
+            created_at: Utc::now(),
+            initiated: false,
         };
         self.store.insert(session, user).await?;
         self.logs.create_user(session, tg_id, name, phone).await;

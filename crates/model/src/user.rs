@@ -1,6 +1,6 @@
 use super::rights::Rights;
 use crate::subscription::UserSubscription;
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Local, TimeZone as _, Utc};
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,6 @@ pub struct User {
     pub rights: Rights,
     pub phone: String,
     pub birthday: Option<DateTime<Local>>,
-    pub reg_date: DateTime<Local>,
     pub balance: u32,
     #[serde(default)]
     pub reserved_balance: u32,
@@ -28,6 +27,17 @@ pub struct User {
     pub freeze_days: u32,
     #[serde(default)]
     pub version: u64,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    #[serde(default = "default_created_at")]
+    pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    pub initiated: bool,
+}
+
+fn default_created_at() -> DateTime<Utc> {
+    Utc.with_ymd_and_hms(2024, 09, 13, 12, 20, 0)
+        .single()
+        .unwrap()
 }
 
 impl User {
@@ -43,7 +53,6 @@ impl User {
             rights: Rights::customer(),
             phone: "".to_owned(),
             birthday: None,
-            reg_date: Local::now(),
             balance: 0,
             is_active: true,
             reserved_balance: 0,
@@ -51,6 +60,8 @@ impl User {
             subscriptions: vec![],
             freeze_days: 0,
             freeze: None,
+            created_at: Utc::now(),
+            initiated: false,
         }
     }
 }
