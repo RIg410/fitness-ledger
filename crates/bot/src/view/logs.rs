@@ -31,7 +31,11 @@ impl LogsView {
             .date_time
             .with_timezone(&Local)
             .format("%Y-%m-%d %H:%M:%S");
-        let actor = ctx.ledger.get_user(&mut ctx.session, entry.actor).await?;
+
+        let actor = Self::render_user_info(ctx, entry.actor)
+            .await
+            .ok()
+            .unwrap_or_else(|| "unknown".to_owned());
 
         let action = match Self::render_action(ctx, &entry.action).await {
             Ok(info) => info,
@@ -40,17 +44,7 @@ impl LogsView {
             }
         };
 
-        msg.push_str(&format!(
-            "{}\n_{}_({})\n: {:?}\n\n",
-            date,
-            actor.name.first_name,
-            actor
-                .name
-                .last_name
-                .or(actor.name.tg_user_name)
-                .unwrap_or_else(|| "-".to_string()),
-            action
-        ));
+        msg.push_str(&format!("{}\n{}\n: {:?}\n\n", date, actor, action));
         Ok(())
     }
 

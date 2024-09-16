@@ -83,6 +83,7 @@ impl Users {
             version: 0,
             created_at: Utc::now(),
             initiated: false,
+            couch: None,
         };
         self.store.insert(session, user).await?;
         self.logs.create_user(session, tg_id, name, phone).await;
@@ -209,7 +210,9 @@ impl Users {
         self.logs
             .change_reserved_balance(session, tg_id, amount)
             .await;
-        self.store.change_reserved_balance(session, tg_id, amount).await
+        self.store
+            .change_reserved_balance(session, tg_id, amount)
+            .await
     }
 
     #[tx]

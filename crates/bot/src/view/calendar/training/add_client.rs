@@ -118,6 +118,9 @@ async fn render(
     let mut keymap = InlineKeyboardMarkup::default();
 
     for user in &users {
+        if user.couch.is_some() {
+            continue;
+        }
         keymap = keymap.append_row(vec![make_button(user)]);
     }
 

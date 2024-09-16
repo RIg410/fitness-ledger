@@ -1,5 +1,5 @@
 use super::rights::Rights;
-use crate::subscription::UserSubscription;
+use crate::{couch::Couch, subscription::UserSubscription};
 use chrono::{DateTime, Local, TimeZone as _, Utc};
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
@@ -32,6 +32,8 @@ pub struct User {
     pub created_at: DateTime<Utc>,
     #[serde(default)]
     pub initiated: bool,
+    #[serde(default)]
+    pub couch: Option<Couch>,
 }
 
 fn default_created_at() -> DateTime<Utc> {
@@ -62,6 +64,7 @@ impl User {
             freeze: None,
             created_at: Utc::now(),
             initiated: false,
+            couch: None,
         }
     }
 }

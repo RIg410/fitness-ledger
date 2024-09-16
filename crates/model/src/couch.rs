@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{decimal::Decimal, training::Training};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Couch {
     #[serde(rename = "_id")]
     pub id: ObjectId,
@@ -53,6 +53,7 @@ impl Couch {
                 };
                 Some(reward)
             }
+            Rate::None => None,
         })
     }
 
@@ -84,11 +85,12 @@ impl Couch {
                 }
             }
             Rate::PerClient { .. } => None,
+            Rate::None => None,
         })
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub enum Rate {
     FixedMonthly {
         rate: Decimal,
@@ -99,6 +101,8 @@ pub enum Rate {
         min: Decimal,
         per_client: Decimal,
     },
+    #[default]
+    None,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

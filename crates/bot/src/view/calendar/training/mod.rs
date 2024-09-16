@@ -11,13 +11,13 @@ use model::{
 use serde::{Deserialize, Serialize};
 use teloxide::{
     prelude::Requester as _,
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    types::{InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
 
-mod client_list;
-mod client;
 mod add_client;
+mod client;
+mod client_list;
 
 pub struct TrainingView {
     id: DateTime<Local>,
@@ -44,6 +44,26 @@ impl TrainingView {
         let id = ctx.send_msg("\\.").await?;
         ctx.update_origin_msg_id(id);
         self.show(ctx).await?;
+        Ok(None)
+    }
+
+    async fn couch_info(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        let user = ctx
+            .ledger
+            .get_user(&mut ctx.session, training.instructor)
+            .await?;
+        if let Some(couch) = user.couch {
+            ctx.send_msg(&escape(&couch.description)).await?;
+            let id = ctx.send_msg("\\.").await?;
+            ctx.update_origin_msg_id(id);
+            self.show(ctx).await?;
+        }
         Ok(None)
     }
 
@@ -154,11 +174,27 @@ impl TrainingView {
 
     async fn client_list(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         ctx.ensure(Rule::Train)?;
-        let this = TrainingView::new(self.id, self.go_back.take());
-        Ok(Some(Box::new(ClientList::new(
+        let this = TrainingView::new(self.id, self.go_back.take()).boxed();
+        Ok(Some(ClientList::new(
             self.id,
-            Some(Box::new(this)),
-        ))))
+            Some(this),
+        ).boxed()))
+    }
+
+    async fn change_couch(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+        ctx.ensure(Rule::EditSchedule)?;
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        // let back = TrainingView::new(self.id, self.go_back.take());
+        // Ok(Some(Box::new(add_client::AddClientView::new(
+        //     self.id,
+        //     Some(Box::new(back)),
+        // )))
+        todo!()
     }
 }
 
@@ -171,7 +207,7 @@ impl View for TrainingView {
             .get_training_by_start_at(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let (msg, keymap) = render(ctx, &training, self.go_back.is_some());
+        let (msg, keymap) = render(ctx, &training, self.go_back.is_some()).await?;
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
@@ -194,18 +230,24 @@ impl View for TrainingView {
         match cb {
             Callback::Back => self.go_back(ctx).await,
             Callback::Description => self.description(ctx).await,
+            Callback::CouchInfo => self.couch_info(ctx).await,
             Callback::Cancel => self.cancel_training(ctx).await,
             Callback::Delete(all) => self.delete_training(ctx, all).await,
             Callback::UnCancel => self.restore_training(ctx).await,
             Callback::SignUp => self.sign_up(ctx).await,
             Callback::SignOut => self.sign_out(ctx).await,
             Callback::ClientList => self.client_list(ctx).await,
+            Callback::ChangeCouch => self.change_couch(ctx).await,
         }
     }
 }
 
-fn render(ctx: &Context, training: &Training, has_back: bool) -> (String, InlineKeyboardMarkup) {
-    let is_client = !ctx.has_right(Rule::Train);
+async fn render(
+    ctx: &mut Context,
+    training: &Training,
+    has_back: bool,
+) -> Result<(String, InlineKeyboardMarkup)> {
+    let is_client = ctx.me.couch.is_none();
     let cap = if is_client {
         format!(
             "*свободных мест*: _{}_",
@@ -223,91 +265,86 @@ fn render(ctx: &Context, training: &Training, has_back: bool) -> (String, Inline
     let tr_status = training.status(now);
     let slot = training.get_slot();
 
+    let couch = ctx
+        .ledger
+        .users
+        .get(&mut ctx.session, training.instructor)
+        .await?
+        .map(|couch| {
+            format!(
+                "_{}_ {}",
+                escape(&couch.name.first_name),
+                escape(&couch.name.last_name.unwrap_or_default())
+            )
+        })
+        .unwrap_or_default();
+
     let msg = format!(
         "
 💪 *Тренировка*: _{}_
 📅 *Дата*: _{}_
+🧘 *Инструктор*: {}
 💁{}
 _{}_
 ",
         escape(&training.name),
         slot.start_at().format("%d\\.%m\\.%Y %H:%M"),
+        couch,
         cap,
         status(tr_status, training.is_full()),
     );
     let mut keymap = InlineKeyboardMarkup::default();
-    keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-        "📝 Описание",
-        Callback::Description.to_data(),
-    )]);
+    keymap = keymap.append_row(vec![
+        Callback::Description.button("📝 Описание"),
+        Callback::CouchInfo.button("🧘 Об инструкторе"),
+    ]);
 
     if !is_client {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "🗒 Список клиентов",
-            Callback::ClientList.to_data(),
-        )]);
+        keymap = keymap.append_row(vec![Callback::ClientList.button("🗒 Список клиентов")]);
     }
 
     if ctx.has_right(Rule::CancelTraining) {
         if tr_status.can_be_canceled() {
-            keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-                "⛔ Отменить",
-                Callback::Cancel.to_data(),
-            )]);
+            keymap = keymap.append_row(vec![Callback::Cancel.button("⛔ Отменить")]);
         }
         if tr_status.can_be_uncanceled() {
-            keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-                "🔓 Вернуть",
-                Callback::UnCancel.to_data(),
-            )]);
+            keymap = keymap.append_row(vec![Callback::UnCancel.button("🔓 Вернуть")]);
         }
     }
 
     if ctx.has_right(Rule::EditSchedule) {
         let mut keys = vec![];
-        keys.push(InlineKeyboardButton::callback(
-            "🗑️ Удалить эту тренировку",
-            Callback::Delete(false).to_data(),
-        ));
+        keys.push(Callback::Delete(false).button("🗑️ Удалить эту тренировку"));
         if !training.is_one_time {
-            keys.push(InlineKeyboardButton::callback(
-                "🗑️ Удалить все последующие",
-                Callback::Delete(true).to_data(),
-            ));
+            keys.push(Callback::Delete(true).button("🗑️ Удалить все последующие"));
         }
         keymap = keymap.append_row(keys);
+        keymap = keymap.append_row(vec![Callback::ChangeCouch.button("🔄 Заменить инструктора")]);
     }
 
     if is_client {
         if training.clients.contains(&ctx.me.id) {
             if tr_status.can_sign_out() {
-                keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-                    "🔓 Отменить запись",
-                    Callback::SignOut.to_data(),
-                )]);
+                keymap = keymap.append_row(vec![Callback::SignOut.button("🔓 Отменить запись")]);
             }
         } else {
             if tr_status.can_sign_in() {
-                keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-                    "🔒 Записаться",
-                    Callback::SignUp.to_data(),
-                )]);
+                keymap = keymap.append_row(vec![Callback::SignUp.button("🔒 Записаться")]);
             }
         }
     }
     if has_back {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "🔙 Назад",
-            Callback::Back.to_data(),
-        )]);
+        keymap = keymap.append_row(vec![Callback::Back.button("🔙 Назад")]);
     }
-    (msg, keymap)
+    Ok((msg, keymap))
 }
 
 #[derive(Serialize, Deserialize)]
 enum Callback {
     Back,
     Description,
+    CouchInfo,
+    ChangeCouch,
     Delete(bool),
     Cancel,
     ClientList,
