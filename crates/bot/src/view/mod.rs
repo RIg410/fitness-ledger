@@ -11,6 +11,7 @@ pub mod subscription;
 pub mod training;
 pub mod users;
 pub mod logs;
+pub mod couching;
 
 #[async_trait]
 pub trait View {

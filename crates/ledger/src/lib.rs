@@ -21,6 +21,7 @@ pub mod programs;
 pub mod subscriptions;
 pub mod treasury;
 mod users;
+mod couch;
 
 use programs::Programs;
 use subscriptions::Subscriptions;

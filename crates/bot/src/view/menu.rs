@@ -1,12 +1,5 @@
-use async_trait::async_trait;
-use eyre::{bail, Ok, Result};
-use model::rights::Rule;
-use strum::EnumIter;
-use teloxide::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message};
-
-use crate::{context::Context, state::Widget};
-
 use super::{
+    couching::CouchingView,
     finance::FinanceView,
     logs::LogsView,
     subscription::SubscriptionView,
@@ -14,6 +7,12 @@ use super::{
     users::{profile::UserProfile, Query, UsersView},
     View,
 };
+use crate::{context::Context, state::Widget};
+use async_trait::async_trait;
+use eyre::{bail, Ok, Result};
+use model::rights::Rule;
+use strum::EnumIter;
+use teloxide::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 pub struct MainMenuView;
 
@@ -34,6 +33,10 @@ impl MainMenuView {
 
         if ctx.has_right(Rule::ViewLogs) {
             keymap = keymap.append_row(vec![MainMenuItem::LogView.into()]);
+        }
+
+        if ctx.has_right(Rule::CouchingView) {
+            keymap = keymap.append_row(vec![MainMenuItem::Coaching.into()]);
         }
 
         let id = ctx.send_msg_with_markup("🏠SoulFamily🤸🏼", keymap).await?;
@@ -72,6 +75,7 @@ impl View for MainMenuView {
             MainMenuItem::Subscription => SubscriptionView::default().boxed(),
             MainMenuItem::FinanceView => FinanceView.boxed(),
             MainMenuItem::LogView => LogsView::default().boxed(),
+            MainMenuItem::Coaching => CouchingView::default().boxed(),
             MainMenuItem::Home => return Ok(None),
         }))
     }
@@ -95,6 +99,7 @@ impl View for MainMenuView {
             MainMenuItem::Home => MainMenuView.boxed(),
             MainMenuItem::FinanceView => FinanceView.boxed(),
             MainMenuItem::LogView => LogsView::default().boxed(),
+            MainMenuItem::Coaching => CouchingView::default().boxed(),
         }))
     }
 }
@@ -108,6 +113,7 @@ pub enum MainMenuItem {
     Subscription,
     FinanceView,
     LogView,
+    Coaching,
 }
 
 const HOME_DESCRIPTION: &str = "🏠";
@@ -131,6 +137,9 @@ const FINANCE_NAME: &str = "/finance";
 const LOG_DESCRIPTION: &str = "Логи 📜";
 const LOG_NAME: &str = "/log";
 
+const COACHING_DESCRIPTION: &str = "Тренерская 🧘🏼‍♂️";
+const COACHING_NAME: &str = "/coaching";
+
 impl MainMenuItem {
     pub fn description(&self) -> &'static str {
         match self {
@@ -141,6 +150,7 @@ impl MainMenuItem {
             MainMenuItem::Home => HOME_DESCRIPTION,
             MainMenuItem::FinanceView => FINANCE_DESCRIPTION,
             MainMenuItem::LogView => LOG_DESCRIPTION,
+            MainMenuItem::Coaching => COACHING_DESCRIPTION,
         }
     }
 
@@ -153,6 +163,7 @@ impl MainMenuItem {
             MainMenuItem::Home => HOME_NAME,
             MainMenuItem::FinanceView => FINANCE_NAME,
             MainMenuItem::LogView => LOG_NAME,
+            MainMenuItem::Coaching => COACHING_NAME,
         }
     }
 }

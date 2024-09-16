@@ -103,6 +103,9 @@ pub enum Rule {
 
     //Logs
     ViewLogs,
+
+    //Couching
+    CouchingView,
 }
 
 impl Rule {

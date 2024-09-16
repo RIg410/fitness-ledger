@@ -6,6 +6,7 @@ pub mod subscription;
 pub mod training;
 pub mod treasury;
 pub mod user;
+pub mod couch;
 
 use eyre::Result;
 use logs::LogStore;

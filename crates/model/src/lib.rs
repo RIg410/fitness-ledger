@@ -10,3 +10,4 @@ pub mod treasury;
 pub mod user;
 pub mod log;
 pub mod session;
+pub mod couch;
