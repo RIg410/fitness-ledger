@@ -350,7 +350,7 @@ pub fn render_profile_msg(user: &User, sys_info: bool, trainings: &Vec<Training>
         for training in trainings {
             msg.push_str(&escape(&format!(
                 "{} {}\n",
-                training.start_at.format("%d.%m %H:%M"),
+                training.start_at.with_timezone(&Local).format("%d.%m %H:%M"),
                 training.name
             )))
         }

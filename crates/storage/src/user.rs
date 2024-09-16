@@ -439,17 +439,33 @@ impl UserStore {
         amount: i32,
     ) -> Result<()> {
         info!("Changing balance for user {}: {}", tg_id, amount);
-        let result = self
-            .users
+        let mut user = self
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        user.version += 1;
+        if amount < 0 {
+            user.balance = user.balance.saturating_sub(amount.abs() as u32);
+        } else {
+            user.balance += amount as u32;
+        }
+
+        user.subscriptions.sort_by(|a, b| a.status.cmp(&b.status));
+        if let Some(sub) = user.subscriptions.first_mut() {
+            if amount < 0 {
+                sub.items = sub.items.saturating_sub(amount.abs() as u32);
+            } else {
+                sub.items += amount as u32;
+            }
+        }
+
+        self.users
             .update_one(
                 doc! { "tg_id": tg_id },
-                doc! { "$inc": { "balance": amount, "version": 1 } },
+                doc! { "$set": to_document(&user)? },
             )
             .session(&mut *session)
             .await?;
-        if result.modified_count == 0 {
-            return Err(Error::msg("User not found"));
-        }
         Ok(())
     }
 
