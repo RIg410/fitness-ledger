@@ -432,6 +432,34 @@ impl UserStore {
         Ok(result.modified_count > 0)
     }
 
+    pub async fn change_reserved_balance(
+        &self,
+        session: &mut Session,
+        tg_id: i64,
+        amount: i32,
+    ) -> Result<()> {
+        info!("Changing reserved balance for user {}: {}", tg_id, amount);
+        let mut user = self
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        user.version += 1;
+        if amount < 0 {
+            user.reserved_balance = user.reserved_balance.saturating_sub(amount.abs() as u32);
+        } else {
+            user.reserved_balance += amount as u32;
+        }
+
+        self.users
+            .update_one(
+                doc! { "tg_id": tg_id },
+                doc! { "$set": to_document(&user)? },
+            )
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
     pub async fn change_balance(
         &self,
         session: &mut Session,

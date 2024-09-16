@@ -162,4 +162,8 @@ pub enum Action {
         price: Decimal,
         item: u32,
     },
+    ChangeReservedBalance {
+        tg_id: i64,
+        amount: i32,
+    },
 }

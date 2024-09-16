@@ -200,6 +200,19 @@ impl Users {
     }
 
     #[tx]
+    pub async fn change_reserved_balance(
+        &self,
+        session: &mut Session,
+        tg_id: i64,
+        amount: i32,
+    ) -> Result<()> {
+        self.logs
+            .change_reserved_balance(session, tg_id, amount)
+            .await;
+        self.store.change_reserved_balance(session, tg_id, amount).await
+    }
+
+    #[tx]
     pub async fn set_name(
         &self,
         session: &mut Session,

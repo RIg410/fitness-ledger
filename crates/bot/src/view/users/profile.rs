@@ -81,6 +81,32 @@ impl UserProfile {
         Ok(None)
     }
 
+    async fn change_reserved_balance(
+        &mut self,
+        ctx: &mut Context,
+        amount: i32,
+    ) -> Result<Option<Widget>, eyre::Error> {
+        ctx.ensure(Rule::ChangeBalance)?;
+        let user = ctx
+            .ledger
+            .get_user(&mut ctx.session, self.tg_id)
+            .await?;
+
+        if amount < 0 {
+            if user.reserved_balance < amount.abs() as u32 {
+                return Err(eyre::eyre!("Not enough reserved balance"));
+            }
+        }
+
+        ctx.ledger
+            .users
+            .change_reserved_balance(&mut ctx.session, user.tg_id, amount)
+            .await?;
+        ctx.reload_user().await?;
+        self.show(ctx).await?;
+        Ok(None)
+    }
+
     async fn freeze_user(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
         if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
             return Err(eyre::eyre!("User has no rights to perform this action"));
@@ -214,6 +240,9 @@ impl View for UserProfile {
             Callback::EditRights => self.edit_rights(ctx).await,
             Callback::Freeze => self.freeze_user(ctx).await,
             Callback::ChangeBalance(amount) => self.change_balance(ctx, amount).await,
+            Callback::ChangeReservedBalance(amount) => {
+                self.change_reserved_balance(ctx, amount).await
+            }
             Callback::SetBirthday => self.set_birthday(ctx).await,
             Callback::EditPhone => self.set_phone(ctx).await,
             Callback::TrainingList => self.training_list(ctx).await,
@@ -245,6 +274,10 @@ fn render_user_profile(
         keymap = keymap.append_row(vec![
             Callback::ChangeBalance(-1).button("Списать баланс 💸"),
             Callback::ChangeBalance(1).button("Пополнить баланс 💰"),
+        ]);
+        keymap = keymap.append_row(vec![
+            Callback::ChangeReservedBalance(-1).button("Списать зарезервированный баланс 💸"),
+            Callback::ChangeReservedBalance(1).button("Пополнить зарезервированный баланс 💰"),
         ]);
     }
 
@@ -285,6 +318,7 @@ pub enum Callback {
     Freeze,
     TrainingList,
     ChangeBalance(i32),
+    ChangeReservedBalance(i32),
 }
 
 fn render_sub(sub: &UserSubscription) -> String {
@@ -350,7 +384,10 @@ pub fn render_profile_msg(user: &User, sys_info: bool, trainings: &Vec<Training>
         for training in trainings {
             msg.push_str(&escape(&format!(
                 "{} {}\n",
-                training.start_at.with_timezone(&Local).format("%d.%m %H:%M"),
+                training
+                    .start_at
+                    .with_timezone(&Local)
+                    .format("%d.%m %H:%M"),
                 training.name
             )))
         }

@@ -351,6 +351,10 @@ impl LogsView {
                     seller_info, phone, price, item
                 )
             }
+            Action::ChangeReservedBalance { tg_id, amount } => {
+                let info = Self::render_user_info(ctx, *tg_id).await?;
+                format!("Change reserved balance: {} by {}", info, amount)
+            }
         })
     }
 }

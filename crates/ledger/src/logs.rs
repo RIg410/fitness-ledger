@@ -139,6 +139,17 @@ impl Logs {
         }
     }
 
+    pub async fn change_reserved_balance(&self, session: &mut Session, tg_id: i64, amount: i32) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::ChangeReservedBalance { tg_id, amount },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
     pub async fn set_phone(&self, session: &mut Session, tg_id: i64, phone: String) {
         let entry = model::log::LogEntry {
             actor: session.actor(),
