@@ -100,6 +100,24 @@ pub fn sanitize_phone(phone: &str) -> String {
         .collect()
 }
 
+#[derive(Debug)]
+pub enum UserIdent {
+    TgId(i64),
+    Id(ObjectId),
+}
+
+impl From<ObjectId> for UserIdent {
+    fn from(value: ObjectId) -> Self {
+        UserIdent::Id(value)
+    }
+}
+
+impl From<i64> for UserIdent {
+    fn from(value: i64) -> Self {
+        UserIdent::TgId(value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::user::sanitize_phone;

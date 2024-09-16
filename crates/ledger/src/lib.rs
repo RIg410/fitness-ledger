@@ -1,6 +1,6 @@
 use calendar::{Calendar, SignOutError};
 use chrono::Local;
-use eyre::{bail, eyre, Result};
+use eyre::{bail, eyre, Context, Result};
 use log::error;
 use logs::Logs;
 use model::decimal::Decimal;
@@ -8,7 +8,7 @@ use model::session::Session;
 use model::subscription::Subscription;
 use model::training::{Training, TrainingStatus};
 use model::treasury::Sell;
-use model::user::{sanitize_phone, UserPreSell};
+use model::user::{sanitize_phone, User, UserIdent, UserPreSell};
 use mongodb::bson::oid::ObjectId;
 use storage::pre_sell::PreSellStore;
 use storage::session::Db;
@@ -65,6 +65,20 @@ impl Ledger {
             logs,
             presell,
         }
+    }
+
+    pub async fn get_user<ID: Into<UserIdent>>(
+        &self,
+        session: &mut Session,
+        id: ID,
+    ) -> Result<User> {
+        let id: UserIdent = id.into();
+        Ok(match id {
+            UserIdent::TgId(tg_id) => self.users.get_by_tg_id(session, tg_id).await,
+            UserIdent::Id(id) => self.users.get(session, id).await,
+        }
+        .context("get_user")?
+        .ok_or_else(|| eyre!("User not found:{:?}", id))?)
     }
 
     #[tx]
