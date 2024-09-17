@@ -98,6 +98,14 @@ impl View for SubscriptionOption {
         }
         Ok(None)
     }
+
+    fn take(&mut self) -> Widget {
+        SubscriptionOption {
+            go_back: self.go_back.take(),
+            id: self.id,
+        }
+        .boxed()
+    }
 }
 
 async fn render_sub(

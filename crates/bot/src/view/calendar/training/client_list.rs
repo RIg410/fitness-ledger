@@ -168,6 +168,14 @@ impl View for ClientList {
             Callback::Back => self.go_back(ctx),
         }
     }
+
+    fn take(&mut self) -> Widget {
+        ClientList {
+            start_at: self.start_at,
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize)]

@@ -54,6 +54,12 @@ impl View for FindTraining {
             Callback::Back => Ok(self.go_back.take()),
         }
     }
+    fn take(&mut self) -> Widget {
+        FindTraining {
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {

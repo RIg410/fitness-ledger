@@ -66,6 +66,14 @@ impl View for ClientTrainings {
             }
         }
     }
+
+    fn take(&mut self) -> Widget {
+        ClientTrainings {
+            id: self.id,
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 async fn render(

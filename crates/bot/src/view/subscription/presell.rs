@@ -135,6 +135,15 @@ impl View for PreSellView {
             }
         }
     }
+
+    fn take(&mut self) -> Widget {
+        PreSellView {
+            go_back: self.go_back.take(),
+            sell: self.sell.clone(),
+            state: self.state.clone(),
+        }
+        .boxed()
+    }
 }
 
 async fn render_init() -> Result<(String, InlineKeyboardMarkup), Error> {
@@ -194,6 +203,7 @@ enum Callback {
     Cancel,
 }
 
+#[derive(Clone)]
 enum State {
     Init,
     Confirm(String),

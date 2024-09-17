@@ -1,5 +1,3 @@
-use std::mem;
-
 use crate::{
     callback_data::Calldata as _,
     context::Context,
@@ -108,30 +106,22 @@ impl UserProfile {
         if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
             return Err(eyre::eyre!("User has no rights to perform this action"));
         }
-        let mut new_user_new = UserProfile::new(0, None);
-        mem::swap(self, &mut new_user_new);
         Ok(Some(
-            FreezeProfile::new(new_user_new.tg_id, Some(new_user_new.boxed())).boxed(),
+            FreezeProfile::new(self.tg_id, Some(self.take())).boxed(),
         ))
     }
 
     async fn edit_rights(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
         ctx.ensure(Rule::EditUserRights)?;
-        let mut new_user_new = UserProfile::new(0, None);
-        mem::swap(self, &mut new_user_new);
         Ok(Some(
-            UserRightsView::new(new_user_new.tg_id, Some(new_user_new.boxed())).boxed(),
+            UserRightsView::new(self.tg_id, Some(self.take())).boxed(),
         ))
     }
 
     async fn set_birthday(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) || ctx.me.tg_id == self.tg_id {
             Ok(Some(
-                SetBirthday::new(
-                    self.tg_id,
-                    Some(UserProfile::new(self.tg_id, self.go_back.take()).boxed()),
-                )
-                .boxed(),
+                SetBirthday::new(self.tg_id, Some(self.take())).boxed(),
             ))
         } else {
             Ok(None)
@@ -147,23 +137,13 @@ impl UserProfile {
             .ok_or_else(|| eyre!("User not found:{}", self.tg_id))?;
 
         Ok(Some(
-            ClientTrainings::new(
-                user.id,
-                Some(UserProfile::new(self.tg_id, self.go_back.take()).boxed()),
-            )
-            .boxed(),
+            ClientTrainings::new(user.id, Some(self.take())).boxed(),
         ))
     }
 
     async fn set_fio(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
-            Ok(Some(
-                SetFio::new(
-                    self.tg_id,
-                    Some(UserProfile::new(self.tg_id, self.go_back.take()).boxed()),
-                )
-                .boxed(),
-            ))
+            Ok(Some(SetFio::new(self.tg_id, Some(self.take())).boxed()))
         } else {
             Ok(None)
         }
@@ -171,13 +151,7 @@ impl UserProfile {
 
     async fn set_phone(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
-            Ok(Some(
-                SetPhone::new(
-                    self.tg_id,
-                    Some(UserProfile::new(self.tg_id, self.go_back.take()).boxed()),
-                )
-                .boxed(),
-            ))
+            Ok(Some(SetPhone::new(self.tg_id, Some(self.take())).boxed()))
         } else {
             Ok(None)
         }
@@ -233,6 +207,14 @@ impl View for UserProfile {
             Callback::EditPhone => self.set_phone(ctx).await,
             Callback::TrainingList => self.training_list(ctx).await,
         }
+    }
+
+    fn take(&mut self) -> Widget {
+        UserProfile {
+            tg_id: self.tg_id,
+            go_back: self.go_back.take(),
+        }
+        .boxed()
     }
 }
 

@@ -94,12 +94,19 @@ impl View for UsersView {
                 self.show(ctx).await?;
             }
             Callback::Select(user_id) => {
-                let user_view = Box::new(UserProfile::new(user_id, Some(Box::new(self.clone()))));
+                let user_view = Box::new(UserProfile::new(user_id, Some(self.take())));
                 return Ok(Some(user_view));
             }
         }
 
         Ok(None)
+    }
+
+    fn take(&mut self) -> Widget {
+        UsersView {
+            query: self.query.clone(),
+        }
+        .boxed()
     }
 }
 

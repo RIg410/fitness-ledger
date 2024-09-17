@@ -102,6 +102,10 @@ impl View for MainMenuView {
             MainMenuItem::Coaching => CouchingView::default().boxed(),
         }))
     }
+
+    fn take(&mut self) -> Widget {
+        MainMenuView.boxed()
+    }
 }
 
 #[derive(EnumIter, Clone, Copy, Debug, PartialEq)]

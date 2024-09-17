@@ -62,6 +62,14 @@ impl View for SetFio {
             Ok(None)
         }
     }
+
+    fn take(&mut self) -> Widget {
+        SetFio {
+            id: self.id,
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize)]

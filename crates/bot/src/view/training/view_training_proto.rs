@@ -148,6 +148,15 @@ impl View for ViewProgram {
             Callback::EditDescription => self.edit_description(ctx).await,
         }
     }
+
+    fn take(&mut self) -> Widget {
+        ViewProgram {
+            id: self.id,
+            go_back: self.go_back.take(),
+            preset: self.preset.clone(),
+        }
+        .boxed()
+    }
 }
 
 async fn render(

@@ -119,6 +119,16 @@ impl View for CalendarView {
             }
         }
     }
+
+    fn take(&mut self) -> Widget {
+        CalendarView {
+            go_back: self.go_back.take(),
+            week_id: self.week_id,
+            selected_day: self.selected_day,
+            filter: self.filter.clone(),
+        }
+        .boxed()
+    }
 }
 
 pub async fn render_week(

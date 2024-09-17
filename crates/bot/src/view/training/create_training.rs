@@ -138,8 +138,17 @@ impl View for CreateTraining {
 
         Ok(None)
     }
+
+    fn take(&mut self) -> Widget {
+        CreateTraining {
+            go_back: self.go_back.take(),
+            state: self.state.take(),
+        }
+        .boxed()
+    }
 }
 
+#[derive(Clone)]
 pub enum State {
     SetName(Program),
     SetDescription(Program),

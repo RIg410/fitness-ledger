@@ -90,6 +90,15 @@ impl View for ConfirmSell {
             }
         }
     }
+
+    fn take(&mut self) -> Widget {
+        ConfirmSell {
+            go_back: self.go_back.take(),
+            user_id: self.user_id,
+            sell: self.sell.clone(),
+        }
+        .boxed()
+    }
 }
 
 async fn render(

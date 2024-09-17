@@ -4,14 +4,14 @@ use eyre::Result;
 use teloxide::types::Message;
 
 pub mod calendar;
+pub mod couching;
 pub mod finance;
+pub mod logs;
 pub mod menu;
 pub mod signup;
 pub mod subscription;
 pub mod training;
 pub mod users;
-pub mod logs;
-pub mod couching;
 
 #[async_trait]
 pub trait View {
@@ -39,6 +39,10 @@ pub trait View {
     {
         Box::new(self)
     }
+
+    fn take(&mut self) -> Widget
+    where
+        Self: Sized + Send + Sync + 'static;
 }
 
 // use async_trait::async_trait;

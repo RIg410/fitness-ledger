@@ -182,6 +182,16 @@ impl View for ClientView {
         };
         Ok(self.go_back.take())
     }
+
+    fn take(&mut self) -> Widget {
+        ClientView {
+            id: self.id,
+            training_id: self.training_id,
+            go_back: self.go_back.take(),
+            reason: self.reason,
+        }
+        .boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -191,6 +201,7 @@ enum Callback {
     AddClient,
 }
 
+#[derive(Clone, Copy)]
 pub enum Reason {
     AddClient,
     RemoveClient,

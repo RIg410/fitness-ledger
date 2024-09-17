@@ -75,6 +75,14 @@ impl View for UserRightsView {
             }
         }
     }
+
+    fn take(&mut self) -> Widget {
+        UserRightsView {
+            tg_id: self.tg_id,
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 fn render_user_rights(user: &User, back: bool) -> (String, InlineKeyboardMarkup) {

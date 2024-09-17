@@ -17,7 +17,7 @@ pub struct SignUpView {
     state: State,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 enum State {
     #[default]
     Start,
@@ -95,6 +95,13 @@ impl View for SignUpView {
         _: &str,
     ) -> Result<Option<Widget>, eyre::Error> {
         Ok(None)
+    }
+
+    fn take(&mut self) -> Widget {
+        SignUpView {
+            state: self.state.clone(),
+        }
+        .boxed()
     }
 
     fn allow_unsigned_user(&self) -> bool {

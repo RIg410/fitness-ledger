@@ -42,6 +42,10 @@ impl View for CouchingView {
             Callback::Couch => Ok(None),
         }
     }
+
+    fn take(&mut self) -> Widget {
+        CouchingView.boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize)]

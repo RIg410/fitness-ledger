@@ -155,6 +155,16 @@ impl View for EditSubscription {
             }
         }
     }
+
+    fn take(&mut self) -> Widget {
+        EditSubscription {
+            go_back: self.go_back.take(),
+            id: self.id,
+            edit_type: self.edit_type,
+            state: self.state.clone(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -163,6 +173,7 @@ enum State {
     Confirm(String),
 }
 
+#[derive(Clone, Copy)]
 pub enum EditType {
     Price,
     Name,

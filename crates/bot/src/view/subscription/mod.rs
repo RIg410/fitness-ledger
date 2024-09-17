@@ -1,10 +1,10 @@
 pub mod confirm;
 pub mod create;
+pub mod edit;
 pub mod free_sell;
+pub mod presell;
 pub mod sell;
 pub mod view;
-pub mod edit;
-pub mod presell;
 
 use super::View;
 use crate::{callback_data::Calldata, context::Context, state::Widget};
@@ -69,6 +69,10 @@ impl View for SubscriptionView {
                 Ok(Some(widget))
             }
         }
+    }
+
+    fn take(&mut self) -> Widget {
+        SubscriptionView.boxed()
     }
 }
 

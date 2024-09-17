@@ -171,6 +171,14 @@ impl View for InOut {
             },
         }
     }
+    fn take(&mut self) -> Widget {
+        InOut {
+            go_back: self.go_back.take(),
+            state: self.state.clone(),
+            io: self.io.clone(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -179,7 +187,7 @@ enum Callback {
     Save,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 enum State {
     #[default]
     Description,
@@ -218,6 +226,7 @@ impl State {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum Io {
     Deposit,
     Payment,

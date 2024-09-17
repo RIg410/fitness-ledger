@@ -423,6 +423,13 @@ impl View for LogsView {
         self.show(ctx).await?;
         Ok(None)
     }
+
+    fn take(&mut self) -> Widget {
+        LogsView {
+            offset: self.offset,
+        }
+        .boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize)]

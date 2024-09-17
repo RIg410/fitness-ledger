@@ -117,6 +117,14 @@ impl View for FeeSellView {
             Ok(None)
         }
     }
+
+    fn take(&mut self) -> Widget {
+        FeeSellView {
+            go_back: self.go_back.take(),
+            state: self.state.clone(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -125,7 +133,7 @@ enum Callback {
     Cancel,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 enum State {
     #[default]
     SetItems,

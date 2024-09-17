@@ -85,6 +85,13 @@ impl View for ProgramList {
         }
         Ok(None)
     }
+
+    fn take(&mut self) -> Widget {
+        ProgramList {
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 async fn render(

@@ -113,6 +113,14 @@ impl View for SetDateTime {
     async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Option<Widget>> {
         Ok(None)
     }
+    fn take(&mut self) -> Widget {
+        SetDateTime {
+            id: self.id,
+            preset: self.preset.take(),
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 struct TimeParts(u32, u32);

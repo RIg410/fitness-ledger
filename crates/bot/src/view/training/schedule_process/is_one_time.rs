@@ -75,6 +75,14 @@ impl View for SetOneTime {
             preset.into_next_view(self.id, self.go_back.take().unwrap()),
         ))
     }
+    fn take(&mut self) -> Widget {
+        SetOneTime {
+            id: self.id,
+            preset: self.preset.take(),
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

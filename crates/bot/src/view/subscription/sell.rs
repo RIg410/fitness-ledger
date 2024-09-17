@@ -107,6 +107,16 @@ impl View for SellView {
             Callback::PreSell => self.presell(),
         }
     }
+
+    fn take(&mut self) -> Widget {
+        SellView {
+            go_back: self.go_back.take(),
+            sell: self.sell.clone(),
+            query: self.query.clone(),
+            offset: self.offset,
+        }
+        .boxed()
+    }
 }
 
 async fn render(

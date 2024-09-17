@@ -73,6 +73,15 @@ impl View for SetInstructor {
             }
         }
     }
+
+    fn take(&mut self) -> Widget {
+        SetInstructor {
+            id: self.id,
+            preset: self.preset.take(),
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 async fn render(ctx: &mut Context, training: &Program) -> Result<(String, InlineKeyboardMarkup)> {

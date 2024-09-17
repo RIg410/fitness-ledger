@@ -174,11 +174,7 @@ impl TrainingView {
 
     async fn client_list(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         ctx.ensure(Rule::Train)?;
-        let this = TrainingView::new(self.id, self.go_back.take()).boxed();
-        Ok(Some(ClientList::new(
-            self.id,
-            Some(this),
-        ).boxed()))
+        Ok(Some(ClientList::new(self.id, Some(self.take())).boxed()))
     }
 
     async fn change_couch(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
@@ -239,6 +235,14 @@ impl View for TrainingView {
             Callback::ClientList => self.client_list(ctx).await,
             Callback::ChangeCouch => self.change_couch(ctx).await,
         }
+    }
+
+    fn take(&mut self) -> Widget {
+        TrainingView {
+            id: self.id,
+            go_back: self.go_back.take(),
+        }
+        .boxed()
     }
 }
 

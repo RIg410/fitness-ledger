@@ -114,6 +114,15 @@ impl View for Finish {
             Ok(None)
         }
     }
+
+    fn take(&mut self) -> Widget {
+        Finish {
+            id: self.id,
+            preset: self.preset.take(),
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

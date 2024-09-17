@@ -235,6 +235,15 @@ impl View for CreateSubscription {
             Callback::Cancel => Ok(self.go_back.take()),
         }
     }
+
+    fn take(&mut self) -> Widget {
+        CreateSubscription {
+            go_back: self.go_back.take(),
+            state: self.state,
+            subscription: self.subscription.clone(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Default, Clone, Copy)]

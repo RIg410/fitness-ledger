@@ -80,6 +80,14 @@ impl View for SetBirthday {
             Ok(None)
         }
     }
+
+    fn take(&mut self) -> Widget {
+        SetBirthday {
+            id: self.id,
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize)]

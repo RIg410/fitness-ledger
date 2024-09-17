@@ -56,6 +56,14 @@ impl View for SetPhone {
             Ok(None)
         }
     }
+
+    fn take(&mut self) -> Widget {
+        SetPhone {
+            id: self.id,
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize)]

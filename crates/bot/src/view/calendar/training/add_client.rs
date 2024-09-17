@@ -98,6 +98,16 @@ impl View for AddClientView {
             }
         }
     }
+
+    fn take(&mut self) -> Widget {
+        AddClientView {
+            go_back: self.go_back.take(),
+            training_id: self.training_id,
+            query: self.query.clone(),
+            offset: self.offset,
+        }
+        .boxed()
+    }
 }
 
 async fn render(

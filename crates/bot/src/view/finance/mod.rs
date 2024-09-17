@@ -63,6 +63,10 @@ impl View for FinanceView {
             }
         }
     }
+
+    fn take(&mut self) -> Widget {
+        FinanceView.boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize)]

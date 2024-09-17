@@ -7,7 +7,10 @@ use eyre::Result;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::{types::{InlineKeyboardMarkup, Message}, utils::markdown::escape};
+use teloxide::{
+    types::{InlineKeyboardMarkup, Message},
+    utils::markdown::escape,
+};
 
 pub struct EditProgram {
     go_back: Option<Widget>,
@@ -50,7 +53,11 @@ impl EditProgram {
         Ok(None)
     }
 
-    pub async fn edit_description(&self, ctx: &mut Context, value: String) -> Result<Option<Widget>> {
+    pub async fn edit_description(
+        &self,
+        ctx: &mut Context,
+        value: String,
+    ) -> Result<Option<Widget>> {
         ctx.ensure(Rule::EditTraining)?;
         ctx.ledger
             .edit_program_description(&mut ctx.session, self.id, value)
@@ -162,6 +169,16 @@ impl View for EditProgram {
             }
         }
     }
+
+    fn take(&mut self) -> Widget {
+        EditProgram {
+            go_back: self.go_back.take(),
+            id: self.id,
+            edit_type: self.edit_type,
+            state: self.state.clone(),
+        }
+        .boxed()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -170,6 +187,7 @@ enum State {
     Confirm(String),
 }
 
+#[derive(Clone, Copy)]
 pub enum EditType {
     Capacity,
     Duration,

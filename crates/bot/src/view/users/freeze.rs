@@ -136,6 +136,16 @@ impl View for FreezeProfile {
         ctx.update_origin_msg_id(id);
         return Ok(self.go_back.take());
     }
+
+    fn take(&mut self) -> Widget {
+        FreezeProfile {
+            tg_id: self.tg_id,
+            go_back: self.go_back.take(),
+            state: self.state,
+            days: self.days,
+        }
+        .boxed()
+    }
 }
 
 #[derive(Clone, Copy)]

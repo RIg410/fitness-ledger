@@ -82,6 +82,13 @@ impl View for ScheduleTraining {
         }
         Ok(None)
     }
+    fn take(&mut self) -> Widget {
+        ScheduleTraining {
+            go_back: self.go_back.take(),
+            day: self.day,
+        }
+        .boxed()
+    }
 }
 
 async fn render(

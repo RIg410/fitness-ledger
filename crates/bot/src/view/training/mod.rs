@@ -61,6 +61,9 @@ impl View for TrainingMainView {
             }
         }
     }
+    fn take(&mut self) -> Widget {
+        TrainingMainView.boxed()
+    }
 }
 
 pub fn render() -> (String, InlineKeyboardMarkup) {
