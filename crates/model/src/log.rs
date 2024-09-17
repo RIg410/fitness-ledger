@@ -166,4 +166,20 @@ pub enum Action {
         tg_id: i64,
         amount: i32,
     },
+    EditProgramCapacity {
+        id: ObjectId,
+        capacity: u32,
+    },
+    EditProgramDuration {
+        id: ObjectId,
+        duration_min: u32,
+    },
+    EditProgramName {
+        id: ObjectId,
+        value: String,
+    },
+    EditProgramDescription {
+        id: ObjectId,
+        value: String,
+    },
 }

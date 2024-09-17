@@ -288,4 +288,93 @@ impl CalendarStore {
         }
         Ok(())
     }
+
+    pub async fn edit_capacity(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
+        capacity: u32,
+    ) -> Result<(), eyre::Error> {
+        info!("Edit capacity: {:?} {}", program_id, capacity);
+        let filter = doc! { "training.proto_id": program_id };
+        let update = doc! {
+            "$set": { "training.$.capacity": capacity },
+            "$inc": { "version": 1 }
+        };
+        self.days
+            .update_many(filter, update)
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn edit_program_name(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
+        name: String,
+    ) -> Result<(), eyre::Error> {
+        info!("Edit program name: {:?} {}", program_id, name);
+        let filter = doc! { "training.proto_id": program_id };
+        let update = doc! {
+            "$set": { "training.$.name": name },
+            "$inc": { "version": 1 }
+        };
+        self.days
+            .update_many(filter, update)
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn edit_program_description(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
+        description: String,
+    ) -> Result<(), eyre::Error> {
+        info!("Edit program description: {:?} {}", program_id, description);
+        let filter = doc! { "training.proto_id": program_id };
+        let update = doc! {
+            "$set": { "training.$.description": description },
+            "$inc": { "version": 1 }
+        };
+        self.days
+            .update_many(filter, update)
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn find_with_program_id(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
+    ) -> Result<SessionCursor<Day>, eyre::Error> {
+        let filter = doc! { "training.proto_id": program_id };
+        Ok(self.days.find(filter).session(&mut *session).await?)
+    }
+
+    pub async fn update_duration_in_day(
+        &self,
+        session: &mut Session,
+        day_id: ObjectId,
+        program_id: ObjectId,
+        duration: u32,
+    ) -> Result<(), eyre::Error> {
+        info!("Update duration in day: {:?} {}", day_id, duration);
+        let filter = doc! {
+            "_id": day_id,
+            "training.proto_id": program_id
+        };
+        let update = doc! {
+            "$set": { "training.$.duration_min": duration },
+            "$inc": { "version": 1 }
+        };
+        self.days
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
 }

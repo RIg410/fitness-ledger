@@ -228,12 +228,16 @@ fn render(ctx: &Context, training: &Training, has_back: bool) -> (String, Inline
 💪 *Тренировка*: _{}_
 📅 *Дата*: _{}_
 💁{}
-_{}_
+⏱*продолжительность*: _{}_мин
+_{}_                                                                 \n
+[Описание]({})
 ",
         escape(&training.name),
         slot.start_at().format("%d\\.%m\\.%Y %H:%M"),
         cap,
+        training.duration_min,
         status(tr_status, training.is_full()),
+        training.description,
     );
     let mut keymap = InlineKeyboardMarkup::default();
     keymap = keymap.append_row(vec![InlineKeyboardButton::callback(

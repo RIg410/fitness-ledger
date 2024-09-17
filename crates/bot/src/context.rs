@@ -36,6 +36,12 @@ impl Context {
         Ok(())
     }
 
+    pub async fn reset_origin(&mut self) -> Result<(), Error> {
+        let id = self.send_msg("\\.").await?;
+        self.update_origin_msg_id(id);
+        Ok(())
+    }
+
     pub fn is_active(&self) -> bool {
         self.me.is_active
     }

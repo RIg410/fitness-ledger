@@ -1,4 +1,4 @@
-use crate::{ids::DayId, training::Training};
+use crate::{ids::DayId, slot::Slot, training::Training};
 use chrono::{DateTime, Datelike, Local, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -67,6 +67,24 @@ impl Day {
 
     pub fn day_date(&self) -> DateTime<Local> {
         self.date_time.with_timezone(&Local)
+    }
+
+    pub fn has_conflict(&self) -> bool {
+        let mut slots: Vec<Slot> = Vec::new();
+        for training in &self.training {
+            if training.is_canceled {
+                continue;
+            }
+
+            let slot = training.get_slot();
+            if slots.iter().any(|s| s.has_conflict(&slot)) {
+                return true;
+            }
+
+            slots.push(slot);
+        }
+
+        false
     }
 }
 

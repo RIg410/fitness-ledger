@@ -289,6 +289,69 @@ impl Calendar {
     ) -> Result<()> {
         self.calendar.finalized(session, start_at).await
     }
+
+    pub(crate) async fn edit_capacity(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
+        capacity: u32,
+    ) -> Result<()> {
+        self.calendar
+            .edit_capacity(session, program_id, capacity)
+            .await
+    }
+
+    pub(crate) async fn edit_duration(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
+        duration: u32,
+    ) -> Result<()> {
+        let mut cursor = self
+            .calendar
+            .find_with_program_id(session, program_id)
+            .await?;
+        while let Some(day) = cursor.next(session).await {
+            let mut day = day?;
+            for training in &mut day.training {
+                if training.proto_id == program_id {
+                    training.duration_min = duration;
+                }
+            }
+
+            if day.has_conflict() {
+                return Err(eyre::eyre!("Conflicts found"));
+            }
+
+            self.calendar
+                .update_duration_in_day(session, day.id, program_id, duration)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    pub(crate) async fn edit_program_name(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
+        name: String,
+    ) -> Result<()> {
+        self.calendar
+            .edit_program_name(session, program_id, name)
+            .await
+    }
+
+    pub(crate) async fn edit_program_description(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
+        description: String,
+    ) -> Result<()> {
+        self.calendar
+            .edit_program_description(session, program_id, description)
+            .await
+    }
 }
 
 #[derive(Debug)]

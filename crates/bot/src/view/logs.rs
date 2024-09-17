@@ -355,6 +355,18 @@ impl LogsView {
                 let info = Self::render_user_info(ctx, *tg_id).await?;
                 format!("Change reserved balance: {} by {}", info, amount)
             }
+            Action::EditProgramCapacity { id, capacity } => {
+                format!("Edit program capacity: {} {}", id, capacity)
+            }
+            Action::EditProgramDuration { id, duration_min } => {
+                format!("Edit program duration: {} {}", id, duration_min)
+            }
+            Action::EditProgramName { id, value } => {
+                format!("Edit program name: {} {}", id, value)
+            }
+            Action::EditProgramDescription { id, value } => {
+                format!("Edit program description: {} {}", id, value)
+            }
         })
     }
 }

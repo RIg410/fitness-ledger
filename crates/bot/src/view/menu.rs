@@ -195,6 +195,7 @@ impl TryFrom<&str> for MainMenuItem {
             HOME_NAME | HOME_DESCRIPTION | "/home" => Ok(MainMenuItem::Home),
             FINANCE_NAME | FINANCE_DESCRIPTION => Ok(MainMenuItem::FinanceView),
             LOG_NAME | LOG_DESCRIPTION => Ok(MainMenuItem::LogView),
+            COACHING_NAME | COACHING_DESCRIPTION => Ok(MainMenuItem::Coaching),
             _ => bail!("Unknown command"),
         }
     }

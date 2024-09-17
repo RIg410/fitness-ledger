@@ -1,15 +1,16 @@
-use super::{
-    create_training::CreateTraining, schedule_process::ScheduleTrainingPreset,
-    view_training_proto::ViewProgram,
-};
 use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::{calendar::render_weekday, View},
+    view::{
+        training::{
+            create_training::CreateTraining, schedule_process::ScheduleTrainingPreset,
+            view_training_proto::ViewProgram,
+        },
+        View,
+    },
 };
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
 use eyre::{Error, Result};
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
@@ -19,22 +20,21 @@ use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
 };
 
-pub struct ScheduleTraining {
+pub struct ProgramList {
     go_back: Option<Widget>,
-    day: DateTime<Local>,
 }
 
-impl ScheduleTraining {
-    pub fn new(day: DateTime<Local>, go_back: Option<Widget>) -> Self {
-        Self { day, go_back }
+impl ProgramList {
+    pub fn new(go_back: Option<Widget>) -> Self {
+        Self { go_back }
     }
 }
 
 #[async_trait]
-impl View for ScheduleTraining {
+impl View for ProgramList {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         ctx.ensure(Rule::EditSchedule)?;
-        let (msg, keymap) = render(ctx, &self.day, self.go_back.is_some()).await?;
+        let (msg, keymap) = render(ctx, self.go_back.is_some()).await?;
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
@@ -63,21 +63,24 @@ impl View for ScheduleTraining {
             }
             Callback::CreateTraining => {
                 ctx.ensure(Rule::CreateTraining)?;
-                let widget = Box::new(ScheduleTraining::new(self.day, self.go_back.take()));
-                return Ok(Some(Box::new(CreateTraining::new(widget))));
+                return Ok(Some(
+                    CreateTraining::new(ProgramList::new(self.go_back.take()).boxed()).boxed(),
+                ));
             }
             Callback::SelectTraining(id) => {
-                ctx.ensure(Rule::EditSchedule)?;
+                ctx.ensure(Rule::EditTraining)?;
                 let id = ObjectId::from_bytes(id);
-                let widget = Box::new(ScheduleTraining::new(self.day, self.go_back.take()));
-
                 let preset = ScheduleTrainingPreset {
-                    day: Some(self.day),
+                    day: None,
                     date_time: None,
                     instructor: None,
                     is_one_time: None,
                 };
-                return Ok(Some(Box::new(ViewProgram::new(id, preset, Some(widget)))));
+                return Ok(Some(Box::new(ViewProgram::new(
+                    id,
+                    preset,
+                    Some(ProgramList::new(self.go_back.take()).boxed()),
+                ))));
             }
         }
         Ok(None)
@@ -86,17 +89,9 @@ impl View for ScheduleTraining {
 
 async fn render(
     ctx: &mut Context,
-    day: &DateTime<Local>,
     has_back: bool,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
-    let msg = format!(
-        "
-🤸🏼 Добавить тренировку на день: *{}* _{}_
-Выберите тренировку из списка или создайте новую\\.
-",
-        day.format("%d\\.%m\\.%Y"),
-        render_weekday(day)
-    );
+    let msg = format!("Тренировочные программы: 🤸🏼");
     let mut keymap = InlineKeyboardMarkup::default();
 
     let trainings = ctx.ledger.programs.find(&mut ctx.session, None).await?;
@@ -104,10 +99,7 @@ async fn render(
     for training in trainings {
         keymap
             .inline_keyboard
-            .push(vec![InlineKeyboardButton::callback(
-                training.name.clone(),
-                Callback::SelectTraining(training.id.bytes()).to_data(),
-            )]);
+            .push(Callback::SelectTraining(training.id.bytes()).btn_row(training.name));
     }
 
     keymap

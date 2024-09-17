@@ -70,4 +70,44 @@ impl Programs {
         self.logs.create_program(session, proto).await;
         Ok(())
     }
+
+    pub(crate) async fn edit_capacity(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        capacity: u32,
+    ) -> Result<(), Error> {
+        self.store.edit_capacity(session, id, capacity).await?;
+        Ok(())
+    }
+
+    pub(crate) async fn edit_duration(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        capacity: u32,
+    ) -> Result<(), Error> {
+        self.store.edit_duration(session, id, capacity).await?;
+        Ok(())
+    }
+
+    pub(crate) async fn edit_name(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        name: String,
+    ) -> Result<(), Error> {
+        self.store.edit_name(session, id, name).await?;
+        Ok(())
+    }
+
+    pub(crate) async fn edit_description(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        description: String,
+    ) -> Result<(), Error> {
+        self.store.edit_description(session, id, description).await?;
+        Ok(())
+    }
 }

@@ -160,4 +160,68 @@ impl ProgramStore {
             .await?;
         Ok(())
     }
+
+    pub async fn edit_capacity(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        capacity: u32,
+    ) -> Result<(), Error> {
+        self.store
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$set": { "capacity": capacity }, "$inc" : { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn edit_duration(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        duration: u32,
+    ) -> Result<(), Error> {
+        self.store
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$set": { "duration_min": duration }, "$inc" : { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn edit_name(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        name: String,
+    ) -> Result<(), Error> {
+        self.store
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$set": { "name": name }, "$inc" : { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn edit_description(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        description: String,
+    ) -> Result<(), Error> {
+        self.store
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$set": { "description": description }, "$inc" : { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
 }

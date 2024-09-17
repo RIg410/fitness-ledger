@@ -37,6 +37,34 @@ impl Logs {
         self.store.get_logs(session, limit, offset).await
     }
 
+    pub async fn edit_program_capacity(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        capacity: u32,
+    ) -> Result<()> {
+        let entry = LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::EditProgramCapacity { id, capacity },
+        };
+        self.store.store(session, entry).await
+    }
+
+    pub async fn edit_program_duration(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        duration_min: u32,
+    ) -> Result<()> {
+        let entry = LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::EditProgramDuration { id, duration_min },
+        };
+        self.store.store(session, entry).await
+    }
+
     pub async fn create_user(
         &self,
         session: &mut Session,
@@ -517,5 +545,33 @@ impl Logs {
         if let Err(err) = self.store.store(session, entry).await {
             log::error!("Failed to store log entry: {}", err);
         }
+    }
+
+    pub(crate) async fn edit_program_name(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        value: String,
+    ) -> Result<()> {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::EditProgramName { id, value },
+        };
+        self.store.store(session, entry).await
+    }
+
+    pub(crate) async fn edit_program_description(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        value: String,
+    ) -> Result<()> {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::EditProgramDescription { id, value },
+        };
+        self.store.store(session, entry).await
     }
 }

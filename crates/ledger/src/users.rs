@@ -73,7 +73,7 @@ impl Users {
             rights,
             phone: phone.clone(),
             birthday: None,
-            balance: 0,
+            balance: subscriptions.iter().map(|s| s.items).sum(),
             is_active: true,
             id: ObjectId::new(),
             reserved_balance: 0,
@@ -209,7 +209,9 @@ impl Users {
         self.logs
             .change_reserved_balance(session, tg_id, amount)
             .await;
-        self.store.change_reserved_balance(session, tg_id, amount).await
+        self.store
+            .change_reserved_balance(session, tg_id, amount)
+            .await
     }
 
     #[tx]

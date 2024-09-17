@@ -15,13 +15,13 @@ use storage::session::Db;
 use storage::Storage;
 
 pub mod calendar;
+mod couch;
 pub mod logs;
 pub mod process;
 pub mod programs;
 pub mod subscriptions;
 pub mod treasury;
 mod users;
-mod couch;
 
 use programs::Programs;
 use subscriptions::Subscriptions;
@@ -396,6 +396,78 @@ impl Ledger {
 
         self.treasury
             .presell(session, seller, phone, Sell::Free(item, price))
+            .await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn edit_program_capacity(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
+        value: u32,
+    ) -> Result<()> {
+        self.programs
+            .edit_capacity(session, program_id, value)
+            .await?;
+        self.calendar
+            .edit_capacity(session, program_id, value)
+            .await?;
+        self.logs
+            .edit_program_capacity(session, program_id, value)
+            .await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn edit_program_duration(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
+        value: u32,
+    ) -> Result<()> {
+        self.logs
+            .edit_program_duration(session, program_id, value)
+            .await?;
+        self.calendar
+            .edit_duration(session, program_id, value)
+            .await?;
+        self.programs
+            .edit_duration(session, program_id, value)
+            .await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn edit_program_name(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        value: String,
+    ) -> Result<()> {
+        self.logs
+            .edit_program_name(session, id, value.clone())
+            .await?;
+        self.programs.edit_name(session, id, value.clone()).await?;
+        self.calendar.edit_program_name(session, id, value).await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn edit_program_description(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        value: String,
+    ) -> Result<()> {
+        self.logs
+            .edit_program_description(session, id, value.clone())
+            .await?;
+        self.programs
+            .edit_description(session, id, value.clone())
+            .await?;
+        self.calendar
+            .edit_program_description(session, id, value)
             .await?;
         Ok(())
     }

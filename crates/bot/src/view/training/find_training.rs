@@ -1,6 +1,4 @@
-use super::{
-    schedule_process::ScheduleTrainingPreset, view_training_proto::ViewTrainingProto, View,
-};
+use super::{schedule_process::ScheduleTrainingPreset, view_training_proto::ViewProgram, View};
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use eyre::Result;
@@ -46,7 +44,7 @@ impl View for FindTraining {
             Callback::SelectTraining(id) => {
                 let id = ObjectId::from_bytes(id);
                 let back = FindTraining::new(self.go_back.take());
-                let view = Box::new(ViewTrainingProto::new(
+                let view = Box::new(ViewProgram::new(
                     id,
                     ScheduleTrainingPreset::default(),
                     Some(Box::new(back)),
