@@ -79,6 +79,42 @@ impl Subscriptions {
         self.store.insert(session, sub).await?;
         Ok(())
     }
+
+    #[tx]
+    pub async fn edit_price(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        value: Decimal,
+    ) -> Result<(), Error> {
+        self.logs.edit_sub_price(session, id, value).await;
+        self.store.edit_price(session, id, value).await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn edit_items(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        value: u32,
+    ) -> Result<(), Error> {
+        self.logs.edit_sub_items(session, id, value).await;
+        self.store.edit_items(session, id, value).await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn edit_name(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        value: String,
+    ) -> Result<(), Error> {
+        self.logs.edit_sub_name(session, id, value.clone()).await;
+        self.store.edit_name(session, id, value).await?;
+        Ok(())
+    }
 }
 
 #[derive(Error, Debug)]

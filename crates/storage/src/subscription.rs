@@ -4,7 +4,7 @@ use crate::session::Db;
 use bson::{doc, oid::ObjectId};
 use eyre::Error;
 use log::info;
-use model::{session::Session, subscription::Subscription};
+use model::{decimal::Decimal, session::Session, subscription::Subscription};
 use mongodb::Collection;
 
 const TABLE_NAME: &str = "subscriptions";
@@ -71,5 +71,59 @@ impl SubscriptionsStore {
             .find_one(doc! { "name": name })
             .session(&mut *session)
             .await?)
+    }
+
+    pub async fn edit_price(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        price: Decimal,
+    ) -> Result<(), Error> {
+        self.collection
+            .update_one(
+                doc! { "_id": id },
+                doc! {
+                    "$set": {"price": price.inner()}
+                },
+            )
+            .session(session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn edit_items(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        items: u32,
+    ) -> Result<(), Error> {
+        self.collection
+            .update_one(
+                doc! { "_id": id },
+                doc! {
+                    "$set": {"items": items}
+                },
+            )
+            .session(session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn edit_name(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        name: String,
+    ) -> Result<(), Error> {
+        self.collection
+            .update_one(
+                doc! { "_id": id },
+                doc! {
+                    "$set": {"name": name}
+                },
+            )
+            .session(session)
+            .await?;
+        Ok(())
     }
 }

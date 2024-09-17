@@ -292,6 +292,39 @@ impl Logs {
         }
     }
 
+    pub async fn edit_sub_price(&self, session: &mut Session, id: ObjectId, value: Decimal) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::EditSubPrice { id, value },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn edit_sub_items(&self, session: &mut Session, id: ObjectId, value: u32) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::EditSubItems { id, value },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn edit_sub_name(&self, session: &mut Session, id: ObjectId, value: String) {
+        let entry = model::log::LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::EditSubName { id, value },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
     pub async fn create_program(&self, session: &mut Session, program: Program) {
         let entry = model::log::LogEntry {
             actor: session.actor(),

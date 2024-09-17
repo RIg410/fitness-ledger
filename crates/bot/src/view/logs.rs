@@ -367,6 +367,15 @@ impl LogsView {
             Action::EditProgramDescription { id, value } => {
                 format!("Edit program description: {} {}", id, value)
             }
+            Action::EditSubPrice { id, value } => {
+                format!("Edit sub price:{} {}", id, value)
+            }
+            Action::EditSubItems { id, value } => {
+                format!("Edit sub items:{} {}", id, value)
+            }
+            Action::EditSubName { id, value } => {
+                format!("Edit sub name:{} {}", id, value)
+            }
         })
     }
 }

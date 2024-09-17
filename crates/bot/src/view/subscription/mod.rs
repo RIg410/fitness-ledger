@@ -3,6 +3,7 @@ pub mod create;
 pub mod free_sell;
 pub mod sell;
 pub mod view;
+pub mod edit;
 pub mod presell;
 
 use super::View;

@@ -26,6 +26,10 @@ impl Decimal {
     pub fn zero() -> Decimal {
         Decimal::int(0)
     }
+
+    pub fn inner(&self) -> i64 {
+        self.0
+    }
 }
 
 impl Debug for Decimal {

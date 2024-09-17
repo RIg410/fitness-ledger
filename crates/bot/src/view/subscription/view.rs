@@ -1,4 +1,5 @@
 use super::{
+    edit::{EditSubscription, EditType},
     sell::{Sell, SellView},
     View,
 };
@@ -9,7 +10,7 @@ use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    types::{InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
 
@@ -24,6 +25,20 @@ impl SubscriptionOption {
             go_back: Some(go_back),
             id,
         }
+    }
+
+    fn as_back(&mut self) -> Widget {
+        SubscriptionOption {
+            go_back: self.go_back.take(),
+            id: self.id,
+        }
+        .boxed()
+    }
+
+    async fn edit(&mut self, tp: EditType) -> Result<Option<Widget>> {
+        Ok(Some(
+            EditSubscription::new(self.id, tp, Some(self.as_back())).boxed(),
+        ))
     }
 }
 
@@ -63,17 +78,22 @@ impl View for SubscriptionOption {
             }
             Callback::Sell => {
                 ctx.ensure(Rule::SellSubscription)?;
-                let back = Box::new(SubscriptionOption {
-                    go_back: self.go_back.take(),
-                    id: self.id,
-                });
-                let widget = Box::new(SellView::new(Sell::with_id(self.id), back));
+                let widget = SellView::new(Sell::with_id(self.id), self.as_back()).boxed();
                 return Ok(Some(widget));
             }
             Callback::Back => {
                 if let Some(widget) = self.go_back.take() {
                     return Ok(Some(widget));
                 }
+            }
+            Callback::EditPrice => {
+                return self.edit(EditType::Price).await;
+            }
+            Callback::EditItems => {
+                return self.edit(EditType::Items).await;
+            }
+            Callback::EditName => {
+                return self.edit(EditType::Name).await;
             }
         }
         Ok(None)
@@ -100,23 +120,19 @@ async fn render_sub(
     let mut keymap = InlineKeyboardMarkup::default();
 
     if ctx.has_right(Rule::EditSubscription) {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "❌ Удалить",
-            Callback::Delete.to_data(),
-        )]);
+        keymap = keymap.append_row(vec![Callback::Delete.button("❌ Удалить")]);
+        keymap = keymap.append_row(vec![Callback::EditPrice.button("Изменить цену 💸")]);
+        keymap = keymap.append_row(vec![
+            Callback::EditItems.button("Изменить количество занятий")
+        ]);
+        keymap = keymap.append_row(vec![Callback::EditName.button("Изменить название")]);
     }
 
     if ctx.has_right(Rule::SellSubscription) {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "🛒 Продать",
-            Callback::Sell.to_data(),
-        )]);
+        keymap = keymap.append_row(vec![Callback::Sell.button("🛒 Продать")]);
     }
 
-    keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-        "🔙 Назад",
-        Callback::Back.to_data(),
-    )]);
+    keymap = keymap.append_row(vec![Callback::Back.button("🔙 Назад")]);
 
     Ok((msg, keymap))
 }
@@ -126,4 +142,7 @@ enum Callback {
     Delete,
     Sell,
     Back,
+    EditPrice,
+    EditItems,
+    EditName,
 }

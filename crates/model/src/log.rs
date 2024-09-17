@@ -182,4 +182,16 @@ pub enum Action {
         id: ObjectId,
         value: String,
     },
+    EditSubPrice {
+        id: ObjectId,
+        value: Decimal,
+    },
+    EditSubItems {
+        id: ObjectId,
+        value: u32,
+    },
+    EditSubName {
+        id: ObjectId,
+        value: String,
+    },
 }
