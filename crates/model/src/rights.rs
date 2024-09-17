@@ -106,6 +106,7 @@ pub enum Rule {
 
     //Couching
     CouchingView,
+    CreateCouch,
 }
 
 impl Rule {

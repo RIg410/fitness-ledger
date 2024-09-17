@@ -1,12 +1,15 @@
 use super::View;
 use crate::{callback_data::Calldata, context::Context, state::Widget};
 use async_trait::async_trait;
+use couch_list::CouchingList;
 use eyre::Result;
 use programs_list::ProgramList;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
+mod couch_list;
 mod programs_list;
+mod make_couch;
 
 #[derive(Default)]
 pub struct CouchingView;
@@ -38,8 +41,8 @@ impl View for CouchingView {
             return Ok(None);
         };
         match cb {
-            Callback::Training => Ok(Some(ProgramList::new(Some(CouchingView.boxed())).boxed())),
-            Callback::Couch => Ok(None),
+            Callback::Training => Ok(Some(ProgramList::new(Some(self.take())).boxed())),
+            Callback::Couch => Ok(Some(CouchingList::new(Some(self.take())).boxed())),
         }
     }
 
