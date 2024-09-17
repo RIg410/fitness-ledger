@@ -75,6 +75,10 @@ impl ClientView {
             Err(SignUpError::NotEnoughBalance) => {
                 ctx.send_err("Не хватает баланса").await?;
             }
+            Err(SignUpError::UserIsCouch) => {
+                ctx.send_err("Тренер не может записаться на тренировку")
+                    .await?;
+            }
         }
         Ok(())
     }
@@ -120,19 +124,7 @@ impl ClientView {
 #[async_trait]
 impl View for ClientView {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let user = ctx
-            .ledger
-            .users
-            .get(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("User not found:{}", self.id))?;
-
-        let training = ctx
-            .ledger
-            .calendar
-            .get_users_trainings(&mut ctx.session, user.id, 100, 0)
-            .await?;
-        let msg = render_profile_msg(&user, ctx.has_right(Rule::ViewProfile), &training);
+        let (msg, _) = render_profile_msg(ctx, self.id).await?;
         let mut keymap = InlineKeyboardMarkup::default();
 
         match self.reason {

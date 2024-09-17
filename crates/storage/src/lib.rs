@@ -1,15 +1,16 @@
 pub mod calendar;
 pub mod logs;
 pub mod pre_sell;
+pub mod rewards;
 pub mod session;
 pub mod subscription;
 pub mod training;
 pub mod treasury;
 pub mod user;
-pub mod couch;
 
 use eyre::Result;
 use logs::LogStore;
+use rewards::RewardsStore;
 use session::Db;
 use user::UserStore;
 
@@ -24,6 +25,7 @@ pub struct Storage {
     pub subscriptions: subscription::SubscriptionsStore,
     pub logs: LogStore,
     pub presell: pre_sell::PreSellStore,
+    pub rewards: RewardsStore,
 }
 
 impl Storage {
@@ -34,8 +36,9 @@ impl Storage {
         let training = training::ProgramStore::new(&db);
         let treasury = treasury::TreasuryStore::new(&db).await?;
         let subscriptions = subscription::SubscriptionsStore::new(&db);
-        let pre_cell = pre_sell::PreSellStore::new(&db).await?;
+        let presell = pre_sell::PreSellStore::new(&db).await?;
         let logs = logs::LogStore::new(&db).await?;
+        let couch = RewardsStore::new(&db).await?;
         Ok(Storage {
             db,
             users,
@@ -44,7 +47,8 @@ impl Storage {
             treasury,
             subscriptions,
             logs,
-            presell: pre_cell,
+            presell,
+            rewards: couch,
         })
     }
 }

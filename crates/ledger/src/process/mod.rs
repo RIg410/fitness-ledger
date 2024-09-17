@@ -1,5 +1,5 @@
 use crate::Ledger;
-use eyre::{Context, Result};
+use eyre::{Context as _, Result};
 use freeze::FreezeBg;
 use log::{debug, error};
 use logs::LogsBg;

@@ -1,56 +1,23 @@
 use std::sync::Arc;
 
-use bson::{doc, oid::ObjectId, to_document};
+use bson::{doc, oid::ObjectId};
 use eyre::Error;
-use model::{
-    couch::{Couch, Reward},
-    session::Session,
-};
+use model::{couch::Reward, session::Session};
 use mongodb::Collection;
 
-const COLLECTION: &str = "couch";
-const REWARD_COLLECTION: &str = "couch_reward";
+const REWARD_COLLECTION: &str = "reward";
 
 #[derive(Clone)]
-pub struct TreasuryStore {
-    store: Arc<Collection<Couch>>,
+pub struct RewardsStore {
     rewards: Arc<Collection<Reward>>,
 }
 
-impl TreasuryStore {
+impl RewardsStore {
     pub async fn new(db: &mongodb::Database) -> Result<Self, Error> {
-        let store = db.collection(COLLECTION);
         let reward = db.collection(REWARD_COLLECTION);
-        Ok(TreasuryStore {
-            store: Arc::new(store),
+        Ok(RewardsStore {
             rewards: Arc::new(reward),
         })
-    }
-
-    pub async fn insert(&self, session: &mut Session, couch_info: &Couch) -> Result<(), Error> {
-        self.store.insert_one(couch_info).session(session).await?;
-        Ok(())
-    }
-
-    pub async fn get(&self, session: &mut Session, id: ObjectId) -> Result<Option<Couch>, Error> {
-        Ok(self
-            .store
-            .find_one(doc! {
-                "_id": id
-            })
-            .session(session)
-            .await?)
-    }
-
-    pub async fn update(&self, session: &mut Session, couch_info: &Couch) -> Result<(), Error> {
-        self.store
-            .update_one(
-                doc! { "_id": couch_info.id },
-                doc! { "$set": to_document(&couch_info)? },
-            )
-            .session(&mut *session)
-            .await?;
-        Ok(())
     }
 
     pub async fn add_reward(&self, session: &mut Session, reward: Reward) -> Result<(), Error> {

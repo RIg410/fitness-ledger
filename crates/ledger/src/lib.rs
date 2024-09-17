@@ -1,6 +1,6 @@
 use calendar::{Calendar, SignOutError};
 use chrono::Local;
-use eyre::{bail, eyre, Context, Result};
+use eyre::{bail, eyre, Context as _, Result};
 use log::error;
 use logs::Logs;
 use model::decimal::Decimal;
@@ -10,25 +10,26 @@ use model::training::{Training, TrainingStatus};
 use model::treasury::Sell;
 use model::user::{sanitize_phone, User, UserIdent, UserPreSell};
 use mongodb::bson::oid::ObjectId;
+use programs::Programs;
+use rewards::Rewards;
 use storage::pre_sell::PreSellStore;
 use storage::session::Db;
 use storage::Storage;
+use subscriptions::Subscriptions;
+use thiserror::Error;
+use treasury::Treasury;
+use tx_macro::tx;
+pub use users::*;
 
 pub mod calendar;
 mod couch;
 pub mod logs;
 pub mod process;
 pub mod programs;
+pub mod rewards;
 pub mod subscriptions;
 pub mod treasury;
 mod users;
-
-use programs::Programs;
-use subscriptions::Subscriptions;
-use thiserror::Error;
-use treasury::Treasury;
-use tx_macro::tx;
-pub use users::*;
 
 #[derive(Clone)]
 pub struct Ledger {
@@ -40,6 +41,7 @@ pub struct Ledger {
     pub subscriptions: Subscriptions,
     pub presell: PreSellStore,
     pub logs: Logs,
+    pub rewards: Rewards,
 }
 
 impl Ledger {
@@ -56,6 +58,7 @@ impl Ledger {
         let treasury = Treasury::new(storage.treasury, logs.clone());
         let subscriptions = Subscriptions::new(storage.subscriptions, logs.clone());
         let presell = storage.presell.clone();
+        let rewards = Rewards::new(storage.rewards);
         Ledger {
             users,
             calendar,
@@ -65,6 +68,7 @@ impl Ledger {
             subscriptions,
             logs,
             presell,
+            rewards,
         }
     }
 
@@ -159,6 +163,11 @@ impl Ledger {
             .get(session, client)
             .await?
             .ok_or_else(|| SignUpError::UserNotFound)?;
+
+        if user.couch.is_some() {
+            return Err(SignUpError::UserIsCouch);
+        }
+
         if user.balance == 0 {
             return Err(SignUpError::NotEnoughBalance);
         }
@@ -501,6 +510,8 @@ pub enum SignUpError {
     ClientAlreadySignedUp,
     #[error("User not found")]
     UserNotFound,
+    #[error("User is couch")]
+    UserIsCouch,
     #[error("Common error:{0}")]
     Common(#[from] eyre::Error),
     #[error("Not enough balance")]

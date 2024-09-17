@@ -83,6 +83,7 @@ impl Users {
             version: 0,
             created_at: Utc::now(),
             initiated: false,
+            couch: None,
         };
         self.store.insert(session, user).await?;
         self.logs.create_user(session, tg_id, name, phone).await;

@@ -8,13 +8,13 @@ use crate::{
 };
 use async_trait::async_trait;
 use chrono::Local;
-use eyre::eyre;
+use eyre::{eyre, Error};
 use log::warn;
 use model::{
+    couch::{Couch, Rate},
     rights::Rule,
     subscription::{Status, UserSubscription},
-    training::Training,
-    user::User,
+    user::{User, UserIdent},
 };
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -87,10 +87,7 @@ impl UserProfile {
         amount: i32,
     ) -> Result<Option<Widget>, eyre::Error> {
         ctx.ensure(Rule::ChangeBalance)?;
-        let user = ctx
-            .ledger
-            .get_user(&mut ctx.session, self.tg_id)
-            .await?;
+        let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
 
         if amount < 0 {
             if user.reserved_balance < amount.abs() as u32 {
@@ -190,18 +187,7 @@ impl UserProfile {
 #[async_trait]
 impl View for UserProfile {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let user = ctx
-            .ledger
-            .users
-            .get_by_tg_id(&mut ctx.session, self.tg_id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("User not found:{}", self.tg_id))?;
-        let trainings = ctx
-            .ledger
-            .calendar
-            .get_users_trainings(&mut ctx.session, user.id, 100, 0)
-            .await?;
-        let (msg, keymap) = render_user_profile(&ctx, &user, &trainings, self.go_back.is_some());
+        let (msg, keymap) = render_user_profile(ctx, self.tg_id, self.go_back.is_some()).await?;
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
@@ -250,13 +236,12 @@ impl View for UserProfile {
     }
 }
 
-fn render_user_profile(
-    ctx: &Context,
-    user: &User,
-    trainings: &Vec<Training>,
+async fn render_user_profile<ID: Into<UserIdent>>(
+    ctx: &mut Context,
+    id: ID,
     back: bool,
-) -> (String, InlineKeyboardMarkup) {
-    let msg = render_profile_msg(user, ctx.has_right(Rule::ViewProfile), trainings);
+) -> Result<(String, InlineKeyboardMarkup), Error> {
+    let (msg, user) = render_profile_msg(ctx, id).await?;
 
     let mut keymap = InlineKeyboardMarkup::default();
     if ctx.has_right(Rule::FreezeUsers)
@@ -304,7 +289,7 @@ fn render_user_profile(
     if back {
         keymap = keymap.append_row(Callback::Back.btn_row("⬅️"));
     }
-    (msg, keymap)
+    Ok((msg, keymap))
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -342,43 +327,29 @@ fn render_sub(sub: &UserSubscription) -> String {
     }
 }
 
-pub fn render_profile_msg(user: &User, sys_info: bool, trainings: &Vec<Training>) -> String {
-    let empty = "?".to_string();
+pub async fn render_profile_msg<ID: Into<UserIdent>>(
+    ctx: &mut Context,
+    id: ID,
+) -> Result<(String, User), Error> {
+    let user = ctx.ledger.get_user(&mut ctx.session, id).await?;
 
-    let sys_info = if sys_info {
-        format!("*Резерв : _{}_ занятий*", user.reserved_balance)
+    let mut msg = user_base_info(&user);
+    if let Some(couch) = user.couch.as_ref() {
+        render_couch_info(&mut msg, couch);
     } else {
-        "".to_owned()
-    };
+        render_balance_info(&mut msg, &user, ctx.has_right(Rule::ViewProfile));
+        render_subscriptions(&mut msg, &user);
+        render_trainings(ctx, &mut msg, &user).await?;
+    }
+    Ok((msg, user))
+}
 
-    let mut msg = format!(
-        "
-{} Пользователь : _@{}_
-Имя : _{}_
-Телефон : _\\+{}_
-Дата рождения : _{}_
-➖➖➖➖➖➖➖➖➖➖
-*Баланс : _{}_ занятий*
-{}
-*Осталось дней заморозок: _{}_*
-➖➖➖➖➖➖➖➖➖➖
-",
-        user_type(user),
-        escape(user.name.tg_user_name.as_ref().unwrap_or_else(|| &empty)),
-        escape(&user.name.first_name),
-        escape(&user.phone),
-        escape(
-            &user
-                .birthday
-                .as_ref()
-                .map(|d| d.format("%d.%m.%Y").to_string())
-                .unwrap_or_else(|| empty.clone())
-        ),
-        user.balance,
-        sys_info,
-        user.freeze_days
-    );
-
+async fn render_trainings(ctx: &mut Context, msg: &mut String, user: &User) -> Result<(), Error> {
+    let trainings = ctx
+        .ledger
+        .calendar
+        .get_users_trainings(&mut ctx.session, user.id, 100, 0)
+        .await?;
     if !trainings.is_empty() {
         msg.push_str("Записи:\n");
         for training in trainings {
@@ -393,6 +364,10 @@ pub fn render_profile_msg(user: &User, sys_info: bool, trainings: &Vec<Training>
         }
         msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
     }
+    Ok(())
+}
+
+fn render_subscriptions(msg: &mut String, user: &User) {
     let mut subs = user.subscriptions.iter().collect::<Vec<_>>();
     subs.sort_by(|a, b| a.status.cmp(&b.status));
     msg.push_str("Абонементы:\n");
@@ -411,7 +386,19 @@ pub fn render_profile_msg(user: &User, sys_info: bool, trainings: &Vec<Training>
         }
     }
     msg.push_str("➖➖➖➖➖➖➖➖➖➖");
-    msg
+}
+
+fn render_balance_info(msg: &mut String, user: &User, sys_info: bool) {
+    msg.push_str("➖➖➖➖➖➖➖➖➖➖");
+    let sys_info = if sys_info {
+        format!("\n*Резерв : _{}_ занятий*", user.reserved_balance)
+    } else {
+        "".to_owned()
+    };
+    msg.push_str(&format!(
+        "*Баланс : _{}_ занятий*{}\n",
+        user.balance, sys_info
+    ));
 }
 
 pub fn user_type(user: &User) -> &str {
@@ -421,9 +408,62 @@ pub fn user_type(user: &User) -> &str {
         "⚫"
     } else if user.rights.is_full() {
         "🔴"
-    } else if user.rights.has_rule(Rule::Train) {
+    } else if user.rights.has_rule(Rule::Train) && user.couch.is_some() {
         "🔵"
     } else {
         "🟢"
+    }
+}
+
+pub fn user_base_info(user: &User) -> String {
+    let empty = "?".to_string();
+    format!(
+        "{} Пользователь : _@{}_
+Имя : _{}_
+Фамилия : _{}_
+Телефон : _\\+{}_
+Дата рождения : _{}_\n",
+        user_type(&user),
+        escape(user.name.tg_user_name.as_ref().unwrap_or_else(|| &empty)),
+        escape(&user.name.first_name),
+        escape(&user.name.last_name.as_ref().unwrap_or_else(|| &empty)),
+        escape(&user.phone),
+        escape(
+            &user
+                .birthday
+                .as_ref()
+                .map(|d| d.format("%d.%m.%Y").to_string())
+                .unwrap_or_else(|| empty.clone())
+        ),
+    )
+}
+
+fn render_couch_info(msg: &mut String, couch: &Couch) {
+    msg.push_str("➖➖➖➖➖➖➖➖➖➖");
+    msg.push_str(&format!(
+        "Анкета : _{}_\nНакопленная награда : _{}_💰\n{}\n",
+        escape(&couch.description),
+        couch.reward,
+        render_rate(&couch.rate)
+    ));
+    todo!()
+}
+
+fn render_rate(rate: &Rate) -> String {
+    match rate {
+        Rate::FixedMonthly { rate, next_reward } => {
+            format!(
+                "Фиксированный месячный тариф : _{}_💰\nСледующая награда : _{}_\n",
+                rate,
+                next_reward.with_timezone(&Local).format("%d\\.%m\\.%Y")
+            )
+        }
+        Rate::PerClient { min, per_client } => {
+            format!(
+                "По клиентам : _{}_💰\nМинимальная награда : _{}_💰\n",
+                per_client, min
+            )
+        }
+        Rate::None => "Тариф не определен".to_string(),
     }
 }

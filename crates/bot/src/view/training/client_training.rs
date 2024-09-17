@@ -83,7 +83,7 @@ async fn render(
         .get_users_trainings(&mut ctx.session, id, 100, 0)
         .await?;
 
-    if trainings.is_empty() && !ctx.has_right(Rule::Train) {
+    if trainings.is_empty() && ctx.me.couch.is_none() {
         msg.push_str("\n\n🤷🏻‍♂️  У вас нет назначенных тренировок");
         msg.push_str("\n\n🔍давайте что\\-нибудь подберем");
     }
