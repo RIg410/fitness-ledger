@@ -248,7 +248,11 @@ async fn render_user_profile<ID: Into<UserIdent>>(
         ]);
     }
 
-    keymap = keymap.append_row(Callback::TrainingList.btn_row("Записи 📝"));
+    if user.is_couch() {
+        keymap = keymap.append_row(Callback::TrainingList.btn_row("Тренировки 📝"));
+    } else {
+        keymap = keymap.append_row(Callback::TrainingList.btn_row("Записи 📝"));
+    }
 
     if ctx.has_right(Rule::BlockUser) && ctx.me.tg_id != user.tg_id {
         keymap = keymap.append_row(Callback::BlockUnblock.btn_row(if user.is_active {
@@ -390,7 +394,7 @@ pub fn user_type(user: &User) -> &str {
         "⚫"
     } else if user.rights.is_full() {
         "🔴"
-    } else if user.rights.has_rule(Rule::Train) && user.couch.is_some() {
+    } else if user.couch.is_some() {
         "🔵"
     } else {
         "🟢"
@@ -423,12 +427,11 @@ pub fn user_base_info(user: &User) -> String {
 fn render_couch_info(msg: &mut String, couch: &CouchInfo) {
     msg.push_str("➖➖➖➖➖➖➖➖➖➖");
     msg.push_str(&format!(
-        "Анкета : _{}_\nНакопленная награда : _{}_💰\n{}\n",
+        "\n[Анкета]({})\nНакопленная награда : _{}_💰\n{}\n",
         escape(&couch.description),
-        couch.reward,
+        escape(&couch.reward.to_string()),
         render_rate(&couch.rate)
     ));
-    todo!()
 }
 
 pub fn render_rate(rate: &Rate) -> String {
@@ -436,14 +439,15 @@ pub fn render_rate(rate: &Rate) -> String {
         Rate::FixedMonthly { rate, next_reward } => {
             format!(
                 "Фиксированный месячный тариф : _{}_💰\nСледующая награда : _{}_\n",
-                rate,
+                escape(&rate.to_string()),
                 next_reward.with_timezone(&Local).format("%d\\.%m\\.%Y")
             )
         }
         Rate::PerClient { min, per_client } => {
             format!(
-                "По клиентам : _{}_💰\nМинимальная награда : _{}_💰\n",
-                per_client, min
+                "За клиента : _{}_💰\nМинимальная награда : _{}_💰\n",
+                escape(&per_client.to_string()),
+                escape(&min.to_string())
             )
         }
         Rate::None => "Тариф не определен".to_string(),

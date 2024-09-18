@@ -172,7 +172,7 @@ impl Calendar {
             .get_by_tg_id(session, instructor)
             .await?
             .ok_or(ScheduleError::InstructorNotFound)?;
-        if !instructor.rights.has_rule(Rule::Train) && instructor.couch.is_some() {
+        if !instructor.couch.is_some() {
             return Err(ScheduleError::InstructorHasNoRights);
         }
         let collision = self

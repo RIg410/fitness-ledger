@@ -97,7 +97,10 @@ impl ClientList {
 #[async_trait]
 impl View for ClientList {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        ctx.ensure(Rule::Train)?;
+        if !ctx.is_couch() {
+            bail!("Only couch can see client list");
+        }
+        
         let training = ctx
             .ledger
             .calendar

@@ -186,7 +186,7 @@ async fn render(
         keymap.push(vec![Callback::EditDescription.button("📝Изменить описание")]);
     }
 
-    if !ctx.has_right(Rule::Train) {
+    if !ctx.me.is_couch() {
         keymap.push(vec![Callback::FindTraining.button("📅Расписание")]);
     }
 

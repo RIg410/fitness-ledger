@@ -134,18 +134,15 @@ where
                 }
                 self.show(ctx).await?;
             }
-            Stage::YesNo { .. } => {
-                ctx.delete_msg(message.id).await?;
-            }
+            Stage::YesNo { .. } => {}
             Stage::List(list) => {
                 list.hdl
                     .query(ctx, self.state.as_mut().unwrap(), text)
                     .await?;
-                ctx.delete_msg(message.id).await?;
                 self.show(ctx).await?;
             }
         }
-
+        ctx.delete_msg(message.id).await?;
         Ok(None)
     }
 
@@ -172,7 +169,13 @@ where
                     return Ok(None);
                 }
                 Stage::YesNo { hdl, .. } => match idx {
-                    ListId::Yes => hdl.yes(ctx, self.state.as_mut().unwrap()).await?,
+                    ListId::Yes => {
+                        if let Some(next) = hdl.yes(ctx, self.state.as_mut().unwrap()).await? {
+                            Some(next)
+                        } else {
+                            return Ok(self.go_back.take());
+                        }
+                    }
                     ListId::No => {
                         ctx.send_notification("❌ Отменено").await?;
                         return Ok(self.go_back.take());

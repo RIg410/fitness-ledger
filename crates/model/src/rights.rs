@@ -82,6 +82,7 @@ pub enum Rule {
     ChangeBalance,
 
     // Training
+    #[deprecated]
     Train,
     EditTraining,
     CancelTraining,

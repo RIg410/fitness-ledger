@@ -42,6 +42,10 @@ impl Context {
         Ok(())
     }
 
+    pub fn is_couch(&self) -> bool {
+        self.me.couch.is_some()
+    }
+
     pub fn is_active(&self) -> bool {
         self.me.is_active
     }

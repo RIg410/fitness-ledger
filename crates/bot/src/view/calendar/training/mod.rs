@@ -3,7 +3,7 @@ use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use client_list::ClientList;
-use eyre::Result;
+use eyre::{bail, Result};
 use model::{
     rights::Rule,
     training::{Training, TrainingStatus},
@@ -159,7 +159,9 @@ impl TrainingView {
     }
 
     async fn client_list(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
-        ctx.ensure(Rule::Train)?;
+        if !ctx.is_couch() {
+            bail!("Only couch can see client list");
+        }
         Ok(Some(ClientList::new(self.id, Some(self.take())).boxed()))
     }
 

@@ -1,8 +1,9 @@
 use std::vec;
 
 use async_trait::async_trait;
+use chrono::{Local, NaiveDate, TimeZone as _, Utc};
 use eyre::Error;
-use model::{couch::Rate, user::User};
+use model::{couch::Rate, decimal::Decimal, user::User};
 use teloxide::utils::markdown::escape;
 
 use crate::{
@@ -62,7 +63,7 @@ impl StageList<State> for SetRewardType {
 
     async fn select(
         &self,
-        ctx: &mut Context,
+        _: &mut Context,
         state: &mut State,
         id: ListId,
     ) -> Result<Option<Stage<State>>, Error> {
@@ -72,14 +73,143 @@ impl StageList<State> for SetRewardType {
                 state.reward_rate = Some(Rate::None);
                 Some(Stage::yes_no(Confirm))
             }
-            1 => todo!("Fixed rate"),
-            2 => todo!("Rate by clients"),
+            1 => Some(Stage::text(FixedRate)),
+            2 => Some(Stage::text(ClientRate)),
             _ => return Ok(None),
         })
     }
 
     fn back(&self) -> Option<Stage<State>> {
         Some(Stage::text(CouchDescription))
+    }
+}
+
+pub struct FixedRate;
+
+#[async_trait]
+impl StageText<State> for FixedRate {
+    async fn message(&self, _: &mut Context, _: &mut State) -> Result<String, eyre::Error> {
+        Ok("Введите фиксированное вознаграждение 💵".to_string())
+    }
+
+    async fn handle_text(
+        &self,
+        _: &mut Context,
+        state: &mut State,
+        query: &str,
+    ) -> Result<Option<Stage<State>>, Error> {
+        let rate = query.parse::<Decimal>()?;
+        let rate = Rate::FixedMonthly {
+            rate,
+            next_reward: Utc::now(),
+        };
+        state.reward_rate = Some(rate);
+        Ok(Some(Stage::text(FixedRateNextReward)))
+    }
+
+    fn back(&self) -> Option<Stage<State>> {
+        Some(Stage::list(SetRewardType))
+    }
+}
+
+struct ClientRate;
+
+#[async_trait]
+impl StageText<State> for ClientRate {
+    async fn message(&self, _: &mut Context, _: &mut State) -> Result<String, eyre::Error> {
+        Ok("Введите минимальное вознаграждение 💵".to_string())
+    }
+
+    async fn handle_text(
+        &self,
+        _: &mut Context,
+        state: &mut State,
+        query: &str,
+    ) -> Result<Option<Stage<State>>, Error> {
+        let min = query.parse::<Decimal>()?;
+
+        state.reward_rate = Some(Rate::PerClient {
+            min: min,
+            per_client: Decimal::zero(),
+        });
+        Ok(Some(Stage::text(ClientRatePerClient)))
+    }
+
+    fn back(&self) -> Option<Stage<State>> {
+        Some(Stage::list(SetRewardType))
+    }
+}
+
+struct ClientRatePerClient;
+
+#[async_trait]
+impl StageText<State> for ClientRatePerClient {
+    async fn message(&self, _: &mut Context, _: &mut State) -> Result<String, eyre::Error> {
+        Ok("Введите вознаграждение за клиента 💵".to_string())
+    }
+
+    async fn handle_text(
+        &self,
+        _: &mut Context,
+        state: &mut State,
+        query: &str,
+    ) -> Result<Option<Stage<State>>, Error> {
+        let per_client = query.parse::<Decimal>()?;
+
+        if let Some(Rate::PerClient { min, .. }) = state.reward_rate.as_mut() {
+            state.reward_rate = Some(Rate::PerClient {
+                min: min.clone(),
+                per_client,
+            });
+        } else {
+            eyre::bail!("Rate not found");
+        }
+        Ok(Some(Stage::yes_no(Confirm)))
+    }
+
+    fn back(&self) -> Option<Stage<State>> {
+        Some(Stage::text(ClientRate))
+    }
+}
+
+struct FixedRateNextReward;
+
+#[async_trait]
+impl StageText<State> for FixedRateNextReward {
+    async fn message(&self, _: &mut Context, _: &mut State) -> Result<String, eyre::Error> {
+        Ok("Введите дату следующего вознаграждения 📅\nY\\.m\\.d".to_string())
+    }
+
+    async fn handle_text(
+        &self,
+        _: &mut Context,
+        state: &mut State,
+        query: &str,
+    ) -> Result<Option<Stage<State>>, Error> {
+        let next_reward = NaiveDate::parse_from_str(query, "%Y.%m.%d")?;
+        let next_reward = Local
+            .from_local_datetime(
+                &next_reward
+                    .and_hms_opt(0, 0, 0)
+                    .ok_or_else(|| eyre::eyre!("Invalid time"))?,
+            )
+            .earliest()
+            .ok_or_else(|| eyre::eyre!("Invalid time"))?;
+
+        let rate = if let Some(Rate::FixedMonthly { rate, .. }) = state.reward_rate.as_mut() {
+            Rate::FixedMonthly {
+                rate: rate.clone(),
+                next_reward: next_reward.with_timezone(&Utc),
+            }
+        } else {
+            eyre::bail!("Rate not found");
+        };
+        state.reward_rate = Some(rate);
+        Ok(Some(Stage::yes_no(Confirm)))
+    }
+
+    fn back(&self) -> Option<Stage<State>> {
+        Some(Stage::list(SetRewardType))
     }
 }
 
@@ -128,7 +258,7 @@ impl StageYesNo<State> for Confirm {
             .users
             .make_user_instructor(&mut ctx.session, user.tg_id, desc.clone(), rate.clone())
             .await?;
-
+        ctx.send_notification("Инструктор успешно создан 🎉").await?;
         Ok(None)
     }
 

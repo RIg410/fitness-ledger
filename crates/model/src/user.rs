@@ -67,6 +67,10 @@ impl User {
             couch: None,
         }
     }
+
+    pub fn is_couch(&self) -> bool {
+        self.couch.is_some()
+    }
 }
 
 fn default_is_active() -> bool {

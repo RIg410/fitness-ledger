@@ -3,7 +3,10 @@ use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::{calendar::{render_training_status, training::TrainingView, CallbackDateTime}, View},
+    view::{
+        calendar::{render_training_status, training::TrainingView, CallbackDateTime},
+        View,
+    },
 };
 use async_trait::async_trait;
 use chrono::Local;
@@ -132,7 +135,7 @@ async fn render(
         ));
         keymap = keymap.append_row(row);
     }
-    if !ctx.has_right(Rule::Train) {
+    if !ctx.is_couch() {
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
             "🔍 Найти тренировку",
             Callback::FindTraining.to_data(),
