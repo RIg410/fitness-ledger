@@ -33,20 +33,6 @@ impl TrainingView {
         Ok(self.go_back.take())
     }
 
-    async fn description(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
-        let training = ctx
-            .ledger
-            .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        ctx.send_msg(&escape(&training.description)).await?;
-        let id = ctx.send_msg("\\.").await?;
-        ctx.update_origin_msg_id(id);
-        self.show(ctx).await?;
-        Ok(None)
-    }
-
     async fn couch_info(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         let training = ctx
             .ledger
@@ -225,7 +211,6 @@ impl View for TrainingView {
         };
         match cb {
             Callback::Back => self.go_back(ctx).await,
-            Callback::Description => self.description(ctx).await,
             Callback::CouchInfo => self.couch_info(ctx).await,
             Callback::Cancel => self.cancel_training(ctx).await,
             Callback::Delete(all) => self.delete_training(ctx, all).await,
@@ -302,10 +287,7 @@ _{}_                                                                 \n
         training.description,
     );
     let mut keymap = InlineKeyboardMarkup::default();
-    keymap = keymap.append_row(vec![
-        Callback::Description.button("📝 Описание"),
-        Callback::CouchInfo.button("🧘 Об инструкторе"),
-    ]);
+    keymap = keymap.append_row(vec![Callback::CouchInfo.button("🧘 Об инструкторе")]);
 
     if !is_client {
         keymap = keymap.append_row(vec![Callback::ClientList.button("🗒 Список клиентов")]);
@@ -350,7 +332,6 @@ _{}_                                                                 \n
 #[derive(Serialize, Deserialize)]
 enum Callback {
     Back,
-    Description,
     CouchInfo,
     ChangeCouch,
     Delete(bool),

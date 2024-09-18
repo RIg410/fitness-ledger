@@ -58,7 +58,7 @@ impl ClientList {
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         if training.is_processed {
-            ctx.send_err("Тренировка завершена\\. *Редактирование запрещено\\.*")
+            ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
                 .await?;
             self.show(ctx).await?;
             return Ok(None);
@@ -73,18 +73,18 @@ impl ClientList {
                 bail!("Training not found");
             }
             Err(SignOutError::TrainingNotOpenToSignOut) => {
-                ctx.send_err("Тренировка завершена\\. *Редактирование запрещено\\.*")
+                ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
                     .await?;
             }
             Err(SignOutError::NotEnoughReservedBalance) => {
-                ctx.send_err("Не удалось удалить клиента\\. Нет резерва")
+                ctx.send_notification("Не удалось удалить клиента\\. Нет резерва")
                     .await?;
             }
             Err(SignOutError::UserNotFound) => {
                 bail!("User not found");
             }
             Err(SignOutError::ClientNotSignedUp) => {
-                ctx.send_err("Уже удален)").await?;
+                ctx.send_notification("Уже удален)").await?;
             }
             Err(SignOutError::Common(err)) => return Err(err),
         }

@@ -6,15 +6,13 @@ use serde::{Deserialize, Serialize};
 use crate::{decimal::Decimal, training::Training};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct Couch {
-    #[serde(rename = "_id")]
-    pub id: ObjectId,
+pub struct CouchInfo {
     pub description: String,
     pub reward: Decimal,
     pub rate: Rate,
 }
 
-impl Couch {
+impl CouchInfo {
     pub fn get_reward(&mut self, take: Decimal) -> Result<(), Error> {
         if take > self.reward {
             bail!(
@@ -29,6 +27,7 @@ impl Couch {
 
     pub fn collect_training_rewards(
         &mut self,
+        id: ObjectId,
         training: &Training,
     ) -> Result<Option<Reward>, Error> {
         Ok(match &self.rate {
@@ -42,7 +41,7 @@ impl Couch {
                 self.reward += reward_sum;
                 let reward = Reward {
                     id: ObjectId::new(),
-                    couch: self.id,
+                    couch: id,
                     created_at: Local::now().with_timezone(&Utc),
                     reward: reward_sum,
                     rate: self.rate.clone(),
@@ -59,6 +58,7 @@ impl Couch {
 
     pub fn collect_monthly_rewards(
         &mut self,
+        id: ObjectId,
         date_time: DateTime<Local>,
     ) -> Result<Option<Reward>, Error> {
         Ok(match self.rate.clone() {
@@ -73,7 +73,7 @@ impl Couch {
                     self.reward += rate;
                     let reward = Reward {
                         id: ObjectId::new(),
-                        couch: self.id,
+                        couch: id,
                         created_at: Local::now().with_timezone(&Utc),
                         reward: rate,
                         rate: self.rate.clone(),

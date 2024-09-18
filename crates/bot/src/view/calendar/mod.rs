@@ -1,5 +1,6 @@
 use std::vec;
 
+use super::training::client_training::ClientTrainings;
 use super::{training::schedule_training::ScheduleTraining, View};
 use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
@@ -20,6 +21,17 @@ pub struct CalendarView {
     week_id: WeekId,
     selected_day: DayId,
     filter: Filter,
+}
+
+impl Default for CalendarView {
+    fn default() -> Self {
+        Self {
+            go_back: Default::default(),
+            week_id: WeekId::default(),
+            selected_day: Default::default(),
+            filter: Default::default(),
+        }
+    }
 }
 
 impl CalendarView {
@@ -94,28 +106,20 @@ impl View for CalendarView {
                 }
             }
             Callback::SelectTraining(id) => {
-                return Ok(Some(Box::new(TrainingView::new(
-                    id.into(),
-                    Some(Box::new(CalendarView::new(
-                        self.week_id,
-                        self.go_back.take(),
-                        Some(self.selected_day.local().weekday()),
-                        Some(self.filter.clone()),
-                    ))),
-                ))));
+                return Ok(Some(
+                    TrainingView::new(id.into(), Some(self.take())).boxed(),
+                ));
             }
             Callback::AddTraining => {
                 ctx.ensure(Rule::EditSchedule)?;
-                let widget = Box::new(CalendarView::new(
-                    self.week_id,
-                    self.go_back.take(),
-                    Some(self.selected_day.local().weekday()),
-                    Some(self.filter.clone()),
+                return Ok(Some(
+                    ScheduleTraining::new(self.selected_day.local(), Some(self.take())).boxed(),
                 ));
-                return Ok(Some(Box::new(ScheduleTraining::new(
-                    self.selected_day.local(),
-                    Some(widget),
-                ))));
+            }
+            Callback::MyTrainings => {
+                return Ok(Some(
+                    ClientTrainings::new(ctx.me.id, Some(self.take())).boxed(),
+                ))
             }
         }
     }
@@ -229,6 +233,9 @@ pub async fn render_week(
         ));
         buttons = buttons.append_row(row);
     }
+
+    buttons = buttons.append_row(Callback::MyTrainings.btn_row("🫶🏻 Мои тренировки"));
+
     if ctx.has_right(Rule::EditSchedule) {
         buttons = buttons.append_row(vec![InlineKeyboardButton::callback(
             "📝  запланировать тренировку",
@@ -337,6 +344,7 @@ enum Callback {
     SelectDay(CallbackDateTime),
     SelectTraining(CallbackDateTime),
     AddTraining,
+    MyTrainings,
     Back,
 }
 

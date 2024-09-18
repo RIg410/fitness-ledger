@@ -35,7 +35,7 @@ impl View for SetPhone {
     ) -> Result<Option<Widget>> {
         let text = message.text().unwrap_or_default();
         if text.is_empty() {
-            ctx.send_err("Введите телефон").await?;
+            ctx.send_notification("Введите телефон").await?;
             return Ok(None);
         }
 

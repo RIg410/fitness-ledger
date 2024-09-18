@@ -424,7 +424,7 @@ impl Ledger {
             .await?;
         self.logs
             .edit_program_capacity(session, program_id, value)
-            .await?;
+            .await;
         Ok(())
     }
 

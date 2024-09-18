@@ -3,6 +3,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Local, Utc};
 use eyre::Result;
 use model::{
+    couch::CouchInfo,
     decimal::Decimal,
     log::{Action, LogEntry},
     program::Program,
@@ -37,18 +38,26 @@ impl Logs {
         self.store.get_logs(session, limit, offset).await
     }
 
-    pub async fn edit_program_capacity(
-        &self,
-        session: &mut Session,
-        id: ObjectId,
-        capacity: u32,
-    ) -> Result<()> {
+    pub async fn make_user_instructor(&self, session: &mut Session, tg_id: i64, couch: CouchInfo) {
+        let entry = LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::MakeUserInstructor { tg_id, couch },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn edit_program_capacity(&self, session: &mut Session, id: ObjectId, capacity: u32) {
         let entry = LogEntry {
             actor: session.actor(),
             date_time: chrono::Local::now().with_timezone(&Utc),
             action: Action::EditProgramCapacity { id, capacity },
         };
-        self.store.store(session, entry).await
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
     }
 
     pub async fn edit_program_duration(

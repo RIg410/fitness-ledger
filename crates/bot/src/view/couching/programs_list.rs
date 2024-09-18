@@ -33,7 +33,6 @@ impl ProgramList {
 #[async_trait]
 impl View for ProgramList {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        ctx.ensure(Rule::EditSchedule)?;
         let (msg, keymap) = render(ctx, self.go_back.is_some()).await?;
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
@@ -49,7 +48,6 @@ impl View for ProgramList {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        ctx.ensure(Rule::EditSchedule)?;
         let cb = if let Some(cb) = Callback::from_data(data) {
             cb
         } else {
@@ -63,12 +61,9 @@ impl View for ProgramList {
             }
             Callback::CreateTraining => {
                 ctx.ensure(Rule::CreateTraining)?;
-                return Ok(Some(
-                    CreateTraining::new(ProgramList::new(self.go_back.take()).boxed()).boxed(),
-                ));
+                return Ok(Some(CreateTraining::new(self.take()).boxed()));
             }
             Callback::SelectTraining(id) => {
-                ctx.ensure(Rule::EditTraining)?;
                 let id = ObjectId::from_bytes(id);
                 let preset = ScheduleTrainingPreset {
                     day: None,
@@ -76,11 +71,9 @@ impl View for ProgramList {
                     instructor: None,
                     is_one_time: None,
                 };
-                return Ok(Some(Box::new(ViewProgram::new(
-                    id,
-                    preset,
-                    Some(ProgramList::new(self.go_back.take()).boxed()),
-                ))));
+                return Ok(Some(
+                    ViewProgram::new(id, preset, Some(self.take())).boxed(),
+                ));
             }
         }
         Ok(None)
@@ -109,13 +102,11 @@ async fn render(
             .push(Callback::SelectTraining(training.id.bytes()).btn_row(training.name));
     }
 
-    keymap
-        .inline_keyboard
-        .push(vec![InlineKeyboardButton::callback(
-            "🧘🏼 Создать новую тренировку",
-            Callback::CreateTraining.to_data(),
-        )]);
-
+    if ctx.has_right(Rule::CreateTraining) {
+        keymap
+            .inline_keyboard
+            .push(Callback::CreateTraining.btn_row("🧘🏼 Создать новую тренировку"));
+    }
     if has_back {
         keymap
             .inline_keyboard

@@ -105,7 +105,6 @@ pub enum Rule {
     ViewLogs,
 
     //Couching
-    CouchingView,
     CreateCouch,
 }
 

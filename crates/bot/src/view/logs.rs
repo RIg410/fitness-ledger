@@ -370,6 +370,10 @@ impl LogsView {
             Action::EditSubName { id, value } => {
                 format!("Edit sub name:{} {}", id, value)
             }
+            Action::MakeUserInstructor { tg_id, couch } => {
+                let info = Self::render_user_info(ctx, *tg_id).await?;
+                format!("Make user instructor: {} {:?}", info, couch)
+            }
         })
     }
 }

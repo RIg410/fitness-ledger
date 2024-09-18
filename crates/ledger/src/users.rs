@@ -3,6 +3,8 @@ use chrono::{DateTime, Local, Utc};
 use eyre::{bail, eyre, Error, Result};
 use log::info;
 use model::{
+    couch::{CouchInfo, Rate},
+    decimal::Decimal,
     rights::{Rights, Rule},
     session::Session,
     subscription::Subscription,
@@ -90,6 +92,33 @@ impl Users {
         Ok(())
     }
 
+    #[tx]
+    pub async fn make_user_instructor(
+        &self,
+        session: &mut Session,
+        tg_id: i64,
+        description: String,
+        rate: Rate,
+    ) -> Result<()> {
+        let user = self
+            .store
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        if user.couch.is_some() {
+            bail!("Already instructor");
+        }
+
+        let couch = CouchInfo {
+            description,
+            reward: Decimal::zero(),
+            rate,
+        };
+        self.store.set_couch(session, tg_id, &couch).await?;
+        self.logs.make_user_instructor(session, tg_id, couch).await;
+        Ok(())
+    }
+
     pub async fn count(&self, session: &mut Session) -> Result<u64> {
         self.store.count(session).await
     }
@@ -98,11 +127,11 @@ impl Users {
         &self,
         session: &mut Session,
         query: &str,
-        limit: u64,
         offset: u64,
+        limit: u64,
     ) -> Result<Vec<User>> {
         let keywords = query.split_whitespace().collect::<Vec<_>>();
-        self.store.find(session, &keywords, limit, offset).await
+        self.store.find(session, &keywords, offset, limit).await
     }
 
     pub async fn instructors(&self, session: &mut Session) -> Result<Vec<User>> {

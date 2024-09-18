@@ -1,9 +1,9 @@
 use super::{
-    couching::CouchingView,
+    calendar::CalendarView,
+    couching::{couch_list::CouchingList, programs_list::ProgramList},
     finance::FinanceView,
     logs::LogsView,
     subscription::SubscriptionView,
-    training::TrainingMainView,
     users::{profile::UserProfile, Query, UsersView},
     View,
 };
@@ -21,12 +21,14 @@ impl MainMenuView {
         let mut keymap = InlineKeyboardMarkup::default();
 
         keymap = keymap.append_row(vec![MainMenuItem::Profile.into()]);
-        keymap = keymap.append_row(vec![MainMenuItem::Trainings.into()]);
+        keymap = keymap.append_row(vec![MainMenuItem::Schedule.into()]);
         keymap = keymap.append_row(vec![MainMenuItem::Subscription.into()]);
+        keymap = keymap.append_row(vec![MainMenuItem::Coach.into()]);
+        keymap = keymap.append_row(vec![MainMenuItem::Programs.into()]);
+
         if ctx.has_right(Rule::ViewUsers) {
             keymap = keymap.append_row(vec![MainMenuItem::Users.into()]);
         }
-
         if ctx.has_right(Rule::ViewFinance) {
             keymap = keymap.append_row(vec![MainMenuItem::FinanceView.into()]);
         }
@@ -35,11 +37,9 @@ impl MainMenuView {
             keymap = keymap.append_row(vec![MainMenuItem::LogView.into()]);
         }
 
-        if ctx.has_right(Rule::CouchingView) {
-            keymap = keymap.append_row(vec![MainMenuItem::Coaching.into()]);
-        }
-
-        let id = ctx.send_msg_with_markup("🏠SoulFamily🤸🏼", keymap).await?;
+        let id = ctx
+            .send_msg_with_markup("🏠SoulFamily       🤸🏼", keymap)
+            .await?;
         ctx.update_origin_msg_id(id);
         Ok(())
     }
@@ -70,13 +70,14 @@ impl View for MainMenuView {
         self.send_self(ctx).await?;
         Ok(Some(match command {
             MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id, None).boxed(),
-            MainMenuItem::Trainings => TrainingMainView::default().boxed(),
+            MainMenuItem::Schedule => CalendarView::default().boxed(),
             MainMenuItem::Users => UsersView::new(Query::default()).boxed(),
             MainMenuItem::Subscription => SubscriptionView::default().boxed(),
             MainMenuItem::FinanceView => FinanceView.boxed(),
             MainMenuItem::LogView => LogsView::default().boxed(),
-            MainMenuItem::Coaching => CouchingView::default().boxed(),
+            MainMenuItem::Coach => CouchingList::new(None).boxed(),
             MainMenuItem::Home => return Ok(None),
+            MainMenuItem::Programs => ProgramList::new(None).boxed(),
         }))
     }
 
@@ -93,13 +94,14 @@ impl View for MainMenuView {
         self.send_self(ctx).await?;
         Ok(Some(match command {
             MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id, None).boxed(),
-            MainMenuItem::Trainings => TrainingMainView::default().boxed(),
+            MainMenuItem::Schedule => CalendarView::default().boxed(),
             MainMenuItem::Users => UsersView::new(Default::default()).boxed(),
             MainMenuItem::Subscription => SubscriptionView::default().boxed(),
             MainMenuItem::Home => MainMenuView.boxed(),
             MainMenuItem::FinanceView => FinanceView.boxed(),
             MainMenuItem::LogView => LogsView::default().boxed(),
-            MainMenuItem::Coaching => CouchingView::default().boxed(),
+            MainMenuItem::Coach => CouchingList::new(None).boxed(),
+            MainMenuItem::Programs => ProgramList::new(None).boxed(),
         }))
     }
 
@@ -112,12 +114,13 @@ impl View for MainMenuView {
 pub enum MainMenuItem {
     Home,
     Profile,
-    Trainings,
+    Schedule,
     Users,
     Subscription,
     FinanceView,
     LogView,
-    Coaching,
+    Coach,
+    Programs,
 }
 
 const HOME_DESCRIPTION: &str = "🏠";
@@ -126,14 +129,20 @@ const HOME_NAME: &str = "/start";
 const PROFILE_DESCRIPTION: &str = "Профиль 🧑";
 const PROFILE_NAME: &str = "/profile";
 
-const TRAININGS_DESCRIPTION: &str = "Тренировки 🤸🏻‍♂️";
-const TRAININGS_NAME: &str = "/trainings";
-
-const USERS_DESCRIPTION: &str = "Пользователи 👥";
-const USERS_NAME: &str = "/users";
+const TRAININGS_DESCRIPTION: &str = "Расписание 📅";
+const TRAININGS_NAME: &str = "/schedule";
 
 const SUBSCRIPTION_DESCRIPTION: &str = "Абонементы 💳";
 const SUBSCRIPTION_NAME: &str = "/subscription";
+
+const COUCH_DESCRIPTION: &str = "Наши инструкторы ❤️";
+const COUCH_NAME: &str = "/couch";
+
+const PROGRAM_DESCRIPTION: &str = "Наши программы 💪🏼";
+const PROGRAM_NAME: &str = "/program";
+
+const USERS_DESCRIPTION: &str = "Пользователи 👥";
+const USERS_NAME: &str = "/users";
 
 const FINANCE_DESCRIPTION: &str = "Финансы 💰";
 const FINANCE_NAME: &str = "/finance";
@@ -141,33 +150,32 @@ const FINANCE_NAME: &str = "/finance";
 const LOG_DESCRIPTION: &str = "Логи 📜";
 const LOG_NAME: &str = "/log";
 
-const COACHING_DESCRIPTION: &str = "Тренерская 🧘🏼‍♂️";
-const COACHING_NAME: &str = "/coaching";
-
 impl MainMenuItem {
     pub fn description(&self) -> &'static str {
         match self {
             MainMenuItem::Profile => PROFILE_DESCRIPTION,
-            MainMenuItem::Trainings => TRAININGS_DESCRIPTION,
+            MainMenuItem::Schedule => TRAININGS_DESCRIPTION,
             MainMenuItem::Users => USERS_DESCRIPTION,
             MainMenuItem::Subscription => SUBSCRIPTION_DESCRIPTION,
             MainMenuItem::Home => HOME_DESCRIPTION,
             MainMenuItem::FinanceView => FINANCE_DESCRIPTION,
             MainMenuItem::LogView => LOG_DESCRIPTION,
-            MainMenuItem::Coaching => COACHING_DESCRIPTION,
+            MainMenuItem::Coach => COUCH_DESCRIPTION,
+            MainMenuItem::Programs => PROGRAM_DESCRIPTION,
         }
     }
 
     pub fn name(&self) -> &'static str {
         match self {
             MainMenuItem::Profile => PROFILE_NAME,
-            MainMenuItem::Trainings => TRAININGS_NAME,
+            MainMenuItem::Schedule => TRAININGS_NAME,
             MainMenuItem::Users => USERS_NAME,
             MainMenuItem::Subscription => SUBSCRIPTION_NAME,
             MainMenuItem::Home => HOME_NAME,
             MainMenuItem::FinanceView => FINANCE_NAME,
             MainMenuItem::LogView => LOG_NAME,
-            MainMenuItem::Coaching => COACHING_NAME,
+            MainMenuItem::Coach => COUCH_NAME,
+            MainMenuItem::Programs => PROGRAM_NAME,
         }
     }
 }
@@ -193,13 +201,14 @@ impl TryFrom<&str> for MainMenuItem {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             PROFILE_NAME | PROFILE_DESCRIPTION => Ok(MainMenuItem::Profile),
-            TRAININGS_NAME | TRAININGS_DESCRIPTION => Ok(MainMenuItem::Trainings),
+            TRAININGS_NAME | TRAININGS_DESCRIPTION => Ok(MainMenuItem::Schedule),
             USERS_NAME | USERS_DESCRIPTION => Ok(MainMenuItem::Users),
             SUBSCRIPTION_NAME | SUBSCRIPTION_DESCRIPTION => Ok(MainMenuItem::Subscription),
             HOME_NAME | HOME_DESCRIPTION | "/home" => Ok(MainMenuItem::Home),
             FINANCE_NAME | FINANCE_DESCRIPTION => Ok(MainMenuItem::FinanceView),
             LOG_NAME | LOG_DESCRIPTION => Ok(MainMenuItem::LogView),
-            COACHING_NAME | COACHING_DESCRIPTION => Ok(MainMenuItem::Coaching),
+            COUCH_NAME | COUCH_DESCRIPTION => Ok(MainMenuItem::Coach),
+            PROGRAM_NAME | PROGRAM_DESCRIPTION => Ok(MainMenuItem::Programs),
             _ => bail!("Unknown command"),
         }
     }

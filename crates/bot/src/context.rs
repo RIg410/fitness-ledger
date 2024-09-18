@@ -29,7 +29,7 @@ impl Context {
         }
     }
 
-    pub async fn send_err(&mut self, err: &str) -> Result<(), Error> {
+    pub async fn send_notification(&mut self, err: &str) -> Result<(), Error> {
         self.send_msg(err).await?;
         let id = self.send_msg("\\.").await?;
         self.update_origin_msg_id(id);

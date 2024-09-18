@@ -1,5 +1,5 @@
-use super::{ScheduleTrainingPreset, View};
-use crate::{callback_data::Calldata, context::Context, state::Widget};
+use super::ScheduleTrainingPreset;
+use crate::{callback_data::Calldata, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
 use eyre::Result;
 use model::{program::Program, user::User};

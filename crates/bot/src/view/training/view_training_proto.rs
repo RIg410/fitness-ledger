@@ -1,9 +1,12 @@
-use super::{edit::EditProgram, schedule_process::ScheduleTrainingPreset, View};
+use super::{edit::EditProgram, schedule_process::ScheduleTrainingPreset};
 use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::calendar::{CalendarView, Filter},
+    view::{
+        calendar::{CalendarView, Filter},
+        View,
+    },
 };
 use async_trait::async_trait;
 use eyre::Result;
@@ -32,10 +35,9 @@ impl ViewProgram {
     }
 
     async fn find_training(&mut self) -> Result<Option<Widget>> {
-        let back = ViewProgram::new(self.id, self.preset.clone(), self.go_back.take());
         let view = CalendarView::new(
             WeekId::default(),
-            Some(Box::new(back)),
+            Some(self.take()),
             None,
             Some(Filter {
                 proto_id: Some(self.id),
@@ -47,14 +49,7 @@ impl ViewProgram {
     async fn schedule(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         ctx.ensure(Rule::EditSchedule)?;
         let preset = self.preset.clone();
-        let view = preset.into_next_view(
-            self.id,
-            Box::new(ViewProgram::new(
-                self.id,
-                self.preset.clone(),
-                self.go_back.take(),
-            )),
-        );
+        let view = preset.into_next_view(self.id, self.take());
         Ok(Some(view))
     }
 

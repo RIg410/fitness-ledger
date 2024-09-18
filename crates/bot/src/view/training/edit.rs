@@ -1,12 +1,10 @@
-use std::num::NonZero;
-
-use super::View;
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
 use eyre::Result;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use std::num::NonZero;
 use teloxide::{
     types::{InlineKeyboardMarkup, Message},
     utils::markdown::escape,

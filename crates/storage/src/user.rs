@@ -3,6 +3,7 @@ use chrono::{DateTime, Duration, Local, Utc};
 use eyre::{bail, eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
 use log::info;
+use model::couch::CouchInfo;
 use model::rights;
 use model::session::Session;
 use model::subscription::{Status, Subscription, UserSubscription};
@@ -561,5 +562,22 @@ impl UserStore {
             .find_one(doc! { "phone": phone })
             .session(&mut *session)
             .await?)
+    }
+
+    pub async fn set_couch(
+        &self,
+        session: &mut Session,
+        tg_id: i64,
+        couch: &CouchInfo,
+    ) -> Result<()> {
+        info!("Setting couch for user {}: {:?}", tg_id, couch);
+        self.users
+            .update_one(
+                doc! { "tg_id": tg_id },
+                doc! { "$set": { "couch": to_document(couch)? }, "$inc": { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        Ok(())
     }
 }

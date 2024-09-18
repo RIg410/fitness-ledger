@@ -1,10 +1,12 @@
-use super::View;
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
 use eyre::Result;
 use model::{rights::Rule, user::User};
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
+
+use super::make_couch::make_make_couch_view;
 
 pub struct CouchingList {
     go_back: Option<Widget>,
@@ -19,8 +21,7 @@ impl CouchingList {
 #[async_trait]
 impl View for CouchingList {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        ctx.ensure(Rule::CouchingView)?;
-        let msg = "Инструкторы 🧘";
+        let msg = "Наши инструкторы ❤️";
         let mut keymap = InlineKeyboardMarkup::default();
         let instructs = ctx.ledger.users.instructors(&mut ctx.session).await?;
 
@@ -49,6 +50,21 @@ impl View for CouchingList {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
+        let cb = if let Some(cb) = Callback::from_data(data) {
+            cb
+        } else {
+            return Ok(None);
+        };
+        match cb {
+            Callback::Back => {
+                return Ok(self.go_back.take());
+            }
+            Callback::SelectCouch(id) => {
+                let id = ObjectId::from_bytes(id);
+            }
+            Callback::MakeCouch => return Ok(Some(make_make_couch_view(self.take()))),
+        }
+
         Ok(None)
     }
 
@@ -56,7 +72,7 @@ impl View for CouchingList {
         CouchingList {
             go_back: self.go_back.take(),
         }
-        .take()
+        .boxed()
     }
 }
 

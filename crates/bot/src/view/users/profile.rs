@@ -9,7 +9,7 @@ use chrono::Local;
 use eyre::{eyre, Error};
 use log::warn;
 use model::{
-    couch::{Couch, Rate},
+    couch::{CouchInfo, Rate},
     rights::Rule,
     subscription::{Status, UserSubscription},
     user::{User, UserIdent},
@@ -420,7 +420,7 @@ pub fn user_base_info(user: &User) -> String {
     )
 }
 
-fn render_couch_info(msg: &mut String, couch: &Couch) {
+fn render_couch_info(msg: &mut String, couch: &CouchInfo) {
     msg.push_str("➖➖➖➖➖➖➖➖➖➖");
     msg.push_str(&format!(
         "Анкета : _{}_\nНакопленная награда : _{}_💰\n{}\n",
@@ -431,7 +431,7 @@ fn render_couch_info(msg: &mut String, couch: &Couch) {
     todo!()
 }
 
-fn render_rate(rate: &Rate) -> String {
+pub fn render_rate(rate: &Rate) -> String {
     match rate {
         Rate::FixedMonthly { rate, next_reward } => {
             format!(

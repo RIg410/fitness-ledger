@@ -32,7 +32,7 @@ pub async fn start_bot(ledger: Ledger, token: String) -> Result<()> {
     bot.set_my_commands(vec![
         MainMenuItem::Home.into(),
         MainMenuItem::Profile.into(),
-        MainMenuItem::Trainings.into(),
+        MainMenuItem::Schedule.into(),
         MainMenuItem::Subscription.into(),
     ])
     .await?;

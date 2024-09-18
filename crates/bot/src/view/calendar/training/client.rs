@@ -48,7 +48,7 @@ impl ClientView {
         let training = self.training(ctx).await?;
 
         if training.is_processed {
-            ctx.send_err("Тренировка завершена\\. *Редактирование запрещено\\.*")
+            ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
                 .await?;
             return Ok(());
         }
@@ -59,13 +59,13 @@ impl ClientView {
         match result {
             Ok(_) => {}
             Err(SignUpError::ClientAlreadySignedUp) => {
-                ctx.send_err("Уже добавлен").await?;
+                ctx.send_notification("Уже добавлен").await?;
             }
             Err(SignUpError::TrainingNotFound) => {
                 bail!("Training not found");
             }
             Err(SignUpError::TrainingNotOpenToSignUp(_)) => {
-                ctx.send_err("Тренировка завершена\\. *Редактирование запрещено\\.*")
+                ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
                     .await?;
             }
             Err(SignUpError::UserNotFound) => {
@@ -73,10 +73,10 @@ impl ClientView {
             }
             Err(SignUpError::Common(err)) => return Err(err),
             Err(SignUpError::NotEnoughBalance) => {
-                ctx.send_err("Не хватает баланса").await?;
+                ctx.send_notification("Не хватает баланса").await?;
             }
             Err(SignUpError::UserIsCouch) => {
-                ctx.send_err("Тренер не может записаться на тренировку")
+                ctx.send_notification("Тренер не может записаться на тренировку")
                     .await?;
             }
         }
@@ -87,7 +87,7 @@ impl ClientView {
         let training = self.training(ctx).await?;
 
         if training.is_processed {
-            ctx.send_err("Тренировка завершена\\. *Редактирование запрещено\\.*")
+            ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
                 .await?;
             return Ok(());
         }
@@ -102,18 +102,18 @@ impl ClientView {
                 bail!("Training not found");
             }
             Err(SignOutError::TrainingNotOpenToSignOut) => {
-                ctx.send_err("Тренировка завершена\\. *Редактирование запрещено\\.*")
+                ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
                     .await?;
             }
             Err(SignOutError::NotEnoughReservedBalance) => {
-                ctx.send_err("Не удалось удалить клиента\\. Нет резерва")
+                ctx.send_notification("Не удалось удалить клиента\\. Нет резерва")
                     .await?;
             }
             Err(SignOutError::UserNotFound) => {
                 bail!("User not found");
             }
             Err(SignOutError::ClientNotSignedUp) => {
-                ctx.send_err("Уже удален)").await?;
+                ctx.send_notification("Уже удален)").await?;
             }
             Err(SignOutError::Common(err)) => return Err(err),
         }

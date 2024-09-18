@@ -1,9 +1,9 @@
-use super::{find_training::FindTraining, View};
+use super::find_training::FindTraining;
 use crate::{
     callback_data::Calldata as _,
     context::Context,
     state::Widget,
-    view::calendar::{render_training_status, training::TrainingView, CallbackDateTime},
+    view::{calendar::{render_training_status, training::TrainingView, CallbackDateTime}, View},
 };
 use async_trait::async_trait;
 use chrono::Local;

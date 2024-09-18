@@ -1,4 +1,3 @@
-use super::View;
 use crate::{context::Context, state::Widget};
 use chrono::{DateTime, Local};
 use eyre::Result;

@@ -58,13 +58,13 @@ impl View for SetBirthday {
                     .set_user_birthday(&mut ctx.session, self.id, date, forced)
                     .await;
                 if let Err(_) = result {
-                    ctx.send_err("Не удалось установить дату рождения").await?;
+                    ctx.send_notification("Не удалось установить дату рождения").await?;
                 }
                 ctx.delete_msg(message.id).await?;
                 Ok(self.go_back.take())
             }
             Err(_) => {
-                ctx.send_err(&format!("Введите дату в формате ДД\\.ММ\\.ГГГГ"))
+                ctx.send_notification(&format!("Введите дату в формате ДД\\.ММ\\.ГГГГ"))
                     .await?;
                 Ok(None)
             }

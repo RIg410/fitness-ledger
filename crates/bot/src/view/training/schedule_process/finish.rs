@@ -1,5 +1,5 @@
-use super::{render_msg, set_date_time::render_time_slot_collision, ScheduleTrainingPreset, View};
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
+use super::{render_msg, set_date_time::render_time_slot_collision, ScheduleTrainingPreset};
+use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
 use eyre::Result;
 use ledger::calendar::ScheduleError;
