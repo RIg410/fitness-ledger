@@ -18,6 +18,8 @@ use model::rights::Rule;
 use strum::EnumIter;
 use teloxide::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
+use super::signup::{self, SignUpView};
+
 pub struct MainMenuView;
 
 impl MainMenuView {
@@ -60,15 +62,19 @@ impl View for MainMenuView {
         ctx: &mut Context,
         msg: &Message,
     ) -> Result<Goto, eyre::Error> {
+        if !ctx.is_real_user {
+            return Ok(SignUpView::default().into());
+        }
         let text = if let Some(text) = msg.text() {
             text
         } else {
-            return Ok(None);
+            return Ok(Goto::None);
         };
+
         let command = if let Some(command) = MainMenuItem::try_from(text).ok() {
             command
         } else {
-            return Ok(None);
+            return Ok(Goto::None);
         };
 
         self.send_self(ctx).await?;
@@ -87,10 +93,14 @@ impl View for MainMenuView {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, msg: &str) -> Result<Goto, eyre::Error> {
+        if !ctx.is_real_user {
+            return Ok(SignUpView::default().into());
+        }
+
         let command = if let Some(command) = MainMenuItem::try_from(msg).ok() {
             command
         } else {
-            return Ok(None);
+            return Ok(Goto::None);
         };
         self.send_self(ctx).await?;
         // Ok(Some(match command {
@@ -105,6 +115,10 @@ impl View for MainMenuView {
         //     MainMenuItem::Programs => ProgramList::new().boxed(),
         // }))
         Ok(Goto::None)
+    }
+
+    fn allow_unsigned_user(&self) -> bool {
+        true
     }
 }
 

@@ -71,7 +71,7 @@ async fn inner_message_handler(
         return Ok(());
     }
 
-    let mut widget = if let Some(msg) = msg.text() {
+    let widget = if let Some(msg) = msg.text() {
         if msg.starts_with("/") {
             match msg {
                 BACK_NAME => {
@@ -97,10 +97,18 @@ async fn inner_message_handler(
         widget
     };
 
+    let mut widget = if !ctx.is_real_user && !widget.allow_unsigned_user() {
+        let mut handler = system_handler();
+        handler.show(ctx).await?;
+        handler
+    } else {
+        widget
+    };
+
     let new_widget = match widget.handle_message(ctx, &msg).await? {
         crate::widget::Goto::Next(mut new_widget) => {
-            new_widget.show(ctx).await?;
             new_widget.set_back(widget);
+            new_widget.show(ctx).await?;
             new_widget
         }
         crate::widget::Goto::None => widget,

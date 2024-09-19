@@ -16,8 +16,6 @@ use teloxide::{
 };
 use view::menu::{MainMenuItem, MainMenuView};
 
-const ERROR: &str = "Что-то пошло не так. Пожалуйста, попробуйте позже.";
-
 pub async fn start_bot(ledger: Ledger, token: String) -> Result<()> {
     let bot = Bot::new(token);
     let state = StateHolder::default();

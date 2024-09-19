@@ -1,6 +1,9 @@
 use super::menu::MainMenuView;
 use async_trait::async_trait;
-use bot_core::{context::Context, widget::{Goto, View}};
+use bot_core::{
+    context::Context,
+    widget::{Goto, View},
+};
 use eyre::{bail, Context as _};
 use ledger::Ledger;
 use log::info;
@@ -13,20 +16,19 @@ const GREET_START: &str =
     "Добрый день\\. Приветствуем вас в нашей семье\\.\nПожалуйста, оставьте ваш номер телефона\\.";
 
 #[derive(Default)]
-pub struct SignUpView {
-    state: State,
-}
-
-#[derive(Default, Clone)]
-enum State {
-    #[default]
-    Start,
-    RequestPhone,
-}
+pub struct SignUpView;
 
 #[async_trait]
 impl View for SignUpView {
-    async fn show(&mut self, _: &mut Context) -> Result<(), eyre::Error> {
+    async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
+        let keymap = KeyboardMarkup::new(vec![vec![
+            KeyboardButton::new("📱 Отправить номер").request(ButtonRequest::Contact)
+        ]]);
+        ctx.send_replay_markup(
+            GREET_START,
+            ReplyMarkup::Keyboard(keymap.one_time_keyboard()),
+        )
+        .await?;
         Ok(())
     }
 
@@ -43,61 +45,39 @@ impl View for SignUpView {
 
         if from.is_bot {
             ctx.send_msg("Бот работает только с людьми\\.").await?;
-            return Ok(None);
+            return Ok(Goto::None);
         }
-        match self.state {
-            State::Start => {
-                let keymap =
-                    KeyboardMarkup::new(vec![vec![
-                        KeyboardButton::new("📱 Отправить номер").request(ButtonRequest::Contact)
-                    ]]);
-                ctx.send_replay_markup(
-                    GREET_START,
-                    ReplyMarkup::Keyboard(keymap.one_time_keyboard()),
-                )
-                .await?;
-                self.state = State::RequestPhone;
-                Ok(None)
-            }
-            State::RequestPhone => {
-                if let Some(contact) = msg.contact() {
-                    create_user(&ctx.ledger, msg.chat.id.0, contact, from, &mut ctx.session)
-                        .await
-                        .context("Failed to create user")?;
-                    ctx.send_replay_markup(
-                        "Добро пожаловать\\!",
-                        ReplyMarkup::KeyboardRemove(KeyboardRemove::new()),
-                    )
-                    .await?;
 
-                    ctx.reload_user().await?;
-                    let view = Box::new(MainMenuView);
-                    view.send_self(ctx).await?;
-                    return Ok(Some(view));
-                } else {
-                    let keymap =
-                        KeyboardMarkup::new(vec![vec![KeyboardButton::new("📱 Отправить номер")
-                            .request(ButtonRequest::Contact)]]);
-                    ctx.send_replay_markup(
-                        "Нажмите на кнопку, чтобы отправить номер телефона\\.",
-                        ReplyMarkup::Keyboard(keymap.one_time_keyboard()),
-                    )
-                    .await?;
-                    Ok(None)
-                }
-            }
+        if let Some(contact) = msg.contact() {
+            create_user(&ctx.ledger, msg.chat.id.0, contact, from, &mut ctx.session)
+                .await
+                .context("Failed to create user")?;
+            ctx.send_replay_markup(
+                "Добро пожаловать\\!",
+                ReplyMarkup::KeyboardRemove(KeyboardRemove::new()),
+            )
+            .await?;
+
+            ctx.reload_user().await?;
+            let view = MainMenuView;
+            view.send_self(ctx).await?;
+            return Ok(view.into());
+        } else {
+            let keymap = KeyboardMarkup::new(vec![vec![
+                KeyboardButton::new("📱 Отправить номер").request(ButtonRequest::Contact)
+            ]]);
+            ctx.send_replay_markup(
+                "Нажмите на кнопку, чтобы отправить номер телефона\\.",
+                ReplyMarkup::Keyboard(keymap.one_time_keyboard()),
+            )
+            .await?;
+            Ok(Goto::None)
         }
     }
 
-    async fn handle_callback(
-        &mut self,
-        _: &mut Context,
-        _: &str,
-    ) -> Result<Goto, eyre::Error> {
+    async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Goto, eyre::Error> {
         Ok(Goto::None)
     }
-
-  
 
     fn allow_unsigned_user(&self) -> bool {
         true

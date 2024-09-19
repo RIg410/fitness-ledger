@@ -78,7 +78,7 @@ async fn inner_callback_handler(
         return Ok(());
     }
 
-    let mut widget = if data.starts_with("/") {
+    let widget = if data.starts_with("/") {
         match data.as_str() {
             BACK_NAME => {
                 if let Some(mut back) = widget.take_back() {
@@ -96,6 +96,14 @@ async fn inner_callback_handler(
                 handler
             }
         }
+    } else {
+        widget
+    };
+
+    let mut widget = if !ctx.is_real_user && !widget.allow_unsigned_user() {
+        let mut handler = system_handler();
+        handler.show(ctx).await?;
+        handler
     } else {
         widget
     };
