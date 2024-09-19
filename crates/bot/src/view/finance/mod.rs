@@ -53,12 +53,12 @@ impl View for FinanceView {
         match cb {
             Callback::Payment => {
                 ctx.ensure(Rule::MakePayment)?;
-                let payment = InOut::new(Some(Box::new(FinanceView)), Io::Payment);
+                let payment = InOut::new(Io::Payment);
                 Ok(Some(Box::new(payment)))
             }
             Callback::Deposit => {
                 ctx.ensure(Rule::MakeDeposit)?;
-                let payment = InOut::new(Some(Box::new(FinanceView)), Io::Deposit);
+                let payment = InOut::new(Io::Deposit);
                 Ok(Some(Box::new(payment)))
             }
         }
@@ -66,6 +66,11 @@ impl View for FinanceView {
 
     fn take(&mut self) -> Widget {
         FinanceView.boxed()
+    }
+    fn set_back(&mut self, back: Widget) {}
+
+    fn back(&mut self) -> Option<Widget> {
+        None
     }
 }
 

@@ -17,11 +17,11 @@ pub struct SetOneTime {
 }
 
 impl SetOneTime {
-    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset, go_back: Widget) -> Self {
+    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
         Self {
             id,
             preset: Some(preset),
-            go_back: Some(go_back),
+            go_back: None,
         }
     }
 }
@@ -71,9 +71,7 @@ impl View for SetOneTime {
             }
         };
         let preset = self.preset.take().unwrap();
-        Ok(Some(
-            preset.into_next_view(self.id, self.go_back.take().unwrap()),
-        ))
+        Ok(Some(preset.into_next_view(self.id)))
     }
     fn take(&mut self) -> Widget {
         SetOneTime {
@@ -82,6 +80,14 @@ impl View for SetOneTime {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

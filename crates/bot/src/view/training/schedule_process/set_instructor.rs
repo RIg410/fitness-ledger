@@ -19,11 +19,11 @@ pub struct SetInstructor {
 }
 
 impl SetInstructor {
-    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset, go_back: Widget) -> Self {
+    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
         Self {
             id,
             preset: Some(preset),
-            go_back: Some(go_back),
+            go_back: None,
         }
     }
 }
@@ -67,9 +67,7 @@ impl View for SetInstructor {
                     .ok_or_else(|| eyre::eyre!("Instructor not found"))?;
                 let mut preset = self.preset.take().unwrap();
                 preset.instructor = Some(instructor.tg_id);
-                return Ok(Some(
-                    preset.into_next_view(self.id, self.go_back.take().unwrap()),
-                ));
+                return Ok(Some(preset.into_next_view(self.id)));
             }
         }
     }
@@ -81,6 +79,14 @@ impl View for SetInstructor {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

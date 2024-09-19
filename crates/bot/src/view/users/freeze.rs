@@ -15,10 +15,10 @@ pub struct FreezeProfile {
 }
 
 impl FreezeProfile {
-    pub fn new(tg_id: i64, go_back: Option<Widget>) -> FreezeProfile {
+    pub fn new(tg_id: i64) -> FreezeProfile {
         FreezeProfile {
             tg_id,
-            go_back,
+            go_back: None,
             state: State::SetDays,
             days: 0,
         }
@@ -145,6 +145,14 @@ impl View for FreezeProfile {
             days: self.days,
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

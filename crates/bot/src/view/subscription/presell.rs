@@ -21,9 +21,9 @@ pub struct PreSellView {
 }
 
 impl PreSellView {
-    pub fn new(sell: Sell, go_back: Option<Widget>) -> PreSellView {
+    pub fn new(sell: Sell) -> PreSellView {
         PreSellView {
-            go_back,
+            go_back: None,
             sell,
             state: State::Init,
         }
@@ -143,6 +143,14 @@ impl View for PreSellView {
             state: self.state.clone(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

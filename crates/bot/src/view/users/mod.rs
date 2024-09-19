@@ -20,14 +20,17 @@ pub mod set_phone;
 
 pub const LIMIT: u64 = 7;
 
-#[derive(Clone)]
 pub struct UsersView {
     query: Query,
+    go_back: Option<Widget>,
 }
 
 impl UsersView {
     pub fn new(query: Query) -> UsersView {
-        UsersView { query }
+        UsersView {
+            query,
+            go_back: None,
+        }
     }
 }
 
@@ -94,7 +97,7 @@ impl View for UsersView {
                 self.show(ctx).await?;
             }
             Callback::Select(user_id) => {
-                let user_view = Box::new(UserProfile::new(user_id, Some(self.take())));
+                let user_view = UserProfile::new(user_id).boxed();
                 return Ok(Some(user_view));
             }
         }
@@ -105,8 +108,17 @@ impl View for UsersView {
     fn take(&mut self) -> Widget {
         UsersView {
             query: self.query.clone(),
+            go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

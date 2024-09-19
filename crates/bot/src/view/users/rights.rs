@@ -14,8 +14,8 @@ pub struct UserRightsView {
 }
 
 impl UserRightsView {
-    pub fn new(tg_id: i64, go_back: Option<Widget>) -> UserRightsView {
-        UserRightsView { tg_id, go_back }
+    pub fn new(tg_id: i64) -> UserRightsView {
+        UserRightsView { tg_id, go_back: None }
     }
 }
 
@@ -82,6 +82,14 @@ impl View for UserRightsView {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

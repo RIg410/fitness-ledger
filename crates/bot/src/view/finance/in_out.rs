@@ -18,9 +18,9 @@ pub struct InOut {
     io: Io,
 }
 impl InOut {
-    pub fn new(go_back: Option<Widget>, io: Io) -> Self {
+    pub fn new(io: Io) -> Self {
         Self {
-            go_back,
+            go_back: None,
             state: State::Description,
             io,
         }
@@ -178,6 +178,14 @@ impl View for InOut {
             io: self.io.clone(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

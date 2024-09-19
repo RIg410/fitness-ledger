@@ -11,8 +11,8 @@ pub struct SetFio {
 }
 
 impl SetFio {
-    pub fn new(id: i64, go_back: Option<Widget>) -> SetFio {
-        SetFio { id, go_back }
+    pub fn new(id: i64) -> SetFio {
+        SetFio { id, go_back: None }
     }
 }
 
@@ -69,6 +69,14 @@ impl View for SetFio {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

@@ -5,7 +5,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
-use super::{Callback, Stage};
+use super::{Callback, Dispatch, Stage};
 
 #[async_trait]
 pub trait StageList<S>
@@ -29,7 +29,7 @@ where
         ctx: &mut Context,
         state: &mut S,
         id: ListId,
-    ) -> Result<Option<Stage<S>>, Error>;
+    ) -> Result<Dispatch<S>, Error>;
 
     async fn query(&self, _: &mut Context, _: &mut S, _: &str) -> Result<(), Error> {
         Ok(())

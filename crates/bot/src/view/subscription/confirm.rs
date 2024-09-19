@@ -18,9 +18,9 @@ pub struct ConfirmSell {
 }
 
 impl ConfirmSell {
-    pub fn new(user: i64, sell: Sell, go_back: Option<Widget>) -> ConfirmSell {
+    pub fn new(user: i64, sell: Sell) -> ConfirmSell {
         ConfirmSell {
-            go_back,
+            go_back: None,
             user_id: user,
             sell,
         }
@@ -98,6 +98,14 @@ impl View for ConfirmSell {
             sell: self.sell.clone(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

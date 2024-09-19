@@ -25,8 +25,8 @@ pub struct ProgramList {
 }
 
 impl ProgramList {
-    pub fn new(go_back: Option<Widget>) -> Self {
-        Self { go_back }
+    pub fn new() -> Self {
+        Self { go_back: None }
     }
 }
 
@@ -61,7 +61,7 @@ impl View for ProgramList {
             }
             Callback::CreateTraining => {
                 ctx.ensure(Rule::CreateTraining)?;
-                return Ok(Some(CreateTraining::new(self.take()).boxed()));
+                return Ok(Some(CreateTraining::new().boxed()));
             }
             Callback::SelectTraining(id) => {
                 let id = ObjectId::from_bytes(id);
@@ -71,9 +71,7 @@ impl View for ProgramList {
                     instructor: None,
                     is_one_time: None,
                 };
-                return Ok(Some(
-                    ViewProgram::new(id, preset, Some(self.take())).boxed(),
-                ));
+                return Ok(Some(ViewProgram::new(id, preset).boxed()));
             }
         }
         Ok(None)
@@ -84,6 +82,14 @@ impl View for ProgramList {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

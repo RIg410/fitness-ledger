@@ -1,11 +1,10 @@
-use crate::{context::Origin, view::View};
+use crate::{context::Origin, widget::Widget};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
 use teloxide::types::ChatId;
 
-pub type Widget = Box<dyn View + Send + Sync + 'static>;
 
 #[derive(Default)]
 pub struct State {

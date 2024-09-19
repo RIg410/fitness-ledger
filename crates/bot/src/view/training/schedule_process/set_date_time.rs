@@ -16,11 +16,11 @@ pub struct SetDateTime {
 }
 
 impl SetDateTime {
-    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset, go_back: Widget) -> Self {
+    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
         Self {
             id,
             preset: Some(preset),
-            go_back: Some(go_back),
+            go_back: None,
         }
     }
 }
@@ -71,9 +71,7 @@ impl View for SetDateTime {
             if let Ok(day) = parts.to_date() {
                 let mut preset = self.preset.take().unwrap();
                 preset.day = Some(day);
-                return Ok(Some(
-                    preset.into_next_view(self.id, self.go_back.take().unwrap()),
-                ));
+                return Ok(Some(preset.into_next_view(self.id)));
             } else {
                 ctx.send_msg("Неверный формат даты\\. _дд\\.мм_").await?;
             }
@@ -100,9 +98,7 @@ impl View for SetDateTime {
                 } else {
                     preset.date_time = Some(date_time);
                 }
-                return Ok(Some(
-                    preset.into_next_view(self.id, self.go_back.take().unwrap()),
-                ));
+                return Ok(Some(preset.into_next_view(self.id)));
             } else {
                 ctx.send_msg("Неверный формат времени\\. _чч\\:мм_").await?;
             }
@@ -120,6 +116,14 @@ impl View for SetDateTime {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

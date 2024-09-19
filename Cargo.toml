@@ -11,6 +11,7 @@ resolver = "2"
 [workspace.dependencies]
 bg-process = {path = "crates/bg-process"}
 bot = {path = "crates/bot"}
+bot-core = {path = "crates/bot-core"}
 ledger = {path = "crates/ledger"}
 mini-app = {path = "crates/mini-app"}
 model = {path = "crates/model"}

@@ -1,4 +1,4 @@
-use crate::{context::Context, state::Widget};
+use crate::{context::Context, state::Widget, view::View};
 use chrono::{DateTime, Local};
 use eyre::Result;
 use is_one_time::SetOneTime;
@@ -22,20 +22,20 @@ pub struct ScheduleTrainingPreset {
 }
 
 impl ScheduleTrainingPreset {
-    pub fn into_next_view(self, id: ObjectId, go_back: Widget) -> Widget {
+    pub fn into_next_view(self, id: ObjectId) -> Widget {
         if self.instructor.is_none() {
-            return Box::new(SetInstructor::new(id, self, go_back));
+            return SetInstructor::new(id, self).boxed();
         }
 
         if self.is_one_time.is_none() {
-            return Box::new(SetOneTime::new(id, self, go_back));
+            return SetOneTime::new(id, self).boxed();
         }
 
         if self.date_time.is_none() {
-            return Box::new(SetDateTime::new(id, self, go_back));
+            return SetDateTime::new(id, self).boxed();
         }
 
-        Box::new(finish::Finish::new(id, self, go_back))
+        finish::Finish::new(id, self).boxed()
     }
 }
 

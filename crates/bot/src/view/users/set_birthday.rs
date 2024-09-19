@@ -13,8 +13,8 @@ pub struct SetBirthday {
 }
 
 impl SetBirthday {
-    pub fn new(id: i64, go_back: Option<Widget>) -> SetBirthday {
-        SetBirthday { id, go_back }
+    pub fn new(id: i64) -> SetBirthday {
+        SetBirthday { id, go_back: None }
     }
 }
 
@@ -58,7 +58,8 @@ impl View for SetBirthday {
                     .set_user_birthday(&mut ctx.session, self.id, date, forced)
                     .await;
                 if let Err(_) = result {
-                    ctx.send_notification("Не удалось установить дату рождения").await?;
+                    ctx.send_notification("Не удалось установить дату рождения")
+                        .await?;
                 }
                 ctx.delete_msg(message.id).await?;
                 Ok(self.go_back.take())
@@ -87,6 +88,14 @@ impl View for SetBirthday {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

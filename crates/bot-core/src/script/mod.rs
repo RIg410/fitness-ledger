@@ -1,34 +1,23 @@
-use super::View;
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
+use crate::{
+    callback_data::Calldata as _,
+    context::Context,
+    widget::{self, Goto, View, Widget},
+};
 use async_trait::async_trait;
-use eyre::{Error, Result};
+use eyre::Result;
 use list::{List, ListId, StageList};
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardMarkup, Message};
 use text::StageText;
+use yes_no::StageYesNo;
 
 pub mod list;
 pub mod text;
-
-#[async_trait]
-pub trait StageYesNo<S>
-where
-    S: Send + Sync + 'static,
-{
-    async fn message(&self, ctx: &mut Context, state: &mut S) -> Result<String, Error>;
-    async fn yes(&self, ctx: &mut Context, state: &mut S) -> Result<Option<Stage<S>>, Error>;
-    fn back(&self) -> Option<Stage<S>> {
-        None
-    }
-}
+pub mod yes_no;
 
 pub enum Stage<S> {
-    Text {
-        hdl: Box<dyn StageText<S> + Send + Sync + 'static>,
-    },
-    YesNo {
-        hdl: Box<dyn StageYesNo<S> + Send + Sync + 'static>,
-    },
+    Text(Box<dyn StageText<S> + Send + Sync + 'static>),
+    YesNo(Box<dyn StageYesNo<S> + Send + Sync + 'static>),
     List(List<S>),
 }
 
@@ -37,11 +26,11 @@ where
     S: Send + Sync + 'static,
 {
     pub fn text(hdl: impl StageText<S> + Send + Sync + 'static) -> Stage<S> {
-        Stage::Text { hdl: Box::new(hdl) }
+        Stage::Text(Box::new(hdl))
     }
 
     pub fn yes_no(hdl: impl StageYesNo<S> + Send + Sync + 'static) -> Stage<S> {
-        Stage::YesNo { hdl: Box::new(hdl) }
+        Stage::YesNo(Box::new(hdl))
     }
 
     pub fn list(hdl: impl StageList<S> + Send + Sync + 'static) -> Stage<S> {
@@ -55,8 +44,8 @@ where
     fn back(&self) -> Option<Stage<S>> {
         match self {
             Stage::List(list) => list.hdl.back(),
-            Stage::YesNo { hdl } => hdl.back(),
-            Stage::Text { hdl } => hdl.back(),
+            Stage::YesNo(hdl) => hdl.back(),
+            Stage::Text(hdl) => hdl.back(),
         }
     }
 }
@@ -64,18 +53,16 @@ where
 pub struct ScriptView<S> {
     state: Option<S>,
     action: Option<Stage<S>>,
-    go_back: Option<Widget>,
 }
 
 impl<S> ScriptView<S>
 where
     S: Send + Sync + 'static,
 {
-    pub fn new(state: S, action: Stage<S>, go_back: Widget) -> ScriptView<S> {
+    pub fn new(state: S, action: Stage<S>) -> ScriptView<S> {
         ScriptView {
             state: Some(state),
             action: Some(action),
-            go_back: Some(go_back),
         }
     }
 }
@@ -90,11 +77,11 @@ where
             let mut keymap = InlineKeyboardMarkup::default();
 
             let (msg, mut keymap) = match stage {
-                Stage::Text { hdl, .. } => (
+                Stage::Text(hdl) => (
                     hdl.message(ctx, self.state.as_mut().unwrap()).await?,
                     keymap,
                 ),
-                Stage::YesNo { hdl, .. } => {
+                Stage::YesNo(hdl) => {
                     keymap = keymap.append_row(vec![
                         Callback::Select(ListId::Yes).button("✅Да"),
                         Callback::Select(ListId::No).button("❌Нет"),
@@ -106,31 +93,33 @@ where
                 }
                 Stage::List(list) => list.render(ctx, self.state.as_mut().unwrap()).await?,
             };
+
+            ctx.system_go_back = false;
             keymap = keymap.append_row(Callback::Back.btn_row("🔙 Назад"));
             ctx.edit_origin(&msg, keymap).await?;
         }
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Goto> {
         let (action, text) =
             if let (Some(action), Some(text)) = (self.action.as_mut(), message.text()) {
                 (action, text)
             } else {
-                return Ok(None);
+                return Ok(Goto::None);
             };
 
         match action {
-            Stage::Text { hdl } => {
-                let mut next = hdl
+            Stage::Text(hdl) => {
+                let next = hdl
                     .handle_text(ctx, self.state.as_mut().unwrap(), text)
                     .await?;
-                if let Some(next) = next.take() {
-                    self.action = Some(next);
+                match next {
+                    Dispatch::None => {}
+                    Dispatch::Stage(stage) => self.action = Some(stage),
+                    Dispatch::Widget(view) => {
+                        return Ok(Goto::Next(view));
+                    }
                 }
                 self.show(ctx).await?;
             }
@@ -143,78 +132,77 @@ where
             }
         }
         ctx.delete_msg(message.id).await?;
-        Ok(None)
+        Ok(Goto::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Goto> {
         let (action, cb) =
             if let (Some(action), Some(cb)) = (self.action.as_mut(), Callback::from_data(data)) {
                 (action, cb)
             } else {
-                return Ok(None);
+                return Ok(widget::Goto::None);
             };
 
-        let next = match cb {
-            Callback::Back => {
-                if let Some(back) = action.back() {
+        match cb {
+            Callback::Back => match action.back() {
+                Some(back) => {
                     self.action = Some(back);
-                    self.show(ctx).await?;
-                    return Ok(None);
-                } else {
-                    return Ok(self.go_back.take());
                 }
-            }
+                None => {
+                    return Ok(Goto::Back);
+                }
+            },
             Callback::Select(idx) => match action {
-                Stage::Text { .. } => {
-                    return Ok(None);
+                Stage::Text(_) => {
+                    return Ok(Goto::None);
                 }
-                Stage::YesNo { hdl, .. } => match idx {
-                    ListId::Yes => {
-                        if let Some(next) = hdl.yes(ctx, self.state.as_mut().unwrap()).await? {
-                            Some(next)
-                        } else {
-                            return Ok(self.go_back.take());
+                Stage::YesNo(hdl) => match idx {
+                    ListId::Yes => match hdl.yes(ctx, self.state.as_mut().unwrap()).await? {
+                        Dispatch::None => {
+                            return Ok(Goto::None);
                         }
-                    }
+                        Dispatch::Stage(stage) => {
+                            self.action = Some(stage);
+                        }
+                        Dispatch::Widget(widget) => {
+                            return Ok(Goto::Next(widget));
+                        }
+                    },
                     ListId::No => {
                         ctx.send_notification("❌ Отменено").await?;
-                        return Ok(self.go_back.take());
+                        return Ok(Goto::Back);
                     }
-                    _ => return Ok(None),
+                    _ => return Ok(Goto::None),
                 },
                 Stage::List(list) => {
-                    list.hdl
+                    let result = list
+                        .hdl
                         .select(ctx, self.state.as_mut().unwrap(), idx)
-                        .await?
+                        .await?;
+                    match result {
+                        Dispatch::None => {
+                            return Ok(Goto::None);
+                        }
+                        Dispatch::Stage(stage) => {
+                            self.action = Some(stage);
+                        }
+                        Dispatch::Widget(widget) => {
+                            return Ok(Goto::Next(widget));
+                        }
+                    }
                 }
             },
             Callback::Page(offset) => match action {
                 Stage::List(list) => {
                     list.offset += offset as usize * list.limit;
                     self.show(ctx).await?;
-                    return Ok(None);
                 }
-                _ => return Ok(None),
+                _ => return Ok(Goto::None),
             },
         };
-        if let Some(next) = next {
-            self.action = Some(next);
-        }
 
         self.show(ctx).await?;
-        Ok(None)
-    }
-
-    fn take(&mut self) -> Widget
-    where
-        Self: Sized + Send + Sync + 'static,
-    {
-        ScriptView {
-            state: self.state.take(),
-            action: self.action.take(),
-            go_back: self.go_back.take(),
-        }
-        .boxed()
+        Ok(Goto::None)
     }
 }
 
@@ -223,4 +211,10 @@ enum Callback {
     Back,
     Select(ListId),
     Page(i8),
+}
+
+pub enum Dispatch<S> {
+    None,
+    Stage(Stage<S>),
+    Widget(Widget),
 }

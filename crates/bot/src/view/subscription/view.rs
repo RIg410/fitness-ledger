@@ -20,11 +20,8 @@ pub struct SubscriptionOption {
 }
 
 impl SubscriptionOption {
-    pub fn new(id: ObjectId, go_back: Widget) -> SubscriptionOption {
-        SubscriptionOption {
-            go_back: Some(go_back),
-            id,
-        }
+    pub fn new(id: ObjectId) -> SubscriptionOption {
+        SubscriptionOption { go_back: None, id }
     }
 
     fn as_back(&mut self) -> Widget {
@@ -36,9 +33,7 @@ impl SubscriptionOption {
     }
 
     async fn edit(&mut self, tp: EditType) -> Result<Option<Widget>> {
-        Ok(Some(
-            EditSubscription::new(self.id, tp, Some(self.as_back())).boxed(),
-        ))
+        Ok(Some(EditSubscription::new(self.id, tp).boxed()))
     }
 }
 
@@ -78,7 +73,7 @@ impl View for SubscriptionOption {
             }
             Callback::Sell => {
                 ctx.ensure(Rule::SellSubscription)?;
-                let widget = SellView::new(Sell::with_id(self.id), self.as_back()).boxed();
+                let widget = SellView::new(Sell::with_id(self.id)).boxed();
                 return Ok(Some(widget));
             }
             Callback::Back => {
@@ -105,6 +100,14 @@ impl View for SubscriptionOption {
             id: self.id,
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

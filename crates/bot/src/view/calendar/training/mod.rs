@@ -25,8 +25,8 @@ pub struct TrainingView {
 }
 
 impl TrainingView {
-    pub fn new(id: DateTime<Local>, go_back: Option<Widget>) -> Self {
-        Self { id, go_back }
+    pub fn new(id: DateTime<Local>) -> Self {
+        Self { id, go_back: None }
     }
 
     async fn go_back(&mut self, _: &mut Context) -> Result<Option<Widget>> {
@@ -162,7 +162,7 @@ impl TrainingView {
         if !ctx.is_couch() {
             bail!("Only couch can see client list");
         }
-        Ok(Some(ClientList::new(self.id, Some(self.take())).boxed()))
+        Ok(Some(ClientList::new(self.id).boxed()))
     }
 
     async fn change_couch(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
@@ -230,6 +230,14 @@ impl View for TrainingView {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

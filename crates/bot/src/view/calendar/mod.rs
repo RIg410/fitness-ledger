@@ -35,14 +35,9 @@ impl Default for CalendarView {
 }
 
 impl CalendarView {
-    pub fn new(
-        week_id: WeekId,
-        go_back: Option<Widget>,
-        selected_day: Option<Weekday>,
-        filter: Option<Filter>,
-    ) -> Self {
+    pub fn new(week_id: WeekId, selected_day: Option<Weekday>, filter: Option<Filter>) -> Self {
         Self {
-            go_back,
+            go_back: None,
             week_id,
             selected_day: week_id.day(selected_day.unwrap_or_else(|| Local::now().weekday())),
             filter: filter.unwrap_or_default(),
@@ -106,21 +101,15 @@ impl View for CalendarView {
                 }
             }
             Callback::SelectTraining(id) => {
-                return Ok(Some(
-                    TrainingView::new(id.into(), Some(self.take())).boxed(),
-                ));
+                return Ok(Some(TrainingView::new(id.into()).boxed()));
             }
             Callback::AddTraining => {
                 ctx.ensure(Rule::EditSchedule)?;
                 return Ok(Some(
-                    ScheduleTraining::new(self.selected_day.local(), Some(self.take())).boxed(),
+                    ScheduleTraining::new(self.selected_day.local()).boxed(),
                 ));
             }
-            Callback::MyTrainings => {
-                return Ok(Some(
-                    ClientTrainings::new(ctx.me.id, Some(self.take())).boxed(),
-                ))
-            }
+            Callback::MyTrainings => return Ok(Some(ClientTrainings::new(ctx.me.id).boxed())),
         }
     }
 
@@ -132,6 +121,14 @@ impl View for CalendarView {
             filter: self.filter.clone(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

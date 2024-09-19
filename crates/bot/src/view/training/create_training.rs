@@ -11,9 +11,9 @@ pub struct CreateTraining {
 }
 
 impl CreateTraining {
-    pub fn new(go_back: Widget) -> Self {
+    pub fn new() -> Self {
         Self {
-            go_back: Some(go_back),
+            go_back: None,
             state: None,
         }
     }
@@ -145,6 +145,14 @@ impl View for CreateTraining {
             state: self.state.take(),
         }
         .boxed()
+    }
+    
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

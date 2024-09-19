@@ -22,9 +22,9 @@ pub struct SellView {
 }
 
 impl SellView {
-    pub fn new(sell: Sell, go_back: Widget) -> SellView {
+    pub fn new(sell: Sell) -> SellView {
         SellView {
-            go_back: Some(go_back),
+            go_back: None,
             sell,
             query: "".to_string(),
             offset: 0,
@@ -32,16 +32,7 @@ impl SellView {
     }
 
     pub fn select(&mut self, user_id: i64, _: &mut Context) -> Result<Option<Widget>> {
-        let back = SellView {
-            go_back: self.go_back.take(),
-            sell: self.sell,
-            query: self.query.clone(),
-            offset: self.offset,
-        }
-        .boxed();
-        return Ok(Some(
-            ConfirmSell::new(user_id, self.sell, Some(back)).boxed(),
-        ));
+        return Ok(Some(ConfirmSell::new(user_id, self.sell).boxed()));
     }
 
     pub fn presell(&mut self) -> Result<Option<Widget>> {
@@ -51,7 +42,7 @@ impl SellView {
             query: self.query.clone(),
             offset: self.offset,
         });
-        let view = Box::new(PreSellView::new(self.sell, Some(back)));
+        let view = PreSellView::new(self.sell).boxed();
         return Ok(Some(view));
     }
 }
@@ -116,6 +107,14 @@ impl View for SellView {
             offset: self.offset,
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

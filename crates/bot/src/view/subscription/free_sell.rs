@@ -19,9 +19,9 @@ pub struct FeeSellView {
 }
 
 impl FeeSellView {
-    pub fn new(go_back: Widget) -> FeeSellView {
+    pub fn new() -> FeeSellView {
         FeeSellView {
-            go_back: Some(go_back),
+            go_back: None,
             state: State::SetItems,
         }
     }
@@ -103,11 +103,8 @@ impl View for FeeSellView {
             match cb {
                 Callback::Sell => {
                     ctx.ensure(Rule::FreeSell)?;
-                    let back = Box::new(FeeSellView {
-                        go_back: self.go_back.take(),
-                        state: State::SetItems,
-                    });
-                    let widget = Box::new(SellView::new(Sell::free(price, items.get()), back));
+
+                    let widget = Box::new(SellView::new(Sell::free(price, items.get())));
                     return Ok(Some(widget));
                 }
                 Callback::Cancel => Ok(self.go_back.take()),
@@ -124,6 +121,14 @@ impl View for FeeSellView {
             state: self.state.clone(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

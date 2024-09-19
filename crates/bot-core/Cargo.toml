@@ -1,5 +1,5 @@
 [package]
-name = "bot"
+name = "bot-core"
 
 edition.workspace = true
 license.workspace = true
@@ -7,7 +7,6 @@ publish.workspace = true
 version.workspace = true
 
 [dependencies]
-bot-core.workspace = true
 async-trait.workspace = true
 bincode.workspace = true
 chrono.workspace = true

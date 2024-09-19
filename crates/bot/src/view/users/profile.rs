@@ -31,8 +31,11 @@ pub struct UserProfile {
 }
 
 impl UserProfile {
-    pub fn new(tg_id: i64, go_back: Option<Widget>) -> UserProfile {
-        UserProfile { tg_id, go_back }
+    pub fn new(tg_id: i64) -> UserProfile {
+        UserProfile {
+            tg_id,
+            go_back: None,
+        }
     }
 
     async fn block_user(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
@@ -106,23 +109,17 @@ impl UserProfile {
         if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
             return Err(eyre::eyre!("User has no rights to perform this action"));
         }
-        Ok(Some(
-            FreezeProfile::new(self.tg_id, Some(self.take())).boxed(),
-        ))
+        Ok(Some(FreezeProfile::new(self.tg_id).boxed()))
     }
 
     async fn edit_rights(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
         ctx.ensure(Rule::EditUserRights)?;
-        Ok(Some(
-            UserRightsView::new(self.tg_id, Some(self.take())).boxed(),
-        ))
+        Ok(Some(UserRightsView::new(self.tg_id).boxed()))
     }
 
     async fn set_birthday(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) || ctx.me.tg_id == self.tg_id {
-            Ok(Some(
-                SetBirthday::new(self.tg_id, Some(self.take())).boxed(),
-            ))
+            Ok(Some(SetBirthday::new(self.tg_id).boxed()))
         } else {
             Ok(None)
         }
@@ -136,14 +133,12 @@ impl UserProfile {
             .await?
             .ok_or_else(|| eyre!("User not found:{}", self.tg_id))?;
 
-        Ok(Some(
-            ClientTrainings::new(user.id, Some(self.take())).boxed(),
-        ))
+        Ok(Some(ClientTrainings::new(user.id).boxed()))
     }
 
     async fn set_fio(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
-            Ok(Some(SetFio::new(self.tg_id, Some(self.take())).boxed()))
+            Ok(Some(SetFio::new(self.tg_id).boxed()))
         } else {
             Ok(None)
         }
@@ -151,7 +146,7 @@ impl UserProfile {
 
     async fn set_phone(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
-            Ok(Some(SetPhone::new(self.tg_id, Some(self.take())).boxed()))
+            Ok(Some(SetPhone::new(self.tg_id).boxed()))
         } else {
             Ok(None)
         }
@@ -215,6 +210,14 @@ impl View for UserProfile {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

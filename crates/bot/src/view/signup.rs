@@ -1,6 +1,6 @@
-use super::{menu::MainMenuView, View};
-use crate::{context::Context, state::Widget};
+use super::menu::MainMenuView;
 use async_trait::async_trait;
+use bot_core::{context::Context, widget::{Goto, View}};
 use eyre::{bail, Context as _};
 use ledger::Ledger;
 use log::info;
@@ -34,7 +34,7 @@ impl View for SignUpView {
         &mut self,
         ctx: &mut Context,
         msg: &Message,
-    ) -> Result<Option<Widget>, eyre::Error> {
+    ) -> Result<Goto, eyre::Error> {
         let from = if let Some(from) = &msg.from {
             from
         } else {
@@ -93,16 +93,11 @@ impl View for SignUpView {
         &mut self,
         _: &mut Context,
         _: &str,
-    ) -> Result<Option<Widget>, eyre::Error> {
-        Ok(None)
+    ) -> Result<Goto, eyre::Error> {
+        Ok(Goto::None)
     }
 
-    fn take(&mut self) -> Widget {
-        SignUpView {
-            state: self.state.clone(),
-        }
-        .boxed()
-    }
+  
 
     fn allow_unsigned_user(&self) -> bool {
         true

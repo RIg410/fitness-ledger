@@ -6,15 +6,15 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
-use super::make_couch::make_make_couch_view;
+use super::{couch_info::couch_view, make_couch::make_make_couch_view};
 
 pub struct CouchingList {
     go_back: Option<Widget>,
 }
 
 impl CouchingList {
-    pub fn new(go_back: Option<Widget>) -> CouchingList {
-        CouchingList { go_back }
+    pub fn new() -> CouchingList {
+        CouchingList { go_back: None }
     }
 }
 
@@ -49,7 +49,7 @@ impl View for CouchingList {
         Ok(None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Option<Widget>> {
         let cb = if let Some(cb) = Callback::from_data(data) {
             cb
         } else {
@@ -61,11 +61,10 @@ impl View for CouchingList {
             }
             Callback::SelectCouch(id) => {
                 let id = ObjectId::from_bytes(id);
+                return Ok(Some(couch_view(self.take(), id)));
             }
             Callback::MakeCouch => return Ok(Some(make_make_couch_view(self.take()))),
         }
-
-        Ok(None)
     }
 
     fn take(&mut self) -> Widget {
@@ -73,6 +72,14 @@ impl View for CouchingList {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

@@ -20,11 +20,11 @@ pub struct Finish {
 }
 
 impl Finish {
-    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset, go_back: Widget) -> Self {
+    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
         Self {
             id,
             preset: Some(preset),
-            go_back: Some(go_back),
+            go_back: None,
         }
     }
 }
@@ -122,6 +122,14 @@ impl View for Finish {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

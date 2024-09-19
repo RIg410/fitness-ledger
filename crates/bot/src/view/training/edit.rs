@@ -18,9 +18,9 @@ pub struct EditProgram {
 }
 
 impl EditProgram {
-    pub fn new(id: ObjectId, edit_type: EditType, go_back: Option<Widget>) -> Self {
+    pub fn new(id: ObjectId, edit_type: EditType) -> Self {
         Self {
-            go_back,
+            go_back: None,
             edit_type,
             state: State::Init,
             id,
@@ -176,6 +176,14 @@ impl View for EditProgram {
             state: self.state.clone(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

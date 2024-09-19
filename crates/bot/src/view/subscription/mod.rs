@@ -23,7 +23,9 @@ use teloxide::{
 use view::SubscriptionOption;
 
 #[derive(Default)]
-pub struct SubscriptionView;
+pub struct SubscriptionView {
+    go_back: Option<Widget>,
+}
 
 #[async_trait]
 impl View for SubscriptionView {
@@ -54,25 +56,35 @@ impl View for SubscriptionView {
         };
         match cb {
             Callback::Select(id) => {
-                let view =
-                    SubscriptionOption::new(ObjectId::from_bytes(id), Box::new(SubscriptionView));
+                let view = SubscriptionOption::new(ObjectId::from_bytes(id));
                 Ok(Some(Box::new(view)))
             }
             Callback::CreateSubscription => {
                 ctx.ensure(Rule::CreateSubscription)?;
-                let widget = Box::new(CreateSubscription::new(Box::new(SubscriptionView)));
+                let widget = CreateSubscription::new().boxed();
                 Ok(Some(widget))
             }
             Callback::FreeSell => {
                 ctx.ensure(Rule::FreeSell)?;
-                let widget = Box::new(FeeSellView::new(Box::new(SubscriptionView)));
+                let widget = FeeSellView::new().boxed();
                 Ok(Some(widget))
             }
         }
     }
 
     fn take(&mut self) -> Widget {
-        SubscriptionView.boxed()
+        SubscriptionView {
+            go_back: self.go_back.take(),
+        }
+        .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

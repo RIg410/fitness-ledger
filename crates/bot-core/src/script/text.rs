@@ -2,7 +2,7 @@ use crate::context::Context;
 use async_trait::async_trait;
 use eyre::{Error, Result};
 
-use super::Stage;
+use super::{Dispatch, Stage};
 
 #[async_trait]
 pub trait StageText<S>
@@ -15,7 +15,7 @@ where
         ctx: &mut Context,
         state: &mut S,
         msg: &str,
-    ) -> Result<Option<Stage<S>>, Error>;
+    ) -> Result<Dispatch<S>, Error>;
 
     fn back(&self) -> Option<Stage<S>> {
         None

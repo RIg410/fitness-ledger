@@ -434,6 +434,12 @@ impl View for LogsView {
         }
         .boxed()
     }
+
+    fn set_back(&mut self, _: Widget) {}
+
+    fn back(&mut self) -> Option<Widget> {
+        None
+    }
 }
 
 #[derive(Serialize, Deserialize)]

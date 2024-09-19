@@ -11,7 +11,6 @@ use crate::{
 use async_trait::async_trait;
 use chrono::Local;
 use eyre::Result;
-use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
@@ -22,8 +21,8 @@ pub struct ClientTrainings {
 }
 
 impl ClientTrainings {
-    pub fn new(id: ObjectId, go_back: Option<Widget>) -> Self {
-        Self { id, go_back }
+    pub fn new(id: ObjectId) -> Self {
+        Self { id, go_back: None }
     }
 }
 
@@ -55,7 +54,6 @@ impl View for ClientTrainings {
             Callback::SelectTraining(date) => {
                 let widget = Box::new(TrainingView::new(
                     date.into(),
-                    Some(Box::new(ClientTrainings::new(self.id, self.go_back.take()))),
                 ));
                 Ok(Some(widget))
             }
@@ -76,6 +74,14 @@ impl View for ClientTrainings {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

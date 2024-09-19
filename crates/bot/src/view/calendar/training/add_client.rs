@@ -26,9 +26,9 @@ pub struct AddClientView {
 }
 
 impl AddClientView {
-    pub fn new(training_id: DateTime<Local>, go_back: Widget) -> AddClientView {
+    pub fn new(training_id: DateTime<Local>) -> AddClientView {
         AddClientView {
-            go_back: Some(go_back),
+            go_back: None,
             training_id,
             query: "".to_string(),
             offset: 0,
@@ -86,7 +86,7 @@ impl View for AddClientView {
                 .boxed();
                 let id = ObjectId::from_bytes(user_id);
                 Ok(Some(
-                    ClientView::new(id, self.training_id, Reason::AddClient, Some(back)).boxed(),
+                    ClientView::new(id, self.training_id, Reason::AddClient).boxed(),
                 ))
             }
             Callback::Back => {
@@ -107,6 +107,14 @@ impl View for AddClientView {
             offset: self.offset,
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

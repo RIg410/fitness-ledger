@@ -20,15 +20,10 @@ pub struct ClientView {
 }
 
 impl ClientView {
-    pub fn new(
-        id: ObjectId,
-        training_id: DateTime<Local>,
-        reason: Reason,
-        go_back: Option<Widget>,
-    ) -> ClientView {
+    pub fn new(id: ObjectId, training_id: DateTime<Local>, reason: Reason) -> ClientView {
         ClientView {
             id,
-            go_back,
+            go_back: None,
             reason,
             training_id,
         }
@@ -191,6 +186,14 @@ impl View for ClientView {
             reason: self.reason,
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

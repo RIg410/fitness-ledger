@@ -44,11 +44,7 @@ impl View for FindTraining {
             Callback::SelectTraining(id) => {
                 let id = ObjectId::from_bytes(id);
                 let back = FindTraining::new(self.go_back.take());
-                let view = Box::new(ViewProgram::new(
-                    id,
-                    ScheduleTrainingPreset::default(),
-                    Some(Box::new(back)),
-                ));
+                let view = ViewProgram::new(id, ScheduleTrainingPreset::default()).boxed();
                 Ok(Some(view))
             }
             Callback::Back => Ok(self.go_back.take()),
@@ -59,6 +55,14 @@ impl View for FindTraining {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

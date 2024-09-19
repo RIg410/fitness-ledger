@@ -23,8 +23,11 @@ pub struct ClientList {
 }
 
 impl ClientList {
-    pub fn new(start_at: DateTime<Local>, go_back: Option<Widget>) -> Self {
-        Self { start_at, go_back }
+    pub fn new(start_at: DateTime<Local>) -> Self {
+        Self {
+            start_at,
+            go_back: None,
+        }
     }
 
     pub fn go_back(&mut self, _: &mut Context) -> Result<Option<Widget>> {
@@ -32,15 +35,13 @@ impl ClientList {
     }
 
     pub async fn view_user_profile(&mut self, id: ObjectId) -> Result<Option<Widget>> {
-        let back = ClientList::new(self.start_at, self.go_back.take()).boxed();
-        let view = ClientView::new(id, self.start_at, Reason::RemoveClient, Some(back)).boxed();
+        let view = ClientView::new(id, self.start_at, Reason::RemoveClient).boxed();
         Ok(Some(view))
     }
 
     pub async fn add_client(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         ctx.ensure(Rule::EditTrainingClientsList)?;
-        let back = ClientList::new(self.start_at, self.go_back.take()).boxed();
-        let view = AddClientView::new(self.start_at, back).boxed();
+        let view = AddClientView::new(self.start_at).boxed();
         Ok(Some(view))
     }
 
@@ -100,7 +101,7 @@ impl View for ClientList {
         if !ctx.is_couch() {
             bail!("Only couch can see client list");
         }
-        
+
         let training = ctx
             .ledger
             .calendar
@@ -178,6 +179,14 @@ impl View for ClientList {
             go_back: self.go_back.take(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

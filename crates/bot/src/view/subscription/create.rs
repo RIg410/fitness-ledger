@@ -19,9 +19,9 @@ pub struct CreateSubscription {
 }
 
 impl CreateSubscription {
-    pub fn new(go_back: Widget) -> CreateSubscription {
+    pub fn new() -> CreateSubscription {
         CreateSubscription {
-            go_back: Some(go_back),
+            go_back: None,
             state: State::SetName,
             subscription: Subscription::default(),
         }
@@ -243,6 +243,14 @@ impl View for CreateSubscription {
             subscription: self.subscription.clone(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 

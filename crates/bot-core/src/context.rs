@@ -8,7 +8,7 @@ use teloxide::{
     ApiError, Bot, RequestError,
 };
 
-use crate::view::menu::MainMenuItem;
+use crate::sys_button;
 
 pub struct Context {
     pub bot: Bot,
@@ -16,16 +16,27 @@ pub struct Context {
     pub ledger: Ledger,
     origin: Origin,
     pub session: Session,
+    pub system_go_back: bool,
+    pub is_real_user: bool,
 }
 
 impl Context {
-    pub fn new(bot: Bot, me: User, ledger: Ledger, origin: Origin, session: Session) -> Context {
+    pub fn new(
+        bot: Bot,
+        me: User,
+        ledger: Ledger,
+        origin: Origin,
+        session: Session,
+        is_real_user: bool,
+    ) -> Context {
         Context {
             bot,
             me,
             ledger,
             origin,
             session,
+            system_go_back: true,
+            is_real_user,
         }
     }
 
@@ -69,14 +80,13 @@ impl Context {
     pub async fn edit_origin(
         &self,
         text: &str,
-        mut markup: InlineKeyboardMarkup,
+        markup: InlineKeyboardMarkup,
     ) -> Result<(), eyre::Error> {
-        markup = markup.append_row(vec![MainMenuItem::Home.into()]);
         let update_result = self
             .bot
             .edit_message_text(self.chat_id(), self.origin.message_id, text)
             .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-            .reply_markup(markup)
+            .reply_markup(sys_button(markup, self.system_go_back))
             .await;
         match update_result {
             Ok(_) => Ok(()),

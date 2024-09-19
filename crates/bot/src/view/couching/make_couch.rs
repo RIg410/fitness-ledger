@@ -11,9 +11,7 @@ use crate::{
     state::Widget,
     view::{
         script::{
-            list::{ListId, ListItem, StageList},
-            text::StageText,
-            ScriptView, Stage, StageYesNo,
+            list::{ListId, ListItem, StageList}, text::StageText, yes_no::StageYesNo, ScriptView, Stage
         },
         users::profile::render_rate,
         View,

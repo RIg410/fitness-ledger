@@ -1,14 +1,18 @@
-use super::{
-    calendar::CalendarView,
-    couching::{couch_list::CouchingList, programs_list::ProgramList},
-    finance::FinanceView,
-    logs::LogsView,
-    subscription::SubscriptionView,
-    users::{profile::UserProfile, Query, UsersView},
-    View,
-};
-use crate::{context::Context, state::Widget};
+// use super::{
+//     calendar::CalendarView,
+//     couching::{couch_list::CouchingList, programs_list::ProgramList},
+//     finance::FinanceView,
+//     logs::LogsView,
+//     subscription::SubscriptionView,
+//     users::{profile::UserProfile, Query, UsersView},
+//     View,
+// };
+//use crate::{context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{
+    context::Context,
+    widget::{Goto, View},
+};
 use eyre::{bail, Ok, Result};
 use model::rights::Rule;
 use strum::EnumIter;
@@ -55,7 +59,7 @@ impl View for MainMenuView {
         &mut self,
         ctx: &mut Context,
         msg: &Message,
-    ) -> Result<Option<Widget>, eyre::Error> {
+    ) -> Result<Goto, eyre::Error> {
         let text = if let Some(text) = msg.text() {
             text
         } else {
@@ -68,45 +72,39 @@ impl View for MainMenuView {
         };
 
         self.send_self(ctx).await?;
-        Ok(Some(match command {
-            MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id, None).boxed(),
-            MainMenuItem::Schedule => CalendarView::default().boxed(),
-            MainMenuItem::Users => UsersView::new(Query::default()).boxed(),
-            MainMenuItem::Subscription => SubscriptionView::default().boxed(),
-            MainMenuItem::FinanceView => FinanceView.boxed(),
-            MainMenuItem::LogView => LogsView::default().boxed(),
-            MainMenuItem::Coach => CouchingList::new(None).boxed(),
-            MainMenuItem::Home => return Ok(None),
-            MainMenuItem::Programs => ProgramList::new(None).boxed(),
-        }))
+        // Ok(Some(match command {
+        //     MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id).boxed(),
+        //     MainMenuItem::Schedule => CalendarView::default().boxed(),
+        //     MainMenuItem::Users => UsersView::new(Query::default()).boxed(),
+        //     MainMenuItem::Subscription => SubscriptionView::default().boxed(),
+        //     MainMenuItem::FinanceView => FinanceView.boxed(),
+        //     MainMenuItem::LogView => LogsView::default().boxed(),
+        //     MainMenuItem::Coach => CouchingList::new().boxed(),
+        //     MainMenuItem::Home => MainMenuView.boxed(),
+        //     MainMenuItem::Programs => ProgramList::new().boxed(),
+        // }))
+        Ok(Goto::None)
     }
 
-    async fn handle_callback(
-        &mut self,
-        ctx: &mut Context,
-        msg: &str,
-    ) -> Result<Option<Widget>, eyre::Error> {
+    async fn handle_callback(&mut self, ctx: &mut Context, msg: &str) -> Result<Goto, eyre::Error> {
         let command = if let Some(command) = MainMenuItem::try_from(msg).ok() {
             command
         } else {
             return Ok(None);
         };
         self.send_self(ctx).await?;
-        Ok(Some(match command {
-            MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id, None).boxed(),
-            MainMenuItem::Schedule => CalendarView::default().boxed(),
-            MainMenuItem::Users => UsersView::new(Default::default()).boxed(),
-            MainMenuItem::Subscription => SubscriptionView::default().boxed(),
-            MainMenuItem::Home => MainMenuView.boxed(),
-            MainMenuItem::FinanceView => FinanceView.boxed(),
-            MainMenuItem::LogView => LogsView::default().boxed(),
-            MainMenuItem::Coach => CouchingList::new(None).boxed(),
-            MainMenuItem::Programs => ProgramList::new(None).boxed(),
-        }))
-    }
-
-    fn take(&mut self) -> Widget {
-        MainMenuView.boxed()
+        // Ok(Some(match command {
+        //     MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id).boxed(),
+        //     MainMenuItem::Schedule => CalendarView::default().boxed(),
+        //     MainMenuItem::Users => UsersView::new(Default::default()).boxed(),
+        //     MainMenuItem::Subscription => SubscriptionView::default().boxed(),
+        //     MainMenuItem::Home => MainMenuView.boxed(),
+        //     MainMenuItem::FinanceView => FinanceView.boxed(),
+        //     MainMenuItem::LogView => LogsView::default().boxed(),
+        //     MainMenuItem::Coach => CouchingList::new().boxed(),
+        //     MainMenuItem::Programs => ProgramList::new().boxed(),
+        // }))
+        Ok(Goto::None)
     }
 }
 

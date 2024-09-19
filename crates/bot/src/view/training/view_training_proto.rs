@@ -26,10 +26,10 @@ pub struct ViewProgram {
 }
 
 impl ViewProgram {
-    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset, go_back: Option<Widget>) -> Self {
+    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
         Self {
             id,
-            go_back,
+            go_back: None,
             preset,
         }
     }
@@ -37,7 +37,6 @@ impl ViewProgram {
     async fn find_training(&mut self) -> Result<Option<Widget>> {
         let view = CalendarView::new(
             WeekId::default(),
-            Some(self.take()),
             None,
             Some(Filter {
                 proto_id: Some(self.id),
@@ -49,51 +48,44 @@ impl ViewProgram {
     async fn schedule(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         ctx.ensure(Rule::EditSchedule)?;
         let preset = self.preset.clone();
-        let view = preset.into_next_view(self.id, self.take());
+        let view = preset.into_next_view(self.id);
         Ok(Some(view))
     }
 
     async fn edit_capacity(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         ctx.ensure(Rule::EditTraining)?;
         Ok(Some(
-            EditProgram::new(
-                self.id,
-                super::edit::EditType::Capacity,
-                self.go_back.take(),
-            )
-            .boxed(),
+            EditProgram::new(self.id, super::edit::EditType::Capacity).boxed(),
         ))
     }
 
     async fn edit_duration(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         ctx.ensure(Rule::EditTraining)?;
         Ok(Some(
-            EditProgram::new(
-                self.id,
-                super::edit::EditType::Duration,
-                self.go_back.take(),
-            )
-            .boxed(),
+            EditProgram::new(self.id, super::edit::EditType::Duration).boxed(),
         ))
     }
 
     async fn edit_name(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         ctx.ensure(Rule::EditTraining)?;
         Ok(Some(
-            EditProgram::new(self.id, super::edit::EditType::Name, self.go_back.take()).boxed(),
+            EditProgram::new(self.id, super::edit::EditType::Name).boxed(),
         ))
     }
 
     async fn edit_description(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
         ctx.ensure(Rule::EditTraining)?;
         Ok(Some(
-            EditProgram::new(
-                self.id,
-                super::edit::EditType::Description,
-                self.go_back.take(),
-            )
-            .boxed(),
+            EditProgram::new(self.id, super::edit::EditType::Description).boxed(),
         ))
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 
@@ -151,6 +143,14 @@ impl View for ViewProgram {
             preset: self.preset.clone(),
         }
         .boxed()
+    }
+
+    fn set_back(&mut self, back: Widget) {
+        self.go_back = Some(back);
+    }
+
+    fn back(&mut self) -> Option<Widget> {
+        self.go_back.take()
     }
 }
 
