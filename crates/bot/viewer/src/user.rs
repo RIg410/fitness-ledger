@@ -92,7 +92,7 @@ fn render_subscriptions(msg: &mut String, user: &User) {
 }
 
 fn render_balance_info(msg: &mut String, user: &User, sys_info: bool) {
-    msg.push_str("➖➖➖➖➖➖➖➖➖➖");
+    msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
     let sys_info = if sys_info {
         format!("\n*Резерв : _{}_ занятий*", user.reserved_balance)
     } else {
