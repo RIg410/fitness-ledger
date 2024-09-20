@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use bot_core::{
     context::Context,
-    widget::{Goto, View},
+    widget::{Dest, View},
 };
 use eyre::Result;
 use teloxide::types::{InlineKeyboardMarkup, Message};
@@ -24,11 +24,11 @@ impl View for SetPhone {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Goto> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
         let text = message.text().unwrap_or_default();
         if text.is_empty() {
             ctx.send_notification("Введите телефон").await?;
-            return Ok(Goto::None);
+            return Ok(Dest::None);
         }
 
         ctx.ledger
@@ -36,6 +36,6 @@ impl View for SetPhone {
             .set_phone(&mut ctx.session, self.id, text)
             .await?;
         ctx.delete_msg(message.id).await?;
-        Ok(Goto::Back)
+        Ok(Dest::Back)
     }
 }

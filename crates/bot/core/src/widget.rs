@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::{callback_data::Calldata, context::Context};
+use crate::context::Context;
 use async_trait::async_trait;
 use eyre::Result;
 use teloxide::types::Message;
@@ -21,13 +21,13 @@ pub trait View {
         &mut self,
         ctx: &mut Context,
         msg: &Message,
-    ) -> Result<Goto, eyre::Error> {
+    ) -> Result<Dest, eyre::Error> {
         ctx.delete_msg(msg.id).await?;
-        Ok(Goto::None)
+        Ok(Dest::None)
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Goto, eyre::Error> {
-        Ok(Goto::None)
+    async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Dest, eyre::Error> {
+        Ok(Dest::None)
     }
 
     fn widget(self) -> Widget
@@ -79,20 +79,22 @@ impl DerefMut for Widget {
     }
 }
 
-pub enum Goto {
+pub enum Dest {
     Next(Widget),
+    Goto(Widget),
     None,
     Back,
+    Home,
 }
 
-impl<T: View + Send + Sync + 'static> From<T> for Goto {
+impl<T: View + Send + Sync + 'static> From<T> for Dest {
     fn from(value: T) -> Self {
-        Goto::Next(value.into())
+        Dest::Next(value.into())
     }
 }
 
-impl From<Widget> for Goto {
+impl From<Widget> for Dest {
     fn from(value: Widget) -> Self {
-        Goto::Next(value)
+        Dest::Next(value)
     }
 }

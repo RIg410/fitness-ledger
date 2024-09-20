@@ -1,8 +1,6 @@
 use super::{confirm::ConfirmSell, presell::PreSellView, View};
-use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::users::profile::user_type,
-};
 use async_trait::async_trait;
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Dest};
 use eyre::{eyre, Error, Result};
 use model::{decimal::Decimal, rights::Rule, user::User};
 use mongodb::bson::oid::ObjectId;
@@ -15,7 +13,6 @@ use teloxide::{
 pub const LIMIT: u64 = 7;
 
 pub struct SellView {
-    go_back: Option<Widget>,
     sell: Sell,
     query: String,
     offset: u64,
@@ -24,26 +21,18 @@ pub struct SellView {
 impl SellView {
     pub fn new(sell: Sell) -> SellView {
         SellView {
-            go_back: None,
             sell,
             query: "".to_string(),
             offset: 0,
         }
     }
 
-    pub fn select(&mut self, user_id: i64, _: &mut Context) -> Result<Option<Widget>> {
-        return Ok(Some(ConfirmSell::new(user_id, self.sell).boxed()));
+    pub fn select(&mut self, user_id: i64, _: &mut Context) -> Result<Dest> {
+        return Ok(ConfirmSell::new(user_id, self.sell).into());
     }
 
-    pub fn presell(&mut self) -> Result<Option<Widget>> {
-        let back = Box::new(SellView {
-            go_back: self.go_back.take(),
-            sell: self.sell,
-            query: self.query.clone(),
-            offset: self.offset,
-        });
-        let view = PreSellView::new(self.sell).boxed();
-        return Ok(Some(view));
+    pub fn presell(&mut self) -> Result<Dest> {
+        return Ok(PreSellView::new(self.sell).into());
     }
 }
 
@@ -55,7 +44,7 @@ impl View for SellView {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, msg: &Message) -> Result<Option<Widget>> {
+    async fn handle_message(&mut self, ctx: &mut Context, msg: &Message) -> Result<Dest> {
         ctx.delete_msg(msg.id).await?;
 
         let mut query = msg.text().to_owned().unwrap_or_default().to_string();
@@ -66,55 +55,26 @@ impl View for SellView {
         self.query = remove_non_alphanumeric(&query);
         self.offset = 0;
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Dest::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
         ctx.ensure(Rule::SellSubscription)?;
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
+
+        match calldata!(data) {
             Callback::Next => {
                 self.offset += LIMIT;
                 self.show(ctx).await?;
-                Ok(None)
+                Ok(Dest::None)
             }
             Callback::Prev => {
                 self.offset = self.offset.saturating_sub(LIMIT);
                 self.show(ctx).await?;
-                Ok(None)
+                Ok(Dest::None)
             }
             Callback::Select(user_id) => self.select(user_id, ctx),
-            Callback::Back => {
-                if let Some(back) = self.go_back.take() {
-                    Ok(Some(back))
-                } else {
-                    Ok(None)
-                }
-            }
             Callback::PreSell => self.presell(),
         }
-    }
-
-    fn take(&mut self) -> Widget {
-        SellView {
-            go_back: self.go_back.take(),
-            sell: self.sell.clone(),
-            query: self.query.clone(),
-            offset: self.offset,
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 
@@ -178,11 +138,6 @@ async fn render(
         keymap = keymap.append_row(raw);
     }
 
-    keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-        "🔙 Назад",
-        Callback::Back.to_data(),
-    )]);
-
     Ok((msg, keymap))
 }
 
@@ -222,7 +177,6 @@ fn make_button(user: &User) -> InlineKeyboardButton {
 enum Callback {
     Next,
     Prev,
-    Back,
     Select(i64),
     PreSell,
 }

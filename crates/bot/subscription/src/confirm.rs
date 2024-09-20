@@ -1,29 +1,19 @@
 use super::{sell::Sell, View};
-use crate::{
-    callback_data::Calldata as _, context::Context, state::Widget, view::menu::MainMenuView,
-};
 use async_trait::async_trait;
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Dest};
 use eyre::{eyre, Error, Result};
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
-    utils::markdown::escape,
-};
+use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
 pub struct ConfirmSell {
-    go_back: Option<Widget>,
     user_id: i64,
     sell: Sell,
 }
 
 impl ConfirmSell {
-    pub fn new(user: i64, sell: Sell) -> ConfirmSell {
-        ConfirmSell {
-            go_back: None,
-            user_id: user,
-            sell,
-        }
+    pub fn new(user_id: i64, sell: Sell) -> ConfirmSell {
+        ConfirmSell { user_id, sell }
     }
 }
 
@@ -35,22 +25,8 @@ impl View for ConfirmSell {
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
-        ctx.delete_msg(message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+        match calldata!(data) {
             Callback::Sell => {
                 let result = match self.sell {
                     Sell::Sub(sub) => {
@@ -76,36 +52,11 @@ impl View for ConfirmSell {
                     Err(err.into())
                 } else {
                     ctx.send_msg("🤑 Продано").await?;
-                    let view = Box::new(MainMenuView);
-                    view.send_self(ctx).await?;
-                    Ok(Some(view))
+                    Ok(Dest::Home)
                 }
             }
-            Callback::Cancel => {
-                if let Some(back) = self.go_back.take() {
-                    Ok(Some(back))
-                } else {
-                    Ok(None)
-                }
-            }
+            Callback::Cancel => Ok(Dest::Back),
         }
-    }
-
-    fn take(&mut self) -> Widget {
-        ConfirmSell {
-            go_back: self.go_back.take(),
-            user_id: self.user_id,
-            sell: self.sell.clone(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 
@@ -153,8 +104,8 @@ async fn render(
 
     let mut keymap = InlineKeyboardMarkup::default();
     keymap = keymap.append_row(vec![
-        InlineKeyboardButton::callback("✅ Да", Callback::Sell.to_data()),
-        InlineKeyboardButton::callback("❌ Отмена", Callback::Cancel.to_data()),
+        Callback::Sell.button("✅ Да"),
+        Callback::Cancel.button("❌ Отмена"),
     ]);
     Ok((text, keymap))
 }

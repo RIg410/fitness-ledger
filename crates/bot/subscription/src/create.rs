@@ -1,19 +1,18 @@
 use std::mem;
 
 use super::View;
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{callback_data::Calldata, calldata, context::Context, widget::Dest};
 use eyre::Result;
 use ledger::subscriptions::CreateSubscriptionError;
 use model::{rights::Rule, subscription::Subscription};
 use serde::{Deserialize, Serialize};
 use teloxide::{
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    types::{InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
 
 pub struct CreateSubscription {
-    go_back: Option<Widget>,
     state: State,
     subscription: Subscription,
 }
@@ -21,7 +20,6 @@ pub struct CreateSubscription {
 impl CreateSubscription {
     pub fn new() -> CreateSubscription {
         CreateSubscription {
-            go_back: None,
             state: State::SetName,
             subscription: Subscription::default(),
         }
@@ -103,8 +101,8 @@ impl View for CreateSubscription {
             State::Finish => {
                 text.push_str("*Все верно?*");
                 keymap = keymap.append_row(vec![
-                    InlineKeyboardButton::callback("✅ Сохранить", Callback::Create.to_data()),
-                    InlineKeyboardButton::callback("❌ Отмена", Callback::Cancel.to_data()),
+                    Callback::Create.button("✅ Сохранить"),
+                    Callback::Cancel.button("❌ Отмена"),
                 ]);
             }
         }
@@ -114,15 +112,11 @@ impl View for CreateSubscription {
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
         let text = if let Some(text) = message.text() {
             text
         } else {
-            return Ok(None);
+            return Ok(Dest::None);
         };
 
         self.state = match self.state {
@@ -136,7 +130,7 @@ impl View for CreateSubscription {
                 if sub.is_some() {
                     ctx.send_msg("Абонемент с таким именем уже существует")
                         .await?;
-                    return Ok(None);
+                    return Ok(Dest::None);
                 }
                 self.subscription.name = text.to_string();
                 State::SetItems
@@ -184,16 +178,11 @@ impl View for CreateSubscription {
         };
         self.show(ctx).await?;
 
-        Ok(None)
+        Ok(Dest::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+        match calldata!(data) {
             Callback::Create => {
                 ctx.ensure(Rule::CreateSubscription)?;
                 let sub = mem::take(&mut self.subscription);
@@ -212,45 +201,28 @@ impl View for CreateSubscription {
                 match result {
                     Ok(_) => {
                         ctx.send_msg("✅Абонемент создан").await?;
-                        Ok(self.go_back.take())
+                        Ok(Dest::Back)
                     }
                     Err(CreateSubscriptionError::NameAlreadyExists) => {
                         ctx.send_msg(&"Не удалось создать абонемент: Имя уже занято")
                             .await?;
-                        Ok(None)
+                        Ok(Dest::None)
                     }
                     Err(CreateSubscriptionError::InvalidPrice) => {
                         ctx.send_msg("Не удалось создать абонемент: Неверная цена")
                             .await?;
-                        Ok(None)
+                        Ok(Dest::None)
                     }
                     Err(CreateSubscriptionError::InvalidItems) => {
                         ctx.send_msg("Не удалось создать абонемент: Неверное количество занятий")
                             .await?;
-                        Ok(None)
+                        Ok(Dest::None)
                     }
                     Err(CreateSubscriptionError::Common(err)) => Err(err),
                 }
             }
-            Callback::Cancel => Ok(self.go_back.take()),
+            Callback::Cancel => Ok(Dest::Back),
         }
-    }
-
-    fn take(&mut self) -> Widget {
-        CreateSubscription {
-            go_back: self.go_back.take(),
-            state: self.state,
-            subscription: self.subscription.clone(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 

@@ -4,7 +4,7 @@ use bot_core::{
     callback_data::Calldata,
     calldata,
     context::Context,
-    widget::{Goto, View},
+    widget::{Dest, View},
 };
 use eyre::Result;
 use mongodb::bson::oid::ObjectId;
@@ -47,7 +47,7 @@ impl View for SetOneTime {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Goto> {
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Dest> {
         match calldata!(data) {
             Callback::OneTime => {
                 self.preset.as_mut().unwrap().is_one_time = Some(true);

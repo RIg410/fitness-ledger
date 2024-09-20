@@ -1,7 +1,7 @@
 use crate::{
     callback_data::Calldata as _,
     context::Context,
-    widget::{self, Goto, View, Widget},
+    widget::{self, Dest, View, Widget},
 };
 use async_trait::async_trait;
 use eyre::Result;
@@ -101,12 +101,12 @@ where
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Goto> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
         let (action, text) =
             if let (Some(action), Some(text)) = (self.action.as_mut(), message.text()) {
                 (action, text)
             } else {
-                return Ok(Goto::None);
+                return Ok(Dest::None);
             };
 
         match action {
@@ -118,7 +118,7 @@ where
                     Dispatch::None => {}
                     Dispatch::Stage(stage) => self.action = Some(stage),
                     Dispatch::Widget(view) => {
-                        return Ok(Goto::Next(view));
+                        return Ok(Dest::Next(view));
                     }
                 }
                 self.show(ctx).await?;
@@ -132,15 +132,15 @@ where
             }
         }
         ctx.delete_msg(message.id).await?;
-        Ok(Goto::None)
+        Ok(Dest::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Goto> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
         let (action, cb) =
             if let (Some(action), Some(cb)) = (self.action.as_mut(), Callback::from_data(data)) {
                 (action, cb)
             } else {
-                return Ok(widget::Goto::None);
+                return Ok(widget::Dest::None);
             };
 
         match cb {
@@ -149,30 +149,30 @@ where
                     self.action = Some(back);
                 }
                 None => {
-                    return Ok(Goto::Back);
+                    return Ok(Dest::Back);
                 }
             },
             Callback::Select(idx) => match action {
                 Stage::Text(_) => {
-                    return Ok(Goto::None);
+                    return Ok(Dest::None);
                 }
                 Stage::YesNo(hdl) => match idx {
                     ListId::Yes => match hdl.yes(ctx, self.state.as_mut().unwrap()).await? {
                         Dispatch::None => {
-                            return Ok(Goto::None);
+                            return Ok(Dest::None);
                         }
                         Dispatch::Stage(stage) => {
                             self.action = Some(stage);
                         }
                         Dispatch::Widget(widget) => {
-                            return Ok(Goto::Next(widget));
+                            return Ok(Dest::Next(widget));
                         }
                     },
                     ListId::No => {
                         ctx.send_notification("❌ Отменено").await?;
-                        return Ok(Goto::Back);
+                        return Ok(Dest::Back);
                     }
-                    _ => return Ok(Goto::None),
+                    _ => return Ok(Dest::None),
                 },
                 Stage::List(list) => {
                     let result = list
@@ -181,13 +181,13 @@ where
                         .await?;
                     match result {
                         Dispatch::None => {
-                            return Ok(Goto::None);
+                            return Ok(Dest::None);
                         }
                         Dispatch::Stage(stage) => {
                             self.action = Some(stage);
                         }
                         Dispatch::Widget(widget) => {
-                            return Ok(Goto::Next(widget));
+                            return Ok(Dest::Next(widget));
                         }
                     }
                 }
@@ -197,12 +197,12 @@ where
                     list.offset += offset as usize * list.limit;
                     self.show(ctx).await?;
                 }
-                _ => return Ok(Goto::None),
+                _ => return Ok(Dest::None),
             },
         };
 
         self.show(ctx).await?;
-        Ok(Goto::None)
+        Ok(Dest::None)
     }
 }
 

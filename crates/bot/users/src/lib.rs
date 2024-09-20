@@ -3,7 +3,7 @@ use bot_core::{
     callback_data::Calldata as _,
     calldata,
     context::Context,
-    widget::{Goto, View},
+    widget::{Dest, View},
 };
 use model::rights::Rule;
 use model::user::User;
@@ -59,7 +59,7 @@ impl View for UsersView {
         &mut self,
         ctx: &mut Context,
         msg: &Message,
-    ) -> Result<Goto, eyre::Error> {
+    ) -> Result<Dest, eyre::Error> {
         ctx.delete_msg(msg.id).await?;
         ctx.ensure(Rule::ViewUsers)?;
 
@@ -73,14 +73,14 @@ impl View for UsersView {
             offset: 0,
         };
         self.show(ctx).await?;
-        Ok(Goto::None)
+        Ok(Dest::None)
     }
 
     async fn handle_callback(
         &mut self,
         ctx: &mut Context,
         data: &str,
-    ) -> Result<Goto, eyre::Error> {
+    ) -> Result<Dest, eyre::Error> {
         ctx.ensure(Rule::ViewUsers)?;
 
         match calldata!(data) {
@@ -97,7 +97,7 @@ impl View for UsersView {
             }
         }
 
-        Ok(Goto::None)
+        Ok(Dest::None)
     }
 }
 

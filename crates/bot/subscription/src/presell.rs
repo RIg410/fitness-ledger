@@ -1,11 +1,11 @@
 use super::sell::Sell;
-use crate::{
-    callback_data::Calldata as _,
-    context::Context,
-    state::Widget,
-    view::{menu::MainMenuView, View},
-};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata,
+    calldata,
+    context::Context,
+    widget::{Dest, View},
+};
 use eyre::{eyre, Error, Result};
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,6 @@ use teloxide::{
 };
 
 pub struct PreSellView {
-    go_back: Option<Widget>,
     sell: Sell,
     state: State,
 }
@@ -23,7 +22,6 @@ pub struct PreSellView {
 impl PreSellView {
     pub fn new(sell: Sell) -> PreSellView {
         PreSellView {
-            go_back: None,
             sell,
             state: State::Init,
         }
@@ -46,11 +44,7 @@ impl View for PreSellView {
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
         match &self.state {
             State::Init => {
                 let phone = message.text().ok_or_else(|| eyre!("No text"))?;
@@ -66,7 +60,7 @@ impl View for PreSellView {
                         ctx.send_msg("Пользователь с таким номером уже существует")
                             .await?;
                         self.show(ctx).await?;
-                        return Ok(None);
+                        return Ok(Dest::None);
                     }
 
                     self.state = State::Confirm(phone.to_owned());
@@ -79,23 +73,17 @@ impl View for PreSellView {
                 ctx.delete_msg(message.id).await?;
             }
         }
-        Ok(None)
+        Ok(Dest::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
         let phone = if let State::Confirm(phone) = &self.state {
             phone.to_owned()
         } else {
-            return Ok(None);
+            return Ok(Dest::None);
         };
 
-        match cb {
+        match calldata!(data) {
             Callback::Sell => {
                 let result = match self.sell {
                     Sell::Sub(sub) => {
@@ -121,36 +109,11 @@ impl View for PreSellView {
                     Err(err.into())
                 } else {
                     ctx.send_msg("🤑 Продано").await?;
-                    let view = Box::new(MainMenuView);
-                    view.send_self(ctx).await?;
-                    Ok(Some(view))
+                    Ok(Dest::Home)
                 }
             }
-            Callback::Cancel => {
-                if let Some(back) = self.go_back.take() {
-                    Ok(Some(back))
-                } else {
-                    Ok(None)
-                }
-            }
+            Callback::Cancel => Ok(Dest::Back),
         }
-    }
-
-    fn take(&mut self) -> Widget {
-        PreSellView {
-            go_back: self.go_back.take(),
-            sell: self.sell.clone(),
-            state: self.state.clone(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 
@@ -199,8 +162,8 @@ async fn render_confirm(
 
     let mut keymap = InlineKeyboardMarkup::default();
     keymap = keymap.append_row(vec![
-        InlineKeyboardButton::callback("✅ Да", Callback::Sell.to_data()),
-        InlineKeyboardButton::callback("❌ Отмена", Callback::Cancel.to_data()),
+        Callback::Sell.button("✅ Да"),
+        Callback::Cancel.button("❌ Отмена"),
     ]);
     Ok((text, keymap))
 }

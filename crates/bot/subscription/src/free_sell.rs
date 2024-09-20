@@ -2,26 +2,24 @@ use super::{
     sell::{Sell, SellView},
     View,
 };
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Dest};
 use eyre::Result;
 use model::{decimal::Decimal, rights::Rule};
 use serde::{Deserialize, Serialize};
 use std::{mem, num::NonZero};
 use teloxide::{
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    types::{InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
 
 pub struct FeeSellView {
-    go_back: Option<Widget>,
     state: State,
 }
 
 impl FeeSellView {
     pub fn new() -> FeeSellView {
         FeeSellView {
-            go_back: None,
             state: State::SetItems,
         }
     }
@@ -43,8 +41,8 @@ impl View for FeeSellView {
             State::Finish(_, _) => {
                 text.push_str("*Все верно?*");
                 keymap = keymap.append_row(vec![
-                    InlineKeyboardButton::callback("✅ Да", Callback::Sell.to_data()),
-                    InlineKeyboardButton::callback("❌ Нет", Callback::Cancel.to_data()),
+                    Callback::Sell.button("✅ Да"),
+                    Callback::Cancel.button("❌ Нет"),
                 ]);
             }
         }
@@ -54,15 +52,11 @@ impl View for FeeSellView {
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
         let text = if let Some(text) = message.text() {
             text
         } else {
-            return Ok(None);
+            return Ok(Dest::None);
         };
 
         self.state = match mem::take(&mut self.state) {
@@ -89,46 +83,24 @@ impl View for FeeSellView {
         };
         self.show(ctx).await?;
 
-        Ok(None)
+        Ok(Dest::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
         let state = mem::take(&mut self.state).inner();
         if let Some((items, price)) = state {
-            let cb = if let Some(cb) = Callback::from_data(data) {
-                cb
-            } else {
-                return Ok(None);
-            };
-            match cb {
+            match calldata!(data) {
                 Callback::Sell => {
                     ctx.ensure(Rule::FreeSell)?;
 
-                    let widget = Box::new(SellView::new(Sell::free(price, items.get())));
-                    return Ok(Some(widget));
+                    return Ok(SellView::new(Sell::free(price, items.get())).into());
                 }
-                Callback::Cancel => Ok(self.go_back.take()),
+                Callback::Cancel => Ok(Dest::Back),
             }
         } else {
             self.show(ctx).await?;
-            Ok(None)
+            Ok(Dest::None)
         }
-    }
-
-    fn take(&mut self) -> Widget {
-        FeeSellView {
-            go_back: self.go_back.take(),
-            state: self.state.clone(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 

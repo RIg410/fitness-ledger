@@ -7,7 +7,7 @@ use bot_core::{
     callback_data::Calldata as _,
     calldata,
     context::Context,
-    widget::{Goto, View},
+    widget::{Dest, View},
 };
 use chrono::{DateTime, Local};
 use eyre::{Error, Result};
@@ -35,7 +35,7 @@ impl View for ScheduleTraining {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Goto> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
         ctx.ensure(Rule::EditSchedule)?;
         match calldata!(data) {
             Callback::CreateTraining => {

@@ -9,7 +9,7 @@ use super::{
 use async_trait::async_trait;
 use bot_core::{
     context::Context,
-    widget::{Goto, View},
+    widget::{Dest, View},
 };
 use eyre::{bail, Ok, Result};
 use model::rights::Rule;
@@ -59,20 +59,20 @@ impl View for MainMenuView {
         &mut self,
         ctx: &mut Context,
         msg: &Message,
-    ) -> Result<Goto, eyre::Error> {
+    ) -> Result<Dest, eyre::Error> {
         if !ctx.is_real_user {
             return Ok(SignUpView::default().into());
         }
         let text = if let Some(text) = msg.text() {
             text
         } else {
-            return Ok(Goto::None);
+            return Ok(Dest::None);
         };
 
         let command = if let Some(command) = MainMenuItem::try_from(text).ok() {
             command
         } else {
-            return Ok(Goto::None);
+            return Ok(Dest::None);
         };
 
         self.send_self(ctx).await?;
@@ -89,7 +89,7 @@ impl View for MainMenuView {
         })
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, msg: &str) -> Result<Goto, eyre::Error> {
+    async fn handle_callback(&mut self, ctx: &mut Context, msg: &str) -> Result<Dest, eyre::Error> {
         if !ctx.is_real_user {
             return Ok(SignUpView::default().into());
         }
@@ -97,7 +97,7 @@ impl View for MainMenuView {
         let command = if let Some(command) = MainMenuItem::try_from(msg).ok() {
             command
         } else {
-            return Ok(Goto::None);
+            return Ok(Dest::None);
         };
         self.send_self(ctx).await?;
         Ok(Some(match command {

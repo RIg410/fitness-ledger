@@ -64,7 +64,7 @@ macro_rules! calldata {
         if let Some(cb) = bot_core::callback_data::Calldata::from_data($data) {
             cb
         } else {
-            return Ok(bot_core::widget::Goto::None);
+            return Ok(bot_core::widget::Dest::None);
         }
     };
 }

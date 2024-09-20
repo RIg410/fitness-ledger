@@ -6,9 +6,13 @@ pub mod presell;
 pub mod sell;
 pub mod view;
 
-use super::View;
-use crate::{callback_data::Calldata, context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata,
+    calldata,
+    context::Context,
+    widget::{Dest, View},
+};
 use create::CreateSubscription;
 use eyre::Result;
 use free_sell::FeeSellView;
@@ -16,16 +20,13 @@ use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
-    prelude::Requester as _,
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    types::{InlineKeyboardButton, InlineKeyboardMarkup},
     utils::markdown::escape,
 };
 use view::SubscriptionOption;
 
 #[derive(Default)]
-pub struct SubscriptionView {
-    go_back: Option<Widget>,
-}
+pub struct SubscriptionView;
 
 #[async_trait]
 impl View for SubscriptionView {
@@ -35,56 +36,18 @@ impl View for SubscriptionView {
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        msg: &Message,
-    ) -> Result<Option<Widget>, eyre::Error> {
-        ctx.bot.delete_message(msg.chat.id, msg.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(
-        &mut self,
-        ctx: &mut Context,
-        msg: &str,
-    ) -> Result<Option<Widget>, eyre::Error> {
-        let cb = if let Some(cb) = Callback::from_data(msg) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
-            Callback::Select(id) => {
-                let view = SubscriptionOption::new(ObjectId::from_bytes(id));
-                Ok(Some(Box::new(view)))
-            }
+    async fn handle_callback(&mut self, ctx: &mut Context, msg: &str) -> Result<Dest, eyre::Error> {
+        match calldata!(msg) {
+            Callback::Select(id) => Ok(SubscriptionOption::new(ObjectId::from_bytes(id)).into()),
             Callback::CreateSubscription => {
                 ctx.ensure(Rule::CreateSubscription)?;
-                let widget = CreateSubscription::new().boxed();
-                Ok(Some(widget))
+                Ok(CreateSubscription::new().into())
             }
             Callback::FreeSell => {
                 ctx.ensure(Rule::FreeSell)?;
-                let widget = FeeSellView::new().boxed();
-                Ok(Some(widget))
+                Ok(FeeSellView::new().into())
             }
         }
-    }
-
-    fn take(&mut self) -> Widget {
-        SubscriptionView {
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 
@@ -116,17 +79,11 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
         msg.push_str("Для продажи тарифа нажмите на него");
     }
     if ctx.has_right(Rule::FreeSell) {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "🤑 Свободная продажа",
-            Callback::FreeSell.to_data(),
-        )]);
+        keymap = keymap.append_row(Callback::FreeSell.btn_row("🤑 Свободная продажа"));
     }
 
     if ctx.has_right(Rule::CreateSubscription) {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "🗒 Создать тариф",
-            Callback::CreateSubscription.to_data(),
-        )]);
+        keymap = keymap.append_row(Callback::CreateSubscription.btn_row("🗒 Создать тариф"));
     }
 
     Ok((msg.to_string(), keymap))

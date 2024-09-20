@@ -5,7 +5,7 @@ use bot_core::{
     callback_data::Calldata as _,
     calldata,
     context::Context,
-    widget::{Goto, View, Widget},
+    widget::{Dest, View, Widget},
 };
 use chrono::Local;
 use eyre::{eyre, Error};
@@ -55,7 +55,7 @@ impl UserProfile {
         }
     }
 
-    async fn block_user(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
+    async fn block_user(&mut self, ctx: &mut Context) -> Result<Dest, eyre::Error> {
         ctx.ensure(Rule::BlockUser)?;
         let user = ctx
             .ledger
@@ -68,14 +68,14 @@ impl UserProfile {
             .await?;
         ctx.reload_user().await?;
         self.show(ctx).await?;
-        Ok(Goto::None)
+        Ok(Dest::None)
     }
 
     async fn change_balance(
         &mut self,
         ctx: &mut Context,
         amount: i32,
-    ) -> Result<Goto, eyre::Error> {
+    ) -> Result<Dest, eyre::Error> {
         ctx.ensure(Rule::ChangeBalance)?;
         let user = ctx
             .ledger
@@ -96,14 +96,14 @@ impl UserProfile {
             .await?;
         ctx.reload_user().await?;
         self.show(ctx).await?;
-        Ok(Goto::None)
+        Ok(Dest::None)
     }
 
     async fn change_reserved_balance(
         &mut self,
         ctx: &mut Context,
         amount: i32,
-    ) -> Result<Goto, eyre::Error> {
+    ) -> Result<Dest, eyre::Error> {
         ctx.ensure(Rule::ChangeBalance)?;
         let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
 
@@ -119,30 +119,30 @@ impl UserProfile {
             .await?;
         ctx.reload_user().await?;
         self.show(ctx).await?;
-        Ok(Goto::None)
+        Ok(Dest::None)
     }
 
-    async fn freeze_user(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
+    async fn freeze_user(&mut self, ctx: &mut Context) -> Result<Dest, eyre::Error> {
         if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
             return Err(eyre::eyre!("User has no rights to perform this action"));
         }
         Ok(FreezeProfile::new(self.tg_id).into())
     }
 
-    async fn edit_rights(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
+    async fn edit_rights(&mut self, ctx: &mut Context) -> Result<Dest, eyre::Error> {
         ctx.ensure(Rule::EditUserRights)?;
         Ok(UserRightsView::new(self.tg_id).into())
     }
 
-    async fn set_birthday(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
+    async fn set_birthday(&mut self, ctx: &mut Context) -> Result<Dest, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) || ctx.me.tg_id == self.tg_id {
             Ok(SetBirthday::new(self.tg_id).into())
         } else {
-            Ok(Goto::None)
+            Ok(Dest::None)
         }
     }
 
-    async fn training_list(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
+    async fn training_list(&mut self, ctx: &mut Context) -> Result<Dest, eyre::Error> {
         let user = ctx
             .ledger
             .users
@@ -152,19 +152,19 @@ impl UserProfile {
         Ok(self.training_list.make_widget(user.id).into())
     }
 
-    async fn set_fio(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
+    async fn set_fio(&mut self, ctx: &mut Context) -> Result<Dest, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
             Ok(SetFio::new(self.tg_id).into())
         } else {
-            Ok(Goto::None)
+            Ok(Dest::None)
         }
     }
 
-    async fn set_phone(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
+    async fn set_phone(&mut self, ctx: &mut Context) -> Result<Dest, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
             Ok(SetPhone::new(self.tg_id).into())
         } else {
-            Ok(Goto::None)
+            Ok(Dest::None)
         }
     }
 }
@@ -181,16 +181,16 @@ impl View for UserProfile {
         &mut self,
         ctx: &mut Context,
         message: &Message,
-    ) -> Result<Goto, eyre::Error> {
+    ) -> Result<Dest, eyre::Error> {
         ctx.delete_msg(message.id).await?;
-        Ok(Goto::None)
+        Ok(Dest::None)
     }
 
     async fn handle_callback(
         &mut self,
         ctx: &mut Context,
         data: &str,
-    ) -> Result<Goto, eyre::Error> {
+    ) -> Result<Dest, eyre::Error> {
         let cb = calldata!(data);
 
         match cb {

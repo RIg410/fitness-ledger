@@ -2,7 +2,7 @@ use super::menu::MainMenuView;
 use async_trait::async_trait;
 use bot_core::{
     context::Context,
-    widget::{Goto, View},
+    widget::{Dest, View},
 };
 use eyre::{bail, Context as _};
 use ledger::Ledger;
@@ -36,7 +36,7 @@ impl View for SignUpView {
         &mut self,
         ctx: &mut Context,
         msg: &Message,
-    ) -> Result<Goto, eyre::Error> {
+    ) -> Result<Dest, eyre::Error> {
         let from = if let Some(from) = &msg.from {
             from
         } else {
@@ -45,7 +45,7 @@ impl View for SignUpView {
 
         if from.is_bot {
             ctx.send_msg("Бот работает только с людьми\\.").await?;
-            return Ok(Goto::None);
+            return Ok(Dest::None);
         }
 
         if let Some(contact) = msg.contact() {
@@ -71,12 +71,12 @@ impl View for SignUpView {
                 ReplyMarkup::Keyboard(keymap.one_time_keyboard()),
             )
             .await?;
-            Ok(Goto::None)
+            Ok(Dest::None)
         }
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Goto, eyre::Error> {
-        Ok(Goto::None)
+    async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Dest, eyre::Error> {
+        Ok(Dest::None)
     }
 
     fn allow_unsigned_user(&self) -> bool {

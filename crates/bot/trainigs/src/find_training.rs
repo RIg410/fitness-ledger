@@ -4,7 +4,7 @@ use bot_core::{
     callback_data::Calldata as _,
     calldata,
     context::Context,
-    widget::{Goto, View},
+    widget::{Dest, View},
 };
 use eyre::Result;
 use mongodb::bson::oid::ObjectId;
@@ -22,7 +22,7 @@ impl View for FindTraining {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Goto> {
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Dest> {
         match calldata!(data) {
             Callback::SelectTraining(id) => {
                 let id = ObjectId::from_bytes(id);

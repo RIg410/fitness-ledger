@@ -1,6 +1,6 @@
 use super::View;
 use async_trait::async_trait;
-use bot_core::{context::Context, widget::Goto};
+use bot_core::{context::Context, widget::Dest};
 use eyre::Result;
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
@@ -22,7 +22,7 @@ impl View for SetFio {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Goto> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
         let parts = message
             .text()
             .unwrap_or_default()
@@ -30,7 +30,7 @@ impl View for SetFio {
             .collect::<Vec<_>>();
         if parts.len() != 2 {
             ctx.send_notification("Введите имя и фамилию").await?;
-            return Ok(Goto::None);
+            return Ok(Dest::None);
         }
 
         let name = parts[0];
@@ -40,6 +40,6 @@ impl View for SetFio {
             .set_name(&mut ctx.session, self.id, name, last_name)
             .await?;
         ctx.delete_msg(message.id).await?;
-        Ok(Goto::Back)
+        Ok(Dest::Back)
     }
 }

@@ -4,7 +4,7 @@ use bot_core::{
     callback_data::{CallbackDateTime, Calldata as _},
     calldata,
     context::Context,
-    widget::{Goto, View},
+    widget::{Dest, View},
 };
 use chrono::Local;
 use eyre::Result;
@@ -30,7 +30,7 @@ impl View for ClientTrainings {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Goto> {
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Dest> {
         match calldata!(data) {
             Callback::SelectTraining(date) => {
                 let widget = Box::new(TrainingView::new(date.into()));

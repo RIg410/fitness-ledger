@@ -1,6 +1,6 @@
 use super::{profile::user_type, View};
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata, calldata, context::Context, widget::Goto};
+use bot_core::{callback_data::Calldata, calldata, context::Context, widget::Dest};
 use model::{rights::Rule, user::User};
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
@@ -34,7 +34,7 @@ impl View for UserRightsView {
         &mut self,
         ctx: &mut Context,
         data: &str,
-    ) -> Result<Goto, eyre::Error> {
+    ) -> Result<Dest, eyre::Error> {
         let cb = calldata!(data);
         match cb {
             Callback::EditRule(rule_id, is_active) => {
@@ -47,7 +47,7 @@ impl View for UserRightsView {
                     .await?;
                 ctx.reload_user().await?;
                 self.show(ctx).await?;
-                Ok(Goto::None)
+                Ok(Dest::None)
             }
         }
     }

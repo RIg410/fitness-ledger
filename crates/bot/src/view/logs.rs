@@ -1,5 +1,9 @@
 use async_trait::async_trait;
-use bot_core::{context::Context, widget::{Goto, View}, calldata};
+use bot_core::{
+    calldata,
+    context::Context,
+    widget::{Dest, View},
+};
 use chrono::Local;
 use eyre::{Error, Result};
 use model::{
@@ -400,16 +404,12 @@ impl View for LogsView {
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Goto> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
         ctx.delete_msg(message.id).await?;
         Ok(None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Goto> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
         let data = calldata!(data);
         match data {
             Calldata::Back => {

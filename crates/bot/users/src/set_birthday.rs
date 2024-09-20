@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use bot_core::{
     context::Context,
-    widget::{Goto, View},
+    widget::{Dest, View},
 };
 use chrono::{Local, TimeZone as _};
 use eyre::{Error, Result};
@@ -28,7 +28,7 @@ impl View for SetBirthday {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Goto> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
         let text = message.text().unwrap_or_default();
         let date = chrono::NaiveDate::parse_from_str(&text, "%d.%m.%Y")
             .map_err(Error::new)
@@ -55,12 +55,12 @@ impl View for SetBirthday {
                         .await?;
                 }
                 ctx.delete_msg(message.id).await?;
-                Ok(Goto::Back)
+                Ok(Dest::Back)
             }
             Err(_) => {
                 ctx.send_notification(&format!("Введите дату в формате ДД\\.ММ\\.ГГГГ"))
                     .await?;
-                Ok(Goto::None)
+                Ok(Dest::None)
             }
         }
     }
