@@ -25,6 +25,10 @@ impl FreezeProfile {
 
 #[async_trait]
 impl View for FreezeProfile {
+    fn name(&self) -> &'static str {
+        "FreezeProfile"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         match self.state {
             State::SetDays => {
@@ -69,11 +73,9 @@ impl View for FreezeProfile {
                     Ok(day) => {
                         self.state = State::Confirm;
                         self.days = day.get();
-                        self.show(ctx).await?;
                     }
                     Err(_) => {
                         ctx.send_msg("Введите число\\.").await?;
-                        self.show(ctx).await?;
                     }
                 }
             }

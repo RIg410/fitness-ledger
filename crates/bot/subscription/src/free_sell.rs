@@ -27,6 +27,10 @@ impl FeeSellView {
 
 #[async_trait]
 impl View for FeeSellView {
+    fn name(&self) -> &'static str {
+        "FeeSellView"
+    }
+    
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let mut text = render_state(&self.state);
         text.push_str(&escape("-------------------\n"));
@@ -81,7 +85,6 @@ impl View for FeeSellView {
                 State::Finish(items, price)
             }
         };
-        self.show(ctx).await?;
 
         Ok(Jmp::None)
     }
@@ -98,7 +101,6 @@ impl View for FeeSellView {
                 Callback::Cancel => Ok(Jmp::Back),
             }
         } else {
-            self.show(ctx).await?;
             Ok(Jmp::None)
         }
     }

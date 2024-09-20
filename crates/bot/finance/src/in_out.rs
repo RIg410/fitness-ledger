@@ -31,6 +31,10 @@ impl InOut {
 
 #[async_trait]
 impl View for InOut {
+    fn name(&self) -> &'static str {
+        "FinInOut"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let mut text = format!("{}{}", self.io.render(), self.state.render());
         let mut keymap = InlineKeyboardMarkup::default();
@@ -99,7 +103,6 @@ impl View for InOut {
                 State::Finish(d, a, dt)
             }
         };
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -139,7 +142,6 @@ impl View for InOut {
                 _ => {
                     ctx.send_msg("Заполните все поля").await?;
                     self.state = State::Description;
-                    self.show(ctx).await?;
                     Ok(Jmp::None)
                 }
             },

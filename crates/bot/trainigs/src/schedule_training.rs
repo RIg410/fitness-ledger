@@ -29,6 +29,10 @@ impl ScheduleTraining {
 
 #[async_trait]
 impl View for ScheduleTraining {
+    fn name(&self) -> &'static str {
+        "ScheduleTraining"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         ctx.ensure(Rule::EditSchedule)?;
         let (msg, keymap) = render(ctx, &self.day).await?;

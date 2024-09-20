@@ -70,6 +70,7 @@ async fn inner_message_handler(
         ctx.send_msg("Ваш аккаунт заблокирован").await?;
         return Ok(());
     }
+    ctx.system_go_back = !widget.is_back_main_view();
 
     let widget = if let Some(msg) = msg.text() {
         if msg.starts_with("/") {
@@ -79,16 +80,10 @@ async fn inner_message_handler(
                         back.show(ctx).await?;
                         back
                     } else {
-                        let mut handler = system_handler();
-                        handler.show(ctx).await?;
-                        handler
+                        system_handler()
                     }
                 }
-                _ => {
-                    let mut handler = system_handler();
-                    handler.show(ctx).await?;
-                    handler
-                }
+                _ => system_handler(),
             }
         } else {
             widget
@@ -105,29 +100,19 @@ async fn inner_message_handler(
         widget
     };
 
-    let new_widget = match widget.handle_message(ctx, &msg).await? {
+    let mut new_widget = match widget.handle_message(ctx, &msg).await? {
         crate::widget::Jmp::Next(mut new_widget) => {
             new_widget.set_back(widget);
-            new_widget.show(ctx).await?;
             new_widget
         }
         crate::widget::Jmp::None => widget,
-        crate::widget::Jmp::Back => {
-            let mut new_widget = widget.take_back().unwrap_or_else(|| system_handler());
-            new_widget.show(ctx).await?;
-            new_widget
-        }
-        crate::widget::Jmp::Home => {
-            let mut new_widget = system_handler();
-            new_widget.show(ctx).await?;
-            new_widget
-        }
-        crate::widget::Jmp::Goto(mut new_widget) => {
-            new_widget.show(ctx).await?;
-            new_widget
-        }
+        crate::widget::Jmp::Back => widget.take_back().unwrap_or_else(|| system_handler()),
+        crate::widget::Jmp::Home => system_handler(),
+        crate::widget::Jmp::Goto(new_widget) => new_widget,
     };
+    ctx.system_go_back = !new_widget.is_back_main_view();
 
+    new_widget.show(ctx).await?;
     state_holder.set_state(
         ctx.chat_id(),
         State {

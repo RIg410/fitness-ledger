@@ -21,6 +21,11 @@ impl SetBirthday {
 
 #[async_trait]
 impl View for SetBirthday {
+    fn name(&self) -> &'static str {
+        "SetBirthday"
+    }
+
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let msg = format!("Введите дату рождения в формате ДД\\.ММ\\.ГГГГ");
         ctx.edit_origin(&msg, InlineKeyboardMarkup::default())
@@ -64,9 +69,4 @@ impl View for SetBirthday {
             }
         }
     }
-}
-
-#[derive(Serialize, Deserialize)]
-enum Callback {
-    Back,
 }

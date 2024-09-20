@@ -39,6 +39,10 @@ impl SellView {
 
 #[async_trait]
 impl View for SellView {
+    fn name(&self) -> &'static str {
+        "SellView"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let (text, keymap) = render(&self.sell, ctx, &self.query, self.offset).await?;
         ctx.edit_origin(&text, keymap).await?;
@@ -55,7 +59,6 @@ impl View for SellView {
 
         self.query = remove_non_alphanumeric(&query);
         self.offset = 0;
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -65,12 +68,10 @@ impl View for SellView {
         match calldata!(data) {
             Callback::Next => {
                 self.offset += LIMIT;
-                self.show(ctx).await?;
                 Ok(Jmp::None)
             }
             Callback::Prev => {
                 self.offset = self.offset.saturating_sub(LIMIT);
-                self.show(ctx).await?;
                 Ok(Jmp::None)
             }
             Callback::Select(user_id) => self.select(user_id, ctx),

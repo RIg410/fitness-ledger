@@ -30,6 +30,10 @@ impl Finish {
 
 #[async_trait]
 impl View for Finish {
+    fn name(&self) -> &'static str {
+        "SchFinish"
+    }
+    
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger

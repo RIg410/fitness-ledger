@@ -30,6 +30,10 @@ impl PreSellView {
 
 #[async_trait]
 impl View for PreSellView {
+    fn name(&self) -> &'static str {
+        "PreSellView"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         match &self.state {
             State::Init => {
@@ -59,12 +63,10 @@ impl View for PreSellView {
                     if exists {
                         ctx.send_msg("Пользователь с таким номером уже существует")
                             .await?;
-                        self.show(ctx).await?;
                         return Ok(Jmp::None);
                     }
 
                     self.state = State::Confirm(phone.to_owned());
-                    self.show(ctx).await?;
                 } else {
                     ctx.send_msg("Номер должен начинаться с +7").await?;
                 }

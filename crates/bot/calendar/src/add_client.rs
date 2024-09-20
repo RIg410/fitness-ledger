@@ -36,6 +36,10 @@ impl AddClientView {
 
 #[async_trait]
 impl View for AddClientView {
+    fn name(&self) -> &'static str {
+        "AddClientView"
+    }
+    
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let (text, keymap) = render(ctx, &self.query, self.offset).await?;
         ctx.edit_origin(&text, keymap).await?;
@@ -52,7 +56,6 @@ impl View for AddClientView {
 
         self.query = remove_non_alphanumeric(&query);
         self.offset = 0;
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -62,12 +65,10 @@ impl View for AddClientView {
         match calldata!(data) {
             Callback::Next => {
                 self.offset += LIMIT;
-                self.show(ctx).await?;
                 Ok(Jmp::None)
             }
             Callback::Prev => {
                 self.offset = self.offset.saturating_sub(LIMIT);
-                self.show(ctx).await?;
                 Ok(Jmp::None)
             }
             Callback::Select(user_id) => {

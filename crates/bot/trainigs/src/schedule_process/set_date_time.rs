@@ -28,6 +28,10 @@ impl SetDateTime {
 
 #[async_trait]
 impl View for SetDateTime {
+    fn name(&self) -> &'static str {
+        "SetDateTime"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger

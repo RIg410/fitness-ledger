@@ -20,7 +20,7 @@ pub struct Context {
     pub ledger: Ledger,
     origin: Origin,
     pub session: Session,
-    pub system_go_back: bool,
+    pub(crate) system_go_back: bool,
     pub is_real_user: bool,
 }
 
@@ -39,7 +39,7 @@ impl Context {
             ledger,
             origin,
             session,
-            system_go_back: true,
+            system_go_back: false,
             is_real_user,
         }
     }

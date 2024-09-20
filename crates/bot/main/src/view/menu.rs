@@ -49,6 +49,14 @@ impl MainMenuView {
 
 #[async_trait]
 impl View for MainMenuView {
+    fn name(&self) -> &'static str {
+        "MainMenu"
+    }
+    
+    fn main_view(&self) -> bool {
+        true
+    }
+
     async fn show(&mut self, _: &mut Context) -> Result<(), eyre::Error> {
         Ok(())
     }

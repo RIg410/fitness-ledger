@@ -78,6 +78,10 @@ impl CreateSubscription {
 
 #[async_trait]
 impl View for CreateSubscription {
+    fn name(&self) -> &'static str {
+        "CreateSubscription"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let mut text = self.render_state();
         text.push_str(&escape("-------------------\n"));
@@ -176,7 +180,6 @@ impl View for CreateSubscription {
                 State::Finish
             }
         };
-        self.show(ctx).await?;
 
         Ok(Jmp::None)
     }

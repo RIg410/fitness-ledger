@@ -20,6 +20,9 @@ pub struct SignUpView;
 
 #[async_trait]
 impl View for SignUpView {
+    fn name(&self) -> &'static str {
+        "SignUpView"
+    }
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         let keymap = KeyboardMarkup::new(vec![vec![
             KeyboardButton::new("📱 Отправить номер").request(ButtonRequest::Contact)

@@ -40,7 +40,6 @@ impl TrainingView {
             ctx.send_msg(&escape(&couch.description)).await?;
             let id = ctx.send_msg("\\.").await?;
             ctx.update_origin_msg_id(id);
-            self.show(ctx).await?;
         }
         Ok(Jmp::None)
     }
@@ -57,7 +56,6 @@ impl TrainingView {
             .calendar
             .cancel_training(&mut ctx.session, &training)
             .await?;
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -88,7 +86,6 @@ impl TrainingView {
             .calendar
             .restore_training(&mut ctx.session, &training)
             .await?;
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -103,7 +100,6 @@ impl TrainingView {
             ctx.send_msg("Запись на тренировку закрыта💔").await?;
             let id = ctx.send_msg("\\.").await?;
             ctx.update_origin_msg_id(id);
-            self.show(ctx).await?;
             return Ok(Jmp::None);
         }
 
@@ -111,21 +107,18 @@ impl TrainingView {
             ctx.send_msg("Недостаточно средств на балансе🥺").await?;
             let id = ctx.send_msg("\\.").await?;
             ctx.update_origin_msg_id(id);
-            self.show(ctx).await?;
             return Ok(Jmp::None);
         }
         if ctx.me.freeze.is_some() {
             ctx.send_msg("Ваш абонемент заморожен🥶").await?;
             let id = ctx.send_msg("\\.").await?;
             ctx.update_origin_msg_id(id);
-            self.show(ctx).await?;
             return Ok(Jmp::None);
         }
 
         ctx.ledger
             .sign_up(&mut ctx.session, &training, ctx.me.id, false)
             .await?;
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -140,13 +133,11 @@ impl TrainingView {
             ctx.send_msg("Запись на тренировку закрыта").await?;
             let id = ctx.send_msg("\\.").await?;
             ctx.update_origin_msg_id(id);
-            self.show(ctx).await?;
             return Ok(Jmp::None);
         }
         ctx.ledger
             .sign_out(&mut ctx.session, &training, ctx.me.id, false)
             .await?;
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -176,6 +167,10 @@ impl TrainingView {
 
 #[async_trait]
 impl View for TrainingView {
+    fn name(&self) -> &'static str {
+        "TrainingView"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger

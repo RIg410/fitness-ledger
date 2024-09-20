@@ -32,6 +32,10 @@ impl SetInstructor {
 
 #[async_trait]
 impl View for SetInstructor {
+    fn name(&self) -> &'static str {
+        "SetInstructor"
+    }
+    
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger

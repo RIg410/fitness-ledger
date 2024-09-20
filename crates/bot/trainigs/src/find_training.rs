@@ -16,6 +16,10 @@ pub struct FindTraining;
 
 #[async_trait]
 impl View for FindTraining {
+    fn name(&self) -> &'static str {
+        "FindTraining"
+    }
+    
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let (msg, keyboard) = render(ctx).await?;
         ctx.edit_origin(&msg, keyboard).await?;

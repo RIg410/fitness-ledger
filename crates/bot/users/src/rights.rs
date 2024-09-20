@@ -19,6 +19,10 @@ impl UserRightsView {
 
 #[async_trait]
 impl View for UserRightsView {
+    fn name(&self) -> &'static str {
+        "UserRightsView"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         let user = ctx
             .ledger
@@ -43,7 +47,6 @@ impl View for UserRightsView {
                     .edit_user_rule(&mut ctx.session, self.tg_id, rule, is_active)
                     .await?;
                 ctx.reload_user().await?;
-                self.show(ctx).await?;
                 Ok(Jmp::None)
             }
         }

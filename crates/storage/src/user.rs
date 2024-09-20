@@ -364,7 +364,7 @@ impl UserStore {
     }
 
     pub async fn get_instructors(&self, session: &mut Session) -> Result<Vec<User>, Error> {
-        let filter = doc! { "couch": { "$exists": true } };
+        let filter = doc! { "couch": { "$exists": true, "$ne": null } };
         let mut cursor = self.users.find(filter).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }

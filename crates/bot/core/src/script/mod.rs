@@ -51,6 +51,7 @@ where
 }
 
 pub struct ScriptView<S> {
+    name: &'static str,
     state: Option<S>,
     action: Option<Stage<S>>,
 }
@@ -59,8 +60,9 @@ impl<S> ScriptView<S>
 where
     S: Send + Sync + 'static,
 {
-    pub fn new(state: S, action: Stage<S>) -> ScriptView<S> {
+    pub fn new(name: &'static str, state: S, action: Stage<S>) -> ScriptView<S> {
         ScriptView {
+            name,
             state: Some(state),
             action: Some(action),
         }
@@ -72,6 +74,10 @@ impl<S> View for ScriptView<S>
 where
     S: Send + Sync + 'static,
 {
+    fn name(&self) -> &'static str {
+        self.name
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         if let Some(stage) = self.action.as_mut() {
             let mut keymap = InlineKeyboardMarkup::default();
@@ -120,15 +126,16 @@ where
                     Dispatch::Widget(view) => {
                         return Ok(Jmp::Next(view));
                     }
+                    Dispatch::WidgetBack => {
+                        return Ok(Jmp::Back);
+                    }
                 }
-                self.show(ctx).await?;
             }
             Stage::YesNo { .. } => {}
             Stage::List(list) => {
                 list.hdl
                     .query(ctx, self.state.as_mut().unwrap(), text)
                     .await?;
-                self.show(ctx).await?;
             }
         }
         ctx.delete_msg(message.id).await?;
@@ -167,6 +174,9 @@ where
                         Dispatch::Widget(widget) => {
                             return Ok(Jmp::Next(widget));
                         }
+                        Dispatch::WidgetBack => {
+                            return Ok(Jmp::Back);
+                        }
                     },
                     ListId::No => {
                         ctx.send_notification("❌ Отменено").await?;
@@ -189,19 +199,20 @@ where
                         Dispatch::Widget(widget) => {
                             return Ok(Jmp::Next(widget));
                         }
+                        Dispatch::WidgetBack => {
+                            return Ok(Jmp::Back);
+                        }
                     }
                 }
             },
             Callback::Page(offset) => match action {
                 Stage::List(list) => {
                     list.offset += offset as usize * list.limit;
-                    self.show(ctx).await?;
                 }
                 _ => return Ok(Jmp::None),
             },
         };
 
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 }
@@ -217,4 +228,5 @@ pub enum Dispatch<S> {
     None,
     Stage(Stage<S>),
     Widget(Widget),
+    WidgetBack,
 }

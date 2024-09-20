@@ -28,6 +28,10 @@ impl SetOneTime {
 
 #[async_trait]
 impl View for SetOneTime {
+    fn name(&self) -> &'static str {
+        "SetOneTime"
+    }
+    
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger

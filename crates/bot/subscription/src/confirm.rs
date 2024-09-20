@@ -19,6 +19,10 @@ impl ConfirmSell {
 
 #[async_trait]
 impl View for ConfirmSell {
+    fn name(&self) -> &'static str {
+        "ConfirmSell"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let (text, keymap) = render(ctx, self.user_id, self.sell).await?;
         ctx.edit_origin(&text, keymap).await?;

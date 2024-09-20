@@ -51,6 +51,10 @@ impl CalendarView {
 
 #[async_trait]
 impl View for CalendarView {
+    fn name(&self) -> &'static str {
+        "CalendarView"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         let (text, keymap) = render_week(
             ctx,
@@ -70,12 +74,10 @@ impl View for CalendarView {
             Callback::GoToWeek(week) => {
                 self.week_id = WeekId::from(week);
                 self.selected_day = self.week_id.day(self.selected_day.week_day());
-                self.show(ctx).await?;
                 Ok(Jmp::None)
             }
             Callback::SelectDay(day) => {
                 self.selected_day = DayId::from(day);
-                self.show(ctx).await?;
                 Ok(Jmp::None)
             }
             Callback::SelectTraining(id) => {
@@ -88,7 +90,7 @@ impl View for CalendarView {
                 // ));
                 todo!()
             }
-            Callback::MyTrainings => return todo!()//Ok(Some(ClientTrainings::new(ctx.me.id).boxed())),
+            Callback::MyTrainings => return todo!(), //Ok(Some(ClientTrainings::new(ctx.me.id).boxed())),
         }
     }
 }

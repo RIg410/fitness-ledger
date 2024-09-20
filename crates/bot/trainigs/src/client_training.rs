@@ -25,6 +25,10 @@ impl ClientTrainings {
 
 #[async_trait]
 impl View for ClientTrainings {
+    fn name(&self) -> &'static str {
+        "ClientTrainings"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let (msg, keyboard) = render(ctx, self.id).await?;
         ctx.edit_origin(&msg, keyboard).await?;

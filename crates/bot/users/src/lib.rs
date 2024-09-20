@@ -36,6 +36,10 @@ impl UsersView {
 
 #[async_trait]
 impl View for UsersView {
+    fn name(&self) -> &'static str {
+        "UsersView"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         let count = ctx.ledger.users.count(&mut ctx.session).await?;
         let users = ctx
@@ -70,7 +74,6 @@ impl View for UsersView {
             query: remove_non_alphanumeric(&query),
             offset: 0,
         };
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -80,11 +83,9 @@ impl View for UsersView {
         match calldata!(data) {
             Callback::Next => {
                 self.query.offset += LIMIT;
-                self.show(ctx).await?;
             }
             Callback::Prev => {
                 self.query.offset = self.query.offset.saturating_sub(LIMIT);
-                self.show(ctx).await?;
             }
             Callback::Select(user_id) => {
                 return Ok(UserProfile::new(user_id).into());

@@ -1,4 +1,7 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    fmt::Debug,
+    ops::{Deref, DerefMut},
+};
 
 use crate::context::Context;
 use async_trait::async_trait;
@@ -7,6 +10,12 @@ use teloxide::types::Message;
 
 #[async_trait]
 pub trait View {
+    fn name(&self) -> &'static str;
+
+    fn main_view(&self) -> bool {
+        false
+    }
+
     fn allow_unsigned_user(&self) -> bool {
         false
     }
@@ -55,8 +64,9 @@ impl Widget {
         self.back.take().map(|b| *b)
     }
 
-    pub fn has_back(&self) -> bool {
-        self.back.is_some()
+    pub(crate) fn is_back_main_view(&self) -> bool {
+        dbg!(self.back.is_some());
+        self.back.as_ref().map_or(false, |b| b.view.main_view())
     }
 }
 
@@ -80,6 +90,17 @@ impl Deref for Widget {
 impl DerefMut for Widget {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.view
+    }
+}
+
+impl Debug for Widget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} -> [{}]",
+            self.view.name(),
+            self.back.as_ref().map(|w| w.name()).unwrap_or("?")
+        )
     }
 }
 

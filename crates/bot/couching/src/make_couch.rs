@@ -18,7 +18,7 @@ use model::{couch::Rate, decimal::Decimal, user::User};
 use teloxide::utils::markdown::escape;
 
 pub fn make_make_couch_view() -> Widget {
-    ScriptView::new(State::default(), Stage::list(UserList)).into()
+    ScriptView::new("make_couch", State::default(), Stage::list(UserList)).into()
 }
 
 #[derive(Default)]
@@ -253,7 +253,7 @@ impl StageYesNo<State> for Confirm {
             .await?;
         ctx.send_notification("Инструктор успешно создан 🎉")
             .await?;
-        Ok(Dispatch::None)
+        Ok(Dispatch::WidgetBack)
     }
 
     fn back(&self) -> Option<Stage<State>> {

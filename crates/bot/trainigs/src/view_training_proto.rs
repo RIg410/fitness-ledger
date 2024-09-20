@@ -7,14 +7,10 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use eyre::Result;
-use model::{ids::WeekId, program::Program, rights::Rule};
+use model::{program::Program, rights::Rule};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    prelude::Requester as _,
-    types::{InlineKeyboardMarkup, Message},
-    utils::markdown::escape,
-};
+use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
 pub struct ViewProgram {
     id: ObjectId,
@@ -68,6 +64,10 @@ impl ViewProgram {
 
 #[async_trait]
 impl View for ViewProgram {
+    fn name(&self) -> &'static str {
+        "ViewProgram"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger

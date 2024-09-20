@@ -381,6 +381,9 @@ impl LogsView {
 
 #[async_trait]
 impl View for LogsView {
+    fn name(&self) -> &'static str {
+        "LogView"
+    }
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let mut message = format!("Logs\n");
         let logs = ctx
@@ -412,7 +415,6 @@ impl View for LogsView {
                 self.offset += PAGE_SIZE;
             }
         }
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 }

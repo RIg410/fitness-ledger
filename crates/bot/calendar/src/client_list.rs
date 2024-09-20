@@ -44,7 +44,6 @@ impl ClientList {
         if training.is_processed {
             ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
                 .await?;
-            self.show(ctx).await?;
             return Ok(Jmp::None);
         }
         let result = ctx
@@ -73,13 +72,16 @@ impl ClientList {
             Err(SignOutError::Common(err)) => return Err(err),
         }
 
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 }
 
 #[async_trait]
 impl View for ClientList {
+      fn name(&self) -> &'static str {
+        "ClientList"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         if !ctx.is_couch() {
             bail!("Only couch can see client list");

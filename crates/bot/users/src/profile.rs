@@ -10,7 +10,6 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::user::render_profile_msg;
-use bot_views::TrainingListView;
 use eyre::{eyre, Error};
 use model::{rights::Rule, user::UserIdent};
 use serde::{Deserialize, Serialize};
@@ -37,7 +36,6 @@ impl UserProfile {
             .block_user(&mut ctx.session, self.tg_id, !user.is_active)
             .await?;
         ctx.reload_user().await?;
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -61,7 +59,6 @@ impl UserProfile {
             .change_balance(&mut ctx.session, user.tg_id, amount)
             .await?;
         ctx.reload_user().await?;
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -84,7 +81,6 @@ impl UserProfile {
             .change_reserved_balance(&mut ctx.session, user.tg_id, amount)
             .await?;
         ctx.reload_user().await?;
-        self.show(ctx).await?;
         Ok(Jmp::None)
     }
 
@@ -138,6 +134,10 @@ impl UserProfile {
 
 #[async_trait]
 impl View for UserProfile {
+    fn name(&self) -> &'static str {
+        "UserProfile"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         let (msg, keymap) = render_user_profile(ctx, self.tg_id).await?;
         ctx.edit_origin(&msg, keymap).await?;
@@ -154,9 +154,7 @@ impl View for UserProfile {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
-        let cb = calldata!(data);
-
-        match cb {
+        match calldata!(data) {
             Callback::BlockUnblock => self.block_user(ctx).await,
             Callback::EditFio => self.set_fio(ctx).await,
             Callback::EditRights => self.edit_rights(ctx).await,

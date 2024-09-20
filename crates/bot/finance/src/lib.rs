@@ -18,6 +18,9 @@ pub struct FinanceView;
 
 #[async_trait]
 impl View for FinanceView {
+    fn name(&self) -> &'static str {
+        "FinView"
+    }
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let text = format!("💰 Финансы:");
         let mut keymap = InlineKeyboardMarkup::default();

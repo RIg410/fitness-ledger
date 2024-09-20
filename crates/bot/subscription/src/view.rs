@@ -27,6 +27,10 @@ impl SubscriptionOption {
 
 #[async_trait]
 impl View for SubscriptionOption {
+    fn name(&self) -> &'static str {
+        "SubscriptionOption"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let (txt, keymap) = render_sub(self.id, ctx).await?;
         ctx.edit_origin(&txt, keymap).await?;

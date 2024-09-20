@@ -15,6 +15,10 @@ pub struct ProgramList;
 
 #[async_trait]
 impl View for ProgramList {
+    fn name(&self) -> &'static str {
+        "ProgramList"
+    }
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let (msg, keymap) = render(ctx).await?;
         ctx.edit_origin(&msg, keymap).await?;
