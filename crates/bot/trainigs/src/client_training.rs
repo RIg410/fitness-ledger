@@ -1,95 +1,47 @@
 use super::find_training::FindTraining;
-use crate::{
-    callback_data::Calldata as _,
-    context::Context,
-    state::Widget,
-    view::{
-        calendar::{render_training_status, training::TrainingView, CallbackDateTime},
-        View,
-    },
-};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::{CallbackDateTime, Calldata as _},
+    calldata,
+    context::Context,
+    widget::{Goto, View},
+};
 use chrono::Local;
 use eyre::Result;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
+use teloxide::types::InlineKeyboardMarkup;
 
 pub struct ClientTrainings {
     id: ObjectId,
-    go_back: Option<Widget>,
 }
 
 impl ClientTrainings {
     pub fn new(id: ObjectId) -> Self {
-        Self { id, go_back: None }
+        Self { id }
     }
 }
 
 #[async_trait]
 impl View for ClientTrainings {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let (msg, keyboard) = render(ctx, self.id, self.go_back.is_some()).await?;
+        let (msg, keyboard) = render(ctx, self.id).await?;
         ctx.edit_origin(&msg, keyboard).await?;
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
-        ctx.delete_msg(message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
-            Callback::Back => Ok(self.go_back.take()),
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Goto> {
+        match calldata!(data) {
             Callback::SelectTraining(date) => {
-                let widget = Box::new(TrainingView::new(
-                    date.into(),
-                ));
+                let widget = Box::new(TrainingView::new(date.into()));
                 Ok(Some(widget))
             }
-            Callback::FindTraining => {
-                let this = Box::new(ClientTrainings {
-                    id: self.id,
-                    go_back: self.go_back.take(),
-                });
-                let widget = Box::new(FindTraining::new(Some(this)));
-                Ok(Some(widget))
-            }
+            Callback::FindTraining => Ok(FindTraining::default().into()),
         }
-    }
-
-    fn take(&mut self) -> Widget {
-        ClientTrainings {
-            id: self.id,
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 
-async fn render(
-    ctx: &mut Context,
-    id: ObjectId,
-    go_back: bool,
-) -> Result<(String, InlineKeyboardMarkup)> {
+async fn render(ctx: &mut Context, id: ObjectId) -> Result<(String, InlineKeyboardMarkup)> {
     let mut msg = "🫶🏻 Мои тренировки:".to_owned();
 
     let mut keymap = InlineKeyboardMarkup::default();
@@ -125,8 +77,8 @@ async fn render(
     for training in trainings[..std::cmp::min(15, trainings.len())].iter() {
         let mut row = vec![];
         let slot = training.get_slot();
-        row.push(InlineKeyboardButton::callback(
-            format!(
+        row.push(
+            Callback::SelectTraining(slot.start_at().into()).button(format!(
                 "{} {} {}",
                 render_training_status(
                     training.status(now),
@@ -136,30 +88,19 @@ async fn render(
                 ),
                 slot.start_at().format("%d.%m %H:%M"),
                 training.name.as_str(),
-            ),
-            Callback::SelectTraining(slot.start_at().into()).to_data(),
-        ));
+            )),
+        );
         keymap = keymap.append_row(row);
     }
     if !ctx.is_couch() {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "🔍 Найти тренировку",
-            Callback::FindTraining.to_data(),
-        )]);
+        keymap = keymap.append_row(Callback::FindTraining.btn_row("🔍 Найти тренировку"));
     }
 
-    if go_back {
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "🔙 Назад",
-            Callback::Back.to_data(),
-        )]);
-    }
     Ok((msg, keymap))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Callback {
-    Back,
     SelectTraining(CallbackDateTime),
     FindTraining,
 }

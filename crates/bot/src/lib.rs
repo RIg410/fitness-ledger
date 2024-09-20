@@ -16,6 +16,7 @@ use teloxide::{
 };
 use view::menu::{MainMenuItem, MainMenuView};
 
+
 pub async fn start_bot(ledger: Ledger, token: String) -> Result<()> {
     let bot = Bot::new(token);
     let state = StateHolder::default();

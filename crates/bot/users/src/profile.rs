@@ -1,19 +1,21 @@
-use crate::{
-    callback_data::Calldata as _,
-    context::Context,
-    state::Widget,
-    view::{training::client_training::ClientTrainings, View},
-};
+use std::sync::Arc;
+
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    widget::{Goto, View, Widget},
+};
 use chrono::Local;
 use eyre::{eyre, Error};
-use log::warn;
 use model::{
     couch::{CouchInfo, Rate},
     rights::Rule,
     subscription::{Status, UserSubscription},
     user::{User, UserIdent},
 };
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
     types::{InlineKeyboardMarkup, Message},
@@ -25,20 +27,35 @@ use super::{
     set_phone::SetPhone,
 };
 
+#[derive(Clone)]
+pub struct TrainingListView(Arc<dyn Fn(ObjectId) -> Widget + Send + Sync + 'static>);
+
+impl TrainingListView {
+    pub fn new(builder: impl Fn(ObjectId) -> Widget + Send + Sync + 'static) -> TrainingListView {
+        TrainingListView(Arc::new(builder))
+    }
+}
+
+impl TrainingListView {
+    fn make_widget(&self, id: ObjectId) -> Widget {
+        ((self.0)(id)).into()
+    }
+}
+
 pub struct UserProfile {
     tg_id: i64,
-    go_back: Option<Widget>,
+    training_list: TrainingListView,
 }
 
 impl UserProfile {
-    pub fn new(tg_id: i64) -> UserProfile {
+    pub fn new(tg_id: i64, training_list: TrainingListView) -> UserProfile {
         UserProfile {
             tg_id,
-            go_back: None,
+            training_list,
         }
     }
 
-    async fn block_user(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+    async fn block_user(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
         ctx.ensure(Rule::BlockUser)?;
         let user = ctx
             .ledger
@@ -51,14 +68,14 @@ impl UserProfile {
             .await?;
         ctx.reload_user().await?;
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Goto::None)
     }
 
     async fn change_balance(
         &mut self,
         ctx: &mut Context,
         amount: i32,
-    ) -> Result<Option<Widget>, eyre::Error> {
+    ) -> Result<Goto, eyre::Error> {
         ctx.ensure(Rule::ChangeBalance)?;
         let user = ctx
             .ledger
@@ -79,14 +96,14 @@ impl UserProfile {
             .await?;
         ctx.reload_user().await?;
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Goto::None)
     }
 
     async fn change_reserved_balance(
         &mut self,
         ctx: &mut Context,
         amount: i32,
-    ) -> Result<Option<Widget>, eyre::Error> {
+    ) -> Result<Goto, eyre::Error> {
         ctx.ensure(Rule::ChangeBalance)?;
         let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
 
@@ -102,53 +119,52 @@ impl UserProfile {
             .await?;
         ctx.reload_user().await?;
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Goto::None)
     }
 
-    async fn freeze_user(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+    async fn freeze_user(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
         if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
             return Err(eyre::eyre!("User has no rights to perform this action"));
         }
-        Ok(Some(FreezeProfile::new(self.tg_id).boxed()))
+        Ok(FreezeProfile::new(self.tg_id).into())
     }
 
-    async fn edit_rights(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+    async fn edit_rights(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
         ctx.ensure(Rule::EditUserRights)?;
-        Ok(Some(UserRightsView::new(self.tg_id).boxed()))
+        Ok(UserRightsView::new(self.tg_id).into())
     }
 
-    async fn set_birthday(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+    async fn set_birthday(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) || ctx.me.tg_id == self.tg_id {
-            Ok(Some(SetBirthday::new(self.tg_id).boxed()))
+            Ok(SetBirthday::new(self.tg_id).into())
         } else {
-            Ok(None)
+            Ok(Goto::None)
         }
     }
 
-    async fn training_list(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+    async fn training_list(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
         let user = ctx
             .ledger
             .users
             .get_by_tg_id(&mut ctx.session, self.tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found:{}", self.tg_id))?;
-
-        Ok(Some(ClientTrainings::new(user.id).boxed()))
+        Ok(self.training_list.make_widget(user.id).into())
     }
 
-    async fn set_fio(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+    async fn set_fio(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
-            Ok(Some(SetFio::new(self.tg_id).boxed()))
+            Ok(SetFio::new(self.tg_id).into())
         } else {
-            Ok(None)
+            Ok(Goto::None)
         }
     }
 
-    async fn set_phone(&mut self, ctx: &mut Context) -> Result<Option<Widget>, eyre::Error> {
+    async fn set_phone(&mut self, ctx: &mut Context) -> Result<Goto, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
-            Ok(Some(SetPhone::new(self.tg_id).boxed()))
+            Ok(SetPhone::new(self.tg_id).into())
         } else {
-            Ok(None)
+            Ok(Goto::None)
         }
     }
 }
@@ -156,7 +172,7 @@ impl UserProfile {
 #[async_trait]
 impl View for UserProfile {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let (msg, keymap) = render_user_profile(ctx, self.tg_id, self.go_back.is_some()).await?;
+        let (msg, keymap) = render_user_profile(ctx, self.tg_id).await?;
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
@@ -165,31 +181,19 @@ impl View for UserProfile {
         &mut self,
         ctx: &mut Context,
         message: &Message,
-    ) -> Result<Option<Widget>, eyre::Error> {
+    ) -> Result<Goto, eyre::Error> {
         ctx.delete_msg(message.id).await?;
-        Ok(None)
+        Ok(Goto::None)
     }
 
     async fn handle_callback(
         &mut self,
         ctx: &mut Context,
         data: &str,
-    ) -> Result<Option<Widget>, eyre::Error> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
+    ) -> Result<Goto, eyre::Error> {
+        let cb = calldata!(data);
 
         match cb {
-            Callback::Back => {
-                if let Some(back) = self.go_back.take() {
-                    return Ok(Some(back));
-                } else {
-                    warn!("Attempt to go back");
-                    Ok(None)
-                }
-            }
             Callback::BlockUnblock => self.block_user(ctx).await,
             Callback::EditFio => self.set_fio(ctx).await,
             Callback::EditRights => self.edit_rights(ctx).await,
@@ -203,28 +207,11 @@ impl View for UserProfile {
             Callback::TrainingList => self.training_list(ctx).await,
         }
     }
-
-    fn take(&mut self) -> Widget {
-        UserProfile {
-            tg_id: self.tg_id,
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
-    }
 }
 
 async fn render_user_profile<ID: Into<UserIdent>>(
     ctx: &mut Context,
     id: ID,
-    back: bool,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
     let (msg, user) = render_profile_msg(ctx, id).await?;
 
@@ -275,15 +262,11 @@ async fn render_user_profile<ID: Into<UserIdent>>(
     if ctx.has_right(Rule::EditUserRights) {
         keymap = keymap.append_row(Callback::EditRights.btn_row("🔒 Права"));
     }
-    if back {
-        keymap = keymap.append_row(Callback::Back.btn_row("⬅️"));
-    }
     Ok((msg, keymap))
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Callback {
-    Back,
     BlockUnblock,
     EditFio,
     EditPhone,

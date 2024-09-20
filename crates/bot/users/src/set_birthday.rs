@@ -1,6 +1,8 @@
-use super::View;
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{
+    context::Context,
+    widget::{Goto, View},
+};
 use chrono::{Local, TimeZone as _};
 use eyre::{Error, Result};
 use model::rights::Rule;
@@ -9,12 +11,11 @@ use teloxide::types::{InlineKeyboardMarkup, Message};
 
 pub struct SetBirthday {
     id: i64,
-    go_back: Option<Widget>,
 }
 
 impl SetBirthday {
     pub fn new(id: i64) -> SetBirthday {
-        SetBirthday { id, go_back: None }
+        SetBirthday { id }
     }
 }
 
@@ -22,20 +23,12 @@ impl SetBirthday {
 impl View for SetBirthday {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let msg = format!("Введите дату рождения в формате ДД\\.ММ\\.ГГГГ");
-        let mut keymap = InlineKeyboardMarkup::default();
-
-        if self.go_back.is_some() {
-            keymap = keymap.append_row(Callback::Back.btn_row("⬅️"));
-        }
-        ctx.edit_origin(&msg, keymap).await?;
+        ctx.edit_origin(&msg, InlineKeyboardMarkup::default())
+            .await?;
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Goto> {
         let text = message.text().unwrap_or_default();
         let date = chrono::NaiveDate::parse_from_str(&text, "%d.%m.%Y")
             .map_err(Error::new)
@@ -62,40 +55,14 @@ impl View for SetBirthday {
                         .await?;
                 }
                 ctx.delete_msg(message.id).await?;
-                Ok(self.go_back.take())
+                Ok(Goto::Back)
             }
             Err(_) => {
                 ctx.send_notification(&format!("Введите дату в формате ДД\\.ММ\\.ГГГГ"))
                     .await?;
-                Ok(None)
+                Ok(Goto::None)
             }
         }
-    }
-
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Option<Widget>> {
-        if let Some(cb) = Callback::from_data(data) {
-            match cb {
-                Callback::Back => Ok(self.go_back.take()),
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn take(&mut self) -> Widget {
-        SetBirthday {
-            id: self.id,
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 

@@ -1,6 +1,5 @@
-use super::View;
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{context::Context, widget::{Goto, View}, calldata};
 use chrono::Local;
 use eyre::{Error, Result};
 use model::{
@@ -405,17 +404,13 @@ impl View for LogsView {
         &mut self,
         ctx: &mut Context,
         message: &Message,
-    ) -> Result<Option<Widget>> {
+    ) -> Result<Goto> {
         ctx.delete_msg(message.id).await?;
         Ok(None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let data = if let Some(data) = Calldata::from_data(data) {
-            data
-        } else {
-            return Ok(None);
-        };
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Goto> {
+        let data = calldata!(data);
         match data {
             Calldata::Back => {
                 self.offset = self.offset.saturating_sub(PAGE_SIZE);
@@ -426,19 +421,6 @@ impl View for LogsView {
         }
         self.show(ctx).await?;
         Ok(None)
-    }
-
-    fn take(&mut self) -> Widget {
-        LogsView {
-            offset: self.offset,
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, _: Widget) {}
-
-    fn back(&mut self) -> Option<Widget> {
-        None
     }
 }
 

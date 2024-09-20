@@ -1,6 +1,9 @@
 use super::{render_msg, ScheduleTrainingPreset};
-use crate::{context::Context, state::Widget, view::View};
 use async_trait::async_trait;
+use bot_core::{
+    context::Context,
+    widget::{Goto, View},
+};
 use chrono::{DateTime, Datelike as _, Local, TimeZone, Timelike};
 use eyre::{Error, Result};
 use ledger::calendar::TimeSlotCollision;
@@ -12,7 +15,6 @@ use teloxide::types::Message;
 pub struct SetDateTime {
     id: ObjectId,
     preset: Option<ScheduleTrainingPreset>,
-    go_back: Option<Widget>,
 }
 
 impl SetDateTime {
@@ -20,7 +22,6 @@ impl SetDateTime {
         Self {
             id,
             preset: Some(preset),
-            go_back: None,
         }
     }
 }
@@ -47,15 +48,11 @@ impl View for SetDateTime {
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Goto> {
         let msg = if let Some(msg) = message.text() {
             msg
         } else {
-            return Ok(None);
+            return Ok(Goto::None);
         };
 
         let parts = match TimeParts::try_from(msg) {
@@ -63,7 +60,7 @@ impl View for SetDateTime {
             Err(err) => {
                 warn!("Invalid time format: {}", err);
                 ctx.send_msg("Неверный формат времени\\.").await?;
-                return Ok(None);
+                return Ok(Goto::None);
             }
         };
 
@@ -71,7 +68,7 @@ impl View for SetDateTime {
             if let Ok(day) = parts.to_date() {
                 let mut preset = self.preset.take().unwrap();
                 preset.day = Some(day);
-                return Ok(Some(preset.into_next_view(self.id)));
+                return Ok(preset.into_next_view(self.id).into());
             } else {
                 ctx.send_msg("Неверный формат даты\\. _дд\\.мм_").await?;
             }
@@ -98,32 +95,12 @@ impl View for SetDateTime {
                 } else {
                     preset.date_time = Some(date_time);
                 }
-                return Ok(Some(preset.into_next_view(self.id)));
+                return Ok(preset.into_next_view(self.id).into());
             } else {
                 ctx.send_msg("Неверный формат времени\\. _чч\\:мм_").await?;
             }
         }
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Option<Widget>> {
-        Ok(None)
-    }
-    fn take(&mut self) -> Widget {
-        SetDateTime {
-            id: self.id,
-            preset: self.preset.take(),
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
+        Ok(Goto::None)
     }
 }
 

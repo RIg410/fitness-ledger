@@ -1,13 +1,17 @@
 use super::ScheduleTrainingPreset;
-use crate::{callback_data::Calldata, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata,
+    calldata,
+    context::Context,
+    widget::{Goto, View},
+};
 use eyre::Result;
 use model::{program::Program, user::User};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
-    prelude::Requester as _,
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    types::{InlineKeyboardButton, InlineKeyboardMarkup},
     utils::markdown::escape,
 };
 
@@ -15,7 +19,6 @@ use teloxide::{
 pub struct SetInstructor {
     id: ObjectId,
     preset: Option<ScheduleTrainingPreset>,
-    go_back: Option<Widget>,
 }
 
 impl SetInstructor {
@@ -23,7 +26,6 @@ impl SetInstructor {
         Self {
             id,
             preset: Some(preset),
-            go_back: None,
         }
     }
 }
@@ -42,22 +44,8 @@ impl View for SetInstructor {
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
-        ctx.bot.delete_message(message.chat.id, message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Goto> {
+        match calldata!(data) {
             Callback::SelectInstructor(instructor_id) => {
                 let instructor = ctx
                     .ledger
@@ -67,26 +55,9 @@ impl View for SetInstructor {
                     .ok_or_else(|| eyre::eyre!("Instructor not found"))?;
                 let mut preset = self.preset.take().unwrap();
                 preset.instructor = Some(instructor.tg_id);
-                return Ok(Some(preset.into_next_view(self.id)));
+                return Ok(preset.into_next_view(self.id).into());
             }
         }
-    }
-
-    fn take(&mut self) -> Widget {
-        SetInstructor {
-            id: self.id,
-            preset: self.preset.take(),
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 
@@ -116,7 +87,7 @@ fn make_instructor_button(instructor: &User) -> InlineKeyboardButton {
             .as_ref()
             .unwrap_or(&"".to_string())
     );
-    InlineKeyboardButton::callback(name, Callback::SelectInstructor(instructor.tg_id).to_data())
+    Callback::SelectInstructor(instructor.tg_id).button(name)
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -1,22 +1,22 @@
 use super::{render_msg, set_date_time::render_time_slot_collision, ScheduleTrainingPreset};
-use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    widget::{Goto, View},
+};
 use eyre::Result;
 use ledger::calendar::ScheduleError;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    prelude::Requester as _,
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
-    utils::markdown::escape,
-};
+use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
 #[derive(Default)]
 pub struct Finish {
     id: ObjectId,
     preset: Option<ScheduleTrainingPreset>,
-    go_back: Option<Widget>,
 }
 
 impl Finish {
@@ -24,7 +24,6 @@ impl Finish {
         Self {
             id,
             preset: Some(preset),
-            go_back: None,
         }
     }
 }
@@ -42,30 +41,16 @@ impl View for Finish {
         ctx.send_msg(&msg).await?;
         let msg = format!("Все верно?");
         let keymap = vec![vec![
-            InlineKeyboardButton::callback("✅ Сохранить", Callback::Yes.to_data()),
-            InlineKeyboardButton::callback("❌ Отмена", Callback::No.to_data()),
+            Callback::Yes.button("✅ Сохранить"),
+            Callback::No.button("❌ Отмена"),
         ]];
         ctx.send_msg_with_markup(&msg, InlineKeyboardMarkup::new(keymap))
             .await?;
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
-        ctx.bot.delete_message(message.chat.id, message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Goto> {
+        match calldata!(data) {
             Callback::Yes => {
                 ctx.ensure(Rule::EditSchedule)?;
                 let preset = self
@@ -108,28 +93,7 @@ impl View for Finish {
                 //no-op
             }
         }
-        if let Some(widget) = self.go_back.take() {
-            Ok(Some(widget))
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn take(&mut self) -> Widget {
-        Finish {
-            id: self.id,
-            preset: self.preset.take(),
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
+        Ok(Goto::None)
     }
 }
 

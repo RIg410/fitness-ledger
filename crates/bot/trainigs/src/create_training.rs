@@ -1,21 +1,19 @@
-use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
+use bot_core::{
+    context::Context,
+    widget::{Goto, View},
+};
 use eyre::Result;
 use model::{program::Program, rights::Rule};
-use serde::{Deserialize, Serialize};
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
+use teloxide::types::{InlineKeyboardMarkup, Message};
 
 pub struct CreateTraining {
-    go_back: Option<Widget>,
     state: Option<State>,
 }
 
 impl CreateTraining {
     pub fn new() -> Self {
-        Self {
-            go_back: None,
-            state: None,
-        }
+        Self { state: None }
     }
 }
 
@@ -24,34 +22,21 @@ impl View for CreateTraining {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         ctx.ensure(Rule::CreateTraining)?;
 
-        let keymap = if self.go_back.is_some() {
-            vec![vec![InlineKeyboardButton::callback(
-                "✖️ Отмена",
-                Callback::Back.to_data(),
-            )]]
-        } else {
-            vec![]
-        };
-
         ctx.edit_origin(
             "📝 Введите название тренировки:\n_оно должно быть уникально_",
-            InlineKeyboardMarkup::default().inline_keyboard(keymap),
+            InlineKeyboardMarkup::default(),
         )
         .await?;
         self.state = Some(State::SetName(Program::default()));
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Goto> {
         ctx.ensure(Rule::CreateTraining)?;
         let msg = if let Some(msg) = message.text() {
             msg
         } else {
-            return Ok(None);
+            return Ok(Goto::None);
         };
 
         let state = self
@@ -110,49 +95,14 @@ impl View for CreateTraining {
                     ctx.send_msg("✅ Тренировка создана").await?;
                     let origin = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(origin);
-                    return Ok(self.go_back.take());
+                    return Ok(Goto::Back);
                 } else {
                     ctx.send_msg("Количество мест должно быть числом").await?;
                     State::SetCapacity(program)
                 }
             }
         });
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
-            Callback::Back => {
-                if let Some(widget) = self.go_back.take() {
-                    let origin = ctx.send_msg("\\.").await?;
-                    ctx.update_origin_msg_id(origin);
-                    return Ok(Some(widget));
-                }
-            }
-        }
-
-        Ok(None)
-    }
-
-    fn take(&mut self) -> Widget {
-        CreateTraining {
-            go_back: self.go_back.take(),
-            state: self.state.take(),
-        }
-        .boxed()
-    }
-    
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
+        Ok(Goto::None)
     }
 }
 
@@ -162,9 +112,4 @@ pub enum State {
     SetDescription(Program),
     SetDuration(Program),
     SetCapacity(Program),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Callback {
-    Back,
 }

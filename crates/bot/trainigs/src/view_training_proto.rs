@@ -1,14 +1,11 @@
 use super::{edit::EditProgram, schedule_process::ScheduleTrainingPreset};
-use crate::{
-    callback_data::Calldata as _,
-    context::Context,
-    state::Widget,
-    view::{
-        calendar::{CalendarView, Filter},
-        View,
-    },
-};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    widget::{Goto, View},
+};
 use eyre::Result;
 use model::{ids::WeekId, program::Program, rights::Rule};
 use mongodb::bson::oid::ObjectId;
@@ -21,20 +18,15 @@ use teloxide::{
 
 pub struct ViewProgram {
     id: ObjectId,
-    go_back: Option<Widget>,
     preset: ScheduleTrainingPreset,
 }
 
 impl ViewProgram {
     pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
-        Self {
-            id,
-            go_back: None,
-            preset,
-        }
+        Self { id, preset }
     }
 
-    async fn find_training(&mut self) -> Result<Option<Widget>> {
+    async fn find_training(&mut self) -> Result<Goto> {
         let view = CalendarView::new(
             WeekId::default(),
             None,
@@ -45,47 +37,31 @@ impl ViewProgram {
         return Ok(Some(Box::new(view)));
     }
 
-    async fn schedule(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn schedule(&mut self, ctx: &mut Context) -> Result<Goto> {
         ctx.ensure(Rule::EditSchedule)?;
         let preset = self.preset.clone();
         let view = preset.into_next_view(self.id);
-        Ok(Some(view))
+        Ok(view.into())
     }
 
-    async fn edit_capacity(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn edit_capacity(&mut self, ctx: &mut Context) -> Result<Goto> {
         ctx.ensure(Rule::EditTraining)?;
-        Ok(Some(
-            EditProgram::new(self.id, super::edit::EditType::Capacity).boxed(),
-        ))
+        Ok(EditProgram::new(self.id, super::edit::EditType::Capacity).into())
     }
 
-    async fn edit_duration(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn edit_duration(&mut self, ctx: &mut Context) -> Result<Goto> {
         ctx.ensure(Rule::EditTraining)?;
-        Ok(Some(
-            EditProgram::new(self.id, super::edit::EditType::Duration).boxed(),
-        ))
+        Ok(EditProgram::new(self.id, super::edit::EditType::Duration).into())
     }
 
-    async fn edit_name(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn edit_name(&mut self, ctx: &mut Context) -> Result<Goto> {
         ctx.ensure(Rule::EditTraining)?;
-        Ok(Some(
-            EditProgram::new(self.id, super::edit::EditType::Name).boxed(),
-        ))
+        Ok(EditProgram::new(self.id, super::edit::EditType::Name).into())
     }
 
-    async fn edit_description(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn edit_description(&mut self, ctx: &mut Context) -> Result<Goto> {
         ctx.ensure(Rule::EditTraining)?;
-        Ok(Some(
-            EditProgram::new(self.id, super::edit::EditType::Description).boxed(),
-        ))
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
+        Ok(EditProgram::new(self.id, super::edit::EditType::Description).into())
     }
 }
 
@@ -98,36 +74,14 @@ impl View for ViewProgram {
             .get_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let (text, keymap) = render(ctx, &training, self.go_back.is_some()).await?;
+        let (text, keymap) = render(ctx, &training).await?;
         ctx.edit_origin(&text, keymap).await?;
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
-        ctx.bot.delete_message(message.chat.id, message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-
-        match cb {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Goto> {
+        match calldata!(data) {
             Callback::Schedule => self.schedule(ctx).await,
-            Callback::Back => {
-                if let Some(widget) = self.go_back.take() {
-                    Ok(Some(widget))
-                } else {
-                    Ok(None)
-                }
-            }
             Callback::FindTraining => self.find_training().await,
             Callback::EditCapacity => self.edit_capacity(ctx).await,
             Callback::EditDuration => self.edit_duration(ctx).await,
@@ -135,30 +89,9 @@ impl View for ViewProgram {
             Callback::EditDescription => self.edit_description(ctx).await,
         }
     }
-
-    fn take(&mut self) -> Widget {
-        ViewProgram {
-            id: self.id,
-            go_back: self.go_back.take(),
-            preset: self.preset.clone(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
-    }
 }
 
-async fn render(
-    ctx: &Context,
-    training: &Program,
-    go_back: bool,
-) -> Result<(String, InlineKeyboardMarkup)> {
+async fn render(ctx: &Context, training: &Program) -> Result<(String, InlineKeyboardMarkup)> {
     let text = format!(
         "
 🧘*Тренировка*: {}
@@ -190,16 +123,12 @@ async fn render(
         keymap.push(vec![Callback::FindTraining.button("📅Расписание")]);
     }
 
-    if go_back {
-        keymap.push(vec![Callback::Back.button("⬅️Назад")]);
-    }
     Ok((text, InlineKeyboardMarkup::new(keymap)))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Callback {
     Schedule,
-    Back,
     FindTraining,
     EditDuration,
     EditCapacity,

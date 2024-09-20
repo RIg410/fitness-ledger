@@ -12,6 +12,8 @@ resolver = "2"
 bg-process = {path = "crates/bg-process"}
 bot = {path = "crates/bot"}
 bot-core = {path = "crates/bot-core"}
+bot-trainigs = {path = "crates/bot/trainigs"}
+bot-users = {path = "crates/bot/users"}
 ledger = {path = "crates/ledger"}
 mini-app = {path = "crates/mini-app"}
 model = {path = "crates/model"}

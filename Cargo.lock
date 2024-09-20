@@ -180,6 +180,8 @@ dependencies = [
  "async-trait",
  "bincode",
  "bot-core",
+ "bot-trainigs",
+ "bot-users",
  "chrono",
  "eyre",
  "hex",
@@ -200,6 +202,48 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "bincode",
+ "chrono",
+ "eyre",
+ "hex",
+ "itertools 0.2.2",
+ "ledger",
+ "log",
+ "model",
+ "mongodb",
+ "serde",
+ "storage",
+ "strum",
+ "teloxide",
+]
+
+[[package]]
+name = "bot-trainigs"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bincode",
+ "bot-core",
+ "chrono",
+ "eyre",
+ "hex",
+ "itertools 0.2.2",
+ "ledger",
+ "log",
+ "model",
+ "mongodb",
+ "serde",
+ "storage",
+ "strum",
+ "teloxide",
+]
+
+[[package]]
+name = "bot-users"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bincode",
+ "bot-core",
  "chrono",
  "eyre",
  "hex",

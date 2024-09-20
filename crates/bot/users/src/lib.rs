@@ -1,11 +1,13 @@
-use super::View;
-use crate::callback_data::Calldata as _;
-use crate::view::users::profile::UserProfile;
-use crate::{context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    widget::{Goto, View},
+};
 use model::rights::Rule;
 use model::user::User;
-use profile::user_type;
+use profile::{user_type, TrainingListView, UserProfile};
 use serde::{Deserialize, Serialize};
 use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
@@ -22,14 +24,14 @@ pub const LIMIT: u64 = 7;
 
 pub struct UsersView {
     query: Query,
-    go_back: Option<Widget>,
+    training_list: TrainingListView,
 }
 
 impl UsersView {
-    pub fn new(query: Query) -> UsersView {
+    pub fn new(query: Query, training_list: TrainingListView) -> UsersView {
         UsersView {
             query,
-            go_back: None,
+            training_list,
         }
     }
 }
@@ -57,7 +59,7 @@ impl View for UsersView {
         &mut self,
         ctx: &mut Context,
         msg: &Message,
-    ) -> Result<Option<Widget>, eyre::Error> {
+    ) -> Result<Goto, eyre::Error> {
         ctx.delete_msg(msg.id).await?;
         ctx.ensure(Rule::ViewUsers)?;
 
@@ -71,23 +73,17 @@ impl View for UsersView {
             offset: 0,
         };
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Goto::None)
     }
 
     async fn handle_callback(
         &mut self,
         ctx: &mut Context,
         data: &str,
-    ) -> Result<Option<Widget>, eyre::Error> {
+    ) -> Result<Goto, eyre::Error> {
         ctx.ensure(Rule::ViewUsers)?;
 
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-
-        match cb {
+        match calldata!(data) {
             Callback::Next => {
                 self.query.offset += LIMIT;
                 self.show(ctx).await?;
@@ -97,28 +93,11 @@ impl View for UsersView {
                 self.show(ctx).await?;
             }
             Callback::Select(user_id) => {
-                let user_view = UserProfile::new(user_id).boxed();
-                return Ok(Some(user_view));
+                return Ok(UserProfile::new(user_id, self.training_list.clone()).into());
             }
         }
 
-        Ok(None)
-    }
-
-    fn take(&mut self) -> Widget {
-        UsersView {
-            query: self.query.clone(),
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
+        Ok(Goto::None)
     }
 }
 
@@ -187,15 +166,12 @@ fn render_message(
 }
 
 fn make_button(user: &User) -> InlineKeyboardButton {
-    InlineKeyboardButton::callback(
-        format!(
-            "{}{} {}",
-            user_type(user),
-            user.name.first_name,
-            user.name.last_name.as_ref().unwrap_or(&"".to_string())
-        ),
-        Callback::Select(user.tg_id).to_data(),
-    )
+    Callback::Select(user.tg_id).button(format!(
+        "{}{} {}",
+        user_type(user),
+        user.name.first_name,
+        user.name.last_name.as_ref().unwrap_or(&"".to_string())
+    ))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

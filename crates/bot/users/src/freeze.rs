@@ -1,15 +1,14 @@
 use super::View;
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Goto};
 use eyre::{eyre, Context as _, Result};
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
+use teloxide::types::{InlineKeyboardMarkup, Message};
 
 pub struct FreezeProfile {
     tg_id: i64,
-    go_back: Option<Widget>,
     state: State,
     days: u32,
 }
@@ -18,7 +17,6 @@ impl FreezeProfile {
     pub fn new(tg_id: i64) -> FreezeProfile {
         FreezeProfile {
             tg_id,
-            go_back: None,
             state: State::SetDays,
             days: 0,
         }
@@ -47,8 +45,8 @@ impl View for FreezeProfile {
             }
             State::Confirm => {
                 let keymap = vec![vec![
-                    InlineKeyboardButton::callback("✅ Да. Замораживаем", Callback::Yes.to_data()),
-                    InlineKeyboardButton::callback("❌ Отмена", Callback::No.to_data()),
+                    Callback::Yes.button("✅ Да. Замораживаем"),
+                    Callback::No.button("❌ Отмена"),
                 ]];
                 ctx.send_msg_with_markup(
                     &format!(
@@ -63,11 +61,7 @@ impl View for FreezeProfile {
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Goto> {
         match self.state {
             State::SetDays => {
                 let days = message.text().unwrap_or_default();
@@ -87,15 +81,12 @@ impl View for FreezeProfile {
                 ctx.delete_msg(message.id).await?;
             }
         }
-        Ok(None)
+        Ok(Goto::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Goto> {
+        let cb = calldata!(data);
+
         match cb {
             Callback::Yes => {
                 let user = ctx
@@ -107,20 +98,20 @@ impl View for FreezeProfile {
                 if user.freeze_days < self.days {
                     self.state = State::SetDays;
                     ctx.send_msg("у вас недостаточно дней заморозки").await?;
-                    return Ok(None);
+                    return Ok(Goto::None);
                 }
 
                 if user.freeze.is_some() {
                     ctx.send_msg("абонемент уже заморожен").await?;
                     let id = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(id);
-                    return Ok(self.go_back.take());
+                    return Ok(Goto::Back);
                 }
                 if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
                     ctx.send_msg("Нет прав").await?;
                     let id = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(id);
-                    return Ok(self.go_back.take());
+                    return Ok(Goto::Back);
                 }
 
                 ctx.ledger
@@ -134,25 +125,7 @@ impl View for FreezeProfile {
 
         let id = ctx.send_msg("\\.").await?;
         ctx.update_origin_msg_id(id);
-        return Ok(self.go_back.take());
-    }
-
-    fn take(&mut self) -> Widget {
-        FreezeProfile {
-            tg_id: self.tg_id,
-            go_back: self.go_back.take(),
-            state: self.state,
-            days: self.days,
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
+        return Ok(Goto::Back);
     }
 }
 

@@ -1,19 +1,20 @@
 use super::{render_msg, ScheduleTrainingPreset};
-use crate::{callback_data::Calldata as _, context::Context, state::Widget, view::View};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata,
+    calldata,
+    context::Context,
+    widget::{Goto, View},
+};
 use eyre::Result;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    prelude::Requester as _,
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
-};
+use teloxide::types::InlineKeyboardMarkup;
 
 #[derive(Default)]
 pub struct SetOneTime {
     id: ObjectId,
     preset: Option<ScheduleTrainingPreset>,
-    go_back: Option<Widget>,
 }
 
 impl SetOneTime {
@@ -21,7 +22,6 @@ impl SetOneTime {
         Self {
             id,
             preset: Some(preset),
-            go_back: None,
         }
     }
 }
@@ -40,29 +40,15 @@ impl View for SetOneTime {
         let msg = "Это разовая тренировка или регулярная?".to_string();
         let mut keymap = InlineKeyboardMarkup::default();
         keymap.inline_keyboard.push(vec![
-            InlineKeyboardButton::callback("разовая", Callback::OneTime.to_data()),
-            InlineKeyboardButton::callback("регулярная", Callback::Regular.to_data()),
+            Callback::OneTime.button("разовая"),
+            Callback::Regular.button("регулярная"),
         ]);
         ctx.send_msg_with_markup(&msg, keymap).await?;
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
-        ctx.bot.delete_message(message.chat.id, message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Goto> {
+        match calldata!(data) {
             Callback::OneTime => {
                 self.preset.as_mut().unwrap().is_one_time = Some(true);
             }
@@ -71,23 +57,7 @@ impl View for SetOneTime {
             }
         };
         let preset = self.preset.take().unwrap();
-        Ok(Some(preset.into_next_view(self.id)))
-    }
-    fn take(&mut self) -> Widget {
-        SetOneTime {
-            id: self.id,
-            preset: self.preset.take(),
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
+        Ok(preset.into_next_view(self.id).into())
     }
 }
 

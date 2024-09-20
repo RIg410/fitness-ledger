@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::context::Context;
+use crate::{callback_data::Calldata, context::Context};
 use async_trait::async_trait;
 use eyre::Result;
 use teloxide::types::Message;
@@ -20,11 +20,15 @@ pub trait View {
     async fn handle_message(
         &mut self,
         ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Goto, eyre::Error>;
+        msg: &Message,
+    ) -> Result<Goto, eyre::Error> {
+        ctx.delete_msg(msg.id).await?;
+        Ok(Goto::None)
+    }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str)
-        -> Result<Goto, eyre::Error>;
+    async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Goto, eyre::Error> {
+        Ok(Goto::None)
+    }
 
     fn widget(self) -> Widget
     where
@@ -84,5 +88,11 @@ pub enum Goto {
 impl<T: View + Send + Sync + 'static> From<T> for Goto {
     fn from(value: T) -> Self {
         Goto::Next(value.into())
+    }
+}
+
+impl From<Widget> for Goto {
+    fn from(value: Widget) -> Self {
+        Goto::Next(value)
     }
 }

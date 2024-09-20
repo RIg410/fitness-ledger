@@ -1,13 +1,11 @@
-// use super::{
-//     calendar::CalendarView,
-//     couching::{couch_list::CouchingList, programs_list::ProgramList},
-//     finance::FinanceView,
-//     logs::LogsView,
-//     subscription::SubscriptionView,
-//     users::{profile::UserProfile, Query, UsersView},
-//     View,
-// };
-//use crate::{context::Context, state::Widget};
+use super::{
+    calendar::CalendarView,
+    couching::{couch_list::CouchingList, programs_list::ProgramList},
+    finance::FinanceView,
+    logs::LogsView,
+    subscription::SubscriptionView,
+    users::{profile::UserProfile, Query, UsersView},
+};
 use async_trait::async_trait;
 use bot_core::{
     context::Context,
@@ -18,7 +16,7 @@ use model::rights::Rule;
 use strum::EnumIter;
 use teloxide::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
-use super::signup::{self, SignUpView};
+use super::signup::SignUpView;
 
 pub struct MainMenuView;
 
@@ -78,18 +76,17 @@ impl View for MainMenuView {
         };
 
         self.send_self(ctx).await?;
-        // Ok(Some(match command {
-        //     MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id).boxed(),
-        //     MainMenuItem::Schedule => CalendarView::default().boxed(),
-        //     MainMenuItem::Users => UsersView::new(Query::default()).boxed(),
-        //     MainMenuItem::Subscription => SubscriptionView::default().boxed(),
-        //     MainMenuItem::FinanceView => FinanceView.boxed(),
-        //     MainMenuItem::LogView => LogsView::default().boxed(),
-        //     MainMenuItem::Coach => CouchingList::new().boxed(),
-        //     MainMenuItem::Home => MainMenuView.boxed(),
-        //     MainMenuItem::Programs => ProgramList::new().boxed(),
-        // }))
-        Ok(Goto::None)
+        Ok(match command {
+            MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id).into(),
+            MainMenuItem::Schedule => CalendarView::default().into(),
+            MainMenuItem::Users => UsersView::new(Query::default()).into(),
+            MainMenuItem::Subscription => SubscriptionView::default().into(),
+            MainMenuItem::FinanceView => FinanceView.into(),
+            MainMenuItem::LogView => LogsView::default().into(),
+            MainMenuItem::Coach => CouchingList::new().into(),
+            MainMenuItem::Home => MainMenuView.into(),
+            MainMenuItem::Programs => ProgramList::new().into(),
+        })
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, msg: &str) -> Result<Goto, eyre::Error> {
@@ -103,18 +100,17 @@ impl View for MainMenuView {
             return Ok(Goto::None);
         };
         self.send_self(ctx).await?;
-        // Ok(Some(match command {
-        //     MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id).boxed(),
-        //     MainMenuItem::Schedule => CalendarView::default().boxed(),
-        //     MainMenuItem::Users => UsersView::new(Default::default()).boxed(),
-        //     MainMenuItem::Subscription => SubscriptionView::default().boxed(),
-        //     MainMenuItem::Home => MainMenuView.boxed(),
-        //     MainMenuItem::FinanceView => FinanceView.boxed(),
-        //     MainMenuItem::LogView => LogsView::default().boxed(),
-        //     MainMenuItem::Coach => CouchingList::new().boxed(),
-        //     MainMenuItem::Programs => ProgramList::new().boxed(),
-        // }))
-        Ok(Goto::None)
+        Ok(Some(match command {
+            MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id).into(),
+            MainMenuItem::Schedule => CalendarView::default().into(),
+            MainMenuItem::Users => UsersView::new(Query::default()).into(),
+            MainMenuItem::Subscription => SubscriptionView::default().into(),
+            MainMenuItem::FinanceView => FinanceView.into(),
+            MainMenuItem::LogView => LogsView::default().into(),
+            MainMenuItem::Coach => CouchingList::new().into(),
+            MainMenuItem::Home => MainMenuView.into(),
+            MainMenuItem::Programs => ProgramList::new().into(),
+        }))
     }
 
     fn allow_unsigned_user(&self) -> bool {
