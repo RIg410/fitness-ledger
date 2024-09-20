@@ -1,6 +1,7 @@
 use super::{confirm::ConfirmSell, presell::PreSellView, View};
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Dest};
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
+use bot_viewer::user::fmt_user_type;
 use eyre::{eyre, Error, Result};
 use model::{decimal::Decimal, rights::Rule, user::User};
 use mongodb::bson::oid::ObjectId;
@@ -27,11 +28,11 @@ impl SellView {
         }
     }
 
-    pub fn select(&mut self, user_id: i64, _: &mut Context) -> Result<Dest> {
+    pub fn select(&mut self, user_id: i64, _: &mut Context) -> Result<Jmp> {
         return Ok(ConfirmSell::new(user_id, self.sell).into());
     }
 
-    pub fn presell(&mut self) -> Result<Dest> {
+    pub fn presell(&mut self) -> Result<Jmp> {
         return Ok(PreSellView::new(self.sell).into());
     }
 }
@@ -44,7 +45,7 @@ impl View for SellView {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, msg: &Message) -> Result<Dest> {
+    async fn handle_message(&mut self, ctx: &mut Context, msg: &Message) -> Result<Jmp> {
         ctx.delete_msg(msg.id).await?;
 
         let mut query = msg.text().to_owned().unwrap_or_default().to_string();
@@ -55,22 +56,22 @@ impl View for SellView {
         self.query = remove_non_alphanumeric(&query);
         self.offset = 0;
         self.show(ctx).await?;
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         ctx.ensure(Rule::SellSubscription)?;
 
         match calldata!(data) {
             Callback::Next => {
                 self.offset += LIMIT;
                 self.show(ctx).await?;
-                Ok(Dest::None)
+                Ok(Jmp::None)
             }
             Callback::Prev => {
                 self.offset = self.offset.saturating_sub(LIMIT);
                 self.show(ctx).await?;
-                Ok(Dest::None)
+                Ok(Jmp::None)
             }
             Callback::Select(user_id) => self.select(user_id, ctx),
             Callback::PreSell => self.presell(),
@@ -165,7 +166,7 @@ fn make_button(user: &User) -> InlineKeyboardButton {
     InlineKeyboardButton::callback(
         format!(
             "{}{} {}",
-            user_type(user),
+            fmt_user_type(user),
             user.name.first_name,
             user.name.last_name.as_ref().unwrap_or(&"".to_string())
         ),

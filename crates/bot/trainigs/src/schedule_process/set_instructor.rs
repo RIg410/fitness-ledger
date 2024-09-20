@@ -4,7 +4,7 @@ use bot_core::{
     callback_data::Calldata,
     calldata,
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
 use eyre::Result;
 use model::{program::Program, user::User};
@@ -44,7 +44,7 @@ impl View for SetInstructor {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::SelectInstructor(instructor_id) => {
                 let instructor = ctx

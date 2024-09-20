@@ -5,16 +5,31 @@ publish = false
 version = "0.1.0"
 
 [workspace]
-members = ["crates/*", "bins"]
+members = [
+  "crates/bg-process",
+  "crates/bot/*",
+  "crates/ledger",
+  "crates/mini-app",
+  "crates/model",
+  "crates/storage",
+  "crates/tx_macro",
+  "bins",
+]
 resolver = "2"
 
 [workspace.dependencies]
 bg-process = {path = "crates/bg-process"}
-bot = {path = "crates/bot"}
+bot-calendar = {path = "crates/bot/calendar"}
 bot-core = {path = "crates/bot/core"}
-bot-trainigs = {path = "crates/bot/trainigs"}
+bot-couching = {path = "crates/bot/couching"}
+bot-finance = {path = "crates/bot/finance"}
+bot-logs = {path = "crates/bot/logs"}
+bot-main = {path = "crates/bot/main"}
 bot-subscription = {path = "crates/bot/subscription"}
+bot-trainigs = {path = "crates/bot/trainigs"}
 bot-users = {path = "crates/bot/users"}
+bot-viewer = {path = "crates/bot/viewer"}
+bot-views = {path = "crates/bot/views"}
 ledger = {path = "crates/ledger"}
 mini-app = {path = "crates/mini-app"}
 model = {path = "crates/model"}

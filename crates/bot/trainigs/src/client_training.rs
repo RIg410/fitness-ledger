@@ -4,8 +4,9 @@ use bot_core::{
     callback_data::{CallbackDateTime, Calldata as _},
     calldata,
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
+use bot_viewer::training::fmt_training_status;
 use chrono::Local;
 use eyre::Result;
 use mongodb::bson::oid::ObjectId;
@@ -30,11 +31,12 @@ impl View for ClientTrainings {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::SelectTraining(date) => {
-                let widget = Box::new(TrainingView::new(date.into()));
-                Ok(Some(widget))
+                // let widget = Box::new(TrainingView::new(date.into()));
+                // Ok(Some(widget))
+                todo!()
             }
             Callback::FindTraining => Ok(FindTraining::default().into()),
         }
@@ -80,7 +82,7 @@ async fn render(ctx: &mut Context, id: ObjectId) -> Result<(String, InlineKeyboa
         row.push(
             Callback::SelectTraining(slot.start_at().into()).button(format!(
                 "{} {} {}",
-                render_training_status(
+                fmt_training_status(
                     training.status(now),
                     training.is_processed,
                     training.is_full(),

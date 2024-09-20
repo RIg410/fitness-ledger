@@ -4,7 +4,7 @@ use bot_core::{
     callback_data::Calldata,
     calldata,
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
 use eyre::{eyre, Error, Result};
 use model::rights::Rule;
@@ -44,7 +44,7 @@ impl View for PreSellView {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         match &self.state {
             State::Init => {
                 let phone = message.text().ok_or_else(|| eyre!("No text"))?;
@@ -60,7 +60,7 @@ impl View for PreSellView {
                         ctx.send_msg("Пользователь с таким номером уже существует")
                             .await?;
                         self.show(ctx).await?;
-                        return Ok(Dest::None);
+                        return Ok(Jmp::None);
                     }
 
                     self.state = State::Confirm(phone.to_owned());
@@ -73,14 +73,14 @@ impl View for PreSellView {
                 ctx.delete_msg(message.id).await?;
             }
         }
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         let phone = if let State::Confirm(phone) = &self.state {
             phone.to_owned()
         } else {
-            return Ok(Dest::None);
+            return Ok(Jmp::None);
         };
 
         match calldata!(data) {
@@ -109,10 +109,10 @@ impl View for PreSellView {
                     Err(err.into())
                 } else {
                     ctx.send_msg("🤑 Продано").await?;
-                    Ok(Dest::Home)
+                    Ok(Jmp::Home)
                 }
             }
-            Callback::Cancel => Ok(Dest::Back),
+            Callback::Cancel => Ok(Jmp::Back),
         }
     }
 }

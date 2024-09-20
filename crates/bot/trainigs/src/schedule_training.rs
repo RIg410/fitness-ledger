@@ -7,8 +7,9 @@ use bot_core::{
     callback_data::Calldata as _,
     calldata,
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
+use bot_viewer::day::{fmt_date, fmt_weekday};
 use chrono::{DateTime, Local};
 use eyre::{Error, Result};
 use model::rights::Rule;
@@ -35,7 +36,7 @@ impl View for ScheduleTraining {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         ctx.ensure(Rule::EditSchedule)?;
         match calldata!(data) {
             Callback::CreateTraining => {
@@ -66,8 +67,8 @@ async fn render(
 🤸🏼 Добавить тренировку на день: *{}* _{}_
 Выберите тренировку из списка или создайте новую\\.
 ",
-        day.format("%d\\.%m\\.%Y"),
-        render_weekday(day)
+        fmt_date(day),
+        fmt_weekday(day)
     );
     let mut keymap = InlineKeyboardMarkup::default();
 

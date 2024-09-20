@@ -1,20 +1,12 @@
-use crate::{
-    context::Context,
-    state::Widget,
-    view::{
-        script::{
-            list::{ListId, ListItem, StageList},
-            ScriptView, Stage,
-        },
-        View as _,
-    },
-};
 use async_trait::async_trait;
+use bot_core::{
+    context::Context, script::{list::{ListId, ListItem, StageList}, Dispatch, ScriptView, Stage}, widget::Widget
+};
 use eyre::{Error, Result};
 use mongodb::bson::oid::ObjectId;
 
-pub fn couch_view(go_back: Widget, id: ObjectId) -> Widget {
-    ScriptView::new(State { id }, Stage::list(CouchInfo), go_back).boxed()
+pub fn couch_view(id: ObjectId) -> Widget {
+    ScriptView::new(State { id }, Stage::list(CouchInfo)).into()
 }
 
 struct State {
@@ -40,7 +32,8 @@ impl StageList<State> for CouchInfo {
         ctx: &mut Context,
         state: &mut State,
         id: ListId,
-    ) -> Result<Option<Stage<State>>, Error> {
+    ) -> Result<Dispatch<State>, Error> {
         todo!()
     }
 }
+

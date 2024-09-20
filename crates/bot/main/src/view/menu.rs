@@ -1,16 +1,14 @@
-use super::{
-    calendar::CalendarView,
-    couching::{couch_list::CouchingList, programs_list::ProgramList},
-    finance::FinanceView,
-    logs::LogsView,
-    subscription::SubscriptionView,
-    users::{profile::UserProfile, Query, UsersView},
-};
 use async_trait::async_trait;
+use bot_calendar::CalendarView;
 use bot_core::{
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
+use bot_couching::{couch_list::CouchingList, programs_list::ProgramList};
+use bot_finance::FinanceView;
+use bot_logs::logs::LogsView;
+use bot_subscription::SubscriptionView;
+use bot_users::{profile::UserProfile, Query, UsersView};
 use eyre::{bail, Ok, Result};
 use model::rights::Rule;
 use strum::EnumIter;
@@ -59,20 +57,20 @@ impl View for MainMenuView {
         &mut self,
         ctx: &mut Context,
         msg: &Message,
-    ) -> Result<Dest, eyre::Error> {
+    ) -> Result<Jmp, eyre::Error> {
         if !ctx.is_real_user {
             return Ok(SignUpView::default().into());
         }
         let text = if let Some(text) = msg.text() {
             text
         } else {
-            return Ok(Dest::None);
+            return Ok(Jmp::None);
         };
 
         let command = if let Some(command) = MainMenuItem::try_from(text).ok() {
             command
         } else {
-            return Ok(Dest::None);
+            return Ok(Jmp::None);
         };
 
         self.send_self(ctx).await?;
@@ -85,11 +83,11 @@ impl View for MainMenuView {
             MainMenuItem::LogView => LogsView::default().into(),
             MainMenuItem::Coach => CouchingList::new().into(),
             MainMenuItem::Home => MainMenuView.into(),
-            MainMenuItem::Programs => ProgramList::new().into(),
+            MainMenuItem::Programs => ProgramList::default().into(),
         })
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, msg: &str) -> Result<Dest, eyre::Error> {
+    async fn handle_callback(&mut self, ctx: &mut Context, msg: &str) -> Result<Jmp, eyre::Error> {
         if !ctx.is_real_user {
             return Ok(SignUpView::default().into());
         }
@@ -97,10 +95,10 @@ impl View for MainMenuView {
         let command = if let Some(command) = MainMenuItem::try_from(msg).ok() {
             command
         } else {
-            return Ok(Dest::None);
+            return Ok(Jmp::None);
         };
         self.send_self(ctx).await?;
-        Ok(Some(match command {
+        Ok(match command {
             MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id).into(),
             MainMenuItem::Schedule => CalendarView::default().into(),
             MainMenuItem::Users => UsersView::new(Query::default()).into(),
@@ -109,8 +107,8 @@ impl View for MainMenuView {
             MainMenuItem::LogView => LogsView::default().into(),
             MainMenuItem::Coach => CouchingList::new().into(),
             MainMenuItem::Home => MainMenuView.into(),
-            MainMenuItem::Programs => ProgramList::new().into(),
-        }))
+            MainMenuItem::Programs => ProgramList::default().into(),
+        })
     }
 
     fn allow_unsigned_user(&self) -> bool {

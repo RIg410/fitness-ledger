@@ -107,6 +107,7 @@ pub enum Rule {
 
     //Couching
     CreateCouch,
+    ViewCouchRates,
 }
 
 impl Rule {

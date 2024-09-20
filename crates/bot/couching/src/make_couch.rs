@@ -1,25 +1,24 @@
 use std::vec;
 
 use async_trait::async_trait;
+use bot_core::{
+    context::Context,
+    script::{
+        list::{ListId, ListItem, StageList},
+        text::StageText,
+        yes_no::StageYesNo,
+        Dispatch, ScriptView, Stage,
+    },
+    widget::Widget,
+};
+use bot_viewer::user::fmt_rate;
 use chrono::{Local, NaiveDate, TimeZone as _, Utc};
 use eyre::Error;
 use model::{couch::Rate, decimal::Decimal, user::User};
 use teloxide::utils::markdown::escape;
 
-use crate::{
-    context::Context,
-    state::Widget,
-    view::{
-        script::{
-            list::{ListId, ListItem, StageList}, text::StageText, yes_no::StageYesNo, ScriptView, Stage
-        },
-        users::profile::render_rate,
-        View,
-    },
-};
-
-pub fn make_make_couch_view(go_back: Widget) -> Widget {
-    ScriptView::new(State::default(), Stage::list(UserList), go_back).boxed()
+pub fn make_make_couch_view() -> Widget {
+    ScriptView::new(State::default(), Stage::list(UserList)).into()
 }
 
 #[derive(Default)]
@@ -64,16 +63,16 @@ impl StageList<State> for SetRewardType {
         _: &mut Context,
         state: &mut State,
         id: ListId,
-    ) -> Result<Option<Stage<State>>, Error> {
+    ) -> Result<Dispatch<State>, Error> {
         let id = id.as_i64().ok_or_else(|| eyre::eyre!("Invalid id"))?;
         Ok(match id {
             0 => {
                 state.reward_rate = Some(Rate::None);
-                Some(Stage::yes_no(Confirm))
+                Dispatch::Stage(Stage::yes_no(Confirm))
             }
-            1 => Some(Stage::text(FixedRate)),
-            2 => Some(Stage::text(ClientRate)),
-            _ => return Ok(None),
+            1 => Dispatch::Stage(Stage::text(FixedRate)),
+            2 => Dispatch::Stage(Stage::text(ClientRate)),
+            _ => return Ok(Dispatch::None),
         })
     }
 
@@ -95,14 +94,14 @@ impl StageText<State> for FixedRate {
         _: &mut Context,
         state: &mut State,
         query: &str,
-    ) -> Result<Option<Stage<State>>, Error> {
+    ) -> Result<Dispatch<State>, Error> {
         let rate = query.parse::<Decimal>()?;
         let rate = Rate::FixedMonthly {
             rate,
             next_reward: Utc::now(),
         };
         state.reward_rate = Some(rate);
-        Ok(Some(Stage::text(FixedRateNextReward)))
+        Ok(Dispatch::Stage(Stage::text(FixedRateNextReward)))
     }
 
     fn back(&self) -> Option<Stage<State>> {
@@ -123,14 +122,14 @@ impl StageText<State> for ClientRate {
         _: &mut Context,
         state: &mut State,
         query: &str,
-    ) -> Result<Option<Stage<State>>, Error> {
+    ) -> Result<Dispatch<State>, Error> {
         let min = query.parse::<Decimal>()?;
 
         state.reward_rate = Some(Rate::PerClient {
             min: min,
             per_client: Decimal::zero(),
         });
-        Ok(Some(Stage::text(ClientRatePerClient)))
+        Ok(Dispatch::Stage(Stage::text(ClientRatePerClient)))
     }
 
     fn back(&self) -> Option<Stage<State>> {
@@ -151,7 +150,7 @@ impl StageText<State> for ClientRatePerClient {
         _: &mut Context,
         state: &mut State,
         query: &str,
-    ) -> Result<Option<Stage<State>>, Error> {
+    ) -> Result<Dispatch<State>, Error> {
         let per_client = query.parse::<Decimal>()?;
 
         if let Some(Rate::PerClient { min, .. }) = state.reward_rate.as_mut() {
@@ -162,7 +161,7 @@ impl StageText<State> for ClientRatePerClient {
         } else {
             eyre::bail!("Rate not found");
         }
-        Ok(Some(Stage::yes_no(Confirm)))
+        Ok(Dispatch::Stage(Stage::yes_no(Confirm)))
     }
 
     fn back(&self) -> Option<Stage<State>> {
@@ -183,7 +182,7 @@ impl StageText<State> for FixedRateNextReward {
         _: &mut Context,
         state: &mut State,
         query: &str,
-    ) -> Result<Option<Stage<State>>, Error> {
+    ) -> Result<Dispatch<State>, Error> {
         let next_reward = NaiveDate::parse_from_str(query, "%Y.%m.%d")?;
         let next_reward = Local
             .from_local_datetime(
@@ -203,7 +202,7 @@ impl StageText<State> for FixedRateNextReward {
             eyre::bail!("Rate not found");
         };
         state.reward_rate = Some(rate);
-        Ok(Some(Stage::yes_no(Confirm)))
+        Ok(Dispatch::Stage(Stage::yes_no(Confirm)))
     }
 
     fn back(&self) -> Option<Stage<State>> {
@@ -234,15 +233,11 @@ impl StageYesNo<State> for Confirm {
             escape(&user.name.first_name),
             escape(&user.name.last_name.clone().unwrap_or_default()),
             escape(&desc),
-            render_rate(rate)
+            fmt_rate(rate)
         ))
     }
 
-    async fn yes(
-        &self,
-        ctx: &mut Context,
-        state: &mut State,
-    ) -> Result<Option<Stage<State>>, Error> {
+    async fn yes(&self, ctx: &mut Context, state: &mut State) -> Result<Dispatch<State>, Error> {
         let (user, desc, rate) = if let (Some(user), Some(desc), Some(rate)) = (
             state.user.as_ref(),
             state.description.as_ref(),
@@ -256,8 +251,9 @@ impl StageYesNo<State> for Confirm {
             .users
             .make_user_instructor(&mut ctx.session, user.tg_id, desc.clone(), rate.clone())
             .await?;
-        ctx.send_notification("Инструктор успешно создан 🎉").await?;
-        Ok(None)
+        ctx.send_notification("Инструктор успешно создан 🎉")
+            .await?;
+        Ok(Dispatch::None)
     }
 
     fn back(&self) -> Option<Stage<State>> {
@@ -278,9 +274,9 @@ impl StageText<State> for CouchDescription {
         _: &mut Context,
         state: &mut State,
         query: &str,
-    ) -> Result<Option<Stage<State>>, Error> {
+    ) -> Result<Dispatch<State>, Error> {
         state.description = Some(query.to_string());
-        Ok(Some(Stage::list(SetRewardType)))
+        Ok(Dispatch::Stage(Stage::list(SetRewardType)))
     }
 
     fn back(&self) -> Option<Stage<State>> {
@@ -310,7 +306,7 @@ impl StageList<State> for UserList {
             )
             .await?
             .into_iter()
-            .map(|u| vec![ListItem::from(u)])
+            .map(|u| vec![list_item(u)])
             .collect();
         Ok((
             format!(
@@ -331,15 +327,15 @@ impl StageList<State> for UserList {
         ctx: &mut Context,
         state: &mut State,
         id: ListId,
-    ) -> Result<Option<Stage<State>>, Error> {
+    ) -> Result<Dispatch<State>, Error> {
         let id = id.as_object_id().ok_or_else(|| eyre::eyre!("Invalid id"))?;
         let user = ctx.ledger.get_user(&mut ctx.session, id).await?;
         if user.couch.is_some() {
             ctx.send_notification("Пользователь уже инструктор").await?;
-            Ok(None)
+            Ok(Dispatch::None)
         } else {
             state.user = Some(user);
-            Ok(Some(Stage::text(CouchDescription)))
+            Ok(Dispatch::Stage(Stage::text(CouchDescription)))
         }
     }
 
@@ -348,15 +344,13 @@ impl StageList<State> for UserList {
     }
 }
 
-impl From<User> for ListItem {
-    fn from(user: User) -> Self {
-        ListItem {
-            id: user.id.into(),
-            name: format!(
-                "{} {}",
-                user.name.first_name,
-                user.name.last_name.clone().unwrap_or_default()
-            ),
-        }
+fn list_item(user: User) -> ListItem {
+    ListItem {
+        id: user.id.into(),
+        name: format!(
+            "{} {}",
+            user.name.first_name,
+            user.name.last_name.clone().unwrap_or_default()
+        ),
     }
 }

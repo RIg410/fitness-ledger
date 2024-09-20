@@ -21,13 +21,13 @@ pub trait View {
         &mut self,
         ctx: &mut Context,
         msg: &Message,
-    ) -> Result<Dest, eyre::Error> {
+    ) -> Result<Jmp, eyre::Error> {
         ctx.delete_msg(msg.id).await?;
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Dest, eyre::Error> {
-        Ok(Dest::None)
+    async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Jmp, eyre::Error> {
+        Ok(Jmp::None)
     }
 
     fn widget(self) -> Widget
@@ -54,6 +54,10 @@ impl Widget {
     pub fn take_back(&mut self) -> Option<Widget> {
         self.back.take().map(|b| *b)
     }
+
+    pub fn has_back(&self) -> bool {
+        self.back.is_some()
+    }
 }
 
 impl<T: View + Send + Sync + 'static> From<T> for Widget {
@@ -79,7 +83,7 @@ impl DerefMut for Widget {
     }
 }
 
-pub enum Dest {
+pub enum Jmp {
     Next(Widget),
     Goto(Widget),
     None,
@@ -87,14 +91,14 @@ pub enum Dest {
     Home,
 }
 
-impl<T: View + Send + Sync + 'static> From<T> for Dest {
+impl<T: View + Send + Sync + 'static> From<T> for Jmp {
     fn from(value: T) -> Self {
-        Dest::Next(value.into())
+        Jmp::Next(value.into())
     }
 }
 
-impl From<Widget> for Dest {
+impl From<Widget> for Jmp {
     fn from(value: Widget) -> Self {
-        Dest::Next(value)
+        Jmp::Next(value)
     }
 }

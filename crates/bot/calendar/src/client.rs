@@ -1,21 +1,21 @@
-use super::View;
-use crate::{
-    callback_data::Calldata, context::Context, state::Widget,
-    view::users::profile::render_profile_msg,
-};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata as _,
+    context::Context,
+    widget::{Jmp, View},
+};
+use bot_viewer::user::render_profile_msg;
 use chrono::{DateTime, Local};
 use eyre::{bail, Result};
 use ledger::{calendar::SignOutError, SignUpError};
 use model::{rights::Rule, training::Training};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::types::{InlineKeyboardMarkup, Message};
+use teloxide::types::InlineKeyboardMarkup;
 
 pub struct ClientView {
     id: ObjectId,
     training_id: DateTime<Local>,
-    go_back: Option<Widget>,
     reason: Reason,
 }
 
@@ -23,7 +23,6 @@ impl ClientView {
     pub fn new(id: ObjectId, training_id: DateTime<Local>, reason: Reason) -> ClientView {
         ClientView {
             id,
-            go_back: None,
             reason,
             training_id,
         }
@@ -124,36 +123,23 @@ impl View for ClientView {
 
         match self.reason {
             Reason::AddClient => {
-                keymap = keymap.append_row(vec![
-                    Callback::AddClient.button("Добавить клиента 👤".to_string())
-                ]);
+                keymap = keymap.append_row(vec![Callback::AddClient.button("Добавить клиента 👤")]);
             }
             Reason::RemoveClient => {
-                keymap = keymap.append_row(vec![
-                    Callback::DeleteClient.button("Удалить клиента ❌".to_string())
-                ]);
+                keymap =
+                    keymap.append_row(vec![Callback::DeleteClient.button("Удалить клиента ❌")]);
             }
         }
 
-        keymap = keymap.append_row(vec![Callback::GoBack.button("🔙 Назад".to_string())]);
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
-        ctx.delete_msg(message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         let cb = if let Some(cb) = Callback::from_data(data) {
             cb
         } else {
-            return Ok(None);
+            return Ok(Jmp::None);
         };
 
         ctx.ensure(Rule::EditTrainingClientsList)?;
@@ -164,36 +150,18 @@ impl View for ClientView {
                 if let Reason::AddClient = self.reason {
                     self.add_client(ctx).await?;
                 } else {
-                    return Ok(None);
+                    return Ok(Jmp::None);
                 }
             }
             Callback::DeleteClient => {
                 if let Reason::RemoveClient = self.reason {
                     self.remove_client(ctx).await?;
                 } else {
-                    return Ok(None);
+                    return Ok(Jmp::None);
                 }
             }
         };
-        Ok(self.go_back.take())
-    }
-
-    fn take(&mut self) -> Widget {
-        ClientView {
-            id: self.id,
-            training_id: self.training_id,
-            go_back: self.go_back.take(),
-            reason: self.reason,
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
+        Ok(Jmp::Back)
     }
 }
 

@@ -1,8 +1,12 @@
 use std::{mem, str::FromStr as _};
 
-use super::View;
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    widget::{Jmp, View},
+};
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use eyre::Result;
 use model::{decimal::Decimal, rights::Rule};
@@ -13,14 +17,12 @@ use teloxide::{
 };
 
 pub struct InOut {
-    go_back: Option<Widget>,
     state: State,
     io: Io,
 }
 impl InOut {
     pub fn new(io: Io) -> Self {
         Self {
-            go_back: None,
             state: State::Description,
             io,
         }
@@ -52,24 +54,16 @@ impl View for InOut {
             }
         }
 
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "⬅️ Назад",
-            Callback::Back.to_data(),
-        )]);
         let id = ctx.send_msg_with_markup(&text, keymap).await?;
         ctx.update_origin_msg_id(id);
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         let text = if let Some(msg) = message.text() {
             msg
         } else {
-            return Ok(None);
+            return Ok(Jmp::None);
         };
 
         let state = mem::take(&mut self.state);
@@ -106,23 +100,11 @@ impl View for InOut {
             }
         };
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Jmp::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
-            Callback::Back => {
-                if let Some(widget) = self.go_back.take() {
-                    Ok(Some(widget))
-                } else {
-                    Ok(None)
-                }
-            }
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
+        match calldata!(data) {
             Callback::Save => match &self.state {
                 State::Finish(description, amount, date) => match self.io {
                     Io::Deposit => {
@@ -137,11 +119,7 @@ impl View for InOut {
                             )
                             .await?;
                         ctx.send_msg("✅ Платеж сохранен").await?;
-                        if let Some(widget) = self.go_back.take() {
-                            Ok(Some(widget))
-                        } else {
-                            Ok(None)
-                        }
+                        Ok(Jmp::Back)
                     }
                     Io::Payment => {
                         ctx.ledger
@@ -155,44 +133,25 @@ impl View for InOut {
                             )
                             .await?;
                         ctx.send_msg("✅ Платеж сохранен").await?;
-                        if let Some(widget) = self.go_back.take() {
-                            Ok(Some(widget))
-                        } else {
-                            Ok(None)
-                        }
+                        Ok(Jmp::Back)
                     }
                 },
                 _ => {
                     ctx.send_msg("Заполните все поля").await?;
                     self.state = State::Description;
                     self.show(ctx).await?;
-                    Ok(None)
+                    Ok(Jmp::None)
                 }
             },
+            Callback::Back => Ok(Jmp::Back),
         }
-    }
-    fn take(&mut self) -> Widget {
-        InOut {
-            go_back: self.go_back.take(),
-            state: self.state.clone(),
-            io: self.io.clone(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 
 #[derive(Serialize, Deserialize)]
 enum Callback {
-    Back,
     Save,
+    Back,
 }
 
 #[derive(Default, Clone)]

@@ -3,16 +3,18 @@ use bot_core::{
     callback_data::Calldata as _,
     calldata,
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
+use bot_viewer::user::fmt_user_type;
 use model::rights::Rule;
 use model::user::User;
-use profile::{user_type, TrainingListView, UserProfile};
+use profile::UserProfile;
 use serde::{Deserialize, Serialize};
 use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
+
 pub mod freeze;
 pub mod profile;
 pub mod rights;
@@ -24,15 +26,11 @@ pub const LIMIT: u64 = 7;
 
 pub struct UsersView {
     query: Query,
-    training_list: TrainingListView,
 }
 
 impl UsersView {
-    pub fn new(query: Query, training_list: TrainingListView) -> UsersView {
-        UsersView {
-            query,
-            training_list,
-        }
+    pub fn new(query: Query) -> UsersView {
+        UsersView { query }
     }
 }
 
@@ -59,7 +57,7 @@ impl View for UsersView {
         &mut self,
         ctx: &mut Context,
         msg: &Message,
-    ) -> Result<Dest, eyre::Error> {
+    ) -> Result<Jmp, eyre::Error> {
         ctx.delete_msg(msg.id).await?;
         ctx.ensure(Rule::ViewUsers)?;
 
@@ -73,14 +71,10 @@ impl View for UsersView {
             offset: 0,
         };
         self.show(ctx).await?;
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    async fn handle_callback(
-        &mut self,
-        ctx: &mut Context,
-        data: &str,
-    ) -> Result<Dest, eyre::Error> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         ctx.ensure(Rule::ViewUsers)?;
 
         match calldata!(data) {
@@ -93,11 +87,11 @@ impl View for UsersView {
                 self.show(ctx).await?;
             }
             Callback::Select(user_id) => {
-                return Ok(UserProfile::new(user_id, self.training_list.clone()).into());
+                return Ok(UserProfile::new(user_id).into());
             }
         }
 
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 }
 
@@ -168,7 +162,7 @@ fn render_message(
 fn make_button(user: &User) -> InlineKeyboardButton {
     Callback::Select(user.tg_id).button(format!(
         "{}{} {}",
-        user_type(user),
+        fmt_user_type(user),
         user.name.first_name,
         user.name.last_name.as_ref().unwrap_or(&"".to_string())
     ))

@@ -4,7 +4,7 @@ use bot_core::{
     callback_data::Calldata as _,
     calldata,
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
 use eyre::Result;
 use ledger::calendar::ScheduleError;
@@ -49,7 +49,7 @@ impl View for Finish {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::Yes => {
                 ctx.ensure(Rule::EditSchedule)?;
@@ -93,7 +93,7 @@ impl View for Finish {
                 //no-op
             }
         }
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 }
 

@@ -4,7 +4,7 @@ use bot_core::{
     callback_data::Calldata as _,
     calldata,
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
 use eyre::Result;
 use model::{ids::WeekId, program::Program, rights::Rule};
@@ -26,40 +26,41 @@ impl ViewProgram {
         Self { id, preset }
     }
 
-    async fn find_training(&mut self) -> Result<Dest> {
-        let view = CalendarView::new(
-            WeekId::default(),
-            None,
-            Some(Filter {
-                proto_id: Some(self.id),
-            }),
-        );
-        return Ok(Some(Box::new(view)));
+    async fn find_training(&mut self) -> Result<Jmp> {
+        // let view = CalendarView::new(
+        //     WeekId::default(),
+        //     None,
+        //     Some(Filter {
+        //         proto_id: Some(self.id),
+        //     }),
+        // );
+        // return Ok(Some(Box::new(view)));
+        todo!()
     }
 
-    async fn schedule(&mut self, ctx: &mut Context) -> Result<Dest> {
+    async fn schedule(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::EditSchedule)?;
         let preset = self.preset.clone();
         let view = preset.into_next_view(self.id);
         Ok(view.into())
     }
 
-    async fn edit_capacity(&mut self, ctx: &mut Context) -> Result<Dest> {
+    async fn edit_capacity(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::EditTraining)?;
         Ok(EditProgram::new(self.id, super::edit::EditType::Capacity).into())
     }
 
-    async fn edit_duration(&mut self, ctx: &mut Context) -> Result<Dest> {
+    async fn edit_duration(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::EditTraining)?;
         Ok(EditProgram::new(self.id, super::edit::EditType::Duration).into())
     }
 
-    async fn edit_name(&mut self, ctx: &mut Context) -> Result<Dest> {
+    async fn edit_name(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::EditTraining)?;
         Ok(EditProgram::new(self.id, super::edit::EditType::Name).into())
     }
 
-    async fn edit_description(&mut self, ctx: &mut Context) -> Result<Dest> {
+    async fn edit_description(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::EditTraining)?;
         Ok(EditProgram::new(self.id, super::edit::EditType::Description).into())
     }
@@ -79,7 +80,7 @@ impl View for ViewProgram {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::Schedule => self.schedule(ctx).await,
             Callback::FindTraining => self.find_training().await,

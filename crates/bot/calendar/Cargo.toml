@@ -1,18 +1,14 @@
 [package]
-name = "bot"
-
-edition.workspace = true
-license.workspace = true
-publish.workspace = true
-version.workspace = true
+edition = "2021"
+name = "bot-calendar"
+version = "0.1.0"
 
 [dependencies]
 async-trait.workspace = true
 bincode.workspace = true
 bot-core.workspace = true
-bot-trainigs.workspace = true
-bot-subscription.workspace = true
-bot-users.workspace = true
+bot-viewer.workspace = true
+bot-views.workspace = true
 chrono.workspace = true
 eyre.workspace = true
 hex.workspace = true

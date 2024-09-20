@@ -77,6 +77,7 @@ async fn inner_callback_handler(
         ctx.send_msg("Ваш аккаунт заблокирован").await?;
         return Ok(());
     }
+    ctx.system_go_back = widget.has_back();
 
     let widget = if data.starts_with("/") {
         match data.as_str() {
@@ -109,23 +110,23 @@ async fn inner_callback_handler(
     };
 
     let new_widget = match widget.handle_callback(ctx, data.as_str()).await? {
-        crate::widget::Dest::Next(mut new_widget) => {
+        crate::widget::Jmp::Next(mut new_widget) => {
             new_widget.show(ctx).await?;
             new_widget.set_back(widget);
             new_widget
         }
-        crate::widget::Dest::None => widget,
-        crate::widget::Dest::Back => {
+        crate::widget::Jmp::None => widget,
+        crate::widget::Jmp::Back => {
             let mut new_widget = widget.take_back().unwrap_or_else(|| system_handler());
             new_widget.show(ctx).await?;
             new_widget
         }
-        crate::widget::Dest::Home => {
+        crate::widget::Jmp::Home => {
             let mut new_widget = system_handler();
             new_widget.show(ctx).await?;
             new_widget
         }
-        crate::widget::Dest::Goto(mut widget) => {
+        crate::widget::Jmp::Goto(mut widget) => {
             widget.show(ctx).await?;
             widget
         }

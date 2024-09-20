@@ -1,6 +1,7 @@
-use super::{profile::user_type, View};
+use super::View;
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata, calldata, context::Context, widget::Dest};
+use bot_core::{callback_data::Calldata, calldata, context::Context, widget::Jmp};
+use bot_viewer::user::fmt_user_type;
 use model::{rights::Rule, user::User};
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
@@ -30,11 +31,7 @@ impl View for UserRightsView {
         Ok(())
     }
 
-    async fn handle_callback(
-        &mut self,
-        ctx: &mut Context,
-        data: &str,
-    ) -> Result<Dest, eyre::Error> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         let cb = calldata!(data);
         match cb {
             Callback::EditRule(rule_id, is_active) => {
@@ -47,14 +44,14 @@ impl View for UserRightsView {
                     .await?;
                 ctx.reload_user().await?;
                 self.show(ctx).await?;
-                Ok(Dest::None)
+                Ok(Jmp::None)
             }
         }
     }
 }
 
 fn render_user_rights(user: &User) -> (String, InlineKeyboardMarkup) {
-    let mut msg = format!("{} 🔒Права:", user_type(user));
+    let mut msg = format!("{} 🔒Права:", fmt_user_type(user));
     let mut keymap = InlineKeyboardMarkup::default();
 
     if !user.rights.is_full() {

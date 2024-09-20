@@ -1,6 +1,6 @@
 use super::{sell::Sell, View};
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Dest};
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
 use eyre::{eyre, Error, Result};
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
@@ -25,7 +25,7 @@ impl View for ConfirmSell {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::Sell => {
                 let result = match self.sell {
@@ -52,10 +52,10 @@ impl View for ConfirmSell {
                     Err(err.into())
                 } else {
                     ctx.send_msg("🤑 Продано").await?;
-                    Ok(Dest::Home)
+                    Ok(Jmp::Home)
                 }
             }
-            Callback::Cancel => Ok(Dest::Back),
+            Callback::Cancel => Ok(Jmp::Back),
         }
     }
 }

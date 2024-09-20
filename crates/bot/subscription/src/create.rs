@@ -2,7 +2,7 @@ use std::mem;
 
 use super::View;
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata, calldata, context::Context, widget::Dest};
+use bot_core::{callback_data::Calldata, calldata, context::Context, widget::Jmp};
 use eyre::Result;
 use ledger::subscriptions::CreateSubscriptionError;
 use model::{rights::Rule, subscription::Subscription};
@@ -112,11 +112,11 @@ impl View for CreateSubscription {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         let text = if let Some(text) = message.text() {
             text
         } else {
-            return Ok(Dest::None);
+            return Ok(Jmp::None);
         };
 
         self.state = match self.state {
@@ -130,7 +130,7 @@ impl View for CreateSubscription {
                 if sub.is_some() {
                     ctx.send_msg("Абонемент с таким именем уже существует")
                         .await?;
-                    return Ok(Dest::None);
+                    return Ok(Jmp::None);
                 }
                 self.subscription.name = text.to_string();
                 State::SetItems
@@ -178,10 +178,10 @@ impl View for CreateSubscription {
         };
         self.show(ctx).await?;
 
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::Create => {
                 ctx.ensure(Rule::CreateSubscription)?;
@@ -201,27 +201,27 @@ impl View for CreateSubscription {
                 match result {
                     Ok(_) => {
                         ctx.send_msg("✅Абонемент создан").await?;
-                        Ok(Dest::Back)
+                        Ok(Jmp::Back)
                     }
                     Err(CreateSubscriptionError::NameAlreadyExists) => {
                         ctx.send_msg(&"Не удалось создать абонемент: Имя уже занято")
                             .await?;
-                        Ok(Dest::None)
+                        Ok(Jmp::None)
                     }
                     Err(CreateSubscriptionError::InvalidPrice) => {
                         ctx.send_msg("Не удалось создать абонемент: Неверная цена")
                             .await?;
-                        Ok(Dest::None)
+                        Ok(Jmp::None)
                     }
                     Err(CreateSubscriptionError::InvalidItems) => {
                         ctx.send_msg("Не удалось создать абонемент: Неверное количество занятий")
                             .await?;
-                        Ok(Dest::None)
+                        Ok(Jmp::None)
                     }
                     Err(CreateSubscriptionError::Common(err)) => Err(err),
                 }
             }
-            Callback::Cancel => Ok(Dest::Back),
+            Callback::Cancel => Ok(Jmp::Back),
         }
     }
 }

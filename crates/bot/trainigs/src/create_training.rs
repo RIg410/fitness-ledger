@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use bot_core::{
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
 use eyre::Result;
 use model::{program::Program, rights::Rule};
@@ -31,12 +31,12 @@ impl View for CreateTraining {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         ctx.ensure(Rule::CreateTraining)?;
         let msg = if let Some(msg) = message.text() {
             msg
         } else {
-            return Ok(Dest::None);
+            return Ok(Jmp::None);
         };
 
         let state = self
@@ -95,14 +95,14 @@ impl View for CreateTraining {
                     ctx.send_msg("✅ Тренировка создана").await?;
                     let origin = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(origin);
-                    return Ok(Dest::Back);
+                    return Ok(Jmp::Back);
                 } else {
                     ctx.send_msg("Количество мест должно быть числом").await?;
                     State::SetCapacity(program)
                 }
             }
         });
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 }
 

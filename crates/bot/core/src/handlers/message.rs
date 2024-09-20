@@ -106,23 +106,23 @@ async fn inner_message_handler(
     };
 
     let new_widget = match widget.handle_message(ctx, &msg).await? {
-        crate::widget::Dest::Next(mut new_widget) => {
+        crate::widget::Jmp::Next(mut new_widget) => {
             new_widget.set_back(widget);
             new_widget.show(ctx).await?;
             new_widget
         }
-        crate::widget::Dest::None => widget,
-        crate::widget::Dest::Back => {
+        crate::widget::Jmp::None => widget,
+        crate::widget::Jmp::Back => {
             let mut new_widget = widget.take_back().unwrap_or_else(|| system_handler());
             new_widget.show(ctx).await?;
             new_widget
         }
-        crate::widget::Dest::Home => {
+        crate::widget::Jmp::Home => {
             let mut new_widget = system_handler();
             new_widget.show(ctx).await?;
             new_widget
         }
-        crate::widget::Dest::Goto(mut new_widget) => {
+        crate::widget::Jmp::Goto(mut new_widget) => {
             new_widget.show(ctx).await?;
             new_widget
         }

@@ -1,6 +1,10 @@
 use eyre::{Context as _, Error};
 use ledger::Ledger;
-use model::{rights::Rule, session::Session, user::User};
+use model::{
+    rights::Rule,
+    session::Session,
+    user::{User, UserIdent},
+};
 use teloxide::{
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester,
@@ -51,6 +55,13 @@ impl Context {
         let id = self.send_msg("\\.").await?;
         self.update_origin_msg_id(id);
         Ok(())
+    }
+
+    pub fn is_me<ID: Into<UserIdent>>(&self, id: ID) -> bool {
+        match id.into() {
+            UserIdent::TgId(tg_id) => self.me.tg_id == tg_id,
+            UserIdent::Id(id) => self.me.id == id,
+        }
     }
 
     pub fn is_couch(&self) -> bool {

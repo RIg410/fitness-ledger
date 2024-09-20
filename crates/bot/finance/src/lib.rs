@@ -1,13 +1,17 @@
 pub mod in_out;
 
-use super::View;
-use crate::{callback_data::Calldata, context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    widget::{Jmp, View},
+};
 use eyre::Result;
 use in_out::{InOut, Io};
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
+use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 #[derive(Default)]
 pub struct FinanceView;
@@ -35,42 +39,17 @@ impl View for FinanceView {
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
-        ctx.delete_msg(message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
+        match calldata!(data) {
             Callback::Payment => {
                 ctx.ensure(Rule::MakePayment)?;
-                let payment = InOut::new(Io::Payment);
-                Ok(Some(Box::new(payment)))
+                Ok(InOut::new(Io::Payment).into())
             }
             Callback::Deposit => {
                 ctx.ensure(Rule::MakeDeposit)?;
-                let payment = InOut::new(Io::Deposit);
-                Ok(Some(Box::new(payment)))
+                Ok(InOut::new(Io::Deposit).into())
             }
         }
-    }
-
-    fn take(&mut self) -> Widget {
-        FinanceView.boxed()
-    }
-    fn set_back(&mut self, back: Widget) {}
-
-    fn back(&mut self) -> Option<Widget> {
-        None
     }
 }
 

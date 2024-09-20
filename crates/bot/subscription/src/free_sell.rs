@@ -3,7 +3,7 @@ use super::{
     View,
 };
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Dest};
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
 use eyre::Result;
 use model::{decimal::Decimal, rights::Rule};
 use serde::{Deserialize, Serialize};
@@ -52,11 +52,11 @@ impl View for FeeSellView {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         let text = if let Some(text) = message.text() {
             text
         } else {
-            return Ok(Dest::None);
+            return Ok(Jmp::None);
         };
 
         self.state = match mem::take(&mut self.state) {
@@ -83,10 +83,10 @@ impl View for FeeSellView {
         };
         self.show(ctx).await?;
 
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         let state = mem::take(&mut self.state).inner();
         if let Some((items, price)) = state {
             match calldata!(data) {
@@ -95,11 +95,11 @@ impl View for FeeSellView {
 
                     return Ok(SellView::new(Sell::free(price, items.get())).into());
                 }
-                Callback::Cancel => Ok(Dest::Back),
+                Callback::Cancel => Ok(Jmp::Back),
             }
         } else {
             self.show(ctx).await?;
-            Ok(Dest::None)
+            Ok(Jmp::None)
         }
     }
 }

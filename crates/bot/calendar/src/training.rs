@@ -1,39 +1,31 @@
-use super::View;
-use crate::{callback_data::Calldata as _, context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    widget::{Jmp, View},
+};
 use chrono::{DateTime, Local};
-use client_list::ClientList;
 use eyre::{bail, Result};
 use model::{
     rights::Rule,
     training::{Training, TrainingStatus},
 };
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    prelude::Requester as _,
-    types::{InlineKeyboardMarkup, Message},
-    utils::markdown::escape,
-};
+use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
-mod add_client;
-mod client;
-mod client_list;
+use crate::client_list::ClientList;
 
 pub struct TrainingView {
     id: DateTime<Local>,
-    go_back: Option<Widget>,
 }
 
 impl TrainingView {
     pub fn new(id: DateTime<Local>) -> Self {
-        Self { id, go_back: None }
+        Self { id }
     }
 
-    async fn go_back(&mut self, _: &mut Context) -> Result<Option<Widget>> {
-        Ok(self.go_back.take())
-    }
-
-    async fn couch_info(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn couch_info(&mut self, ctx: &mut Context) -> Result<Jmp> {
         let training = ctx
             .ledger
             .calendar
@@ -50,10 +42,10 @@ impl TrainingView {
             ctx.update_origin_msg_id(id);
             self.show(ctx).await?;
         }
-        Ok(None)
+        Ok(Jmp::None)
     }
 
-    async fn cancel_training(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn cancel_training(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::CancelTraining)?;
         let training = ctx
             .ledger
@@ -66,10 +58,10 @@ impl TrainingView {
             .cancel_training(&mut ctx.session, &training)
             .await?;
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Jmp::None)
     }
 
-    async fn delete_training(&mut self, ctx: &mut Context, all: bool) -> Result<Option<Widget>> {
+    async fn delete_training(&mut self, ctx: &mut Context, all: bool) -> Result<Jmp> {
         ctx.ensure(Rule::EditSchedule)?;
         let training = ctx
             .ledger
@@ -81,10 +73,10 @@ impl TrainingView {
             .calendar
             .delete_training(&mut ctx.session, &training, all)
             .await?;
-        Ok(self.go_back.take())
+        Ok(Jmp::Back)
     }
 
-    async fn restore_training(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn restore_training(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::CancelTraining)?;
         let training = ctx
             .ledger
@@ -97,10 +89,10 @@ impl TrainingView {
             .restore_training(&mut ctx.session, &training)
             .await?;
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Jmp::None)
     }
 
-    async fn sign_up(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn sign_up(&mut self, ctx: &mut Context) -> Result<Jmp> {
         let training = ctx
             .ledger
             .calendar
@@ -112,7 +104,7 @@ impl TrainingView {
             let id = ctx.send_msg("\\.").await?;
             ctx.update_origin_msg_id(id);
             self.show(ctx).await?;
-            return Ok(None);
+            return Ok(Jmp::None);
         }
 
         if ctx.me.balance < 1 {
@@ -120,24 +112,24 @@ impl TrainingView {
             let id = ctx.send_msg("\\.").await?;
             ctx.update_origin_msg_id(id);
             self.show(ctx).await?;
-            return Ok(None);
+            return Ok(Jmp::None);
         }
         if ctx.me.freeze.is_some() {
             ctx.send_msg("Ваш абонемент заморожен🥶").await?;
             let id = ctx.send_msg("\\.").await?;
             ctx.update_origin_msg_id(id);
             self.show(ctx).await?;
-            return Ok(None);
+            return Ok(Jmp::None);
         }
 
         ctx.ledger
             .sign_up(&mut ctx.session, &training, ctx.me.id, false)
             .await?;
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Jmp::None)
     }
 
-    async fn sign_out(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn sign_out(&mut self, ctx: &mut Context) -> Result<Jmp> {
         let training = ctx
             .ledger
             .calendar
@@ -149,23 +141,23 @@ impl TrainingView {
             let id = ctx.send_msg("\\.").await?;
             ctx.update_origin_msg_id(id);
             self.show(ctx).await?;
-            return Ok(None);
+            return Ok(Jmp::None);
         }
         ctx.ledger
             .sign_out(&mut ctx.session, &training, ctx.me.id, false)
             .await?;
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Jmp::None)
     }
 
-    async fn client_list(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn client_list(&mut self, ctx: &mut Context) -> Result<Jmp> {
         if !ctx.is_couch() {
             bail!("Only couch can see client list");
         }
-        Ok(Some(ClientList::new(self.id).boxed()))
+        Ok(ClientList::new(self.id).into())
     }
 
-    async fn change_couch(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    async fn change_couch(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::EditSchedule)?;
         let training = ctx
             .ledger
@@ -191,28 +183,13 @@ impl View for TrainingView {
             .get_training_by_start_at(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let (msg, keymap) = render(ctx, &training, self.go_back.is_some()).await?;
+        let (msg, keymap) = render(ctx, &training).await?;
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
-        ctx.bot.delete_message(message.chat.id, message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(cb) = Callback::from_data(data) {
-            cb
-        } else {
-            return Ok(None);
-        };
-        match cb {
-            Callback::Back => self.go_back(ctx).await,
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
+        match calldata!(data) {
             Callback::CouchInfo => self.couch_info(ctx).await,
             Callback::Cancel => self.cancel_training(ctx).await,
             Callback::Delete(all) => self.delete_training(ctx, all).await,
@@ -223,29 +200,9 @@ impl View for TrainingView {
             Callback::ChangeCouch => self.change_couch(ctx).await,
         }
     }
-
-    fn take(&mut self) -> Widget {
-        TrainingView {
-            id: self.id,
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
-    }
 }
 
-async fn render(
-    ctx: &mut Context,
-    training: &Training,
-    has_back: bool,
-) -> Result<(String, InlineKeyboardMarkup)> {
+async fn render(ctx: &mut Context, training: &Training) -> Result<(String, InlineKeyboardMarkup)> {
     let is_client = ctx.me.couch.is_none();
     let cap = if is_client {
         format!(
@@ -333,15 +290,11 @@ _{}_                                                                 \n
             }
         }
     }
-    if has_back {
-        keymap = keymap.append_row(vec![Callback::Back.button("🔙 Назад")]);
-    }
     Ok((msg, keymap))
 }
 
 #[derive(Serialize, Deserialize)]
 enum Callback {
-    Back,
     CouchInfo,
     ChangeCouch,
     Delete(bool),

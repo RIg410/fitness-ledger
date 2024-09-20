@@ -2,7 +2,7 @@ use super::{render_msg, ScheduleTrainingPreset};
 use async_trait::async_trait;
 use bot_core::{
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
 use chrono::{DateTime, Datelike as _, Local, TimeZone, Timelike};
 use eyre::{Error, Result};
@@ -48,11 +48,11 @@ impl View for SetDateTime {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         let msg = if let Some(msg) = message.text() {
             msg
         } else {
-            return Ok(Dest::None);
+            return Ok(Jmp::None);
         };
 
         let parts = match TimeParts::try_from(msg) {
@@ -60,7 +60,7 @@ impl View for SetDateTime {
             Err(err) => {
                 warn!("Invalid time format: {}", err);
                 ctx.send_msg("Неверный формат времени\\.").await?;
-                return Ok(Dest::None);
+                return Ok(Jmp::None);
             }
         };
 
@@ -100,7 +100,7 @@ impl View for SetDateTime {
                 ctx.send_msg("Неверный формат времени\\. _чч\\:мм_").await?;
             }
         }
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 }
 

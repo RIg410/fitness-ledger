@@ -4,7 +4,7 @@ use super::{
     View,
 };
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Dest};
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
 use eyre::{Error, Result};
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
@@ -20,7 +20,7 @@ impl SubscriptionOption {
         SubscriptionOption { id }
     }
 
-    async fn edit(&mut self, tp: EditType) -> Result<Dest> {
+    async fn edit(&mut self, tp: EditType) -> Result<Jmp> {
         Ok(EditSubscription::new(self.id, tp).into())
     }
 }
@@ -33,7 +33,7 @@ impl View for SubscriptionOption {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::Delete => {
                 ctx.ensure(Rule::EditSubscription)?;
@@ -41,7 +41,7 @@ impl View for SubscriptionOption {
                     .subscriptions
                     .delete(&mut ctx.session, self.id)
                     .await?;
-                return Ok(Dest::Back);
+                return Ok(Jmp::Back);
             }
             Callback::Sell => {
                 ctx.ensure(Rule::SellSubscription)?;

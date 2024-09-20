@@ -7,7 +7,7 @@ publish.workspace = true
 version.workspace = true
 
 [dependencies]
-bot.workspace = true
+bot-main.workspace = true
 ledger.workspace = true
 mini-app.workspace = true
 storage.workspace = true

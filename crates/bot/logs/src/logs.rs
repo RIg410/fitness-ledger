@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use bot_core::{
+    callback_data::Calldata as _,
     calldata,
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
 use chrono::Local;
 use eyre::{Error, Result};
@@ -11,10 +12,7 @@ use model::{
     user::UserIdent,
 };
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    types::{InlineKeyboardMarkup, Message},
-    utils::markdown::escape,
-};
+use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
 const PAGE_SIZE: usize = 5;
 
@@ -404,12 +402,7 @@ impl View for LogsView {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
-        ctx.delete_msg(message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         let data = calldata!(data);
         match data {
             Calldata::Back => {
@@ -420,7 +413,7 @@ impl View for LogsView {
             }
         }
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Jmp::None)
     }
 }
 

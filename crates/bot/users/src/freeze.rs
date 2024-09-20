@@ -1,6 +1,6 @@
 use super::View;
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Dest};
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
 use eyre::{eyre, Context as _, Result};
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
@@ -61,7 +61,7 @@ impl View for FreezeProfile {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         match self.state {
             State::SetDays => {
                 let days = message.text().unwrap_or_default();
@@ -81,10 +81,10 @@ impl View for FreezeProfile {
                 ctx.delete_msg(message.id).await?;
             }
         }
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         let cb = calldata!(data);
 
         match cb {
@@ -98,20 +98,20 @@ impl View for FreezeProfile {
                 if user.freeze_days < self.days {
                     self.state = State::SetDays;
                     ctx.send_msg("у вас недостаточно дней заморозки").await?;
-                    return Ok(Dest::None);
+                    return Ok(Jmp::None);
                 }
 
                 if user.freeze.is_some() {
                     ctx.send_msg("абонемент уже заморожен").await?;
                     let id = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(id);
-                    return Ok(Dest::Back);
+                    return Ok(Jmp::Back);
                 }
                 if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
                     ctx.send_msg("Нет прав").await?;
                     let id = ctx.send_msg("\\.").await?;
                     ctx.update_origin_msg_id(id);
-                    return Ok(Dest::Back);
+                    return Ok(Jmp::Back);
                 }
 
                 ctx.ledger
@@ -125,7 +125,7 @@ impl View for FreezeProfile {
 
         let id = ctx.send_msg("\\.").await?;
         ctx.update_origin_msg_id(id);
-        return Ok(Dest::Back);
+        return Ok(Jmp::Back);
     }
 }
 

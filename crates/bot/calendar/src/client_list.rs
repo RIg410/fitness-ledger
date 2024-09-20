@@ -3,53 +3,36 @@ use super::{
     client::{ClientView, Reason},
     View,
 };
-use crate::{callback_data::Calldata, context::Context, state::Widget};
 use async_trait::async_trait;
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
 use chrono::{DateTime, Local};
 use eyre::{bail, Result};
 use ledger::calendar::SignOutError;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    types::{InlineKeyboardMarkup, Message},
-    utils::markdown::escape,
-};
+use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
 #[derive(Default)]
 pub struct ClientList {
     start_at: DateTime<Local>,
-    go_back: Option<Widget>,
 }
 
 impl ClientList {
     pub fn new(start_at: DateTime<Local>) -> Self {
-        Self {
-            start_at,
-            go_back: None,
-        }
+        Self { start_at }
     }
 
-    pub fn go_back(&mut self, _: &mut Context) -> Result<Option<Widget>> {
-        Ok(self.go_back.take())
+    pub async fn view_user_profile(&mut self, id: ObjectId) -> Result<Jmp> {
+        Ok(ClientView::new(id, self.start_at, Reason::RemoveClient).into())
     }
 
-    pub async fn view_user_profile(&mut self, id: ObjectId) -> Result<Option<Widget>> {
-        let view = ClientView::new(id, self.start_at, Reason::RemoveClient).boxed();
-        Ok(Some(view))
-    }
-
-    pub async fn add_client(&mut self, ctx: &mut Context) -> Result<Option<Widget>> {
+    pub async fn add_client(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::EditTrainingClientsList)?;
-        let view = AddClientView::new(self.start_at).boxed();
-        Ok(Some(view))
+        Ok(AddClientView::new(self.start_at).into())
     }
 
-    pub async fn delete_client(
-        &mut self,
-        ctx: &mut Context,
-        id: ObjectId,
-    ) -> Result<Option<Widget>> {
+    pub async fn delete_client(&mut self, ctx: &mut Context, id: ObjectId) -> Result<Jmp> {
         ctx.ensure(Rule::EditTrainingClientsList)?;
 
         let training = ctx
@@ -62,7 +45,7 @@ impl ClientList {
             ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
                 .await?;
             self.show(ctx).await?;
-            return Ok(None);
+            return Ok(Jmp::None);
         }
         let result = ctx
             .ledger
@@ -91,7 +74,7 @@ impl ClientList {
         }
 
         self.show(ctx).await?;
-        Ok(None)
+        Ok(Jmp::None)
     }
 }
 
@@ -133,60 +116,24 @@ impl View for ClientList {
             let mut row = Vec::with_capacity(2);
             row.push(Callback::SelectClient(user.id.bytes()).button(format!("👤 {}", user_name)));
             if ctx.has_right(Rule::EditTrainingClientsList) && !training.is_processed {
-                row.push(Callback::DeleteClient(user.id.bytes()).button("❌".to_string()))
+                row.push(Callback::DeleteClient(user.id.bytes()).button("❌"))
             }
             keymap = keymap.append_row(row);
         }
 
         if ctx.has_right(Rule::EditTrainingClientsList) && !training.is_processed {
-            keymap = keymap.append_row(vec![Callback::AddClient.button("Добавить 👤".to_string())]);
+            keymap = keymap.append_row(vec![Callback::AddClient.button("Добавить 👤")]);
         }
-
-        if self.go_back.is_some() {
-            keymap = keymap.append_row(vec![Callback::Back.button("⬅️ Назад".to_string())]);
-        }
-
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
 
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        message: &Message,
-    ) -> Result<Option<Widget>> {
-        ctx.delete_msg(message.id).await?;
-        Ok(None)
-    }
-
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Option<Widget>> {
-        let cb = if let Some(data) = Callback::from_data(data) {
-            data
-        } else {
-            return Ok(None);
-        };
-        match cb {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
+        match calldata!(data) {
             Callback::SelectClient(id) => self.view_user_profile(ObjectId::from_bytes(id)).await,
             Callback::AddClient => self.add_client(ctx).await,
             Callback::DeleteClient(id) => self.delete_client(ctx, ObjectId::from_bytes(id)).await,
-            Callback::Back => self.go_back(ctx),
         }
-    }
-
-    fn take(&mut self) -> Widget {
-        ClientList {
-            start_at: self.start_at,
-            go_back: self.go_back.take(),
-        }
-        .boxed()
-    }
-
-    fn set_back(&mut self, back: Widget) {
-        self.go_back = Some(back);
-    }
-
-    fn back(&mut self) -> Option<Widget> {
-        self.go_back.take()
     }
 }
 
@@ -195,5 +142,4 @@ enum Callback {
     SelectClient([u8; 12]),
     AddClient,
     DeleteClient([u8; 12]),
-    Back,
 }

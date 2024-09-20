@@ -3,7 +3,7 @@ use bot_core::{
     callback_data::Calldata,
     calldata,
     context::Context,
-    widget::{Dest, View},
+    widget::{Jmp, View},
 };
 use eyre::Result;
 use model::rights::Rule;
@@ -30,36 +30,36 @@ impl EditProgram {
         }
     }
 
-    pub async fn edit_capacity(&self, ctx: &mut Context, value: u32) -> Result<Dest> {
+    pub async fn edit_capacity(&self, ctx: &mut Context, value: u32) -> Result<Jmp> {
         ctx.ensure(Rule::EditTraining)?;
         ctx.ledger
             .edit_program_capacity(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    pub async fn edit_duration(&self, ctx: &mut Context, value: u32) -> Result<Dest> {
+    pub async fn edit_duration(&self, ctx: &mut Context, value: u32) -> Result<Jmp> {
         ctx.ensure(Rule::EditTraining)?;
         ctx.ledger
             .edit_program_duration(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    pub async fn edit_name(&self, ctx: &mut Context, value: String) -> Result<Dest> {
+    pub async fn edit_name(&self, ctx: &mut Context, value: String) -> Result<Jmp> {
         ctx.ensure(Rule::EditTraining)?;
         ctx.ledger
             .edit_program_name(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    pub async fn edit_description(&self, ctx: &mut Context, value: String) -> Result<Dest> {
+    pub async fn edit_description(&self, ctx: &mut Context, value: String) -> Result<Jmp> {
         ctx.ensure(Rule::EditTraining)?;
         ctx.ledger
             .edit_program_description(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 }
 
@@ -88,7 +88,7 @@ impl View for EditProgram {
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         match self.state {
             State::Init => {
                 let text = message.text().unwrap_or_default().to_string();
@@ -96,14 +96,14 @@ impl View for EditProgram {
                     EditType::Capacity => {
                         if let Err(err) = text.parse::<NonZero<u32>>() {
                             ctx.send_msg(&format!("Неверный формат: {}", err)).await?;
-                            return Ok(Dest::None);
+                            return Ok(Jmp::None);
                         }
                         format!("вместимость на {}", text)
                     }
                     EditType::Duration => {
                         if let Err(err) = text.parse::<NonZero<u32>>() {
                             ctx.send_msg(&format!("Неверный формат: {}", err)).await?;
-                            return Ok(Dest::None);
+                            return Ok(Jmp::None);
                         }
                         format!("длительность на {}", text)
                     }
@@ -128,16 +128,16 @@ impl View for EditProgram {
             }
         }
 
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::Yes => {
                 let value = if let State::Confirm(value) = self.state.clone() {
                     value
                 } else {
-                    return Ok(Dest::None);
+                    return Ok(Jmp::None);
                 };
                 match self.edit_type {
                     EditType::Capacity => self.edit_capacity(ctx, value.parse()?).await?,
@@ -147,11 +147,11 @@ impl View for EditProgram {
                 };
                 ctx.send_msg("Изменения сохранены ✅").await?;
                 ctx.reset_origin().await?;
-                Ok(Dest::Back)
+                Ok(Jmp::Back)
             }
             Callback::No => {
                 ctx.reset_origin().await?;
-                Ok(Dest::Back)
+                Ok(Jmp::Back)
             }
         }
     }

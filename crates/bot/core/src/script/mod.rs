@@ -1,7 +1,7 @@
 use crate::{
     callback_data::Calldata as _,
     context::Context,
-    widget::{self, Dest, View, Widget},
+    widget::{self, Jmp, View, Widget},
 };
 use async_trait::async_trait;
 use eyre::Result;
@@ -101,12 +101,12 @@ where
         Ok(())
     }
 
-    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Dest> {
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         let (action, text) =
             if let (Some(action), Some(text)) = (self.action.as_mut(), message.text()) {
                 (action, text)
             } else {
-                return Ok(Dest::None);
+                return Ok(Jmp::None);
             };
 
         match action {
@@ -118,7 +118,7 @@ where
                     Dispatch::None => {}
                     Dispatch::Stage(stage) => self.action = Some(stage),
                     Dispatch::Widget(view) => {
-                        return Ok(Dest::Next(view));
+                        return Ok(Jmp::Next(view));
                     }
                 }
                 self.show(ctx).await?;
@@ -132,15 +132,15 @@ where
             }
         }
         ctx.delete_msg(message.id).await?;
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Dest> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         let (action, cb) =
             if let (Some(action), Some(cb)) = (self.action.as_mut(), Callback::from_data(data)) {
                 (action, cb)
             } else {
-                return Ok(widget::Dest::None);
+                return Ok(widget::Jmp::None);
             };
 
         match cb {
@@ -149,30 +149,30 @@ where
                     self.action = Some(back);
                 }
                 None => {
-                    return Ok(Dest::Back);
+                    return Ok(Jmp::Back);
                 }
             },
             Callback::Select(idx) => match action {
                 Stage::Text(_) => {
-                    return Ok(Dest::None);
+                    return Ok(Jmp::None);
                 }
                 Stage::YesNo(hdl) => match idx {
                     ListId::Yes => match hdl.yes(ctx, self.state.as_mut().unwrap()).await? {
                         Dispatch::None => {
-                            return Ok(Dest::None);
+                            return Ok(Jmp::None);
                         }
                         Dispatch::Stage(stage) => {
                             self.action = Some(stage);
                         }
                         Dispatch::Widget(widget) => {
-                            return Ok(Dest::Next(widget));
+                            return Ok(Jmp::Next(widget));
                         }
                     },
                     ListId::No => {
                         ctx.send_notification("❌ Отменено").await?;
-                        return Ok(Dest::Back);
+                        return Ok(Jmp::Back);
                     }
-                    _ => return Ok(Dest::None),
+                    _ => return Ok(Jmp::None),
                 },
                 Stage::List(list) => {
                     let result = list
@@ -181,13 +181,13 @@ where
                         .await?;
                     match result {
                         Dispatch::None => {
-                            return Ok(Dest::None);
+                            return Ok(Jmp::None);
                         }
                         Dispatch::Stage(stage) => {
                             self.action = Some(stage);
                         }
                         Dispatch::Widget(widget) => {
-                            return Ok(Dest::Next(widget));
+                            return Ok(Jmp::Next(widget));
                         }
                     }
                 }
@@ -197,12 +197,12 @@ where
                     list.offset += offset as usize * list.limit;
                     self.show(ctx).await?;
                 }
-                _ => return Ok(Dest::None),
+                _ => return Ok(Jmp::None),
             },
         };
 
         self.show(ctx).await?;
-        Ok(Dest::None)
+        Ok(Jmp::None)
     }
 }
 
