@@ -36,7 +36,7 @@ impl View for InOut {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let mut text = format!("{}{}", self.io.render(), self.state.render());
+        let mut text = format!("{}\n{}", self.io.render(), self.state.render());
         let mut keymap = InlineKeyboardMarkup::default();
 
         match self.state {
@@ -58,8 +58,7 @@ impl View for InOut {
             }
         }
 
-        let id = ctx.send_msg_with_markup(&text, keymap).await?;
-        ctx.update_origin_msg_id(id);
+        ctx.send_msg_with_markup(&text, keymap).await?;
         Ok(())
     }
 

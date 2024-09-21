@@ -1,3 +1,5 @@
+use crate::SubscriptionView;
+
 use super::{sell::Sell, View};
 use async_trait::async_trait;
 use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
@@ -56,7 +58,8 @@ impl View for ConfirmSell {
                     Err(err.into())
                 } else {
                     ctx.send_msg("🤑 Продано").await?;
-                    Ok(Jmp::Home)
+                    ctx.reset_origin().await?;
+                    Ok(Jmp::Goto(SubscriptionView::default().into()))
                 }
             }
             Callback::Cancel => Ok(Jmp::Back),

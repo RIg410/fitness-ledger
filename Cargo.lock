@@ -180,6 +180,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "bot-core",
+ "bot-trainigs",
  "bot-viewer",
  "bot-views",
  "chrono",

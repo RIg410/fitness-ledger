@@ -60,7 +60,6 @@ impl View for SignUpView {
                 ReplyMarkup::KeyboardRemove(KeyboardRemove::new()),
             )
             .await?;
-
             ctx.reload_user().await?;
             let view = MainMenuView;
             view.send_self(ctx).await?;

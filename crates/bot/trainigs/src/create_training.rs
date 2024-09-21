@@ -97,8 +97,6 @@ impl View for CreateTraining {
                         )
                         .await?;
                     ctx.send_msg("✅ Тренировка создана").await?;
-                    let origin = ctx.send_msg("\\.").await?;
-                    ctx.update_origin_msg_id(origin);
                     return Ok(Jmp::Back);
                 } else {
                     ctx.send_msg("Количество мест должно быть числом").await?;

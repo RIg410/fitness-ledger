@@ -39,10 +39,7 @@ impl MainMenuView {
             keymap = keymap.append_row(vec![MainMenuItem::LogView.into()]);
         }
 
-        let id = ctx
-            .send_msg_with_markup("🏠SoulFamily       🤸🏼", keymap)
-            .await?;
-        ctx.update_origin_msg_id(id);
+        ctx.edit_origin("🏠SoulFamily       🤸🏼", keymap).await?;
         Ok(())
     }
 }
@@ -52,7 +49,7 @@ impl View for MainMenuView {
     fn name(&self) -> &'static str {
         "MainMenu"
     }
-    
+
     fn main_view(&self) -> bool {
         true
     }
@@ -81,6 +78,7 @@ impl View for MainMenuView {
             return Ok(Jmp::None);
         };
 
+        ctx.delete_msg(msg.id).await?;
         self.send_self(ctx).await?;
         Ok(match command {
             MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id).into(),

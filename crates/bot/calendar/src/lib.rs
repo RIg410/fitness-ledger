@@ -3,25 +3,19 @@ use bot_core::callback_data::{CallbackDateTime, Calldata};
 use bot_core::calldata;
 use bot_core::context::Context;
 use bot_core::widget::{Jmp, View};
+use bot_trainigs::client_training::ClientTrainings;
+use bot_trainigs::schedule_training::ScheduleTraining;
+use bot_trainigs::training::TrainingView;
 use bot_viewer::day::{fmt_dm, fmt_month, fmt_weekday};
 use bot_viewer::training::fmt_training_status;
 use bot_views::Filter;
-use chrono::{DateTime, Datelike, Duration, Local, TimeZone, Timelike as _, Weekday};
+use chrono::{Datelike, Duration, Local, Weekday};
 use eyre::Error;
 use model::ids::{DayId, WeekId};
 use model::rights::Rule;
-use model::training::TrainingStatus;
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use std::vec;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
-use teloxide::{prelude::Requester as _, types::Message};
-use training::TrainingView;
-
-mod add_client;
-mod client;
-mod client_list;
-pub mod training;
 
 pub struct CalendarView {
     week_id: WeekId,
@@ -85,12 +79,9 @@ impl View for CalendarView {
             }
             Callback::AddTraining => {
                 ctx.ensure(Rule::EditSchedule)?;
-                // return Ok(Some(
-                //     ScheduleTraining::new(self.selected_day.local()).boxed(),
-                // ));
-                todo!()
+                return Ok(ScheduleTraining::new(self.selected_day.local()).into());
             }
-            Callback::MyTrainings => return todo!(), //Ok(Some(ClientTrainings::new(ctx.me.id).boxed())),
+            Callback::MyTrainings => return Ok(ClientTrainings::new(ctx.me.id).into()),
         }
     }
 }

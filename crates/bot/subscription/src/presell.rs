@@ -1,3 +1,5 @@
+use crate::SubscriptionView;
+
 use super::sell::Sell;
 use async_trait::async_trait;
 use bot_core::{
@@ -68,7 +70,7 @@ impl View for PreSellView {
 
                     self.state = State::Confirm(phone.to_owned());
                 } else {
-                    ctx.send_msg("Номер должен начинаться с +7").await?;
+                    ctx.send_msg("Номер должен начинаться с \\+7").await?;
                 }
             }
             State::Confirm(_) => {
@@ -111,7 +113,8 @@ impl View for PreSellView {
                     Err(err.into())
                 } else {
                     ctx.send_msg("🤑 Продано").await?;
-                    Ok(Jmp::Home)
+                    ctx.reset_origin().await?;
+                    Ok(Jmp::Goto(SubscriptionView::default().into()))
                 }
             }
             Callback::Cancel => Ok(Jmp::Back),

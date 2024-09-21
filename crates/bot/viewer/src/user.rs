@@ -54,7 +54,7 @@ async fn render_trainings(ctx: &mut Context, msg: &mut String, user: &User) -> R
         .get_users_trainings(&mut ctx.session, user.id, 100, 0)
         .await?;
     if !trainings.is_empty() {
-        msg.push_str("Записи:\n");
+        msg.push_str("\nЗаписи:\n");
         for training in trainings {
             msg.push_str(&escape(&format!(
                 "{} {}\n",

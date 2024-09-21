@@ -60,22 +60,24 @@ impl View for EditSubscription {
     fn name(&self) -> &'static str {
         "EditSubscription"
     }
-    
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         ctx.ensure(Rule::EditSubscription)?;
-        let keymap = InlineKeyboardMarkup::default();
-        match self.edit_type {
-            EditType::Name => {
-                ctx.send_msg_with_markup("Введите новое название", keymap)
-                    .await?;
-            }
-            EditType::Price => {
-                ctx.send_msg_with_markup("Введите новую цену", keymap)
-                    .await?;
-            }
-            EditType::Items => {
-                ctx.send_msg_with_markup("Введите новое количество занятий", keymap)
-                    .await?;
+        if State::Init == self.state {
+            let keymap = InlineKeyboardMarkup::default();
+            match self.edit_type {
+                EditType::Name => {
+                    ctx.send_msg_with_markup("Введите новое название", keymap)
+                        .await?;
+                }
+                EditType::Price => {
+                    ctx.send_msg_with_markup("Введите новую цену", keymap)
+                        .await?;
+                }
+                EditType::Items => {
+                    ctx.send_msg_with_markup("Введите новое количество занятий", keymap)
+                        .await?;
+                }
             }
         }
         Ok(())
@@ -147,7 +149,7 @@ impl View for EditSubscription {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 enum State {
     Init,
     Confirm(String),

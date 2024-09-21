@@ -1,10 +1,5 @@
-use super::{
-    client::{ClientView, Reason},
-    View,
-};
-
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::{Jmp, View}};
 use bot_viewer::user::fmt_user_type;
 use chrono::{DateTime, Local};
 use eyre::{Error, Result};
@@ -15,6 +10,8 @@ use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
+
+use crate::client::{ClientView, Reason};
 
 pub const LIMIT: u64 = 7;
 

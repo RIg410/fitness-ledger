@@ -30,7 +30,7 @@ impl View for FeeSellView {
     fn name(&self) -> &'static str {
         "FeeSellView"
     }
-    
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let mut text = render_state(&self.state);
         text.push_str(&escape("-------------------\n"));
@@ -51,8 +51,7 @@ impl View for FeeSellView {
             }
         }
 
-        let id = ctx.send_msg_with_markup(&text, keymap).await?;
-        ctx.update_origin_msg_id(id);
+        ctx.send_msg_with_markup(&text, keymap).await?;
         Ok(())
     }
 

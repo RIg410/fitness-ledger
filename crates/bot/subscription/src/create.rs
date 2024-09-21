@@ -111,8 +111,7 @@ impl View for CreateSubscription {
             }
         }
 
-        let id = ctx.send_msg_with_markup(&text, keymap).await?;
-        ctx.update_origin_msg_id(id);
+        ctx.send_msg_with_markup(&text, keymap).await?;
         Ok(())
     }
 
@@ -204,6 +203,7 @@ impl View for CreateSubscription {
                 match result {
                     Ok(_) => {
                         ctx.send_msg("✅Абонемент создан").await?;
+                        ctx.reset_origin().await?;
                         Ok(Jmp::Back)
                     }
                     Err(CreateSubscriptionError::NameAlreadyExists) => {

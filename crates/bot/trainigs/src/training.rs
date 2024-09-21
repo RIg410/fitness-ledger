@@ -38,8 +38,6 @@ impl TrainingView {
             .await?;
         if let Some(couch) = user.couch {
             ctx.send_msg(&escape(&couch.description)).await?;
-            let id = ctx.send_msg("\\.").await?;
-            ctx.update_origin_msg_id(id);
         }
         Ok(Jmp::None)
     }
@@ -98,21 +96,15 @@ impl TrainingView {
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         if !training.status(Local::now()).can_sign_in() {
             ctx.send_msg("Запись на тренировку закрыта💔").await?;
-            let id = ctx.send_msg("\\.").await?;
-            ctx.update_origin_msg_id(id);
             return Ok(Jmp::None);
         }
 
         if ctx.me.balance < 1 {
             ctx.send_msg("Недостаточно средств на балансе🥺").await?;
-            let id = ctx.send_msg("\\.").await?;
-            ctx.update_origin_msg_id(id);
             return Ok(Jmp::None);
         }
         if ctx.me.freeze.is_some() {
             ctx.send_msg("Ваш абонемент заморожен🥶").await?;
-            let id = ctx.send_msg("\\.").await?;
-            ctx.update_origin_msg_id(id);
             return Ok(Jmp::None);
         }
 
@@ -131,8 +123,6 @@ impl TrainingView {
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         if !training.status(Local::now()).can_sign_out() {
             ctx.send_msg("Запись на тренировку закрыта").await?;
-            let id = ctx.send_msg("\\.").await?;
-            ctx.update_origin_msg_id(id);
             return Ok(Jmp::None);
         }
         ctx.ledger
@@ -201,12 +191,12 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
     let is_client = ctx.me.couch.is_none();
     let cap = if is_client {
         format!(
-            "*свободных мест*: _{}_",
+            "*Свободных мест*: _{}_",
             training.capacity - training.clients.len() as u32
         )
     } else {
         format!(
-            "*места* :_{}/{}_",
+            "*Места* :_{}/{}_",
             training.clients.len(),
             training.capacity
         )
@@ -236,7 +226,7 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
 📅 *Дата*: _{}_
 🧘 *Инструктор*: {}
 💁{}
-⏱*продолжительность*: _{}_мин
+⏱*Продолжительность*: _{}_мин
 _{}_                                                                 \n
 [Описание]({})
 ",

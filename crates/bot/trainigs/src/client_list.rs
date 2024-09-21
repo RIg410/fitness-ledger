@@ -1,10 +1,5 @@
-use super::{
-    add_client::AddClientView,
-    client::{ClientView, Reason},
-    View,
-};
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
+use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::{Jmp, View}};
 use chrono::{DateTime, Local};
 use eyre::{bail, Result};
 use ledger::calendar::SignOutError;
@@ -12,6 +7,8 @@ use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
+
+use crate::{add_client::AddClientView, client::{ClientView, Reason}};
 
 #[derive(Default)]
 pub struct ClientList {

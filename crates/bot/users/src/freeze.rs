@@ -105,14 +105,10 @@ impl View for FreezeProfile {
 
                 if user.freeze.is_some() {
                     ctx.send_msg("абонемент уже заморожен").await?;
-                    let id = ctx.send_msg("\\.").await?;
-                    ctx.update_origin_msg_id(id);
                     return Ok(Jmp::Back);
                 }
                 if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
                     ctx.send_msg("Нет прав").await?;
-                    let id = ctx.send_msg("\\.").await?;
-                    ctx.update_origin_msg_id(id);
                     return Ok(Jmp::Back);
                 }
 
@@ -124,9 +120,6 @@ impl View for FreezeProfile {
             }
             Callback::No => {}
         }
-
-        let id = ctx.send_msg("\\.").await?;
-        ctx.update_origin_msg_id(id);
         return Ok(Jmp::Back);
     }
 }

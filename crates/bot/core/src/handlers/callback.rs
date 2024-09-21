@@ -77,7 +77,7 @@ async fn inner_callback_handler(
         ctx.send_msg("Ваш аккаунт заблокирован").await?;
         return Ok(());
     }
-    ctx.system_go_back = !widget.is_back_main_view();
+    ctx.system_go_back = !widget.is_back_main_view() && !widget.main_view();
 
     let widget = if data.starts_with("/") {
         match data.as_str() {

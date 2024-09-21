@@ -85,8 +85,6 @@ impl View for Finish {
                 {
                     Ok(_) => {
                         ctx.send_msg("Тренировка успешно добавлена ✅").await?;
-                        let id = ctx.send_msg("\\.").await?;
-                        ctx.update_origin_msg_id(id);
                     }
                     Err(err) => {
                         ctx.send_msg(&error_msg(&err)).await?;

@@ -15,13 +15,14 @@ use teloxide::{
 use crate::sys_button;
 
 pub struct Context {
-    pub bot: Bot,
+    pub(crate) bot: Bot,
     pub me: User,
     pub ledger: Ledger,
     origin: Origin,
     pub session: Session,
     pub(crate) system_go_back: bool,
     pub is_real_user: bool,
+    pub is_active_origin: bool,
 }
 
 impl Context {
@@ -41,19 +42,20 @@ impl Context {
             session,
             system_go_back: false,
             is_real_user,
+            is_active_origin: true,
         }
     }
 
     pub async fn send_notification(&mut self, err: &str) -> Result<(), Error> {
         self.send_msg(err).await?;
-        let id = self.send_msg("\\.").await?;
-        self.update_origin_msg_id(id);
+        self.reset_origin().await?;
         Ok(())
     }
 
     pub async fn reset_origin(&mut self) -> Result<(), Error> {
         let id = self.send_msg("\\.").await?;
-        self.update_origin_msg_id(id);
+        self.origin.message_id = id;
+        self.is_active_origin = true;
         Ok(())
     }
 
@@ -84,15 +86,15 @@ impl Context {
         self.me.rights.is_admin()
     }
 
-    pub fn update_origin_msg_id(&mut self, id: MessageId) {
-        self.origin.message_id = id;
-    }
-
     pub async fn edit_origin(
-        &self,
+        &mut self,
         text: &str,
         markup: InlineKeyboardMarkup,
     ) -> Result<(), eyre::Error> {
+        if !self.is_active_origin {
+            self.reset_origin().await?;
+        }
+
         let update_result = self
             .bot
             .edit_message_text(self.chat_id(), self.origin.message_id, text)
@@ -109,7 +111,10 @@ impl Context {
         }
     }
 
-    pub async fn delete_msg(&self, id: MessageId) -> Result<(), eyre::Error> {
+    pub async fn delete_msg(&mut self, id: MessageId) -> Result<(), eyre::Error> {
+        if self.origin.message_id == id {
+            self.is_active_origin = false;
+        }
         self.bot.delete_message(self.chat_id(), id).await?;
         Ok(())
     }
@@ -122,7 +127,8 @@ impl Context {
         self.me.rights.ensure(rule)
     }
 
-    pub async fn send_msg(&self, text: &str) -> Result<MessageId, eyre::Error> {
+    pub async fn send_msg(&mut self, text: &str) -> Result<MessageId, eyre::Error> {
+        self.is_active_origin = false;
         Ok(self
             .bot
             .send_message(self.chat_id(), text)
@@ -133,10 +139,11 @@ impl Context {
     }
 
     pub async fn send_msg_with_markup(
-        &self,
+        &mut self,
         text: &str,
         markup: InlineKeyboardMarkup,
     ) -> Result<MessageId, eyre::Error> {
+        self.is_active_origin = false;
         Ok(self
             .bot
             .send_message(self.chat_id(), text)
@@ -160,10 +167,11 @@ impl Context {
     }
 
     pub async fn send_replay_markup(
-        &self,
+        &mut self,
         text: &str,
         markup: ReplyMarkup,
     ) -> Result<MessageId, eyre::Error> {
+        self.is_active_origin = false;
         Ok(self
             .bot
             .send_message(self.chat_id(), text)

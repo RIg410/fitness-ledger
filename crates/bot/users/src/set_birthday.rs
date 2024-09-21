@@ -6,7 +6,6 @@ use bot_core::{
 use chrono::{Local, TimeZone as _};
 use eyre::{Error, Result};
 use model::rights::Rule;
-use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
 pub struct SetBirthday {
@@ -24,7 +23,6 @@ impl View for SetBirthday {
     fn name(&self) -> &'static str {
         "SetBirthday"
     }
-
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let msg = format!("Введите дату рождения в формате ДД\\.ММ\\.ГГГГ");
