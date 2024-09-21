@@ -4,7 +4,7 @@ pub mod pre_sell;
 pub mod rewards;
 pub mod session;
 pub mod subscription;
-pub mod training;
+pub mod program;
 pub mod treasury;
 pub mod user;
 
@@ -20,7 +20,7 @@ pub struct Storage {
     pub db: Db,
     pub users: UserStore,
     pub calendar: calendar::CalendarStore,
-    pub training: training::ProgramStore,
+    pub training: program::ProgramStore,
     pub treasury: treasury::TreasuryStore,
     pub subscriptions: subscription::SubscriptionsStore,
     pub logs: LogStore,
@@ -33,7 +33,7 @@ impl Storage {
         let db = Db::new(uri, DB_NAME).await?;
         let users = UserStore::new(&db).await?;
         let schedule = calendar::CalendarStore::new(&db).await?;
-        let training = training::ProgramStore::new(&db);
+        let training = program::ProgramStore::new(&db);
         let treasury = treasury::TreasuryStore::new(&db).await?;
         let subscriptions = subscription::SubscriptionsStore::new(&db);
         let presell = pre_sell::PreSellStore::new(&db).await?;

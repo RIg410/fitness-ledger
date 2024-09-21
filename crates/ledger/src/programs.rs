@@ -2,7 +2,7 @@ use crate::logs::Logs;
 use eyre::Error;
 use model::{program::Program, session::Session};
 use mongodb::bson::oid::ObjectId;
-use storage::training::ProgramStore;
+use storage::program::ProgramStore;
 use tx_macro::tx;
 
 #[derive(Clone)]

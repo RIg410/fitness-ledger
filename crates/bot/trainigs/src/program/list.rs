@@ -5,13 +5,34 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use chrono::Local;
 use eyre::{Error, Result};
 use model::rights::Rule;
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
-#[derive(Default)]
-pub struct ProgramList;
+use crate::schedule::ScheduleTrainingPreset;
+
+use super::{create::CreateProgram, view::ProgramView};
+
+pub struct ProgramList {
+    preset: Option<ScheduleTrainingPreset>,
+}
+
+impl Default for ProgramList {
+    fn default() -> Self {
+        Self { preset: None }
+    }
+}
+
+impl ProgramList {
+    pub fn new(preset: ScheduleTrainingPreset) -> Self {
+        Self {
+            preset: Some(preset),
+        }
+    }
+}
 
 #[async_trait]
 impl View for ProgramList {
@@ -28,23 +49,14 @@ impl View for ProgramList {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::CreateTraining => {
-                // ctx.ensure(Rule::CreateTraining)?;
-                // return Ok(Some(CreateTraining::new().boxed()));
-                todo!()
+                ctx.ensure(Rule::CreateTraining)?;
+                Ok(CreateProgram::new().into())
             }
             Callback::SelectTraining(id) => {
-                // let id = ObjectId::from_bytes(id);
-                // let preset = ScheduleTrainingPreset {
-                //     day: None,
-                //     date_time: None,
-                //     instructor: None,
-                //     is_one_time: None,
-                // };
-                // return Ok(Some(ViewProgram::new(id, preset).boxed()));
-                todo!()
+                let id = ObjectId::from_bytes(id);
+                Ok(ProgramView::new(id, self.preset.clone().unwrap_or_default()).into())
             }
         }
-        Ok(Jmp::None)
     }
 }
 

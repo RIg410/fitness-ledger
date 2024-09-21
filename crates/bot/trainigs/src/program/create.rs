@@ -7,27 +7,27 @@ use eyre::Result;
 use model::{program::Program, rights::Rule};
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
-pub struct CreateTraining {
+pub struct CreateProgram {
     state: Option<State>,
 }
 
-impl CreateTraining {
+impl CreateProgram {
     pub fn new() -> Self {
         Self { state: None }
     }
 }
 
 #[async_trait]
-impl View for CreateTraining {
+impl View for CreateProgram {
     fn name(&self) -> &'static str {
-        "CreateTraining"
+        "CreateProgram"
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         ctx.ensure(Rule::CreateTraining)?;
 
         ctx.edit_origin(
-            "📝 Введите название тренировки:\n_оно должно быть уникально_",
+            "📝 Введите название программы:\n_оно должно быть уникально_",
             InlineKeyboardMarkup::default(),
         )
         .await?;
@@ -56,25 +56,25 @@ impl View for CreateTraining {
                     .await?
                     .is_some()
                 {
-                    ctx.send_msg("Тренировка с таким названием уже существует")
+                    ctx.send_msg("Программа с таким названием уже существует")
                         .await?;
                     State::SetName(training)
                 } else {
                     training.name = msg.to_string();
-                    ctx.send_msg("📝 Введите описание тренировки").await?;
+                    ctx.send_msg("📝 Введите описание программы").await?;
                     State::SetDescription(training)
                 }
             }
             State::SetDescription(mut training) => {
                 training.description = msg.to_string();
-                ctx.send_msg("📝 Введите продолжительность тренировки в минутах")
+                ctx.send_msg("📝 Введите продолжительность программы в минутах")
                     .await?;
                 State::SetDuration(training)
             }
             State::SetDuration(mut training) => {
                 if let Ok(duration) = msg.parse::<u32>() {
                     training.duration_min = duration;
-                    ctx.send_msg("📝 Введите количество мест на тренировке")
+                    ctx.send_msg("📝 Введите количество мест на программе")
                         .await?;
                     State::SetCapacity(training)
                 } else {
@@ -96,7 +96,7 @@ impl View for CreateTraining {
                             program.capacity,
                         )
                         .await?;
-                    ctx.send_msg("✅ Тренировка создана").await?;
+                    ctx.send_msg("✅ Программа создана").await?;
                     return Ok(Jmp::Back);
                 } else {
                     ctx.send_msg("Количество мест должно быть числом").await?;

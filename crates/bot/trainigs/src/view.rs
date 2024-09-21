@@ -5,6 +5,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use bot_viewer::day::fmt_dt;
 use chrono::{DateTime, Local};
 use eyre::{bail, Result};
 use model::{
@@ -14,7 +15,7 @@ use model::{
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
-use crate::client_list::ClientList;
+use crate::client::list::ClientsList;
 
 pub struct TrainingView {
     id: DateTime<Local>,
@@ -135,10 +136,10 @@ impl TrainingView {
         if !ctx.is_couch() {
             bail!("Only couch can see client list");
         }
-        Ok(ClientList::new(self.id).into())
+        Ok(ClientsList::new(self.id).into())
     }
 
-    async fn change_couch(&mut self, ctx: &mut Context) -> Result<Jmp> {
+    async fn change_couch(&mut self, ctx: &mut Context, all: bool) -> Result<Jmp> {
         ctx.ensure(Rule::EditSchedule)?;
         let training = ctx
             .ledger
@@ -182,7 +183,8 @@ impl View for TrainingView {
             Callback::SignUp => self.sign_up(ctx).await,
             Callback::SignOut => self.sign_out(ctx).await,
             Callback::ClientList => self.client_list(ctx).await,
-            Callback::ChangeCouch => self.change_couch(ctx).await,
+            Callback::ChangeCouchOne => self.change_couch(ctx, false).await,
+            Callback::ChangeCouchAll => self.change_couch(ctx, true).await,
         }
     }
 }
@@ -231,7 +233,7 @@ _{}_                                                                 \n
 [Описание]({})
 ",
         escape(&training.name),
-        slot.start_at().format("%d\\.%m\\.%Y %H:%M"),
+        fmt_dt(&slot.start_at()),
         couch,
         cap,
         training.duration_min,
@@ -261,7 +263,10 @@ _{}_                                                                 \n
             keys.push(Callback::Delete(true).button("🗑️ Удалить все последующие"));
         }
         keymap = keymap.append_row(keys);
-        keymap = keymap.append_row(vec![Callback::ChangeCouch.button("🔄 Заменить инструктора")]);
+        keymap = keymap.append_row(vec![
+            Callback::ChangeCouchOne.button("🔄 Заменить инструктора"),
+            Callback::ChangeCouchAll.button("🔄 Заменить инструктора на все"),
+        ]);
     }
 
     if is_client {
@@ -281,7 +286,8 @@ _{}_                                                                 \n
 #[derive(Serialize, Deserialize)]
 enum Callback {
     CouchInfo,
-    ChangeCouch,
+    ChangeCouchOne,
+    ChangeCouchAll,
     Delete(bool),
     Cancel,
     ClientList,

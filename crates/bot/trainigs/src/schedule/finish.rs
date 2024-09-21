@@ -1,3 +1,5 @@
+use crate::program::list::ProgramList;
+
 use super::{render_msg, set_date_time::render_time_slot_collision, ScheduleTrainingPreset};
 use async_trait::async_trait;
 use bot_core::{
@@ -33,7 +35,7 @@ impl View for Finish {
     fn name(&self) -> &'static str {
         "SchFinish"
     }
-    
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
@@ -41,7 +43,7 @@ impl View for Finish {
             .get_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;
+        let msg = render_msg(ctx, &training, &self.preset.as_ref().unwrap()).await?;
         ctx.send_msg(&msg).await?;
         let msg = format!("Все верно?");
         let keymap = vec![vec![
@@ -95,7 +97,7 @@ impl View for Finish {
                 //no-op
             }
         }
-        Ok(Jmp::None)
+        Ok(Jmp::Goto(ProgramList::default().into()))
     }
 }
 

@@ -51,7 +51,12 @@ async fn render_trainings(ctx: &mut Context, msg: &mut String, user: &User) -> R
     let trainings = ctx
         .ledger
         .calendar
-        .get_users_trainings(&mut ctx.session, user.id, 100, 0)
+        .find_trainings(
+            &mut ctx.session,
+            model::training::Filter::Client(user.id),
+            20,
+            0,
+        )
         .await?;
     if !trainings.is_empty() {
         msg.push_str("\nЗаписи:\n");

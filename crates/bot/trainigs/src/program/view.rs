@@ -1,4 +1,6 @@
-use super::{edit::EditProgram, schedule_process::ScheduleTrainingPreset};
+use crate::{list::TrainingList, schedule::ScheduleTrainingPreset};
+
+use super::edit::EditProgram;
 use async_trait::async_trait;
 use bot_core::{
     callback_data::Calldata as _,
@@ -12,26 +14,18 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
-pub struct ViewProgram {
+pub struct ProgramView {
     id: ObjectId,
     preset: ScheduleTrainingPreset,
 }
 
-impl ViewProgram {
+impl ProgramView {
     pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
         Self { id, preset }
     }
 
     async fn find_training(&mut self) -> Result<Jmp> {
-        // let view = CalendarView::new(
-        //     WeekId::default(),
-        //     None,
-        //     Some(Filter {
-        //         proto_id: Some(self.id),
-        //     }),
-        // );
-        // return Ok(Some(Box::new(view)));
-        todo!()
+        Ok(TrainingList::programs(self.id).into())
     }
 
     async fn schedule(&mut self, ctx: &mut Context) -> Result<Jmp> {
@@ -63,7 +57,7 @@ impl ViewProgram {
 }
 
 #[async_trait]
-impl View for ViewProgram {
+impl View for ProgramView {
     fn name(&self) -> &'static str {
         "ViewProgram"
     }

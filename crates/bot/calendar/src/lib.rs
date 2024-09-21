@@ -3,9 +3,10 @@ use bot_core::callback_data::{CallbackDateTime, Calldata};
 use bot_core::calldata;
 use bot_core::context::Context;
 use bot_core::widget::{Jmp, View};
-use bot_trainigs::client_training::ClientTrainings;
-use bot_trainigs::schedule_training::ScheduleTraining;
-use bot_trainigs::training::TrainingView;
+use bot_trainigs::list::TrainingList;
+use bot_trainigs::program::list::ProgramList;
+use bot_trainigs::schedule::ScheduleTrainingPreset;
+use bot_trainigs::view::TrainingView;
 use bot_viewer::day::{fmt_dm, fmt_month, fmt_weekday};
 use bot_viewer::training::fmt_training_status;
 use bot_views::Filter;
@@ -74,14 +75,19 @@ impl View for CalendarView {
                 self.selected_day = DayId::from(day);
                 Ok(Jmp::None)
             }
-            Callback::SelectTraining(id) => {
-                return Ok(TrainingView::new(id.into()).into());
-            }
+            Callback::SelectTraining(id) => Ok(TrainingView::new(id.into()).into()),
             Callback::AddTraining => {
                 ctx.ensure(Rule::EditSchedule)?;
-                return Ok(ScheduleTraining::new(self.selected_day.local()).into());
+                let preset = ScheduleTrainingPreset::with_day(self.selected_day.local());
+                Ok(ProgramList::new(preset).into())
             }
-            Callback::MyTrainings => return Ok(ClientTrainings::new(ctx.me.id).into()),
+            Callback::MyTrainings => {
+                if ctx.me.couch.is_some() {
+                    Ok(TrainingList::couches(ctx.me.id).into())
+                } else {
+                    Ok(TrainingList::users(ctx.me.id).into())
+                }
+            }
         }
     }
 }

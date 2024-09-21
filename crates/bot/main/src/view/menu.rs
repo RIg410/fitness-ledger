@@ -4,10 +4,11 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_couching::{couch_list::CouchingList, programs_list::ProgramList};
+use bot_couching::couch_list::CouchingList;
 use bot_finance::FinanceView;
 use bot_logs::logs::LogsView;
 use bot_subscription::SubscriptionView;
+use bot_trainigs::program::list::ProgramList;
 use bot_users::{profile::UserProfile, Query, UsersView};
 use eyre::{bail, Ok, Result};
 use model::rights::Rule;

@@ -1,11 +1,5 @@
-mod add_client;
 mod client;
-pub mod client_list;
-pub mod client_training;
-pub mod create_training;
-pub mod edit;
-pub mod find_training;
-pub mod schedule_process;
-pub mod schedule_training;
-pub mod training;
-pub mod view_training_proto;
+pub mod program;
+pub mod schedule;
+pub mod view;
+pub mod list;

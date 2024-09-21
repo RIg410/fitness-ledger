@@ -14,10 +14,9 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
-use crate::{
-    add_client::AddClientView,
-    client::{ClientView, Reason},
-};
+use crate::client::{ClientView, Reason};
+
+use super::add::AddClientView;
 
 #[derive(Default)]
 pub struct ClientsList {

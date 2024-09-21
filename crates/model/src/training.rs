@@ -1,3 +1,4 @@
+use bson::extjson::de;
 use chrono::{DateTime, Datelike, Local, Timelike as _, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -184,5 +185,22 @@ impl TrainingStatus {
 
     pub fn can_sign_in(&self) -> bool {
         matches!(self, TrainingStatus::OpenToSignup { .. })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Filter {
+    Client(ObjectId),
+    Instructor(ObjectId),
+    Program(ObjectId),
+}
+
+impl Filter {
+    pub fn is_match(&self, training: &Training) -> bool {
+        match self {
+            Filter::Client(client) => training.clients.contains(client),
+            Filter::Instructor(instructor) => training.instructor == *instructor,
+            Filter::Program(program) => training.proto_id == *program,
+        }
     }
 }

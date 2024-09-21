@@ -13,6 +13,9 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
+pub mod add;
+pub mod list;
+
 pub struct ClientView {
     id: ObjectId,
     training_id: DateTime<Local>,

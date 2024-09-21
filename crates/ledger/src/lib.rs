@@ -102,7 +102,12 @@ impl Ledger {
             let mut reserved_balance = user.reserved_balance;
             let users_training = self
                 .calendar
-                .get_users_trainings(session, user.id, usize::MAX, 0)
+                .find_trainings(
+                    session,
+                    model::training::Filter::Client(user.id),
+                    usize::MAX,
+                    0,
+                )
                 .await?;
             for training in users_training {
                 if !training.clients.contains(&user.id) {

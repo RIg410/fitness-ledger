@@ -23,6 +23,10 @@ pub fn fmt_dm(day: &DateTime<Local>) -> DelayedFormat<StrftimeItems> {
     day.format("%d\\.%m")
 }
 
+pub fn fmt_dt(day: &DateTime<Local>) -> DelayedFormat<StrftimeItems> {
+    day.format("%d\\.%m\\.%Y %H:%M")
+}
+
 pub fn fmt_month(datetime: &DateTime<Local>) -> &str {
     match datetime.month() {
         1 => "Январь",

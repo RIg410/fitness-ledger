@@ -22,7 +22,16 @@ pub struct ScheduleTrainingPreset {
 }
 
 impl ScheduleTrainingPreset {
-    pub fn into_next_view(self, id: ObjectId) -> Widget {
+    pub fn with_day(day: DateTime<Local>) -> Self {
+        ScheduleTrainingPreset {
+            day: Some(day),
+            date_time: None,
+            instructor: None,
+            is_one_time: None,
+        }
+    }
+
+    pub(crate) fn into_next_view(self, id: ObjectId) -> Widget {
         if self.instructor.is_none() {
             return SetInstructor::new(id, self).into();
         }

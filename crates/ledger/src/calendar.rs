@@ -5,10 +5,9 @@ use eyre::{Error, Result};
 use model::{
     day::Day,
     ids::DayId,
-    rights::Rule,
     session::Session,
     slot::Slot,
-    training::{Training, TrainingStatus},
+    training::{Filter, Training, TrainingStatus},
 };
 use mongodb::{bson::oid::ObjectId, SessionCursor};
 use storage::{calendar::CalendarStore, user::UserStore};
@@ -127,6 +126,9 @@ impl Calendar {
                     let day = day?;
                     let training = day.training.iter().find(|slot| slot.id == training.id);
                     if let Some(training) = training {
+                        if !training.clients.is_empty() {
+                            return Err(eyre::eyre!("Training has clients"));
+                        }
                         self.calendar
                             .delete_training(session, training.start_at)
                             .await?;
@@ -140,15 +142,15 @@ impl Calendar {
         Ok(())
     }
 
-    pub async fn get_users_trainings(
+    pub async fn find_trainings(
         &self,
         session: &mut Session,
-        client: ObjectId,
+        filter: Filter,
         limit: usize,
         offset: usize,
     ) -> Result<Vec<Training>> {
         self.calendar
-            .find_trainings(session, client, limit, offset)
+            .find_trainings(session, filter, limit, offset)
             .await
     }
 
