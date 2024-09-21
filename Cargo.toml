@@ -21,7 +21,7 @@ resolver = "2"
 bg-process = {path = "crates/bg-process"}
 bot-calendar = {path = "crates/bot/calendar"}
 bot-core = {path = "crates/bot/core"}
-bot-couching = {path = "crates/bot/couching"}
+bot-couch = {path = "crates/bot/couch"}
 bot-finance = {path = "crates/bot/finance"}
 bot-logs = {path = "crates/bot/logs"}
 bot-main = {path = "crates/bot/main"}

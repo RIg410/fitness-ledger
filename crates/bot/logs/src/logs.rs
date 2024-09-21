@@ -375,6 +375,15 @@ impl LogsView {
                 let info = Self::render_user_info(ctx, *tg_id).await?;
                 format!("Make user instructor: {} {:?}", info, couch)
             }
+            Action::DeleteCouch { id } => {
+                format!("Delete couch: {}", id)
+            }
+            Action::UpdateCouchDescription { id, description } => {
+                format!("Update couch description: {} {}", id, description)
+            }
+            Action::UpdateCouchRate { id, rate } => {
+                format!("Update couch rate: {} {:?}", id, rate)
+            }
         })
     }
 }
@@ -405,7 +414,7 @@ impl View for LogsView {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Jmp> {
         let data = calldata!(data);
         match data {
             Calldata::Back => {

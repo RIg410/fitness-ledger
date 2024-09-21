@@ -9,6 +9,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use bot_trainigs::list::TrainingList;
 use bot_viewer::user::render_profile_msg;
 use eyre::{eyre, Error};
 use model::{rights::Rule, user::UserIdent};
@@ -111,8 +112,11 @@ impl UserProfile {
             .get_by_tg_id(&mut ctx.session, self.tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found:{}", self.tg_id))?;
-        todo!()
-        // Ok(self.training_list.make_widget(user.id).into())
+        if user.is_couch() {
+            Ok(TrainingList::couches(user.id).into())
+        } else {
+            Ok(TrainingList::users(user.id).into())
+        }
     }
 
     async fn set_fio(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {

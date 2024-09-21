@@ -5,7 +5,6 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use chrono::Local;
 use eyre::{Error, Result};
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;

@@ -69,7 +69,7 @@ macro_rules! calldata {
     };
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct CallbackDateTime {
     year: i32,
     month: u8,

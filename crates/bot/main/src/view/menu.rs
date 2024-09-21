@@ -4,7 +4,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_couching::couch_list::CouchingList;
+use bot_couch::list::CouchingList;
 use bot_finance::FinanceView;
 use bot_logs::logs::LogsView;
 use bot_subscription::SubscriptionView;

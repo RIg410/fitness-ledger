@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Local, Utc};
 use eyre::Result;
 use model::{
-    couch::CouchInfo,
+    couch::{CouchInfo, Rate},
     decimal::Decimal,
     log::{Action, LogEntry},
     program::Program,
@@ -36,6 +36,44 @@ impl Logs {
         offset: usize,
     ) -> Result<Vec<LogEntry>> {
         self.store.get_logs(session, limit, offset).await
+    }
+
+    pub async fn update_couch_rate(&self, session: &mut Session, id: ObjectId, rate: Rate) {
+        let entry = LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::UpdateCouchRate { id, rate },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn update_couch_description(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        description: String,
+    ) {
+        let entry = LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::UpdateCouchDescription { id, description },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
+    pub async fn delete_couch(&self, session: &mut Session, id: ObjectId) {
+        let entry = LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::DeleteCouch { id },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
     }
 
     pub async fn make_user_instructor(&self, session: &mut Session, tg_id: i64, couch: CouchInfo) {

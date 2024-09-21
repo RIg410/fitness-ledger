@@ -1,3 +1,6 @@
+use core::fmt;
+use std::fmt::{Display, Formatter};
+
 use super::rights::Rights;
 use crate::{couch::CouchInfo, subscription::UserSubscription};
 use chrono::{DateTime, Local, TimeZone as _, Utc};
@@ -90,6 +93,19 @@ pub struct UserName {
     pub tg_user_name: Option<String>,
     pub first_name: String,
     pub last_name: Option<String>,
+}
+
+impl Display for UserName {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.first_name)?;
+        if let Some(last_name) = &self.last_name {
+            write!(f, " {}", last_name)?;
+        }
+        if let Some(tg_user_name) = &self.tg_user_name {
+            write!(f, " (@{})", tg_user_name)?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

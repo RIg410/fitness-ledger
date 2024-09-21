@@ -11,7 +11,9 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
-use super::{couch_info::couch_view, make_couch::make_make_couch_view};
+use crate::info::couch_view;
+
+use super::make_couch::make_make_couch_view;
 
 pub struct CouchingList {}
 
@@ -26,7 +28,7 @@ impl View for CouchingList {
     fn name(&self) -> &'static str {
         "CouchingList"
     }
-    
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let msg = "Наши инструкторы ❤️";
         let mut keymap = InlineKeyboardMarkup::default();

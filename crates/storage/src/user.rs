@@ -580,4 +580,20 @@ impl UserStore {
             .await?;
         Ok(())
     }
+
+    pub async fn delete_couch(&self, session: &mut Session, id: ObjectId) -> Result<(), Error> {
+        info!("Deleting couch: {:?}", id);
+        let result = self
+            .users
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$unset": { "couch": "" }, "$inc": { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        if result.modified_count == 0 {
+            return Err(Error::msg("Couch not found"));
+        }
+        Ok(())
+    }
 }

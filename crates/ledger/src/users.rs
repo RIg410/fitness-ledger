@@ -42,6 +42,54 @@ impl Users {
     }
 
     #[tx]
+    pub async fn update_couch_rate(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        rate: Rate,
+    ) -> Result<()> {
+        let user = self
+            .store
+            .get_by_id(session, id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        let couch = user.couch.ok_or_else(|| eyre!("User is not a couch"))?;
+        let couch = CouchInfo {
+            description: couch.description,
+            rate: rate.clone(),
+            reward: couch.reward,
+        };
+        self.store.set_couch(session, user.tg_id, &couch).await?;
+        self.logs.update_couch_rate(session, user.id, rate).await;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn update_couch_description(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        description: String,
+    ) -> Result<()> {
+        let user = self
+            .store
+            .get_by_id(session, id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        let couch = user.couch.ok_or_else(|| eyre!("User is not a couch"))?;
+        let couch = CouchInfo {
+            description: description.clone(),
+            rate: couch.rate,
+            reward: couch.reward,
+        };
+        self.store.set_couch(session, user.tg_id, &couch).await?;
+        self.logs
+            .update_couch_description(session, user.id, description)
+            .await;
+        Ok(())
+    }
+
+    #[tx]
     pub async fn create(
         &self,
         session: &mut Session,
@@ -272,6 +320,10 @@ impl Users {
 }
 
 impl Users {
+    pub async fn delete_couch(&self, session: &mut Session, id: ObjectId) -> Result<()> {
+        self.store.delete_couch(session, id).await
+    }
+
     pub(crate) async fn block_user(
         &self,
         session: &mut Session,

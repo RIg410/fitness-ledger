@@ -5,10 +5,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::{
-    day::{fmt_dt, fmt_weekday},
-    training::fmt_training_status,
-};
+use bot_viewer::{day::fmt_weekday, training::fmt_training_status};
 use chrono::Local;
 use eyre::Result;
 use model::training::Filter;
@@ -76,10 +73,8 @@ async fn render(
     filter: Filter,
     offset: u32,
 ) -> Result<(String, InlineKeyboardMarkup)> {
-    let mut msg = "🫶🏻 Мои тренировки:".to_owned();
-
+    let mut msg = "🫶🏻 Тренировки:\n".to_owned();
     let mut keymap = InlineKeyboardMarkup::default();
-
     let trainings = ctx
         .ledger
         .calendar
@@ -91,11 +86,6 @@ async fn render(
         )
         .await?;
 
-    if trainings.is_empty() && ctx.me.couch.is_none() {
-        msg.push_str("\n🤷🏻‍♂️  У вас нет назначенных тренировок");
-    }
-
-    msg.push_str("\n");
     msg.push_str(
         "
 ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖

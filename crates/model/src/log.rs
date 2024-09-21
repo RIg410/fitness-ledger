@@ -1,5 +1,6 @@
 use crate::{
-    couch::CouchInfo, decimal::Decimal, program::Program, rights::Rule, subscription::Subscription, treasury::Sell, user::UserName
+    couch::{CouchInfo, Rate}, decimal::Decimal, program::Program, rights::Rule, subscription::Subscription,
+    treasury::Sell, user::UserName,
 };
 use bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
@@ -196,5 +197,16 @@ pub enum Action {
     MakeUserInstructor {
         tg_id: i64,
         couch: CouchInfo,
+    },
+    DeleteCouch {
+        id: ObjectId,
+    },
+    UpdateCouchDescription {
+        id: ObjectId,
+        description: String,
+    },
+    UpdateCouchRate {
+        id: ObjectId,
+        rate: Rate,
     },
 }

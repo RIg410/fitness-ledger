@@ -218,12 +218,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "bot-couching"
+name = "bot-couch"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "bincode",
  "bot-core",
+ "bot-trainigs",
  "bot-viewer",
  "chrono",
  "eyre",
@@ -294,7 +295,7 @@ dependencies = [
  "bincode",
  "bot-calendar",
  "bot-core",
- "bot-couching",
+ "bot-couch",
  "bot-finance",
  "bot-logs",
  "bot-subscription",
@@ -366,6 +367,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "bot-core",
+ "bot-trainigs",
  "bot-viewer",
  "bot-views",
  "chrono",
