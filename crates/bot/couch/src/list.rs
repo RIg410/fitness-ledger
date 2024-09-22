@@ -65,7 +65,7 @@ enum Callback {
 
 fn render_button(user: &User) -> InlineKeyboardButton {
     Callback::SelectCouch(user.id.bytes()).button(format!(
-        "💪 {} {}",
+        "💪🏼 {} {}",
         user.name.first_name,
         user.name.last_name.clone().unwrap_or_default()
     ))

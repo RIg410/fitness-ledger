@@ -25,13 +25,14 @@ impl View for CreateProgram {
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         ctx.ensure(Rule::CreateTraining)?;
-
-        ctx.edit_origin(
-            "📝 Введите название программы:\n_оно должно быть уникально_",
-            InlineKeyboardMarkup::default(),
-        )
-        .await?;
-        self.state = Some(State::SetName(Program::default()));
+        if self.state.is_none() {
+            ctx.edit_origin(
+                "📝 Введите название программы:\n_оно должно быть уникально_",
+                InlineKeyboardMarkup::default(),
+            )
+            .await?;
+            self.state = Some(State::SetName(Program::default()));
+        }
         Ok(())
     }
 
@@ -108,7 +109,7 @@ impl View for CreateProgram {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum State {
     SetName(Program),
     SetDescription(Program),
