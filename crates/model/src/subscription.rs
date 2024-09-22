@@ -122,8 +122,8 @@ impl PartialOrd for Status {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
             (Status::NotActive, Status::NotActive) => Some(Ordering::Equal),
-            (Status::NotActive, Status::Active { .. }) => Some(Ordering::Greater),
-            (Status::Active { .. }, Status::NotActive) => Some(Ordering::Less),
+            (Status::NotActive, Status::Active { .. }) => Some(Ordering::Less),
+            (Status::Active { .. }, Status::NotActive) => Some(Ordering::Greater),
             (
                 Status::Active {
                     start_date: l_start_date,

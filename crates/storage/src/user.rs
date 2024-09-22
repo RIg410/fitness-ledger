@@ -487,6 +487,7 @@ impl UserStore {
                 sub.items += amount as u32;
             }
         }
+        user.subscriptions.retain(|sub| sub.items > 0);
 
         self.users
             .update_one(
