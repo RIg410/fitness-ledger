@@ -186,3 +186,20 @@ impl TrainingStatus {
         matches!(self, TrainingStatus::OpenToSignup { .. })
     }
 }
+
+#[derive(Debug, Clone)]
+pub enum Filter {
+    Client(ObjectId),
+    Instructor(ObjectId),
+    Program(ObjectId),
+}
+
+impl Filter {
+    pub fn is_match(&self, training: &Training) -> bool {
+        match self {
+            Filter::Client(client) => training.clients.contains(client),
+            Filter::Instructor(instructor) => training.instructor == *instructor,
+            Filter::Program(program) => training.proto_id == *program,
+        }
+    }
+}

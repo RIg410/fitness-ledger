@@ -1,8 +1,13 @@
 use bson::to_document;
-use chrono::{DateTime, Duration, Utc, Weekday};
+use chrono::{DateTime, Duration, Local, Utc, Weekday};
 use eyre::Result;
 use log::info;
-use model::{day::Day, ids::DayId, session::Session, training::Training};
+use model::{
+    day::Day,
+    ids::DayId,
+    session::Session,
+    training::{Filter, Training},
+};
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::{FindOneOptions, IndexOptions, UpdateOptions},
@@ -68,41 +73,65 @@ impl CalendarStore {
     pub async fn find_trainings(
         &self,
         session: &mut Session,
-        user_id: ObjectId,
+        filter: Filter,
         limit: usize,
         offset: usize,
     ) -> Result<Vec<Training>, eyre::Error> {
         let now = Utc::now();
         let day_id = DayId::from(now);
-        let filter = doc! {
-          "$and": [
-            {
-              "$or": [
-                { "training.instructor": user_id },
-                { "training.clients": { "$elemMatch": { "$eq": user_id } } }
-              ]
-            },
-            { "date_time": { "$gte":  day_id.id()} }
-          ]
-        };
 
-        let mut cursor = self.days.find(filter).session(&mut *session).await?;
-        let mut trainings = Vec::new();
+        let find = match filter {
+            Filter::Client(id) => {
+                doc! {
+                  "$and": [
+                        {
+                            "training.clients": { "$elemMatch": { "$eq": id } }
+                        },
+                    { "date_time": { "$gte":  day_id.id()} }
+                  ]
+                }
+            }
+            Filter::Instructor(object_id) => {
+                doc! {
+                  "$and": [
+                        {
+                            "training.instructor": object_id
+                        },
+                    { "date_time": { "$gte":  day_id.id()} }
+                  ]
+                }
+            }
+            Filter::Program(object_id) => {
+                doc! {
+                  "$and": [
+                        {
+                            "training.proto_id": object_id
+                        },
+                    { "date_time": { "$gte":  day_id.id()} }
+                  ]
+                }
+            }
+        };
+        let mut cursor = self.days.find(find).session(&mut *session).await?;
+
         let mut skiped = 0;
+        let mut trainings = Vec::new();
         while let Some(day) = cursor.next(&mut *session).await {
-            let day = day?;
+            let mut day = day?;
+            day.training.sort_by(|a, b| a.start_at.cmp(&b.start_at));
             for training in day.training {
                 if training.start_at + Duration::minutes(training.duration_min as i64) < now {
                     continue;
                 }
-                if training.instructor == user_id || training.clients.contains(&user_id) {
-                    if skiped < offset {
-                        skiped += 1;
-                        continue;
-                    }
-                    if trainings.len() >= limit {
-                        return Ok(trainings);
-                    }
+                if skiped < offset {
+                    skiped += 1;
+                    continue;
+                }
+                if trainings.len() >= limit {
+                    return Ok(trainings);
+                }
+
+                if filter.is_match(&training) {
                     trainings.push(training);
                 }
             }
@@ -375,6 +404,30 @@ impl CalendarStore {
             .update_one(filter, update)
             .session(&mut *session)
             .await?;
+        Ok(())
+    }
+
+    pub async fn change_couch(
+        &self,
+        session: &mut Session,
+        start_at: DateTime<Local>,
+        couch_id: ObjectId,
+    ) -> Result<(), eyre::Error> {
+        info!("Change couch: {:?} {}", start_at, couch_id);
+        let filter = doc! { "training.start_at": start_at };
+        let update = doc! {
+            "$set": { "training.$.instructor": couch_id },
+            "$inc": { "version": 1 }
+        };
+        let result = self
+            .days
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
+
+        if result.modified_count != 1 {
+            return Err(eyre::eyre!("Training not found"));
+        }
         Ok(())
     }
 }

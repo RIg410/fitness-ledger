@@ -1,7 +1,7 @@
 use calendar::{Calendar, SignOutError};
 use chrono::Local;
 use eyre::{bail, eyre, Context as _, Result};
-use log::error;
+use log::{error, warn};
 use logs::Logs;
 use model::decimal::Decimal;
 use model::session::Session;
@@ -102,7 +102,12 @@ impl Ledger {
             let mut reserved_balance = user.reserved_balance;
             let users_training = self
                 .calendar
-                .get_users_trainings(session, user.id, usize::MAX, 0)
+                .find_trainings(
+                    session,
+                    model::training::Filter::Client(user.id),
+                    usize::MAX,
+                    0,
+                )
                 .await?;
             for training in users_training {
                 if !training.clients.contains(&user.id) {
@@ -480,6 +485,24 @@ impl Ledger {
             .await?;
         Ok(())
     }
+
+    #[tx]
+    pub async fn delete_couch(&self, session: &mut Session, id: ObjectId) -> Result<bool> {
+        let has_trainings = !self
+            .calendar
+            .find_trainings(session, model::training::Filter::Instructor(id), 1, 0)
+            .await?
+            .is_empty();
+        if has_trainings {
+            warn!("Couch has trainings");
+            return Ok(false);
+        } else {
+            self.logs.delete_couch(session, id).await;
+            self.users.delete_couch(session, id).await?;
+            Ok(true)
+        }
+    }
+
 }
 
 #[derive(Error, Debug)]

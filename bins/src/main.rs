@@ -23,7 +23,7 @@ async fn main() -> eyre::Result<()> {
     info!("Starting background process...");
     bg_process::start(ledger.clone());
     info!("Starting bot...");
-    bot::start_bot(ledger.clone(), token).await?;
+    bot_main::start_bot(ledger.clone(), token).await?;
 
     Ok(())
 }

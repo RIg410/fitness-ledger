@@ -1,0 +1,22 @@
+[package]
+edition = "2021"
+name = "bot-subscription"
+version = "0.1.0"
+
+[dependencies]
+async-trait.workspace = true
+bincode.workspace = true
+bot-core.workspace = true
+bot-viewer.workspace = true
+chrono.workspace = true
+eyre.workspace = true
+hex.workspace = true
+itertools.workspace = true
+ledger.workspace = true
+log.workspace = true
+model.workspace = true
+mongodb.workspace = true
+serde.workspace = true
+storage.workspace = true
+strum.workspace = true
+teloxide.workspace = true
