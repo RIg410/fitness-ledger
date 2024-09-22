@@ -100,6 +100,42 @@ impl Calendar {
     }
 
     #[tx]
+    pub async fn change_couch(
+        &self,
+        session: &mut Session,
+        start_at: DateTime<Local>,
+        new_couch: ObjectId,
+        all: bool,
+    ) -> Result<(), Error> {
+        if let Some(training) = self.get_training_by_start_at(session, start_at).await? {
+            self.calendar
+                .change_couch(session, start_at, new_couch)
+                .await?;
+            self.logs
+                .change_couch(session, start_at, all, new_couch)
+                .await;
+
+            let day_id = DayId::from(training.get_slot().start_at());
+            if all {
+                let mut cursor = self.calendar.week_days_after(session, day_id).await?;
+                while let Some(day) = cursor.next(session).await {
+                    let day = day?;
+                    let training = day.training.iter().find(|slot| slot.id == training.id);
+                    if let Some(training) = training {
+                        self.calendar
+                            .change_couch(session, training.get_slot().start_at(), new_couch)
+                            .await?;
+                    }
+                }
+            }
+        } else {
+            return Err(eyre::eyre!("Training not found:{}", start_at));
+        }
+
+        Ok(())
+    }
+
+    #[tx]
     pub async fn delete_training(
         &self,
         session: &mut Session,

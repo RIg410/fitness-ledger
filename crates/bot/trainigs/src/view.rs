@@ -15,7 +15,7 @@ use model::{
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
-use crate::client::list::ClientsList;
+use crate::{change_couch::ChangeCouch, client::list::ClientsList};
 
 pub struct TrainingView {
     id: DateTime<Local>,
@@ -141,18 +141,7 @@ impl TrainingView {
 
     async fn change_couch(&mut self, ctx: &mut Context, all: bool) -> Result<Jmp> {
         ctx.ensure(Rule::EditSchedule)?;
-        let training = ctx
-            .ledger
-            .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        // let back = TrainingView::new(self.id, self.go_back.take());
-        // Ok(Some(Box::new(add_client::AddClientView::new(
-        //     self.id,
-        //     Some(Box::new(back)),
-        // )))
-        todo!()
+        Ok(ChangeCouch::new(self.id, all).into())
     }
 }
 
@@ -257,15 +246,19 @@ _{}_                                                                 \n
     }
 
     if ctx.has_right(Rule::EditSchedule) {
-        let mut keys = vec![];
-        keys.push(Callback::Delete(false).button("🗑️ Удалить эту тренировку"));
-        if !training.is_one_time {
-            keys.push(Callback::Delete(true).button("🗑️ Удалить все последующие"));
-        }
-        keymap = keymap.append_row(keys);
         keymap = keymap.append_row(vec![
-            Callback::ChangeCouchOne.button("🔄 Заменить инструктора"),
-            Callback::ChangeCouchAll.button("🔄 Заменить инструктора на все"),
+            Callback::Delete(false).button("🗑️ Удалить эту тренировку")
+        ]);
+        if !training.is_one_time {
+            keymap = keymap.append_row(vec![
+                Callback::Delete(true).button("🗑️ Удалить все последующие")
+            ]);
+        }
+        keymap = keymap.append_row(vec![
+            Callback::ChangeCouchOne.button("🔄 Заменить инструктора")
+        ]);
+        keymap = keymap.append_row(vec![
+            Callback::ChangeCouchAll.button("🔄 Заменить инструктора на все")
         ]);
     }
 

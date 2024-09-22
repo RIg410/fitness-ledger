@@ -1,5 +1,5 @@
 use bson::to_document;
-use chrono::{DateTime, Duration, Utc, Weekday};
+use chrono::{DateTime, Duration, Local, Utc, Weekday};
 use eyre::Result;
 use log::info;
 use model::{
@@ -404,6 +404,30 @@ impl CalendarStore {
             .update_one(filter, update)
             .session(&mut *session)
             .await?;
+        Ok(())
+    }
+
+    pub async fn change_couch(
+        &self,
+        session: &mut Session,
+        start_at: DateTime<Local>,
+        couch_id: ObjectId,
+    ) -> Result<(), eyre::Error> {
+        info!("Change couch: {:?} {}", start_at, couch_id);
+        let filter = doc! { "training.start_at": start_at };
+        let update = doc! {
+            "$set": { "training.$.instructor": couch_id },
+            "$inc": { "version": 1 }
+        };
+        let result = self
+            .days
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
+
+        if result.modified_count != 1 {
+            return Err(eyre::eyre!("Training not found"));
+        }
         Ok(())
     }
 }

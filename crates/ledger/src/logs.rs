@@ -49,6 +49,17 @@ impl Logs {
         }
     }
 
+    pub async fn change_couch(&self, session: &mut Session, start_at: DateTime<Local>, all: bool, new: ObjectId) {
+        let entry = LogEntry {
+            actor: session.actor(),
+            date_time: chrono::Local::now().with_timezone(&Utc),
+            action: Action::ChangeCouch { start_at, all, new },
+        };
+        if let Err(err) = self.store.store(session, entry).await {
+            log::error!("Failed to store log entry: {}", err);
+        }
+    }
+
     pub async fn update_couch_description(
         &self,
         session: &mut Session,

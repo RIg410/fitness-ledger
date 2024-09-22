@@ -384,6 +384,9 @@ impl LogsView {
             Action::UpdateCouchRate { id, rate } => {
                 format!("Update couch rate: {} {:?}", id, rate)
             }
+            Action::ChangeCouch { start_at, all, new } => {
+                format!("Change couch: {} {} {:?}", start_at, all, new)
+            }
         })
     }
 }

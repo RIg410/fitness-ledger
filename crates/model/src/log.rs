@@ -1,9 +1,14 @@
 use crate::{
-    couch::{CouchInfo, Rate}, decimal::Decimal, program::Program, rights::Rule, subscription::Subscription,
-    treasury::Sell, user::UserName,
+    couch::{CouchInfo, Rate},
+    decimal::Decimal,
+    program::Program,
+    rights::Rule,
+    subscription::Subscription,
+    treasury::Sell,
+    user::UserName,
 };
 use bson::oid::ObjectId;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -208,5 +213,10 @@ pub enum Action {
     UpdateCouchRate {
         id: ObjectId,
         rate: Rate,
+    },
+    ChangeCouch {
+        start_at: DateTime<Local>,
+        all: bool,
+        new: ObjectId,
     },
 }
