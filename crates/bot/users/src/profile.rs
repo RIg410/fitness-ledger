@@ -172,7 +172,7 @@ impl View for UserProfile {
             Callback::SetBirthday => self.set_birthday(ctx).await,
             Callback::EditPhone => self.set_phone(ctx).await,
             Callback::TrainingList => self.training_list(ctx).await,
-            Callback::HistiryList => self.history_list(ctx).await,
+            Callback::HistoryList => self.history_list(ctx).await,
         }
     }
 }
@@ -230,7 +230,7 @@ async fn render_user_profile<ID: Into<UserIdent> + Copy>(
     if ctx.has_right(Rule::EditUserRights) {
         keymap = keymap.append_row(Callback::EditRights.btn_row("🔒 Права"));
     }
-    keymap = keymap.append_row(Callback::HistiryList.btn_row("История 📝"));
+    keymap = keymap.append_row(Callback::HistoryList.btn_row("История 📝"));
     Ok((msg, keymap))
 }
 
@@ -243,7 +243,7 @@ pub enum Callback {
     EditRights,
     Freeze,
     TrainingList,
-    HistiryList,
+    HistoryList,
     ChangeBalance(i32),
     ChangeReservedBalance(i32),
 }

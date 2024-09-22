@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bot_core::{
+    callback_data::Calldata as _,
     calldata,
     context::Context,
     widget::{Jmp, View},
@@ -10,7 +11,7 @@ use eyre::Result;
 use model::history::HistoryRow;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::utils::markdown::escape;
+use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
 pub const LIMIT: u64 = 7;
 
@@ -43,10 +44,19 @@ impl View for HistoryList {
             )
             .await?;
         let mut msg = "*История:*".to_string();
-        for log in logs {
-            msg.push_str(&format!("\n\n📌{}", fmt_row(ctx, &log).await?));
+        for log in &logs {
+            msg.push_str(&format!("\n\n📌{}", fmt_row(ctx, log).await?));
+        }
+        let mut keymap = vec![];
+        if self.offset > 0 {
+            keymap.push(Calldata::Offset(self.offset - LIMIT).button("⬅️"));
+        }
+        if logs.len() as u64 >= LIMIT {
+            keymap.push(Calldata::Offset(self.offset + LIMIT).button("➡️"));
         }
 
+        ctx.edit_origin(&msg, InlineKeyboardMarkup::new(vec![keymap]))
+            .await?;
         Ok(())
     }
 
