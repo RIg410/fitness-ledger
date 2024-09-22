@@ -6,7 +6,6 @@ use bot_core::{
 };
 use bot_couch::list::CouchingList;
 use bot_finance::FinanceView;
-use bot_logs::logs::LogsView;
 use bot_subscription::SubscriptionView;
 use bot_trainigs::program::list::ProgramList;
 use bot_users::{profile::UserProfile, Query, UsersView};
@@ -34,10 +33,6 @@ impl MainMenuView {
         }
         if ctx.has_right(Rule::ViewFinance) {
             keymap = keymap.append_row(vec![MainMenuItem::FinanceView.into()]);
-        }
-
-        if ctx.has_right(Rule::ViewLogs) {
-            keymap = keymap.append_row(vec![MainMenuItem::LogView.into()]);
         }
 
         ctx.edit_origin("🏠SoulFamily       🤸🏼", keymap).await?;
@@ -87,7 +82,6 @@ impl View for MainMenuView {
             MainMenuItem::Users => UsersView::new(Query::default()).into(),
             MainMenuItem::Subscription => SubscriptionView::default().into(),
             MainMenuItem::FinanceView => FinanceView.into(),
-            MainMenuItem::LogView => LogsView::default().into(),
             MainMenuItem::Coach => CouchingList::new().into(),
             MainMenuItem::Home => MainMenuView.into(),
             MainMenuItem::Programs => ProgramList::default().into(),
@@ -111,7 +105,6 @@ impl View for MainMenuView {
             MainMenuItem::Users => UsersView::new(Query::default()).into(),
             MainMenuItem::Subscription => SubscriptionView::default().into(),
             MainMenuItem::FinanceView => FinanceView.into(),
-            MainMenuItem::LogView => LogsView::default().into(),
             MainMenuItem::Coach => CouchingList::new().into(),
             MainMenuItem::Home => MainMenuView.into(),
             MainMenuItem::Programs => ProgramList::default().into(),
@@ -131,7 +124,6 @@ pub enum MainMenuItem {
     Users,
     Subscription,
     FinanceView,
-    LogView,
     Coach,
     Programs,
 }
@@ -160,9 +152,6 @@ const USERS_NAME: &str = "/users";
 const FINANCE_DESCRIPTION: &str = "Финансы 💰";
 const FINANCE_NAME: &str = "/finance";
 
-const LOG_DESCRIPTION: &str = "Логи 📜";
-const LOG_NAME: &str = "/log";
-
 impl MainMenuItem {
     pub fn description(&self) -> &'static str {
         match self {
@@ -172,7 +161,6 @@ impl MainMenuItem {
             MainMenuItem::Subscription => SUBSCRIPTION_DESCRIPTION,
             MainMenuItem::Home => HOME_DESCRIPTION,
             MainMenuItem::FinanceView => FINANCE_DESCRIPTION,
-            MainMenuItem::LogView => LOG_DESCRIPTION,
             MainMenuItem::Coach => COUCH_DESCRIPTION,
             MainMenuItem::Programs => PROGRAM_DESCRIPTION,
         }
@@ -186,7 +174,6 @@ impl MainMenuItem {
             MainMenuItem::Subscription => SUBSCRIPTION_NAME,
             MainMenuItem::Home => HOME_NAME,
             MainMenuItem::FinanceView => FINANCE_NAME,
-            MainMenuItem::LogView => LOG_NAME,
             MainMenuItem::Coach => COUCH_NAME,
             MainMenuItem::Programs => PROGRAM_NAME,
         }
@@ -219,7 +206,6 @@ impl TryFrom<&str> for MainMenuItem {
             SUBSCRIPTION_NAME | SUBSCRIPTION_DESCRIPTION => Ok(MainMenuItem::Subscription),
             HOME_NAME | HOME_DESCRIPTION | "/home" => Ok(MainMenuItem::Home),
             FINANCE_NAME | FINANCE_DESCRIPTION => Ok(MainMenuItem::FinanceView),
-            LOG_NAME | LOG_DESCRIPTION => Ok(MainMenuItem::LogView),
             COUCH_NAME | COUCH_DESCRIPTION => Ok(MainMenuItem::Coach),
             PROGRAM_NAME | PROGRAM_DESCRIPTION => Ok(MainMenuItem::Programs),
             _ => bail!("Unknown command"),

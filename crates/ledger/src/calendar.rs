@@ -14,14 +14,14 @@ use storage::{calendar::CalendarStore, user::UserStore};
 use thiserror::Error;
 use tx_macro::tx;
 
-use crate::{logs::Logs, programs::Programs};
+use crate::{history::History, programs::Programs};
 
 #[derive(Clone)]
 pub struct Calendar {
     calendar: CalendarStore,
     users: UserStore,
     programs: Programs,
-    logs: Logs,
+    logs: History,
 }
 
 impl Calendar {
@@ -29,7 +29,7 @@ impl Calendar {
         calendar: CalendarStore,
         users: UserStore,
         programs: Programs,
-        logs: Logs,
+        logs: History,
     ) -> Self {
         Calendar {
             calendar,
@@ -73,7 +73,7 @@ impl Calendar {
             self.calendar
                 .set_cancel_flag(session, training.start_at, true)
                 .await?;
-            self.logs.cancel_training(session, training).await;
+            //self.logs.cancel_training(session, training).await;
             Ok(())
         } else {
             Err(eyre::eyre!("Training not found"))
@@ -92,7 +92,7 @@ impl Calendar {
             self.calendar
                 .set_cancel_flag(session, training.start_at, false)
                 .await?;
-            self.logs.restore_training(session, training).await;
+            //self.logs.restore_training(session, training).await;
             Ok(())
         } else {
             return Err(eyre::eyre!("Training not found"));
@@ -111,9 +111,9 @@ impl Calendar {
             self.calendar
                 .change_couch(session, start_at, new_couch)
                 .await?;
-            self.logs
-                .change_couch(session, start_at, all, new_couch)
-                .await;
+            // self.logs
+            //     .change_couch(session, start_at, all, new_couch)
+            //     .await;
 
             let day_id = DayId::from(training.get_slot().start_at());
             if all {
@@ -154,7 +154,7 @@ impl Calendar {
                 .delete_training(session, training.start_at)
                 .await?;
 
-            self.logs.delete_training(session, &training, all).await;
+           // self.logs.delete_training(session, &training, all).await;
             let day_id = DayId::from(training.get_slot().start_at());
             if all {
                 let mut cursor = self.calendar.week_days_after(session, day_id).await?;
@@ -235,7 +235,7 @@ impl Calendar {
             return Err(ScheduleError::TooCloseToStart);
         }
 
-        self.logs.schedule(session, &training).await;
+        //self.logs.schedule(session, &training).await;
         self.calendar.add_training(session, &training).await?;
 
         if !is_one_time {

@@ -262,32 +262,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bot-logs"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bincode",
- "bot-calendar",
- "bot-core",
- "bot-subscription",
- "bot-trainigs",
- "bot-users",
- "bot-viewer",
- "chrono",
- "eyre",
- "hex",
- "itertools 0.2.9",
- "ledger",
- "log",
- "model",
- "mongodb",
- "serde",
- "storage",
- "strum",
- "teloxide",
-]
-
-[[package]]
 name = "bot-main"
 version = "0.1.0"
 dependencies = [
@@ -297,7 +271,6 @@ dependencies = [
  "bot-core",
  "bot-couch",
  "bot-finance",
- "bot-logs",
  "bot-subscription",
  "bot-trainigs",
  "bot-users",

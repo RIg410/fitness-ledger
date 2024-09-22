@@ -1,4 +1,4 @@
-use crate::logs::Logs;
+use crate::history::History;
 use eyre::Error;
 use model::{program::Program, session::Session};
 use mongodb::bson::oid::ObjectId;
@@ -8,11 +8,11 @@ use tx_macro::tx;
 #[derive(Clone)]
 pub struct Programs {
     store: ProgramStore,
-    logs: Logs,
+    logs: History,
 }
 
 impl Programs {
-    pub fn new(store: ProgramStore, logs: Logs) -> Self {
+    pub fn new(store: ProgramStore, logs: History) -> Self {
         Programs { store, logs }
     }
 
@@ -67,7 +67,7 @@ impl Programs {
         }
 
         self.store.insert(session, &proto).await?;
-        self.logs.create_program(session, proto).await;
+        // self.logs.create_program(session, proto).await;
         Ok(())
     }
 

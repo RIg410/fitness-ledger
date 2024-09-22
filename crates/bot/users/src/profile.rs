@@ -1,3 +1,5 @@
+use crate::history::HistoryList;
+
 use super::{
     freeze::FreezeProfile, rights::UserRightsView, set_birthday::SetBirthday, set_fio::SetFio,
     set_phone::SetPhone,
@@ -11,7 +13,7 @@ use bot_core::{
 };
 use bot_trainigs::list::TrainingList;
 use bot_viewer::user::render_profile_msg;
-use eyre::{eyre, Error};
+use eyre::Error;
 use model::{rights::Rule, user::UserIdent};
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardMarkup, Message};
@@ -106,17 +108,17 @@ impl UserProfile {
     }
 
     async fn training_list(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
-        let user = ctx
-            .ledger
-            .users
-            .get_by_tg_id(&mut ctx.session, self.tg_id)
-            .await?
-            .ok_or_else(|| eyre!("User not found:{}", self.tg_id))?;
+        let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
         if user.is_couch() {
             Ok(TrainingList::couches(user.id).into())
         } else {
             Ok(TrainingList::users(user.id).into())
         }
+    }
+
+    async fn history_list(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
+        let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
+        Ok(HistoryList::new(user.id).into())
     }
 
     async fn set_fio(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
@@ -170,6 +172,7 @@ impl View for UserProfile {
             Callback::SetBirthday => self.set_birthday(ctx).await,
             Callback::EditPhone => self.set_phone(ctx).await,
             Callback::TrainingList => self.training_list(ctx).await,
+            Callback::HistiryList => self.history_list(ctx).await,
         }
     }
 }
@@ -227,6 +230,7 @@ async fn render_user_profile<ID: Into<UserIdent> + Copy>(
     if ctx.has_right(Rule::EditUserRights) {
         keymap = keymap.append_row(Callback::EditRights.btn_row("🔒 Права"));
     }
+    keymap = keymap.append_row(Callback::HistiryList.btn_row("История 📝"));
     Ok((msg, keymap))
 }
 
@@ -239,6 +243,7 @@ pub enum Callback {
     EditRights,
     Freeze,
     TrainingList,
+    HistiryList,
     ChangeBalance(i32),
     ChangeReservedBalance(i32),
 }

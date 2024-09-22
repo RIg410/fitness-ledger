@@ -5,16 +5,16 @@ use storage::subscription::SubscriptionsStore;
 use thiserror::Error;
 use tx_macro::tx;
 
-use crate::logs::Logs;
+use crate::history::History;
 
 #[derive(Clone)]
 pub struct Subscriptions {
     pub store: SubscriptionsStore,
-    pub logs: Logs,
+    pub logs: History,
 }
 
 impl Subscriptions {
-    pub fn new(store: SubscriptionsStore, logs: Logs) -> Self {
+    pub fn new(store: SubscriptionsStore, logs: History) -> Self {
         Subscriptions { store, logs }
     }
 
@@ -45,11 +45,11 @@ impl Subscriptions {
 
     #[tx]
     pub async fn delete(&self, session: &mut Session, id: ObjectId) -> Result<(), Error> {
-        let sub = self
-            .get(session, id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Subscription not found"))?;
-        self.logs.delete_sub(session, sub).await;
+        // let sub = self
+        //     .get(session, id)
+        //     .await?
+        //     .ok_or_else(|| eyre::eyre!("Subscription not found"))?;
+        //self.logs.delete_sub(session, sub).await;
         self.store.delete(session, id).await?;
         Ok(())
     }
@@ -75,7 +75,7 @@ impl Subscriptions {
             return Err(CreateSubscriptionError::InvalidPrice);
         }
         let sub = Subscription::new(name, items, price, expiration_days, freeze_days);
-        self.logs.create_sub(session, sub.clone()).await;
+        //self.logs.create_sub(session, sub.clone()).await;
         self.store.insert(session, sub).await?;
         Ok(())
     }
@@ -87,7 +87,7 @@ impl Subscriptions {
         id: ObjectId,
         value: Decimal,
     ) -> Result<(), Error> {
-        self.logs.edit_sub_price(session, id, value).await;
+        //self.logs.edit_sub_price(session, id, value).await;
         self.store.edit_price(session, id, value).await?;
         Ok(())
     }
@@ -99,7 +99,7 @@ impl Subscriptions {
         id: ObjectId,
         value: u32,
     ) -> Result<(), Error> {
-        self.logs.edit_sub_items(session, id, value).await;
+        //self.logs.edit_sub_items(session, id, value).await;
         self.store.edit_items(session, id, value).await?;
         Ok(())
     }
@@ -111,7 +111,7 @@ impl Subscriptions {
         id: ObjectId,
         value: String,
     ) -> Result<(), Error> {
-        self.logs.edit_sub_name(session, id, value.clone()).await;
+        //self.logs.edit_sub_name(session, id, value.clone()).await;
         self.store.edit_name(session, id, value).await?;
         Ok(())
     }

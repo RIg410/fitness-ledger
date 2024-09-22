@@ -13,16 +13,16 @@ use mongodb::bson::oid::ObjectId;
 use storage::treasury::TreasuryStore;
 use tx_macro::tx;
 
-use crate::logs::Logs;
+use crate::history::History;
 
 #[derive(Clone)]
 pub struct Treasury {
     store: TreasuryStore,
-    logs: Logs,
+    logs: History,
 }
 
 impl Treasury {
-    pub fn new(store: TreasuryStore, logs: Logs) -> Self {
+    pub fn new(store: TreasuryStore, logs: History) -> Self {
         Treasury { store, logs }
     }
 
@@ -88,8 +88,8 @@ impl Treasury {
         date_time: &chrono::DateTime<Local>,
     ) -> Result<(), Error> {
         self.logs
-            .payment(session, user.id, amount, description.clone(), date_time)
-            .await;
+            .payment(session, amount, description.clone(), date_time)
+            .await?;
         let event = TreasuryEvent {
             id: ObjectId::new(),
             date_time: date_time.with_timezone(&Utc),
@@ -113,8 +113,8 @@ impl Treasury {
         date_time: &chrono::DateTime<Local>,
     ) -> Result<(), Error> {
         self.logs
-            .deposit(session, user.id, amount, description.clone(), date_time)
-            .await;
+            .deposit(session, amount, description.clone(), date_time)
+            .await?;
         let event = TreasuryEvent {
             id: ObjectId::new(),
             date_time: date_time.with_timezone(&Utc),

@@ -69,7 +69,10 @@ impl TriningBg {
             .calendar
             .finalized(session, training.start_at)
             .await?;
-        self.ledger.logs.process_finished(session, &training).await;
+        self.ledger
+            .history
+            .process_finished(session, &training)
+            .await?;
         Ok(())
     }
 
@@ -96,7 +99,10 @@ impl TriningBg {
             .calendar
             .finalized(session, training.start_at)
             .await?;
-        self.ledger.logs.process_canceled(session, &training).await;
+        self.ledger
+            .history
+            .process_canceled(session, &training)
+            .await?;
         Ok(())
     }
 }

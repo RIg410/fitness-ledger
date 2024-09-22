@@ -23,7 +23,6 @@ bot-calendar = {path = "crates/bot/calendar"}
 bot-core = {path = "crates/bot/core"}
 bot-couch = {path = "crates/bot/couch"}
 bot-finance = {path = "crates/bot/finance"}
-bot-logs = {path = "crates/bot/logs"}
 bot-main = {path = "crates/bot/main"}
 bot-subscription = {path = "crates/bot/subscription"}
 bot-trainigs = {path = "crates/bot/trainigs"}

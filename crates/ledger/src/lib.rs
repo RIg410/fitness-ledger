@@ -1,8 +1,8 @@
 use calendar::{Calendar, SignOutError};
 use chrono::Local;
 use eyre::{bail, eyre, Context as _, Result};
+use history::History;
 use log::{error, warn};
-use logs::Logs;
 use model::decimal::Decimal;
 use model::session::Session;
 use model::subscription::Subscription;
@@ -23,7 +23,7 @@ pub use users::*;
 
 pub mod calendar;
 mod couch;
-pub mod logs;
+pub mod history;
 pub mod process;
 pub mod programs;
 pub mod rewards;
@@ -40,23 +40,23 @@ pub struct Ledger {
     pub treasury: Treasury,
     pub subscriptions: Subscriptions,
     pub presell: PreSellStore,
-    pub logs: Logs,
+    pub history: History,
     pub rewards: Rewards,
 }
 
 impl Ledger {
     pub fn new(storage: Storage) -> Self {
-        let logs = logs::Logs::new(storage.logs);
-        let programs = Programs::new(storage.training, logs.clone());
+        let history = history::History::new(storage.history);
+        let programs = Programs::new(storage.training, history.clone());
         let calendar = Calendar::new(
             storage.calendar,
             storage.users.clone(),
             programs.clone(),
-            logs.clone(),
+            history.clone(),
         );
-        let users = Users::new(storage.users, storage.presell.clone(), logs.clone());
-        let treasury = Treasury::new(storage.treasury, logs.clone());
-        let subscriptions = Subscriptions::new(storage.subscriptions, logs.clone());
+        let users = Users::new(storage.users, storage.presell.clone(), history.clone());
+        let treasury = Treasury::new(storage.treasury, history.clone());
+        let subscriptions = Subscriptions::new(storage.subscriptions, history.clone());
         let presell = storage.presell.clone();
         let rewards = Rewards::new(storage.rewards);
         Ledger {
@@ -66,7 +66,7 @@ impl Ledger {
             db: storage.db,
             treasury,
             subscriptions,
-            logs,
+            history,
             presell,
             rewards,
         }
@@ -93,12 +93,12 @@ impl Ledger {
         tg_id: i64,
         is_active: bool,
     ) -> Result<()> {
+        let user = self
+            .users
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
         if !is_active {
-            let user = self
-                .users
-                .get_by_tg_id(session, tg_id)
-                .await?
-                .ok_or_else(|| eyre!("User not found"))?;
             let mut reserved_balance = user.reserved_balance;
             let users_training = self
                 .calendar
@@ -132,7 +132,7 @@ impl Ledger {
                     .await?;
             }
         }
-        self.logs.block_user(session, tg_id, is_active).await;
+        self.history.block_user(session, user.id, is_active).await?;
         self.users.block_user(session, tg_id, is_active).await?;
         Ok(())
     }
@@ -183,7 +183,14 @@ impl Ledger {
         self.calendar
             .sign_up(session, training.start_at, client)
             .await?;
-        self.logs.sign_up(session, training, user.tg_id).await;
+        self.history
+            .sign_up(
+                session,
+                user.id,
+                training.get_slot().start_at(),
+                training.name,
+            )
+            .await?;
         Ok(())
     }
 
@@ -227,7 +234,14 @@ impl Ledger {
         self.calendar
             .sign_out(session, training.start_at, client)
             .await?;
-        self.logs.sign_out(session, training, user.tg_id).await;
+        self.history
+            .sign_up(
+                session,
+                user.id,
+                training.get_slot().start_at(),
+                training.name,
+            )
+            .await?;
         Ok(())
     }
 
@@ -257,9 +271,9 @@ impl Ledger {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
-        self.logs
-            .sell_subscription(session, subscription.clone(), buyer.tg_id, seller.tg_id)
-            .await;
+        self.history
+            .sell_subscription(session, subscription.clone(), buyer.id)
+            .await?;
 
         self.users
             .add_subscription(session, buyer.tg_id, subscription.clone())
@@ -297,9 +311,9 @@ impl Ledger {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
-        self.logs
-            .presell_subscription(session, subscription.clone(), phone.clone(), seller.tg_id)
-            .await;
+        self.history
+            .presell_subscription(session, subscription.clone(), phone.clone())
+            .await?;
 
         self.presell
             .add(
@@ -339,9 +353,9 @@ impl Ledger {
             .await?
             .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
 
-        self.logs
-            .sell_free_subscription(session, price, item, buyer.tg_id, seller.tg_id)
-            .await;
+        self.history
+            .sell_free_subscription(session, price, item, buyer.id)
+            .await?;
         self.users
             .add_subscription(
                 session,
@@ -384,9 +398,9 @@ impl Ledger {
             error!("User with phone {} already exists", phone);
             return Err(SellSubscriptionError::InvalidParams);
         }
-        self.logs
-            .presell_free_subscription(session, price, item, phone.clone(), seller.tg_id)
-            .await;
+        self.history
+            .presell_free_subscription(session, price, item, phone.clone())
+            .await?;
 
         self.presell
             .add(
@@ -427,9 +441,9 @@ impl Ledger {
         self.calendar
             .edit_capacity(session, program_id, value)
             .await?;
-        self.logs
-            .edit_program_capacity(session, program_id, value)
-            .await;
+        // self.history
+        //     .edit_program_capacity(session, program_id, value)
+        //     .await;
         Ok(())
     }
 
@@ -440,9 +454,9 @@ impl Ledger {
         program_id: ObjectId,
         value: u32,
     ) -> Result<()> {
-        self.logs
-            .edit_program_duration(session, program_id, value)
-            .await?;
+        // self.history
+        //     .edit_program_duration(session, program_id, value)
+        //     .await?;
         self.calendar
             .edit_duration(session, program_id, value)
             .await?;
@@ -459,9 +473,9 @@ impl Ledger {
         id: ObjectId,
         value: String,
     ) -> Result<()> {
-        self.logs
-            .edit_program_name(session, id, value.clone())
-            .await?;
+        // self.history
+        //     .edit_program_name(session, id, value.clone())
+        //     .await?;
         self.programs.edit_name(session, id, value.clone()).await?;
         self.calendar.edit_program_name(session, id, value).await?;
         Ok(())
@@ -474,9 +488,9 @@ impl Ledger {
         id: ObjectId,
         value: String,
     ) -> Result<()> {
-        self.logs
-            .edit_program_description(session, id, value.clone())
-            .await?;
+        // self.history
+        //     .edit_program_description(session, id, value.clone())
+        //     .await?;
         self.programs
             .edit_description(session, id, value.clone())
             .await?;
@@ -497,12 +511,11 @@ impl Ledger {
             warn!("Couch has trainings");
             return Ok(false);
         } else {
-            self.logs.delete_couch(session, id).await;
+            // self.history.delete_couch(session, id).await;
             self.users.delete_couch(session, id).await?;
             Ok(true)
         }
     }
-
 }
 
 #[derive(Error, Debug)]

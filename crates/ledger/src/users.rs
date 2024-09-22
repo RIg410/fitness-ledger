@@ -1,4 +1,4 @@
-use crate::logs::Logs;
+use crate::history::History;
 use chrono::{DateTime, Local, Utc};
 use eyre::{bail, eyre, Error, Result};
 use log::info;
@@ -19,11 +19,11 @@ use tx_macro::tx;
 pub struct Users {
     store: UserStore,
     presell: PreSellStore,
-    logs: Logs,
+    logs: History,
 }
 
 impl Users {
-    pub(crate) fn new(store: UserStore, presell: PreSellStore, logs: Logs) -> Self {
+    pub(crate) fn new(store: UserStore, presell: PreSellStore, logs: History) -> Self {
         Users {
             store,
             logs,
@@ -60,7 +60,7 @@ impl Users {
             reward: couch.reward,
         };
         self.store.set_couch(session, user.tg_id, &couch).await?;
-        self.logs.update_couch_rate(session, user.id, rate).await;
+        // self.logs.update_couch_rate(session, user.id, rate).await;
         Ok(())
     }
 
@@ -83,9 +83,9 @@ impl Users {
             reward: couch.reward,
         };
         self.store.set_couch(session, user.tg_id, &couch).await?;
-        self.logs
-            .update_couch_description(session, user.id, description)
-            .await;
+        // self.logs
+        //     .update_couch_description(session, user.id, description)
+        //     .await;
         Ok(())
     }
 
@@ -136,7 +136,7 @@ impl Users {
             couch: None,
         };
         self.store.insert(session, user).await?;
-        self.logs.create_user(session, tg_id, name, phone).await;
+        self.logs.create_user(session, name, phone).await?;
         Ok(())
     }
 
@@ -163,7 +163,7 @@ impl Users {
             rate,
         };
         self.store.set_couch(session, tg_id, &couch).await?;
-        self.logs.make_user_instructor(session, tg_id, couch).await;
+        // self.logs.make_user_instructor(session, tg_id, couch).await;
         Ok(())
     }
 
@@ -207,7 +207,7 @@ impl Users {
         if !forced && user.birthday.is_some() {
             return Err(SetDateError::AlreadySet);
         }
-        self.logs.set_user_birthday(session, id, date).await;
+        // self.logs.set_user_birthday(session, id, date).await;
         self.store
             .set_birthday(session, user.tg_id, date)
             .await
@@ -223,9 +223,9 @@ impl Users {
         rule: Rule,
         is_active: bool,
     ) -> Result<()> {
-        self.logs
-            .edit_user_rule(session, tg_id, rule, is_active)
-            .await;
+        // self.logs
+        //     .edit_user_rule(session, tg_id, rule, is_active)
+        //     .await;
         if is_active {
             self.store.add_rule(session, tg_id, &rule).await?;
             info!("Adding rule {:?} to user {}", rule, tg_id);
@@ -256,13 +256,19 @@ impl Users {
             bail!("Already frozen");
         }
 
-        self.logs.freeze(session, tg_id, days).await;
+        self.logs.freeze(session, user.id, days).await?;
         self.store.freeze(session, tg_id, days).await?;
         Ok(())
     }
 
     pub(crate) async fn unfreeze(&self, session: &mut Session, tg_id: i64) -> Result<()> {
-        self.logs.unfreeze(session, tg_id).await;
+        let user = self
+            .store
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+
+        self.logs.unfreeze(session, user.id).await?;
         self.store.unfreeze(session, tg_id).await
     }
 
@@ -273,7 +279,13 @@ impl Users {
         tg_id: i64,
         amount: i32,
     ) -> Result<()> {
-        self.logs.change_balance(session, tg_id, amount).await;
+        let user = self
+            .store
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+
+        self.logs.change_balance(session, user.id, amount).await?;
         self.store.change_balance(session, tg_id, amount).await
     }
 
@@ -284,9 +296,15 @@ impl Users {
         tg_id: i64,
         amount: i32,
     ) -> Result<()> {
+        let user = self
+            .store
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+
         self.logs
-            .change_reserved_balance(session, tg_id, amount)
-            .await;
+            .change_reserved_balance(session, user.id, amount)
+            .await?;
         self.store
             .change_reserved_balance(session, tg_id, amount)
             .await
@@ -300,9 +318,9 @@ impl Users {
         first_name: &str,
         last_name: &str,
     ) -> Result<()> {
-        self.logs
-            .set_user_name(session, tg_id, first_name, last_name)
-            .await;
+        // self.logs
+        //     .set_user_name(session, tg_id, first_name, last_name)
+        //     .await;
         self.store
             .set_first_name(session, tg_id, first_name)
             .await?;
@@ -314,7 +332,7 @@ impl Users {
     pub async fn set_phone(&self, session: &mut Session, tg_id: i64, phone: &str) -> Result<()> {
         let phone = sanitize_phone(phone);
         self.store.set_phone(session, tg_id, &phone).await?;
-        self.logs.set_phone(session, tg_id, phone).await;
+        // self.logs.set_phone(session, tg_id, phone).await;
         Ok(())
     }
 }
