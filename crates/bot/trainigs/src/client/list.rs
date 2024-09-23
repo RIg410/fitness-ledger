@@ -88,7 +88,7 @@ impl View for ClientsList {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        if !ctx.is_couch() {
+        if !ctx.is_couch() && !ctx.has_right(Rule::EditTrainingClientsList) {
             bail!("Only couch can see client list");
         }
 

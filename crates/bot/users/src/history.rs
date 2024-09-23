@@ -89,12 +89,12 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             } else {
                 if *is_active {
                     format!(
-                        "Вас заблокировал пользователь (@{})",
+                        "Вас заблокировал пользователь \\(@{}\\)",
                         escape(&actor.name.tg_user_name.unwrap_or_default())
                     )
                 } else {
                     format!(
-                        "Вас разблокировал пользователь (@{})",
+                        "Вас разблокировал пользователь \\(@{}\\)",
                         escape(&actor.name.tg_user_name.unwrap_or_default())
                     )
                 }
@@ -109,7 +109,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             } else {
                 format!(
-                    "Вас записал на тренировку *{}* в _{}_ пользователь (@{})",
+                    "Вас записал на тренировку *{}* в _{}_ пользователь \\(@{}\\)",
                     escape(&name),
                     fmt_dt(start_at),
                     escape(&actor.name.tg_user_name.unwrap_or_default())
@@ -125,7 +125,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             } else {
                 format!(
-                    "Вас удалили из списка в тренировке *{}* в _{}_ пользователь (@{})",
+                    "Вас удалили из списка в тренировке *{}* в _{}_ пользователь \\(@{}\\)",
                     escape(&name),
                     fmt_dt(start_at),
                     escape(&actor.name.tg_user_name.unwrap_or_default())
@@ -145,14 +145,14 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 };
                 format!(
                     "Вы продали абонемент *{}*\nКоличество занятий:_{}_\nCумма:_{}_\nПользователю {}",
-                    escape(&subscription.name), subscription.items, subscription.price, escape(&sub)
+                    escape(&subscription.name), subscription.items, escape(&subscription.price.to_string()), escape(&sub)
                 )
             } else {
                 format!(
                     "Вы купили абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_",
                     escape(&subscription.name),
                     subscription.items,
-                    subscription.price
+                    escape(&subscription.price.to_string())
                 )
             }
         }
@@ -163,14 +163,14 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             if is_actor {
                 format!(
                     "Вы продали абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",
-                    escape(&subscription.name), subscription.items, subscription.price, escape(&phone)
+                    escape(&subscription.name), subscription.items, escape(&subscription.price.to_string()), escape(&phone)
                 )
             } else {
                 format!(
-                    "Вы предварительно купили абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_",
+                    "Вы купили абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_",
                     escape(&subscription.name),
                     subscription.items,
-                    subscription.price
+                    escape(&subscription.price.to_string())
                 )
             }
         }
@@ -188,13 +188,14 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 format!(
                     "Вы продали абонемент\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",
                     item,
-                    price,
+                    escape(&price.to_string()),
                     escape(&sub)
                 )
             } else {
                 format!(
                     "Вы купили абонемент\nКоличество занятий:_{}_\nСумма:_{}_",
-                    item, price
+                    item,
+                    escape(&price.to_string())
                 )
             }
         }
@@ -203,13 +204,14 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 format!(
                     "Вы продали абонемент\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",
                     item,
-                    price,
+                    escape(&price.to_string()),
                     escape(&buyer)
                 )
             } else {
                 format!(
                     "Вы купили абонемент\nКоличество занятий:_{}_\nСумма:_{}_",
-                    item, price
+                    item,
+                    escape(&price.to_string())
                 )
             }
         }
@@ -242,7 +244,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
         } => {
             format!(
                 "Вы произвели оплату *{}* в _{}_\n{}",
-                amount,
+                escape(&amount.to_string()),
                 fmt_dt(&date_time.with_timezone(&Local)),
                 escape(&description)
             )
@@ -254,7 +256,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
         } => {
             format!(
                 "Вы внесли депозит *{}* в _{}_\n{}",
-                amount,
+                escape(&amount.to_string()),
                 fmt_dt(&date_time.with_timezone(&Local)),
                 escape(&description)
             )

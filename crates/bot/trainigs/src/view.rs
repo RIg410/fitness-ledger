@@ -133,7 +133,7 @@ impl TrainingView {
     }
 
     async fn client_list(&mut self, ctx: &mut Context) -> Result<Jmp> {
-        if !ctx.is_couch() {
+        if !ctx.is_couch() && !ctx.has_right(Rule::EditTrainingClientsList) {
             bail!("Only couch can see client list");
         }
         Ok(ClientsList::new(self.id).into())
@@ -232,7 +232,7 @@ _{}_                                                                 \n
     let mut keymap = InlineKeyboardMarkup::default();
     keymap = keymap.append_row(vec![Callback::CouchInfo.button("🧘 Об инструкторе")]);
 
-    if !is_client {
+    if ctx.has_right(Rule::EditTrainingClientsList) {
         keymap = keymap.append_row(vec![Callback::ClientList.button("🗒 Список клиентов")]);
     }
 
