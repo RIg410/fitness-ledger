@@ -25,6 +25,20 @@ impl History {
         }
     }
 
+    pub async fn pay_reward(
+        &self,
+        session: &mut Session,
+        user: ObjectId,
+        amount: Decimal,
+    ) -> Result<()> {
+        let entry = HistoryRow::with_sub_actors(
+            session.actor(),
+            vec![user],
+            Action::PayReward { amount },
+        );
+        self.store.store(session, entry).await
+    }
+
     pub async fn logs(
         &self,
         session: &mut Session,

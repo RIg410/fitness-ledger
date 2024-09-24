@@ -597,4 +597,25 @@ impl UserStore {
         }
         Ok(())
     }
+
+    pub async fn update_couch_reward(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        reward: model::decimal::Decimal,
+    ) -> std::result::Result<(), Error> {
+        info!("Updating couch reward: {:?}", id);
+        let result = self
+            .users
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$set": { "couch.reward":  reward.inner() }, "$inc": { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        if result.modified_count == 0 {
+            return Err(Error::msg("Couch not found"));
+        }
+        Ok(())
+    }
 }

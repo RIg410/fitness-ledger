@@ -1,4 +1,3 @@
-use super::UserInfo;
 use crate::{decimal::Decimal, subscription::Subscription};
 use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -28,6 +27,15 @@ impl From<Subscription> for SubscriptionInfo {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SellSubscription {
-    pub buyer: UserInfo,
+    #[serde(default)]
+    pub buyer_id: UserId,
     pub info: SubscriptionInfo,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub enum UserId {
+    Id(ObjectId),
+    Phone(String),
+    #[default]
+    None,
 }

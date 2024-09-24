@@ -93,19 +93,13 @@ impl View for PreSellView {
                     Sell::Sub(sub) => {
                         ctx.ensure(Rule::SellSubscription)?;
                         ctx.ledger
-                            .presell_subscription(&mut ctx.session, sub, phone, ctx.me.tg_id)
+                            .presell_subscription(&mut ctx.session, sub, phone)
                             .await
                     }
                     Sell::Free { price, items } => {
                         ctx.ensure(Rule::FreeSell)?;
                         ctx.ledger
-                            .presell_free_subscription(
-                                &mut ctx.session,
-                                price,
-                                items,
-                                phone,
-                                ctx.me.tg_id,
-                            )
+                            .presell_free_subscription(&mut ctx.session, price, items, phone)
                             .await
                     }
                 };

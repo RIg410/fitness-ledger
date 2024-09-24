@@ -1,15 +1,15 @@
+pub mod aggregate;
 pub mod income;
 pub mod outcome;
 pub mod subs;
-pub mod training;
 
-use crate::{decimal::Decimal, subscription::Subscription, user::User};
+use crate::{decimal::Decimal, subscription::Subscription};
 use bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
 use income::Income;
 use outcome::Outcome;
 use serde::{Deserialize, Serialize};
-use subs::{SellSubscription, SubscriptionInfo};
+use subs::{SellSubscription, SubscriptionInfo, UserId};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TreasuryEvent {
@@ -17,7 +17,8 @@ pub struct TreasuryEvent {
     pub id: ObjectId,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub date_time: DateTime<Utc>,
-    pub user: UserInfo,
+    #[serde(default)]
+    pub actor: ObjectId,
     pub event: Event,
     pub debit: Decimal,
     pub credit: Decimal,
@@ -26,44 +27,9 @@ pub struct TreasuryEvent {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Event {
     SellSubscription(SellSubscription),
+    Reward(UserId),
     Outcome(Outcome),
     Income(Income),
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UserInfo {
-    pub id: ObjectId,
-    pub tg_id: i64,
-    pub name: Option<String>,
-    pub first_name: String,
-    pub last_name: Option<String>,
-    pub phone: String,
-}
-
-impl From<User> for UserInfo {
-    fn from(user: User) -> Self {
-        UserInfo {
-            id: user.id,
-            tg_id: user.tg_id,
-            name: user.name.tg_user_name,
-            first_name: user.name.first_name,
-            last_name: user.name.last_name,
-            phone: user.phone,
-        }
-    }
-}
-
-impl UserInfo {
-    pub fn from_phone(phone: String) -> Self {
-        UserInfo {
-            id: ObjectId::new(),
-            tg_id: 0,
-            name: None,
-            first_name: "".to_owned(),
-            last_name: None,
-            phone,
-        }
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

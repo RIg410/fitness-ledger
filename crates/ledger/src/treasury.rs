@@ -1,13 +1,15 @@
-use chrono::{Local, Utc};
+use chrono::{DateTime, Local, Utc};
 use eyre::Error;
 use model::{
     decimal::Decimal,
     session::Session,
     treasury::{
-        income::Income, outcome::Outcome, subs::SellSubscription, Event, Sell, TreasuryEvent,
-        UserInfo,
+        aggregate::{AggIncome, AggOutcome, TreasuryAggregate},
+        income::Income,
+        outcome::Outcome,
+        subs::{SellSubscription, UserId},
+        Event, Sell, TreasuryEvent,
     },
-    user::User,
 };
 use mongodb::bson::oid::ObjectId;
 use storage::treasury::TreasuryStore;
@@ -26,18 +28,37 @@ impl Treasury {
         Treasury { store, logs }
     }
 
+    pub async fn get(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+    ) -> Result<Option<TreasuryEvent>, Error> {
+        self.store.get(session, id).await
+    }
+
+    pub async fn remove(&self, session: &mut Session, id: ObjectId) -> Result<(), Error> {
+        self.store.remove(session, id).await
+    }
+
+    pub async fn page(
+        &self,
+        session: &mut Session,
+        limit: u64,
+        offset: u64,
+    ) -> Result<Vec<TreasuryEvent>, Error> {
+        self.store.list(session, limit, offset).await
+    }
+
     pub(crate) async fn sell(
         &self,
         session: &mut Session,
-        seller: User,
-        buyer: User,
+        buyer_id: ObjectId,
         sell: Sell,
     ) -> Result<(), Error> {
         let debit = sell.debit();
-
         let sub = SellSubscription {
-            buyer: buyer.into(),
             info: sell.into(),
+            buyer_id: UserId::Id(buyer_id),
         };
 
         let event = TreasuryEvent {
@@ -46,7 +67,7 @@ impl Treasury {
             event: Event::SellSubscription(sub),
             debit,
             credit: Decimal::zero(),
-            user: seller.into(),
+            actor: session.actor(),
         };
         self.store.insert(session, event).await?;
         Ok(())
@@ -55,14 +76,13 @@ impl Treasury {
     pub(crate) async fn presell(
         &self,
         session: &mut Session,
-        seller: User,
         phone: String,
         sell: Sell,
     ) -> Result<(), Error> {
         let debit = sell.debit();
 
         let sub = SellSubscription {
-            buyer: UserInfo::from_phone(phone),
+            buyer_id: UserId::Phone(phone),
             info: sell.into(),
         };
 
@@ -72,7 +92,7 @@ impl Treasury {
             event: Event::SellSubscription(sub),
             debit,
             credit: Decimal::zero(),
-            user: seller.into(),
+            actor: session.actor(),
         };
         self.store.insert(session, event).await?;
         Ok(())
@@ -82,7 +102,6 @@ impl Treasury {
     pub async fn payment(
         &self,
         session: &mut Session,
-        user: User,
         amount: Decimal,
         description: String,
         date_time: &chrono::DateTime<Local>,
@@ -94,9 +113,9 @@ impl Treasury {
             id: ObjectId::new(),
             date_time: date_time.with_timezone(&Utc),
             event: Event::Outcome(Outcome { description }),
-            debit: amount,
-            credit: Decimal::zero(),
-            user: user.into(),
+            debit: Decimal::zero(),
+            credit: amount,
+            actor: session.actor(),
         };
 
         self.store.insert(session, event).await?;
@@ -107,7 +126,6 @@ impl Treasury {
     pub async fn deposit(
         &self,
         session: &mut Session,
-        user: User,
         amount: Decimal,
         description: String,
         date_time: &chrono::DateTime<Local>,
@@ -121,10 +139,79 @@ impl Treasury {
             event: Event::Income(Income { description }),
             debit: amount,
             credit: Decimal::zero(),
-            user: user.into(),
+            actor: session.actor(),
         };
 
         self.store.insert(session, event).await?;
         Ok(())
+    }
+
+    pub(crate) async fn reward_employee(
+        &self,
+        session: &mut Session,
+        to: UserId,
+        amount: Decimal,
+        date_time: &chrono::DateTime<Local>,
+    ) -> Result<(), Error> {
+        let event = TreasuryEvent {
+            id: ObjectId::new(),
+            date_time: date_time.with_timezone(&Utc),
+            event: Event::Reward(to),
+            debit: Decimal::zero(),
+            credit: amount,
+            actor: session.actor(),
+        };
+
+        self.store.insert(session, event).await?;
+        Ok(())
+    }
+
+    pub async fn aggregate(
+        &self,
+        session: &mut Session,
+        from: DateTime<Local>,
+        to: DateTime<Local>,
+    ) -> Result<TreasuryAggregate, Error> {
+        let txs = self.store.range(session, from, to).await?;
+        let mut debit = Decimal::zero();
+        let mut credit = Decimal::zero();
+        let mut income = AggIncome::default();
+        let mut outcome = AggOutcome::default();
+
+        let mut from = txs
+            .first()
+            .map(|tx| tx.date_time.with_timezone(&Local))
+            .unwrap_or_else(|| Local::now());
+        let mut to = from;
+
+        for tx in txs {
+            from = from.min(tx.date_time.with_timezone(&Local));
+            to = to.max(tx.date_time.with_timezone(&Local));
+            debit += tx.debit;
+            credit += tx.credit;
+            match tx.event {
+                Event::SellSubscription(_) => {
+                    income.subscriptions.add(tx.debit);
+                }
+                Event::Reward(_) => {
+                    outcome.rewards.add(tx.credit);
+                }
+                Event::Outcome(_) => {
+                    outcome.other.add(tx.credit);
+                }
+                Event::Income(_) => {
+                    income.other.add(tx.debit);
+                }
+            }
+        }
+
+        Ok(TreasuryAggregate {
+            from,
+            to,
+            debit,
+            credit,
+            income,
+            outcome,
+        })
     }
 }

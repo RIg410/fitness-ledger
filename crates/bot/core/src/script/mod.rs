@@ -207,7 +207,11 @@ where
             },
             Callback::Page(offset) => match action {
                 Stage::List(list) => {
-                    list.offset += offset as usize * list.limit;
+                    if offset > 0 {
+                        list.offset += offset as usize * list.limit;
+                    } else {
+                        list.offset -= offset.abs() as usize * list.limit;
+                    }
                 }
                 _ => return Ok(Jmp::None),
             },

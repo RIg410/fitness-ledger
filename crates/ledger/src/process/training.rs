@@ -65,6 +65,17 @@ impl TriningBg {
                 .charge_reserved_balance(session, user.tg_id, 1)
                 .await?;
         }
+        let mut couch = self.ledger.get_user(session, training.instructor).await?;
+        if let Some(couch_info) = couch.couch.as_mut() {
+            if let Some(reward) = couch_info.collect_training_rewards(&training) {
+                self.ledger.rewards.add_reward(session, reward).await?;
+                self.ledger
+                    .users
+                    .update_couch_reward(session, couch.id, couch_info.reward)
+                    .await?;
+            }
+        }
+
         self.ledger
             .calendar
             .finalized(session, training.start_at)

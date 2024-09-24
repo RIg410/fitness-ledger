@@ -98,4 +98,7 @@ pub enum Action {
     ChangeReservedBalance {
         amount: i32,
     },
+    PayReward {
+        amount: Decimal,
+    },
 }

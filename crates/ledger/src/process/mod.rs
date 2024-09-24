@@ -3,10 +3,12 @@ use eyre::{Context as _, Result};
 use freeze::FreezeBg;
 use log::error;
 use model::session::Session;
+use rewards::RewardsBg;
 use subscription::SubscriptionBg;
 use training::TriningBg;
 
 pub mod freeze;
+pub mod rewards;
 pub mod subscription;
 pub mod training;
 
@@ -15,6 +17,7 @@ pub struct BgProcessor {
     pub training: TriningBg,
     pub freeze: FreezeBg,
     pub subscriptions: SubscriptionBg,
+    pub rewards: RewardsBg,
 }
 
 impl BgProcessor {
@@ -23,6 +26,7 @@ impl BgProcessor {
             training: TriningBg::new(ledger.clone()),
             freeze: FreezeBg::new(ledger.clone()),
             subscriptions: SubscriptionBg::new(ledger.clone()),
+            rewards: RewardsBg::new(ledger.clone()),
             ledger,
         }
     }
@@ -47,6 +51,15 @@ impl BgProcessor {
             .process(session)
             .await
             .context("subscriptions_process");
+        if let Err(err) = result {
+            error!("Failed to training proc error:{:#?}", err);
+        }
+
+        let result = self
+            .rewards
+            .process(session)
+            .await
+            .context("rewards_process");
         if let Err(err) = result {
             error!("Failed to training proc error:{:#?}", err);
         }

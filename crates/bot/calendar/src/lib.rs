@@ -17,6 +17,7 @@ use model::rights::Rule;
 use serde::{Deserialize, Serialize};
 use std::vec;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
+use teloxide::utils::markdown::escape;
 
 pub struct CalendarView {
     week_id: WeekId,
@@ -101,7 +102,7 @@ pub async fn render_week(
     filter: &Filter,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
     let week_local = week_id.local();
-    let msg = format!(
+    let mut msg = format!(
         "
 📅  Расписание
 *{} {}*
@@ -156,6 +157,22 @@ pub async fn render_week(
         .calendar
         .get_day(&mut ctx.session, selected_day_id)
         .await?;
+
+    if ctx.has_right(Rule::ViewFinance) {
+        let processed_clients_count = day
+            .training
+            .iter()
+            .filter(|t| t.is_processed)
+            .map(|t| t.clients.len())
+            .sum::<usize>();
+
+        let planed_clients_count = day.training.iter().map(|t| t.clients.len()).sum::<usize>();
+        msg.push_str(&escape(&format!(
+            "\n 📊 Списано занятий {}\nЗапланированно {}",
+            processed_clients_count, planed_clients_count
+        )));
+    }
+
     day.training
         .sort_by(|a, b| a.get_slot().start_at().cmp(&b.get_slot().start_at()));
     for training in &day.training {

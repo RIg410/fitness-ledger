@@ -344,6 +344,25 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 format!("Ваш резерв изменен на _{}_ занятий", amount)
             }
         }
+        model::history::Action::PayReward { amount } => {
+            let sub = if let Some(subject) = log.sub_actors.first() {
+                ctx.ledger
+                    .get_user(&mut ctx.session, *subject)
+                    .await?
+                    .name
+                    .to_string()
+            } else {
+                "-".to_string()
+            };
+            if is_actor {
+                format!(
+                    "Вы выплатили вознаграждение в размере *{}* пользователю {}",
+                    amount, sub
+                )
+            } else {
+                format!("Вам выплатили вознаграждение в размере *{}*", amount)
+            }
+        }
     };
 
     Ok(format!(

@@ -8,12 +8,12 @@ use tx_macro::tx;
 #[derive(Clone)]
 pub struct Programs {
     store: ProgramStore,
-    logs: History,
+    _logs: History,
 }
 
 impl Programs {
     pub fn new(store: ProgramStore, logs: History) -> Self {
-        Programs { store, logs }
+        Programs { store, _logs: logs }
     }
 
     pub async fn find(
@@ -107,7 +107,9 @@ impl Programs {
         id: ObjectId,
         description: String,
     ) -> Result<(), Error> {
-        self.store.edit_description(session, id, description).await?;
+        self.store
+            .edit_description(session, id, description)
+            .await?;
         Ok(())
     }
 }

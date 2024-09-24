@@ -99,6 +99,7 @@ pub enum Rule {
     MakePayment,
     MakeDeposit,
     FinanceHistoricalDate,
+    DeleteHistory,
 
     //Logs
     ViewLogs,

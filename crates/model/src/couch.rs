@@ -25,12 +25,8 @@ impl CouchInfo {
         Ok(())
     }
 
-    pub fn collect_training_rewards(
-        &mut self,
-        id: ObjectId,
-        training: &Training,
-    ) -> Result<Option<Reward>, Error> {
-        Ok(match &self.rate {
+    pub fn collect_training_rewards(&mut self, training: &Training) -> Option<Reward> {
+        match &self.rate {
             Rate::FixedMonthly { .. } => None,
             Rate::PerClient { min, per_client } => {
                 let mut reward_sum = *per_client * Decimal::int(training.clients.len() as i64);
@@ -41,19 +37,20 @@ impl CouchInfo {
                 self.reward += reward_sum;
                 let reward = Reward {
                     id: ObjectId::new(),
-                    couch: id,
+                    couch: training.instructor,
                     created_at: Local::now().with_timezone(&Utc),
                     reward: reward_sum,
                     rate: self.rate.clone(),
                     source: RewardSource::Training {
                         start_at: training.start_at,
                         clients: training.clients.len() as u32,
+                        name: training.name.clone(),
                     },
                 };
                 Some(reward)
             }
             Rate::None => None,
-        })
+        }
     }
 
     pub fn collect_monthly_rewards(
@@ -105,6 +102,12 @@ pub enum Rate {
     None,
 }
 
+impl Rate {
+    pub fn is_fixed_monthly(&self) -> bool {
+        matches!(self, Rate::FixedMonthly { .. })
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Reward {
     #[serde(rename = "_id")]
@@ -123,6 +126,7 @@ pub enum RewardSource {
         #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
         start_at: DateTime<Utc>,
         clients: u32,
+        name: String,
     },
     FixedMonthly {},
 }

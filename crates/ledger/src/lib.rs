@@ -7,6 +7,7 @@ use model::decimal::Decimal;
 use model::session::Session;
 use model::subscription::Subscription;
 use model::training::{Training, TrainingStatus};
+use model::treasury::subs::UserId;
 use model::treasury::Sell;
 use model::user::{sanitize_phone, User, UserIdent, UserPreSell};
 use mongodb::bson::oid::ObjectId;
@@ -251,17 +252,10 @@ impl Ledger {
         session: &mut Session,
         subscription: ObjectId,
         buyer: i64,
-        seller: i64,
     ) -> Result<(), SellSubscriptionError> {
         let buyer = self
             .users
             .get_by_tg_id(session, buyer)
-            .await?
-            .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
-
-        let seller = self
-            .users
-            .get_by_tg_id(session, seller)
             .await?
             .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
 
@@ -280,7 +274,7 @@ impl Ledger {
             .await?;
 
         self.treasury
-            .sell(session, seller, buyer, Sell::Sub(subscription))
+            .sell(session, buyer.id, Sell::Sub(subscription))
             .await?;
         Ok(())
     }
@@ -291,14 +285,8 @@ impl Ledger {
         session: &mut Session,
         subscription: ObjectId,
         phone: String,
-        seller: i64,
     ) -> Result<(), SellSubscriptionError> {
         let phone = sanitize_phone(&phone);
-        let seller = self
-            .users
-            .get_by_tg_id(session, seller)
-            .await?
-            .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
         let bayer = self.users.find_by_phone(session, &phone).await?;
         if bayer.is_some() {
             error!("User with phone {} already exists", phone);
@@ -327,7 +315,7 @@ impl Ledger {
             .await?;
 
         self.treasury
-            .presell(session, seller, phone, Sell::Sub(subscription))
+            .presell(session, phone, Sell::Sub(subscription))
             .await?;
         Ok(())
     }
@@ -339,17 +327,10 @@ impl Ledger {
         price: Decimal,
         item: u32,
         buyer: i64,
-        seller: i64,
     ) -> Result<(), SellSubscriptionError> {
         let buyer = self
             .users
             .get_by_tg_id(session, buyer)
-            .await?
-            .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
-
-        let seller = self
-            .users
-            .get_by_tg_id(session, seller)
             .await?
             .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
 
@@ -373,7 +354,7 @@ impl Ledger {
             .await?;
 
         self.treasury
-            .sell(session, seller, buyer, Sell::Free(item, price))
+            .sell(session, buyer.id, Sell::Free(item, price))
             .await?;
         Ok(())
     }
@@ -385,14 +366,8 @@ impl Ledger {
         price: Decimal,
         item: u32,
         phone: String,
-        seller: i64,
     ) -> Result<(), SellSubscriptionError> {
         let phone = sanitize_phone(&phone);
-        let seller = self
-            .users
-            .get_by_tg_id(session, seller)
-            .await?
-            .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
         let bayer = self.users.find_by_phone(session, &phone).await?;
         if bayer.is_some() {
             error!("User with phone {} already exists", phone);
@@ -423,7 +398,7 @@ impl Ledger {
             .await?;
 
         self.treasury
-            .presell(session, seller, phone, Sell::Free(item, price))
+            .presell(session, phone, Sell::Free(item, price))
             .await?;
         Ok(())
     }
@@ -515,6 +490,26 @@ impl Ledger {
             self.users.delete_couch(session, id).await?;
             Ok(true)
         }
+    }
+
+    #[tx]
+    pub async fn pay_reward(
+        &self,
+        session: &mut Session,
+        couch_id: ObjectId,
+        amount: Decimal,
+    ) -> Result<()> {
+        let user = self.get_user(session, couch_id).await?;
+        let mut couch_info = user.couch.ok_or_else(|| eyre!("User is not couch"))?;
+        couch_info.get_reward(amount)?;
+        self.history.pay_reward(session, couch_id, amount).await?;
+        self.treasury
+            .reward_employee(session, UserId::Id(couch_id), amount, &Local::now())
+            .await?;
+        self.users
+            .update_couch_reward(session, couch_id, couch_info.reward)
+            .await?;
+        Ok(())
     }
 }
 

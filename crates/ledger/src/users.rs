@@ -338,6 +338,15 @@ impl Users {
 }
 
 impl Users {
+    pub(crate)async fn update_couch_reward(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        reward: Decimal,
+    ) -> Result<()> {
+        self.store.update_couch_reward(session, id, reward).await
+    }
+
     pub async fn delete_couch(&self, session: &mut Session, id: ObjectId) -> Result<()> {
         self.store.delete_couch(session, id).await
     }

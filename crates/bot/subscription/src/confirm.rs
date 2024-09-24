@@ -38,19 +38,13 @@ impl View for ConfirmSell {
                     Sell::Sub(sub) => {
                         ctx.ensure(Rule::SellSubscription)?;
                         ctx.ledger
-                            .sell_subscription(&mut ctx.session, sub, self.user_id, ctx.me.tg_id)
+                            .sell_subscription(&mut ctx.session, sub, self.user_id)
                             .await
                     }
                     Sell::Free { price, items } => {
                         ctx.ensure(Rule::FreeSell)?;
                         ctx.ledger
-                            .sell_free_subscription(
-                                &mut ctx.session,
-                                price,
-                                items,
-                                self.user_id,
-                                ctx.me.tg_id,
-                            )
+                            .sell_free_subscription(&mut ctx.session, price, items, self.user_id)
                             .await
                     }
                 };

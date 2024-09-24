@@ -21,7 +21,7 @@ pub struct Calendar {
     calendar: CalendarStore,
     users: UserStore,
     programs: Programs,
-    logs: History,
+    _logs: History,
 }
 
 impl Calendar {
@@ -35,7 +35,7 @@ impl Calendar {
             calendar,
             users,
             programs,
-            logs,
+            _logs: logs,
         }
     }
 
@@ -154,7 +154,7 @@ impl Calendar {
                 .delete_training(session, training.start_at)
                 .await?;
 
-           // self.logs.delete_training(session, &training, all).await;
+            // self.logs.delete_training(session, &training, all).await;
             let day_id = DayId::from(training.get_slot().start_at());
             if all {
                 let mut cursor = self.calendar.week_days_after(session, day_id).await?;

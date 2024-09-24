@@ -247,6 +247,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "bot-core",
+ "bot-viewer",
  "chrono",
  "eyre",
  "hex",

@@ -112,13 +112,7 @@ impl View for InOut {
                     Io::Deposit => {
                         ctx.ledger
                             .treasury
-                            .deposit(
-                                &mut ctx.session,
-                                ctx.me.clone(),
-                                *amount,
-                                description.to_string(),
-                                date,
-                            )
+                            .deposit(&mut ctx.session, *amount, description.to_string(), date)
                             .await?;
                         ctx.send_msg("✅ Платеж сохранен").await?;
                         Ok(Jmp::Back)
@@ -126,13 +120,7 @@ impl View for InOut {
                     Io::Payment => {
                         ctx.ledger
                             .treasury
-                            .payment(
-                                &mut ctx.session,
-                                ctx.me.clone(),
-                                *amount,
-                                description.to_string(),
-                                date,
-                            )
+                            .payment(&mut ctx.session, *amount, description.to_string(), date)
                             .await?;
                         ctx.send_msg("✅ Платеж сохранен").await?;
                         Ok(Jmp::Back)
