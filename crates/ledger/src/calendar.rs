@@ -7,7 +7,7 @@ use model::{
     ids::DayId,
     session::Session,
     slot::Slot,
-    training::{Filter, Training, TrainingStatus},
+    training::{Filter, Statistics, Training, TrainingStatus},
 };
 use mongodb::{bson::oid::ObjectId, SessionCursor};
 use storage::{calendar::CalendarStore, user::UserStore};
@@ -324,8 +324,9 @@ impl Calendar {
         &self,
         session: &mut Session,
         start_at: DateTime<Utc>,
+        statistics: Statistics,
     ) -> Result<()> {
-        self.calendar.finalized(session, start_at).await
+        self.calendar.finalized(session, start_at, statistics).await
     }
 
     pub(crate) async fn edit_capacity(

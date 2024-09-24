@@ -14,6 +14,7 @@ use chrono::{Datelike, Duration, Local, Weekday};
 use eyre::Error;
 use model::ids::{DayId, WeekId};
 use model::rights::Rule;
+use model::training::Statistics;
 use serde::{Deserialize, Serialize};
 use std::vec;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
@@ -159,17 +160,14 @@ pub async fn render_week(
         .await?;
 
     if ctx.has_right(Rule::ViewFinance) {
-        let processed_clients_count = day
+        let stat = day
             .training
             .iter()
-            .filter(|t| t.is_processed)
-            .map(|t| t.clients.len())
-            .sum::<usize>();
-
-        let planed_clients_count = day.training.iter().map(|t| t.clients.len()).sum::<usize>();
+            .filter_map(|t| t.statistics.clone())
+            .sum::<Statistics>();
         msg.push_str(&escape(&format!(
-            "\n 📊 Списано занятий {}\nЗапланированно {}",
-            processed_clients_count, planed_clients_count
+            "\n 📊Заработано {}\n📊Награда инструктора {}",
+            stat.earned, stat.couch_rewards
         )));
     }
 

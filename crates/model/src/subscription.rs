@@ -48,8 +48,10 @@ pub struct UserSubscription {
     pub items: u32,
     #[serde(default = "default_days")]
     pub days: u32,
-    #[serde(default)]   
+    #[serde(default)]
     pub status: Status,
+    #[serde(default)]
+    pub price: Decimal,
 }
 
 impl UserSubscription {
@@ -82,6 +84,7 @@ impl From<Subscription> for UserSubscription {
             items: value.items,
             days: value.expiration_days,
             status: Status::NotActive,
+            price: value.price,
         }
     }
 }

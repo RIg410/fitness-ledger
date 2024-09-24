@@ -1,8 +1,10 @@
+use std::iter::Sum;
+
 use chrono::{DateTime, Datelike, Local, Timelike as _, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::{ids::DayId, program::Program, slot::Slot};
+use crate::{decimal::Decimal, ids::DayId, program::Program, slot::Slot};
 
 pub const CLOSE_SING_UP: u32 = 3 * 60; // 3 hours
 
@@ -26,6 +28,8 @@ pub struct Training {
     #[serde(default)]
     #[serde(rename = "is_finished")]
     pub is_processed: bool,
+    #[serde(default)]
+    pub statistics: Option<Statistics>,
 }
 
 impl Training {
@@ -52,6 +56,7 @@ impl Training {
             is_one_time,
             is_canceled: false,
             is_processed: false,
+            statistics: None,
         }
     }
 
@@ -74,6 +79,7 @@ impl Training {
             is_one_time,
             is_canceled: false,
             is_processed: false,
+            statistics: None,
         }
     }
 
@@ -99,6 +105,7 @@ impl Training {
             is_one_time: training.is_one_time,
             is_canceled: false,
             is_processed: false,
+            statistics: None,
         }
     }
 
@@ -201,5 +208,20 @@ impl Filter {
             Filter::Instructor(instructor) => training.instructor == *instructor,
             Filter::Program(program) => training.proto_id == *program,
         }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, Copy)]
+pub struct Statistics {
+    pub earned: Decimal,
+    pub couch_rewards: Decimal,
+}
+
+impl Sum<Statistics> for Statistics {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Statistics::default(), |acc, item| Statistics {
+            earned: acc.earned + item.earned,
+            couch_rewards: acc.couch_rewards + item.couch_rewards,
+        })
     }
 }

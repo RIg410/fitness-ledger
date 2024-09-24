@@ -402,8 +402,7 @@ impl Users {
     ) -> Result<(), Error> {
         self.store
             .charge_reserved_balance(session, tg_id, amount)
-            .await?;
-        Ok(())
+            .await
     }
 
     pub(crate) async fn find_subscription_to_expire(

@@ -2,8 +2,9 @@ use crate::Ledger;
 use eyre::{eyre, Result};
 use log::{error, info};
 use model::{
+    decimal::Decimal,
     session::Session,
-    training::{Training, TrainingStatus},
+    training::{Statistics, Training, TrainingStatus},
 };
 use tx_macro::tx;
 
@@ -50,6 +51,9 @@ impl TriningBg {
     #[tx]
     async fn process_finished(&self, session: &mut Session, training: Training) -> Result<()> {
         info!("Finalize training:{:?}", training);
+
+        let mut statistic = Statistics::default();
+
         for client in &training.clients {
             let user = self
                 .ledger
@@ -60,6 +64,16 @@ impl TriningBg {
             if user.reserved_balance == 0 {
                 return Err(eyre!("Not enough reserved balance:{}", user.tg_id));
             }
+            if let Some(active) = user.subscriptions.iter().find(|s| s.is_active()) {
+                if active.price.is_zero() {
+                    statistic.earned += Decimal::int(450);
+                } else {
+                    statistic.earned += active.price / Decimal::int(active.items as i64);
+                }
+            } else {
+                statistic.earned += Decimal::int(450);
+            }
+
             self.ledger
                 .users
                 .charge_reserved_balance(session, user.tg_id, 1)
@@ -68,6 +82,7 @@ impl TriningBg {
         let mut couch = self.ledger.get_user(session, training.instructor).await?;
         if let Some(couch_info) = couch.couch.as_mut() {
             if let Some(reward) = couch_info.collect_training_rewards(&training) {
+                statistic.couch_rewards += reward.reward;
                 self.ledger.rewards.add_reward(session, reward).await?;
                 self.ledger
                     .users
@@ -78,7 +93,7 @@ impl TriningBg {
 
         self.ledger
             .calendar
-            .finalized(session, training.start_at)
+            .finalized(session, training.start_at, statistic)
             .await?;
         self.ledger
             .history
@@ -108,7 +123,7 @@ impl TriningBg {
         }
         self.ledger
             .calendar
-            .finalized(session, training.start_at)
+            .finalized(session, training.start_at, Statistics::default())
             .await?;
         self.ledger
             .history

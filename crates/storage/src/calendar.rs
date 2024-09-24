@@ -6,7 +6,7 @@ use model::{
     day::Day,
     ids::DayId,
     session::Session,
-    training::{Filter, Training},
+    training::{Filter, Statistics, Training},
 };
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -299,11 +299,16 @@ impl CalendarStore {
         Ok(self.days.find(filter).session(&mut *session).await?)
     }
 
-    pub async fn finalized(&self, session: &mut Session, start_at: DateTime<Utc>) -> Result<()> {
+    pub async fn finalized(
+        &self,
+        session: &mut Session,
+        start_at: DateTime<Utc>,
+        statistics: Statistics,
+    ) -> Result<()> {
         info!("Finalized: {:?}", start_at);
         let filter = doc! { "training.start_at": start_at };
         let update = doc! {
-            "$set": { "training.$.is_finished": true },
+            "$set": { "training.$.is_finished": true, "training.$.statistics": to_document(&statistics)? },
             "$inc": { "version": 1 }
         };
         let result = self
