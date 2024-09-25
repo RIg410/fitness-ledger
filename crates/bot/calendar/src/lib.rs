@@ -136,7 +136,7 @@ pub async fn render_week(
             } else {
                 ""
             },
-            fmt_weekday(&date)
+            fmt_weekday(date.weekday())
         );
         row.push(InlineKeyboardButton::callback(
             text,

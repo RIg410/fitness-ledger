@@ -272,9 +272,32 @@ dependencies = [
  "bot-core",
  "bot-couch",
  "bot-finance",
+ "bot-statistic",
  "bot-subscription",
  "bot-trainigs",
  "bot-users",
+ "bot-viewer",
+ "chrono",
+ "eyre",
+ "hex",
+ "itertools 0.2.9",
+ "ledger",
+ "log",
+ "model",
+ "mongodb",
+ "serde",
+ "storage",
+ "strum",
+ "teloxide",
+]
+
+[[package]]
+name = "bot-statistic"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bincode",
+ "bot-core",
  "bot-viewer",
  "chrono",
  "eyre",

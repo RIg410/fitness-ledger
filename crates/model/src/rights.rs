@@ -108,6 +108,9 @@ pub enum Rule {
     CreateCouch,
     EditCouch,
     ViewCouchRates,
+
+    //statistics
+    ViewStatistics,
 }
 
 impl Rule {

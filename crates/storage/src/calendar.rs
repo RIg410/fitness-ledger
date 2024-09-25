@@ -35,6 +35,18 @@ impl CalendarStore {
         })
     }
 
+    pub async fn find_range(
+        &self,
+        session: &mut Session,
+        from: DateTime<Local>,
+        to: DateTime<Local>,
+    ) -> Result<SessionCursor<Day>> {
+        let filter = doc! {
+            "date_time": { "$gte": from.with_timezone(&Utc), "$lt": to.with_timezone(&Utc) },
+        };
+        Ok(self.days.find(filter).session(&mut *session).await?)
+    }
+
     pub async fn cursor(
         &self,
         session: &mut Session,

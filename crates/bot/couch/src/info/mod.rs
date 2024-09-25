@@ -9,7 +9,7 @@ use bot_core::{
 };
 use bot_trainigs::view::TrainingView;
 use bot_viewer::{day::fmt_weekday, training::fmt_training_status};
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Datelike, Local};
 use edit_rate::{ChangeRateState, SetRewardType};
 use eyre::{Error, Result};
 use model::{rights::Rule, training::Training};
@@ -156,7 +156,7 @@ fn make_item(training: Training, ctx: &mut Context, now: DateTime<Local>) -> Lis
                 training.is_full(),
                 training.clients.contains(&ctx.me.id)
             ),
-            fmt_weekday(&start_at),
+            fmt_weekday(start_at.weekday()),
             start_at.format("%d.%m %H:%M"),
             training.name.as_str(),
         ),

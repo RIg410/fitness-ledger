@@ -24,6 +24,7 @@ bot-core = {path = "crates/bot/core"}
 bot-couch = {path = "crates/bot/couch"}
 bot-finance = {path = "crates/bot/finance"}
 bot-main = {path = "crates/bot/main"}
+bot-statistic = {path = "crates/bot/statistic"}
 bot-subscription = {path = "crates/bot/subscription"}
 bot-trainigs = {path = "crates/bot/trainigs"}
 bot-users = {path = "crates/bot/users"}

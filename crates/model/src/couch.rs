@@ -26,6 +26,9 @@ impl CouchInfo {
     }
 
     pub fn collect_training_rewards(&mut self, training: &Training) -> Option<Reward> {
+        if training.clients.len() == 0 {
+            return None;
+        }
         match &self.rate {
             Rate::FixedMonthly { .. } => None,
             Rate::PerClient { min, per_client } => {

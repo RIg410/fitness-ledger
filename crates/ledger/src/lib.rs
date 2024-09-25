@@ -28,6 +28,7 @@ pub mod history;
 pub mod process;
 pub mod programs;
 pub mod rewards;
+pub mod statistics;
 pub mod subscriptions;
 pub mod treasury;
 mod users;
@@ -43,6 +44,7 @@ pub struct Ledger {
     pub presell: PreSellStore,
     pub history: History,
     pub rewards: Rewards,
+    pub statistics: statistics::Statistics,
 }
 
 impl Ledger {
@@ -60,6 +62,7 @@ impl Ledger {
         let subscriptions = Subscriptions::new(storage.subscriptions, history.clone());
         let presell = storage.presell.clone();
         let rewards = Rewards::new(storage.rewards);
+        let statistics = statistics::Statistics::new(calendar.clone());
         Ledger {
             users,
             calendar,
@@ -70,6 +73,7 @@ impl Ledger {
             history,
             presell,
             rewards,
+            statistics,
         }
     }
 

@@ -39,6 +39,15 @@ impl Calendar {
         }
     }
 
+    pub async fn find_range(
+        &self,
+        session: &mut Session,
+        from: DateTime<Local>,
+        to: DateTime<Local>,
+    ) -> Result<SessionCursor<Day>> {
+        self.calendar.find_range(session, from, to).await
+    }
+
     pub async fn get_day(&self, session: &mut Session, day: DayId) -> Result<Day> {
         self.calendar.get_day(session, day).await
     }

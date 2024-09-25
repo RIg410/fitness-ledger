@@ -3,8 +3,8 @@ use chrono::{
     DateTime, Datelike as _, Local, Weekday,
 };
 
-pub fn fmt_weekday(weekday: &DateTime<Local>) -> &'static str {
-    match weekday.weekday() {
+pub fn fmt_weekday(day: Weekday) -> &'static str {
+    match day {
         Weekday::Mon => "Пн",
         Weekday::Tue => "Вт",
         Weekday::Wed => "Ср",

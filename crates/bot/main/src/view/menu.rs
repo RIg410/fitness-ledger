@@ -6,6 +6,7 @@ use bot_core::{
 };
 use bot_couch::list::CouchingList;
 use bot_finance::FinanceView;
+use bot_statistic::StatisticsView;
 use bot_subscription::SubscriptionView;
 use bot_trainigs::program::list::ProgramList;
 use bot_users::{profile::UserProfile, Query, UsersView};
@@ -33,6 +34,10 @@ impl MainMenuView {
         }
         if ctx.has_right(Rule::ViewFinance) {
             keymap = keymap.append_row(vec![MainMenuItem::FinanceView.into()]);
+        }
+
+        if ctx.has_right(Rule::ViewStatistics) {
+            keymap = keymap.append_row(vec![MainMenuItem::Statistics.into()]);
         }
 
         ctx.edit_origin("🏠SoulFamily       🤸🏼", keymap).await?;
@@ -85,6 +90,7 @@ impl View for MainMenuView {
             MainMenuItem::Coach => CouchingList::new().into(),
             MainMenuItem::Home => MainMenuView.into(),
             MainMenuItem::Programs => ProgramList::default().into(),
+            MainMenuItem::Statistics => StatisticsView::default().into(),
         })
     }
 
@@ -108,6 +114,7 @@ impl View for MainMenuView {
             MainMenuItem::Coach => CouchingList::new().into(),
             MainMenuItem::Home => MainMenuView.into(),
             MainMenuItem::Programs => ProgramList::default().into(),
+            MainMenuItem::Statistics => StatisticsView::default().into(),
         })
     }
 
@@ -126,6 +133,7 @@ pub enum MainMenuItem {
     FinanceView,
     Coach,
     Programs,
+    Statistics,
 }
 
 const HOME_DESCRIPTION: &str = "🏠";
@@ -152,6 +160,9 @@ const USERS_NAME: &str = "/users";
 const FINANCE_DESCRIPTION: &str = "Финансы 💰";
 const FINANCE_NAME: &str = "/finance";
 
+const STATISTICS_DESCRIPTION: &str = "Статистика 📊";
+const STATISTICS_NAME: &str = "/statistics";
+
 impl MainMenuItem {
     pub fn description(&self) -> &'static str {
         match self {
@@ -163,6 +174,7 @@ impl MainMenuItem {
             MainMenuItem::FinanceView => FINANCE_DESCRIPTION,
             MainMenuItem::Coach => COUCH_DESCRIPTION,
             MainMenuItem::Programs => PROGRAM_DESCRIPTION,
+            MainMenuItem::Statistics => STATISTICS_DESCRIPTION,
         }
     }
 
@@ -176,6 +188,7 @@ impl MainMenuItem {
             MainMenuItem::FinanceView => FINANCE_NAME,
             MainMenuItem::Coach => COUCH_NAME,
             MainMenuItem::Programs => PROGRAM_NAME,
+            MainMenuItem::Statistics => STATISTICS_NAME,
         }
     }
 }
@@ -208,6 +221,7 @@ impl TryFrom<&str> for MainMenuItem {
             FINANCE_NAME | FINANCE_DESCRIPTION => Ok(MainMenuItem::FinanceView),
             COUCH_NAME | COUCH_DESCRIPTION => Ok(MainMenuItem::Coach),
             PROGRAM_NAME | PROGRAM_DESCRIPTION => Ok(MainMenuItem::Programs),
+            STATISTICS_NAME | STATISTICS_DESCRIPTION => Ok(MainMenuItem::Statistics),
             _ => bail!("Unknown command"),
         }
     }

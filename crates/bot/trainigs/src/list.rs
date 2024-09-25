@@ -6,7 +6,7 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::{day::fmt_weekday, training::fmt_training_status};
-use chrono::Local;
+use chrono::{Datelike as _, Local};
 use eyre::Result;
 use model::training::Filter;
 use mongodb::bson::oid::ObjectId;
@@ -111,7 +111,7 @@ async fn render(
                 training.is_full(),
                 training.clients.contains(&ctx.me.id)
             ),
-            fmt_weekday(&start_at),
+            fmt_weekday(start_at.weekday()),
             start_at.format("%d.%m %H:%M"),
             training.name.as_str(),
         )));
