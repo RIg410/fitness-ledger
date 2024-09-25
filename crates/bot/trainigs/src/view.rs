@@ -40,7 +40,7 @@ impl TrainingView {
         if let Some(couch) = user.couch {
             ctx.send_msg(&escape(&couch.description)).await?;
         }
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn cancel_training(&mut self, ctx: &mut Context) -> Result<Jmp> {
@@ -55,7 +55,7 @@ impl TrainingView {
             .calendar
             .cancel_training(&mut ctx.session, &training)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn delete_training(&mut self, ctx: &mut Context, all: bool) -> Result<Jmp> {
@@ -85,7 +85,7 @@ impl TrainingView {
             .calendar
             .restore_training(&mut ctx.session, &training)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn sign_up(&mut self, ctx: &mut Context) -> Result<Jmp> {
@@ -97,22 +97,22 @@ impl TrainingView {
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         if !training.status(Local::now()).can_sign_in() {
             ctx.send_msg("Запись на тренировку закрыта💔").await?;
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         }
 
         if ctx.me.balance < 1 {
             ctx.send_msg("Недостаточно средств на балансе🥺").await?;
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         }
         if ctx.me.freeze.is_some() {
             ctx.send_msg("Ваш абонемент заморожен🥶").await?;
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         }
 
         ctx.ledger
             .sign_up(&mut ctx.session, &training, ctx.me.id, false)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn sign_out(&mut self, ctx: &mut Context) -> Result<Jmp> {
@@ -124,12 +124,12 @@ impl TrainingView {
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         if !training.status(Local::now()).can_sign_out() {
             ctx.send_msg("Запись на тренировку закрыта").await?;
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         }
         ctx.ledger
             .sign_out(&mut ctx.session, &training, ctx.me.id, false)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn client_list(&mut self, ctx: &mut Context) -> Result<Jmp> {

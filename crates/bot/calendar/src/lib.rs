@@ -71,11 +71,11 @@ impl View for CalendarView {
             Callback::GoToWeek(week) => {
                 self.week_id = WeekId::from(week);
                 self.selected_day = self.week_id.day(self.selected_day.week_day());
-                Ok(Jmp::None)
+                Ok(Jmp::Stay)
             }
             Callback::SelectDay(day) => {
                 self.selected_day = DayId::from(day);
-                Ok(Jmp::None)
+                Ok(Jmp::Stay)
             }
             Callback::SelectTraining(id) => Ok(TrainingView::new(id.into()).into()),
             Callback::AddTraining => {

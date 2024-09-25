@@ -111,6 +111,8 @@ pub enum Rule {
 
     //statistics
     ViewStatistics,
+
+    System,
 }
 
 impl Rule {

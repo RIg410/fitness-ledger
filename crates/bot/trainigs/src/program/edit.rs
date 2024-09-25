@@ -35,7 +35,7 @@ impl EditProgram {
         ctx.ledger
             .edit_program_capacity(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     pub async fn edit_duration(&self, ctx: &mut Context, value: u32) -> Result<Jmp> {
@@ -43,7 +43,7 @@ impl EditProgram {
         ctx.ledger
             .edit_program_duration(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     pub async fn edit_name(&self, ctx: &mut Context, value: String) -> Result<Jmp> {
@@ -51,7 +51,7 @@ impl EditProgram {
         ctx.ledger
             .edit_program_name(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     pub async fn edit_description(&self, ctx: &mut Context, value: String) -> Result<Jmp> {
@@ -59,7 +59,7 @@ impl EditProgram {
         ctx.ledger
             .edit_program_description(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 }
 
@@ -100,14 +100,14 @@ impl View for EditProgram {
                     EditType::Capacity => {
                         if let Err(err) = text.parse::<NonZero<u32>>() {
                             ctx.send_msg(&format!("Неверный формат: {}", err)).await?;
-                            return Ok(Jmp::None);
+                            return Ok(Jmp::Stay);
                         }
                         format!("вместимость на {}", text)
                     }
                     EditType::Duration => {
                         if let Err(err) = text.parse::<NonZero<u32>>() {
                             ctx.send_msg(&format!("Неверный формат: {}", err)).await?;
-                            return Ok(Jmp::None);
+                            return Ok(Jmp::Stay);
                         }
                         format!("длительность на {}", text)
                     }
@@ -132,7 +132,7 @@ impl View for EditProgram {
             }
         }
 
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
@@ -141,7 +141,7 @@ impl View for EditProgram {
                 let value = if let State::Confirm(value) = self.state.clone() {
                     value
                 } else {
-                    return Ok(Jmp::None);
+                    return Ok(Jmp::Stay);
                 };
                 match self.edit_type {
                     EditType::Capacity => self.edit_capacity(ctx, value.parse()?).await?,

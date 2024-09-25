@@ -146,7 +146,7 @@ impl View for ClientView {
         let cb = if let Some(cb) = Callback::from_data(data) {
             cb
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
 
         ctx.ensure(Rule::EditTrainingClientsList)?;
@@ -157,14 +157,14 @@ impl View for ClientView {
                 if let Reason::AddClient = self.reason {
                     self.add_client(ctx).await?;
                 } else {
-                    return Ok(Jmp::None);
+                    return Ok(Jmp::Stay);
                 }
             }
             Callback::DeleteClient => {
                 if let Reason::RemoveClient = self.reason {
                     self.remove_client(ctx).await?;
                 } else {
-                    return Ok(Jmp::None);
+                    return Ok(Jmp::Stay);
                 }
             }
         };

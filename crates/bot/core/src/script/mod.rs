@@ -112,7 +112,7 @@ where
             if let (Some(action), Some(text)) = (self.action.as_mut(), message.text()) {
                 (action, text)
             } else {
-                return Ok(Jmp::None);
+                return Ok(Jmp::Stay);
             };
 
         match action {
@@ -139,7 +139,7 @@ where
             }
         }
         ctx.delete_msg(message.id).await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
@@ -147,7 +147,7 @@ where
             if let (Some(action), Some(cb)) = (self.action.as_mut(), Callback::from_data(data)) {
                 (action, cb)
             } else {
-                return Ok(widget::Jmp::None);
+                return Ok(widget::Jmp::Stay);
             };
 
         match cb {
@@ -161,12 +161,12 @@ where
             },
             Callback::Select(idx) => match action {
                 Stage::Text(_) => {
-                    return Ok(Jmp::None);
+                    return Ok(Jmp::Stay);
                 }
                 Stage::YesNo(hdl) => match idx {
                     ListId::Yes => match hdl.yes(ctx, self.state.as_mut().unwrap()).await? {
                         Dispatch::None => {
-                            return Ok(Jmp::None);
+                            return Ok(Jmp::Stay);
                         }
                         Dispatch::Stage(stage) => {
                             self.action = Some(stage);
@@ -182,7 +182,7 @@ where
                         ctx.send_notification("❌ Отменено").await?;
                         return Ok(Jmp::Back);
                     }
-                    _ => return Ok(Jmp::None),
+                    _ => return Ok(Jmp::Stay),
                 },
                 Stage::List(list) => {
                     let result = list
@@ -191,7 +191,7 @@ where
                         .await?;
                     match result {
                         Dispatch::None => {
-                            return Ok(Jmp::None);
+                            return Ok(Jmp::Stay);
                         }
                         Dispatch::Stage(stage) => {
                             self.action = Some(stage);
@@ -213,11 +213,11 @@ where
                         list.offset -= offset.abs() as usize * list.limit;
                     }
                 }
-                _ => return Ok(Jmp::None),
+                _ => return Ok(Jmp::Stay),
             },
         };
 
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 }
 

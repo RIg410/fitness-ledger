@@ -66,7 +66,7 @@ impl View for InOut {
         let text = if let Some(msg) = message.text() {
             msg
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
 
         let state = mem::take(&mut self.state);
@@ -102,7 +102,7 @@ impl View for InOut {
                 State::Finish(d, a, dt)
             }
         };
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
@@ -129,7 +129,7 @@ impl View for InOut {
                 _ => {
                     ctx.send_msg("Заполните все поля").await?;
                     self.state = State::Description;
-                    Ok(Jmp::None)
+                    Ok(Jmp::Stay)
                 }
             },
             Callback::Back => Ok(Jmp::Back),

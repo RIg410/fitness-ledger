@@ -32,11 +32,11 @@ pub trait View {
         msg: &Message,
     ) -> Result<Jmp, eyre::Error> {
         ctx.delete_msg(msg.id).await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Jmp, eyre::Error> {
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     fn widget(self) -> Widget
@@ -106,7 +106,7 @@ impl Debug for Widget {
 pub enum Jmp {
     Next(Widget),
     Goto(Widget),
-    None,
+    Stay,
     Back,
     Home,
 }

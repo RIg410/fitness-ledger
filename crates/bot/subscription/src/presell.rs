@@ -65,7 +65,7 @@ impl View for PreSellView {
                     if exists {
                         ctx.send_msg("Пользователь с таким номером уже существует")
                             .await?;
-                        return Ok(Jmp::None);
+                        return Ok(Jmp::Stay);
                     }
 
                     self.state = State::Confirm(phone.to_owned());
@@ -77,14 +77,14 @@ impl View for PreSellView {
                 ctx.delete_msg(message.id).await?;
             }
         }
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         let phone = if let State::Confirm(phone) = &self.state {
             phone.to_owned()
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
 
         match calldata!(data) {

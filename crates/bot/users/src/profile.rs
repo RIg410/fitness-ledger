@@ -39,7 +39,7 @@ impl UserProfile {
             .block_user(&mut ctx.session, self.tg_id, !user.is_active)
             .await?;
         ctx.reload_user().await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn change_balance(&mut self, ctx: &mut Context, amount: i32) -> Result<Jmp, eyre::Error> {
@@ -62,7 +62,7 @@ impl UserProfile {
             .change_balance(&mut ctx.session, user.tg_id, amount)
             .await?;
         ctx.reload_user().await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn change_reserved_balance(
@@ -84,7 +84,7 @@ impl UserProfile {
             .change_reserved_balance(&mut ctx.session, user.tg_id, amount)
             .await?;
         ctx.reload_user().await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn freeze_user(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
@@ -103,7 +103,7 @@ impl UserProfile {
         if ctx.has_right(Rule::EditUserInfo) || ctx.me.tg_id == self.tg_id {
             Ok(SetBirthday::new(self.tg_id).into())
         } else {
-            Ok(Jmp::None)
+            Ok(Jmp::Stay)
         }
     }
 
@@ -125,7 +125,7 @@ impl UserProfile {
         if ctx.has_right(Rule::EditUserInfo) {
             Ok(SetFio::new(self.tg_id).into())
         } else {
-            Ok(Jmp::None)
+            Ok(Jmp::Stay)
         }
     }
 
@@ -133,7 +133,7 @@ impl UserProfile {
         if ctx.has_right(Rule::EditUserInfo) {
             Ok(SetPhone::new(self.tg_id).into())
         } else {
-            Ok(Jmp::None)
+            Ok(Jmp::Stay)
         }
     }
 }
@@ -156,7 +156,7 @@ impl View for UserProfile {
         message: &Message,
     ) -> Result<Jmp, eyre::Error> {
         ctx.delete_msg(message.id).await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {

@@ -88,7 +88,7 @@ impl View for WriteSum {
         let txt = if let Some(txt) = msg.text() {
             txt
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
         if let Some(sum) = txt.parse::<Decimal>().ok() {
             let user = ctx
@@ -107,7 +107,7 @@ impl View for WriteSum {
             ctx.send_msg("Неверный формат").await?;
         }
 
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 }
 

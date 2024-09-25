@@ -15,6 +15,8 @@ use model::rights::Rule;
 use strum::EnumIter;
 use teloxide::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
+use crate::system::SystemView;
+
 use super::signup::SignUpView;
 
 pub struct MainMenuView;
@@ -38,6 +40,10 @@ impl MainMenuView {
 
         if ctx.has_right(Rule::ViewStatistics) {
             keymap = keymap.append_row(vec![MainMenuItem::Statistics.into()]);
+        }
+
+        if ctx.has_right(Rule::System) {
+            keymap = keymap.append_row(vec![MainMenuItem::System.into()]);
         }
 
         ctx.edit_origin("🏠SoulFamily       🤸🏼", keymap).await?;
@@ -70,13 +76,13 @@ impl View for MainMenuView {
         let text = if let Some(text) = msg.text() {
             text
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
 
         let command = if let Some(command) = MainMenuItem::try_from(text).ok() {
             command
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
 
         ctx.delete_msg(msg.id).await?;
@@ -91,6 +97,7 @@ impl View for MainMenuView {
             MainMenuItem::Home => MainMenuView.into(),
             MainMenuItem::Programs => ProgramList::default().into(),
             MainMenuItem::Statistics => StatisticsView::default().into(),
+            MainMenuItem::System => SystemView::default().into(),
         })
     }
 
@@ -102,7 +109,7 @@ impl View for MainMenuView {
         let command = if let Some(command) = MainMenuItem::try_from(msg).ok() {
             command
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
         self.send_self(ctx).await?;
         Ok(match command {
@@ -115,6 +122,7 @@ impl View for MainMenuView {
             MainMenuItem::Home => MainMenuView.into(),
             MainMenuItem::Programs => ProgramList::default().into(),
             MainMenuItem::Statistics => StatisticsView::default().into(),
+            MainMenuItem::System => SystemView::default().into(),
         })
     }
 
@@ -134,6 +142,7 @@ pub enum MainMenuItem {
     Coach,
     Programs,
     Statistics,
+    System,
 }
 
 const HOME_DESCRIPTION: &str = "🏠";
@@ -163,6 +172,9 @@ const FINANCE_NAME: &str = "/finance";
 const STATISTICS_DESCRIPTION: &str = "Статистика 📊";
 const STATISTICS_NAME: &str = "/statistics";
 
+const SYSTEM_DESCRIPTION: &str = "Система ⚙️";
+const SYSTEM_NAME: &str = "/system";
+
 impl MainMenuItem {
     pub fn description(&self) -> &'static str {
         match self {
@@ -175,6 +187,7 @@ impl MainMenuItem {
             MainMenuItem::Coach => COUCH_DESCRIPTION,
             MainMenuItem::Programs => PROGRAM_DESCRIPTION,
             MainMenuItem::Statistics => STATISTICS_DESCRIPTION,
+            MainMenuItem::System => SYSTEM_DESCRIPTION,
         }
     }
 
@@ -189,6 +202,7 @@ impl MainMenuItem {
             MainMenuItem::Coach => COUCH_NAME,
             MainMenuItem::Programs => PROGRAM_NAME,
             MainMenuItem::Statistics => STATISTICS_NAME,
+            MainMenuItem::System => SYSTEM_NAME,
         }
     }
 }
@@ -222,6 +236,7 @@ impl TryFrom<&str> for MainMenuItem {
             COUCH_NAME | COUCH_DESCRIPTION => Ok(MainMenuItem::Coach),
             PROGRAM_NAME | PROGRAM_DESCRIPTION => Ok(MainMenuItem::Programs),
             STATISTICS_NAME | STATISTICS_DESCRIPTION => Ok(MainMenuItem::Statistics),
+            SYSTEM_NAME | SYSTEM_DESCRIPTION => Ok(MainMenuItem::System),
             _ => bail!("Unknown command"),
         }
     }

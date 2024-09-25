@@ -1,4 +1,5 @@
 mod view;
+mod system;
 use bot_core::{
     handlers::{callback::callback_handler, message::message_handler},
     state::StateHolder,

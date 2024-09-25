@@ -119,7 +119,7 @@ impl View for CreateSubscription {
         let text = if let Some(text) = message.text() {
             text
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
 
         self.state = match self.state {
@@ -133,7 +133,7 @@ impl View for CreateSubscription {
                 if sub.is_some() {
                     ctx.send_msg("Абонемент с таким именем уже существует")
                         .await?;
-                    return Ok(Jmp::None);
+                    return Ok(Jmp::Stay);
                 }
                 self.subscription.name = text.to_string();
                 State::SetItems
@@ -180,7 +180,7 @@ impl View for CreateSubscription {
             }
         };
 
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
@@ -209,17 +209,17 @@ impl View for CreateSubscription {
                     Err(CreateSubscriptionError::NameAlreadyExists) => {
                         ctx.send_msg(&"Не удалось создать абонемент: Имя уже занято")
                             .await?;
-                        Ok(Jmp::None)
+                        Ok(Jmp::Stay)
                     }
                     Err(CreateSubscriptionError::InvalidPrice) => {
                         ctx.send_msg("Не удалось создать абонемент: Неверная цена")
                             .await?;
-                        Ok(Jmp::None)
+                        Ok(Jmp::Stay)
                     }
                     Err(CreateSubscriptionError::InvalidItems) => {
                         ctx.send_msg("Не удалось создать абонемент: Неверное количество занятий")
                             .await?;
-                        Ok(Jmp::None)
+                        Ok(Jmp::Stay)
                     }
                     Err(CreateSubscriptionError::Common(err)) => Err(err),
                 }

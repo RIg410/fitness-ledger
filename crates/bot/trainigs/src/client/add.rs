@@ -53,7 +53,7 @@ impl View for AddClientView {
 
         self.query = remove_non_alphanumeric(&query);
         self.offset = 0;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
@@ -62,11 +62,11 @@ impl View for AddClientView {
         match calldata!(data) {
             Callback::Next => {
                 self.offset += LIMIT;
-                Ok(Jmp::None)
+                Ok(Jmp::Stay)
             }
             Callback::Prev => {
                 self.offset = self.offset.saturating_sub(LIMIT);
-                Ok(Jmp::None)
+                Ok(Jmp::Stay)
             }
             Callback::Select(user_id) => {
                 let id = ObjectId::from_bytes(user_id);

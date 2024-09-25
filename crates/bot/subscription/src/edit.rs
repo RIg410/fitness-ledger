@@ -33,7 +33,7 @@ impl EditSubscription {
             .subscriptions
             .edit_price(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     pub async fn edit_items(&self, ctx: &mut Context, value: u32) -> Result<Jmp> {
@@ -42,7 +42,7 @@ impl EditSubscription {
             .subscriptions
             .edit_items(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     pub async fn edit_name(&self, ctx: &mut Context, value: String) -> Result<Jmp> {
@@ -51,7 +51,7 @@ impl EditSubscription {
             .subscriptions
             .edit_name(&mut ctx.session, self.id, value)
             .await?;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 }
 
@@ -91,14 +91,14 @@ impl View for EditSubscription {
                     EditType::Items => {
                         if let Err(err) = text.parse::<NonZero<u32>>() {
                             ctx.send_msg(&format!("Неверный формат: {}", err)).await?;
-                            return Ok(Jmp::None);
+                            return Ok(Jmp::Stay);
                         }
                         format!("количество занятий на {}", text)
                     }
                     EditType::Price => {
                         if let Err(err) = text.parse::<Decimal>() {
                             ctx.send_msg(&format!("Неверный формат: {}", err)).await?;
-                            return Ok(Jmp::None);
+                            return Ok(Jmp::Stay);
                         }
                         format!("цену на {}", text)
                     }
@@ -121,7 +121,7 @@ impl View for EditSubscription {
             }
         }
 
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
@@ -130,7 +130,7 @@ impl View for EditSubscription {
                 let value = if let State::Confirm(value) = self.state.clone() {
                     value
                 } else {
-                    return Ok(Jmp::None);
+                    return Ok(Jmp::Stay);
                 };
                 match self.edit_type {
                     EditType::Price => self.edit_price(ctx, value.parse()?).await?,

@@ -8,7 +8,7 @@ use model::{
 use teloxide::{
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester,
-    types::{ChatId, InlineKeyboardMarkup, MessageId, ReplyMarkup},
+    types::{ChatId, InlineKeyboardMarkup, InputFile, MessageId, ReplyMarkup},
     ApiError, Bot, RequestError,
 };
 
@@ -44,6 +44,14 @@ impl Context {
             is_real_user,
             is_active_origin: true,
         }
+    }
+
+    pub async fn send_document(&mut self, data: Vec<u8>, name: &'static str) -> Result<(), Error> {
+        self.is_active_origin = false;
+        self.bot
+            .send_document(self.chat_id(), InputFile::memory(data).file_name(name))
+            .await?;
+        Ok(())
     }
 
     pub async fn send_notification(&mut self, err: &str) -> Result<(), Error> {

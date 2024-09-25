@@ -48,7 +48,7 @@ impl View for SignUpView {
 
         if from.is_bot {
             ctx.send_msg("Бот работает только с людьми\\.").await?;
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         }
 
         if let Some(contact) = msg.contact() {
@@ -73,12 +73,12 @@ impl View for SignUpView {
                 ReplyMarkup::Keyboard(keymap.one_time_keyboard()),
             )
             .await?;
-            Ok(Jmp::None)
+            Ok(Jmp::Stay)
         }
     }
 
     async fn handle_callback(&mut self, _: &mut Context, _: &str) -> Result<Jmp, eyre::Error> {
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     fn allow_unsigned_user(&self) -> bool {

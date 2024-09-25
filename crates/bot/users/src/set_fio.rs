@@ -34,7 +34,7 @@ impl View for SetFio {
             .collect::<Vec<_>>();
         if parts.len() != 2 {
             ctx.send_notification("Введите имя и фамилию").await?;
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         }
 
         let name = parts[0];

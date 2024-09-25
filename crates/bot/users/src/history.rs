@@ -64,7 +64,7 @@ impl View for HistoryList {
         match calldata!(data) {
             Calldata::Offset(offset) => {
                 self.offset = offset;
-                Ok(Jmp::None)
+                Ok(Jmp::Stay)
             }
         }
     }

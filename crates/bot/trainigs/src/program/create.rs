@@ -41,7 +41,7 @@ impl View for CreateProgram {
         let msg = if let Some(msg) = message.text() {
             msg
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
 
         let state = self
@@ -105,7 +105,7 @@ impl View for CreateProgram {
                 }
             }
         });
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 }
 

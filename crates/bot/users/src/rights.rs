@@ -47,7 +47,7 @@ impl View for UserRightsView {
                     .edit_user_rule(&mut ctx.session, self.tg_id, rule, is_active)
                     .await?;
                 ctx.reload_user().await?;
-                Ok(Jmp::None)
+                Ok(Jmp::Stay)
             }
         }
     }

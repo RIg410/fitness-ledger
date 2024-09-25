@@ -75,7 +75,7 @@ impl View for UsersView {
             query: remove_non_alphanumeric(&query),
             offset: 0,
         };
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
@@ -93,7 +93,7 @@ impl View for UsersView {
             }
         }
 
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 }
 

@@ -32,7 +32,7 @@ impl View for SetPhone {
         let text = message.text().unwrap_or_default();
         if text.is_empty() {
             ctx.send_notification("Введите телефон").await?;
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         }
 
         ctx.ledger

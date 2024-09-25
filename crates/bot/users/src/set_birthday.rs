@@ -63,7 +63,7 @@ impl View for SetBirthday {
             Err(_) => {
                 ctx.send_notification(&format!("Введите дату в формате ДД\\.ММ\\.ГГГГ"))
                     .await?;
-                Ok(Jmp::None)
+                Ok(Jmp::Stay)
             }
         }
     }

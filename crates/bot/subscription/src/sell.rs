@@ -59,7 +59,7 @@ impl View for SellView {
 
         self.query = remove_non_alphanumeric(&query);
         self.offset = 0;
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
@@ -68,11 +68,11 @@ impl View for SellView {
         match calldata!(data) {
             Callback::Next => {
                 self.offset += LIMIT;
-                Ok(Jmp::None)
+                Ok(Jmp::Stay)
             }
             Callback::Prev => {
                 self.offset = self.offset.saturating_sub(LIMIT);
-                Ok(Jmp::None)
+                Ok(Jmp::Stay)
             }
             Callback::Select(user_id) => self.select(user_id, ctx),
             Callback::PreSell => self.presell(),

@@ -49,7 +49,7 @@ impl ClientsList {
         if training.is_processed {
             ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
                 .await?;
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         }
         let result = ctx
             .ledger
@@ -77,7 +77,7 @@ impl ClientsList {
             Err(SignOutError::Common(err)) => return Err(err),
         }
 
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 }
 

@@ -83,7 +83,7 @@ impl View for FreezeProfile {
                 ctx.delete_msg(message.id).await?;
             }
         }
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
@@ -100,7 +100,7 @@ impl View for FreezeProfile {
                 if user.freeze_days < self.days {
                     self.state = State::SetDays;
                     ctx.send_msg("у вас недостаточно дней заморозки").await?;
-                    return Ok(Jmp::None);
+                    return Ok(Jmp::Stay);
                 }
 
                 if user.freeze.is_some() {

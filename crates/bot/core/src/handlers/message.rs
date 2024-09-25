@@ -105,7 +105,7 @@ async fn inner_message_handler(
             new_widget.set_back(widget);
             new_widget
         }
-        crate::widget::Jmp::None => widget,
+        crate::widget::Jmp::Stay => widget,
         crate::widget::Jmp::Back => widget.take_back().unwrap_or_else(|| system_handler()),
         crate::widget::Jmp::Home => system_handler(),
         crate::widget::Jmp::Goto(new_widget) => new_widget,

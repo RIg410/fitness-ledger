@@ -62,7 +62,7 @@ impl View for TrainingList {
             Callback::SelectTraining(date) => Ok(TrainingView::new(date.into()).into()),
             Callback::Offset(offset) => {
                 self.offset = offset;
-                Ok(Jmp::None)
+                Ok(Jmp::Stay)
             }
         }
     }

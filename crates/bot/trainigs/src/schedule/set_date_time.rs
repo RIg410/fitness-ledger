@@ -56,7 +56,7 @@ impl View for SetDateTime {
         let msg = if let Some(msg) = message.text() {
             msg
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
 
         let parts = match TimeParts::try_from(msg) {
@@ -64,7 +64,7 @@ impl View for SetDateTime {
             Err(err) => {
                 warn!("Invalid time format: {}", err);
                 ctx.send_msg("Неверный формат времени\\.").await?;
-                return Ok(Jmp::None);
+                return Ok(Jmp::Stay);
             }
         };
 
@@ -104,7 +104,7 @@ impl View for SetDateTime {
                 ctx.send_msg("Неверный формат времени\\. _чч\\:мм_").await?;
             }
         }
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 }
 

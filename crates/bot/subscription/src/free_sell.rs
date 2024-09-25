@@ -59,7 +59,7 @@ impl View for FeeSellView {
         let text = if let Some(text) = message.text() {
             text
         } else {
-            return Ok(Jmp::None);
+            return Ok(Jmp::Stay);
         };
 
         self.state = match mem::take(&mut self.state) {
@@ -85,7 +85,7 @@ impl View for FeeSellView {
             }
         };
 
-        Ok(Jmp::None)
+        Ok(Jmp::Stay)
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
@@ -100,7 +100,7 @@ impl View for FeeSellView {
                 Callback::Cancel => Ok(Jmp::Back),
             }
         } else {
-            Ok(Jmp::None)
+            Ok(Jmp::Stay)
         }
     }
 }
