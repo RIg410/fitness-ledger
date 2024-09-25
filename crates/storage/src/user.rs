@@ -618,4 +618,9 @@ impl UserStore {
         }
         Ok(())
     }
+
+    pub async fn dump(&self, session: &mut Session) -> Result<Vec<User>> {
+        let mut cursor = self.users.find(doc! {}).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
+    }
 }

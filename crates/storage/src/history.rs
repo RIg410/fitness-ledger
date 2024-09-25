@@ -1,5 +1,6 @@
 use bson::{doc, oid::ObjectId};
 use eyre::Error;
+use futures_util::TryStreamExt as _;
 use model::{history::HistoryRow, session::Session};
 use mongodb::{Collection, IndexModel};
 use std::sync::Arc;
@@ -82,5 +83,10 @@ impl HistoryStore {
             }
         }
         Ok(logs)
+    }
+
+    pub async fn dump(&self, session: &mut Session) -> Result<Vec<HistoryRow>, Error> {
+        let mut cursor = self.store.find(doc! {}).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 }

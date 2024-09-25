@@ -447,4 +447,13 @@ impl CalendarStore {
         }
         Ok(())
     }
+
+    pub async fn dump(&self, session: &mut Session) -> Result<Vec<Day>, eyre::Error> {
+        let mut cursor = self.days.find(doc! {}).session(&mut *session).await?;
+        let mut days = Vec::new();
+        while let Some(day) = cursor.next(&mut *session).await {
+            days.push(day?);
+        }
+        Ok(days)
+    }
 }

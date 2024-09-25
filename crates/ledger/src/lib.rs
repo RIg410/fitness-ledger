@@ -1,5 +1,6 @@
 use calendar::{Calendar, SignOutError};
 use chrono::Local;
+use dump::Dump;
 use eyre::{bail, eyre, Context as _, Result};
 use history::History;
 use log::{error, warn};
@@ -24,6 +25,7 @@ pub use users::*;
 
 pub mod calendar;
 mod couch;
+pub mod dump;
 pub mod history;
 pub mod process;
 pub mod programs;
@@ -45,12 +47,14 @@ pub struct Ledger {
     pub history: History,
     pub rewards: Rewards,
     pub statistics: statistics::Statistics,
+    pub dump: dump::Dump,
 }
 
 impl Ledger {
     pub fn new(storage: Storage) -> Self {
+        let dump = Dump::new(storage.clone());
         let history = history::History::new(storage.history);
-        let programs = Programs::new(storage.training, history.clone());
+        let programs = Programs::new(storage.programs, history.clone());
         let calendar = Calendar::new(
             storage.calendar,
             storage.users.clone(),
@@ -74,6 +78,7 @@ impl Ledger {
             presell,
             rewards,
             statistics,
+            dump,
         }
     }
 

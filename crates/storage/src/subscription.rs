@@ -126,4 +126,13 @@ impl SubscriptionsStore {
             .await?;
         Ok(())
     }
+    
+    pub async fn dump(&self, session: &mut Session) -> Result<Vec<Subscription>, Error> {
+        let mut cursor = self.collection.find(doc! {}).session(&mut *session).await?;
+        let mut subscriptions = Vec::new();
+        while let Some(subscription) = cursor.next(&mut *session).await {
+            subscriptions.push(subscription?);
+        }
+        Ok(subscriptions)
+    }
 }

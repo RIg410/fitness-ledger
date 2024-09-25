@@ -1,5 +1,6 @@
 use bson::doc;
 use eyre::Result;
+use futures_util::TryStreamExt as _;
 use model::{session::Session, user::UserPreSell};
 use mongodb::{Collection, Database};
 use std::sync::Arc;
@@ -38,5 +39,10 @@ impl PreSellStore {
             .session(session)
             .await?;
         Ok(())
+    }
+
+    pub async fn dump(&self, session: &mut Session) -> Result<Vec<UserPreSell>> {
+        let mut cursor = self.pre_cell.find(doc! {}).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 }

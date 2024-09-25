@@ -224,4 +224,9 @@ impl ProgramStore {
             .await?;
         Ok(())
     }
+
+    pub async fn dump(&self, session: &mut Session) -> Result<Vec<Program>, Error> {
+        let mut cursor = self.store.find(doc! {}).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
+    }
 }

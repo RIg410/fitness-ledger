@@ -16,11 +16,12 @@ use user::UserStore;
 
 const DB_NAME: &str = "ledger_db";
 
+#[derive(Clone)]
 pub struct Storage {
     pub db: Db,
     pub users: UserStore,
     pub calendar: calendar::CalendarStore,
-    pub training: program::ProgramStore,
+    pub programs: program::ProgramStore,
     pub treasury: treasury::TreasuryStore,
     pub subscriptions: subscription::SubscriptionsStore,
     pub history: HistoryStore,
@@ -43,7 +44,7 @@ impl Storage {
             db,
             users,
             calendar: schedule,
-            training,
+            programs: training,
             treasury,
             subscriptions,
             history: logs,
