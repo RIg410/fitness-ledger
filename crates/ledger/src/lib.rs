@@ -27,7 +27,6 @@ pub mod calendar;
 mod couch;
 pub mod backup;
 pub mod history;
-pub mod process;
 pub mod programs;
 pub mod rewards;
 pub mod statistics;

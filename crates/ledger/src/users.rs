@@ -261,17 +261,6 @@ impl Users {
         Ok(())
     }
 
-    pub(crate) async fn unfreeze(&self, session: &mut Session, tg_id: i64) -> Result<()> {
-        let user = self
-            .store
-            .get_by_tg_id(session, tg_id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-
-        self.logs.unfreeze(session, user.id).await?;
-        self.store.unfreeze(session, tg_id).await
-    }
-
     #[tx]
     pub async fn change_balance(
         &self,
@@ -338,7 +327,18 @@ impl Users {
 }
 
 impl Users {
-    pub(crate)async fn update_couch_reward(
+    pub async fn unfreeze(&self, session: &mut Session, tg_id: i64) -> Result<()> {
+        let user = self
+            .store
+            .get_by_tg_id(session, tg_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+
+        self.logs.unfreeze(session, user.id).await?;
+        self.store.unfreeze(session, tg_id).await
+    }
+
+    pub async fn update_couch_reward(
         &self,
         session: &mut Session,
         id: ObjectId,
@@ -351,7 +351,7 @@ impl Users {
         self.store.delete_couch(session, id).await
     }
 
-    pub(crate) async fn block_user(
+    pub async fn block_user(
         &self,
         session: &mut Session,
         tg_id: i64,
@@ -361,7 +361,7 @@ impl Users {
         Ok(())
     }
 
-    pub(crate) async fn reserve_balance(
+    pub async fn reserve_balance(
         &self,
         session: &mut Session,
         tg_id: i64,
@@ -374,7 +374,7 @@ impl Users {
         Ok(())
     }
 
-    pub(crate) async fn unblock_balance(
+    pub async fn unblock_balance(
         &self,
         session: &mut Session,
         tg_id: i64,
@@ -384,7 +384,7 @@ impl Users {
         Ok(())
     }
 
-    pub(crate) async fn add_subscription(
+    pub async fn add_subscription(
         &self,
         session: &mut Session,
         tg_id: i64,
@@ -394,7 +394,7 @@ impl Users {
         Ok(())
     }
 
-    pub(crate) async fn charge_reserved_balance(
+    pub async fn charge_reserved_balance(
         &self,
         session: &mut Session,
         tg_id: i64,
@@ -405,7 +405,7 @@ impl Users {
             .await
     }
 
-    pub(crate) async fn find_subscription_to_expire(
+    pub async fn find_subscription_to_expire(
         &self,
         session: &mut Session,
     ) -> Result<Vec<User>> {
@@ -413,7 +413,7 @@ impl Users {
     }
 
     #[tx]
-    pub(crate) async fn expire_subscription(
+    pub async fn expire_subscription(
         &self,
         session: &mut Session,
         tg_id: i64,

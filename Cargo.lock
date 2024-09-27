@@ -149,12 +149,15 @@ name = "bg-process"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "bot-main",
  "chrono",
  "eyre",
  "ledger",
  "log",
  "model",
+ "mongodb",
  "tokio",
+ "tx_macro",
 ]
 
 [[package]]

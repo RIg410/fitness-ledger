@@ -1,6 +1,8 @@
 pub mod callback;
 pub mod message;
 
+use std::sync::{atomic::AtomicBool, Arc};
+
 use crate::{
     context::{Context, Origin},
     state::{State, StateHolder},
@@ -48,6 +50,7 @@ async fn build_context(
         Origin {
             chat_id: tg_id,
             message_id: id,
+            is_valid: Arc::new(AtomicBool::new(true)),
         }
     };
 

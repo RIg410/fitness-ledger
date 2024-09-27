@@ -113,16 +113,12 @@ async fn inner_message_handler(
     ctx.system_go_back = !new_widget.is_back_main_view();
 
     new_widget.show(ctx).await?;
-    let origin = if ctx.is_active_origin {
-        Some(ctx.origin())
-    } else {
-        None
-    };
+
     state_holder.set_state(
         ctx.chat_id(),
         State {
             view: Some(new_widget),
-            origin: origin,
+            origin: Some(ctx.origin()),
         },
     );
     Ok(())

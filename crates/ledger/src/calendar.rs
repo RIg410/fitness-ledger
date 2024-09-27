@@ -329,7 +329,7 @@ impl Calendar {
         self.calendar.sign_out(session, start_at, user_id).await
     }
 
-    pub(crate) async fn finalized(
+    pub async fn finalized(
         &self,
         session: &mut Session,
         start_at: DateTime<Utc>,

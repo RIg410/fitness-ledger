@@ -1,3 +1,5 @@
+use std::sync::{atomic::AtomicBool, Arc};
+
 use eyre::{Context as _, Error};
 use ledger::Ledger;
 use model::{
@@ -22,7 +24,6 @@ pub struct Context {
     pub session: Session,
     pub(crate) system_go_back: bool,
     pub is_real_user: bool,
-    pub is_active_origin: bool,
 }
 
 impl Context {
@@ -42,12 +43,11 @@ impl Context {
             session,
             system_go_back: false,
             is_real_user,
-            is_active_origin: true,
         }
     }
 
     pub async fn send_document(&mut self, data: Vec<u8>, name: &'static str) -> Result<(), Error> {
-        self.is_active_origin = false;
+        self.origin.invalidate();
         self.bot
             .send_document(self.chat_id(), InputFile::memory(data).file_name(name))
             .await?;
@@ -63,7 +63,7 @@ impl Context {
     pub async fn reset_origin(&mut self) -> Result<(), Error> {
         let id = self.send_msg("\\.").await?;
         self.origin.message_id = id;
-        self.is_active_origin = true;
+        self.origin.set_valid();
         Ok(())
     }
 
@@ -86,8 +86,8 @@ impl Context {
         self.origin.chat_id
     }
 
-    pub fn origin(&self) -> Origin {
-        self.origin
+    pub(crate) fn origin(&self) -> Origin {
+        self.origin.clone()
     }
 
     pub fn is_admin(&self) -> bool {
@@ -99,7 +99,7 @@ impl Context {
         text: &str,
         markup: InlineKeyboardMarkup,
     ) -> Result<(), eyre::Error> {
-        if !self.is_active_origin {
+        if !self.origin.is_valid() {
             self.reset_origin().await?;
         }
 
@@ -121,7 +121,7 @@ impl Context {
 
     pub async fn delete_msg(&mut self, id: MessageId) -> Result<(), eyre::Error> {
         if self.origin.message_id == id {
-            self.is_active_origin = false;
+            self.origin.invalidate();
         }
         self.bot.delete_message(self.chat_id(), id).await?;
         Ok(())
@@ -136,7 +136,8 @@ impl Context {
     }
 
     pub async fn send_msg(&mut self, text: &str) -> Result<MessageId, eyre::Error> {
-        self.is_active_origin = false;
+        self.origin.invalidate();
+
         Ok(self
             .bot
             .send_message(self.chat_id(), text)
@@ -151,7 +152,8 @@ impl Context {
         text: &str,
         markup: InlineKeyboardMarkup,
     ) -> Result<MessageId, eyre::Error> {
-        self.is_active_origin = false;
+        self.origin.invalidate();
+
         Ok(self
             .bot
             .send_message(self.chat_id(), text)
@@ -179,7 +181,8 @@ impl Context {
         text: &str,
         markup: ReplyMarkup,
     ) -> Result<MessageId, eyre::Error> {
-        self.is_active_origin = false;
+        self.origin.invalidate();
+
         Ok(self
             .bot
             .send_message(self.chat_id(), text)
@@ -191,8 +194,25 @@ impl Context {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Origin {
     pub chat_id: ChatId,
     pub message_id: MessageId,
+    pub is_valid: Arc<AtomicBool>,
+}
+
+impl Origin {
+    pub fn is_valid(&self) -> bool {
+        self.is_valid.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    pub fn invalidate(&self) {
+        self.is_valid
+            .store(false, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn set_valid(&self) {
+        self.is_valid
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+    }
 }

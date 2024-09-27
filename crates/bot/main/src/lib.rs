@@ -1,5 +1,5 @@
-mod view;
 mod system;
+mod view;
 use bot_core::{
     handlers::{callback::callback_handler, message::message_handler},
     state::StateHolder,
@@ -17,55 +17,69 @@ use teloxide::{
 };
 use view::menu::{MainMenuItem, MainMenuView};
 
+#[derive(Clone)]
+pub struct BotApp {
+    bot: Bot,
+    state: StateHolder,
+}
 
-pub async fn start_bot(ledger: Ledger, token: String) -> Result<()> {
-    let bot = Bot::new(token);
-    let state = StateHolder::default();
+impl BotApp {
+    pub fn new(token: String) -> Self {
+        BotApp {
+            bot: Bot::new(token),
+            state: StateHolder::default(),
+        }
+    }
 
-    bot.set_my_commands(vec![
-        MainMenuItem::Home.into(),
-        MainMenuItem::Profile.into(),
-        MainMenuItem::Schedule.into(),
-        MainMenuItem::Subscription.into(),
-    ])
-    .await?;
+    pub async fn start(self, ledger: Ledger) -> Result<()> {
+        let state = self.state;
+        let bot = self.bot;
+        bot.delete_my_commands().await?;
+        bot.set_my_commands(vec![
+            MainMenuItem::Home.into(),
+            MainMenuItem::Profile.into(),
+            MainMenuItem::Schedule.into(),
+            MainMenuItem::Subscription.into(),
+        ])
+        .await?;
 
-    let msg_ledger = ledger.clone();
-    let msg_state = state.clone();
+        let msg_ledger = ledger.clone();
+        let msg_state = state.clone();
 
-    let callback_ledger = ledger.clone();
-    let callback_state = state.clone();
-    let handler = dptree::entry()
-        .branch(
-            Update::filter_message().endpoint(move |bot: Bot, msg: Message| {
-                message_handler(bot, msg, msg_ledger.clone(), msg_state.clone(), || {
-                    MainMenuView.widget()
-                })
-            }),
-        )
-        .branch(
-            Update::filter_callback_query().endpoint(move |bot: Bot, q: CallbackQuery| {
-                callback_handler(
-                    bot,
-                    q,
-                    callback_ledger.clone(),
-                    callback_state.clone(),
-                    || MainMenuView.widget(),
-                )
-            }),
-        )
-        .branch(
-            Update::filter_inline_query().endpoint(move |bot: Bot, q: InlineQuery| {
-                inline_query_handler(bot, q, ledger.clone(), state.clone())
-            }),
-        );
+        let callback_ledger = ledger.clone();
+        let callback_state = state.clone();
+        let handler = dptree::entry()
+            .branch(
+                Update::filter_message().endpoint(move |bot: Bot, msg: Message| {
+                    message_handler(bot, msg, msg_ledger.clone(), msg_state.clone(), || {
+                        MainMenuView.widget()
+                    })
+                }),
+            )
+            .branch(
+                Update::filter_callback_query().endpoint(move |bot: Bot, q: CallbackQuery| {
+                    callback_handler(
+                        bot,
+                        q,
+                        callback_ledger.clone(),
+                        callback_state.clone(),
+                        || MainMenuView.widget(),
+                    )
+                }),
+            )
+            .branch(
+                Update::filter_inline_query().endpoint(move |bot: Bot, q: InlineQuery| {
+                    inline_query_handler(bot, q, ledger.clone(), state.clone())
+                }),
+            );
 
-    Dispatcher::builder(bot, handler)
-        .enable_ctrlc_handler()
-        .build()
-        .dispatch()
-        .await;
-    Ok(())
+        Dispatcher::builder(bot, handler)
+            .enable_ctrlc_handler()
+            .build()
+            .dispatch()
+            .await;
+        Ok(())
+    }
 }
 
 async fn inline_query_handler(
