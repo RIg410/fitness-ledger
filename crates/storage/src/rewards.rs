@@ -28,7 +28,7 @@ impl RewardsStore {
         Ok(())
     }
 
-    pub async fn get_rewards(
+    pub async fn get(
         &self,
         session: &mut Session,
         couch_id: ObjectId,
@@ -54,11 +54,7 @@ impl RewardsStore {
     }
 
     pub async fn dump(&self, session: &mut Session) -> Result<Vec<Reward>, Error> {
-        let mut cursor = self
-            .rewards
-            .find(doc! {})
-            .session(&mut *session)
-            .await?;
+        let mut cursor = self.rewards.find(doc! {}).session(&mut *session).await?;
 
         let mut rewards = Vec::new();
         while let Some(reward) = cursor.next(&mut *session).await {

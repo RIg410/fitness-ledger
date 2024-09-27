@@ -1,6 +1,6 @@
+use backup::Backup;
 use calendar::{Calendar, SignOutError};
 use chrono::Local;
-use backup::Backup;
 use eyre::{bail, eyre, Context as _, Result};
 use history::History;
 use log::{error, warn};
@@ -23,9 +23,8 @@ use treasury::Treasury;
 use tx_macro::tx;
 pub use users::*;
 
-pub mod calendar;
-mod couch;
 pub mod backup;
+pub mod calendar;
 pub mod history;
 pub mod programs;
 pub mod rewards;
@@ -295,7 +294,7 @@ impl Ledger {
         phone: String,
     ) -> Result<(), SellSubscriptionError> {
         let phone = sanitize_phone(&phone);
-        let bayer = self.users.find_by_phone(session, &phone).await?;
+        let bayer = self.users.get_by_phone(session, &phone).await?;
         if bayer.is_some() {
             error!("User with phone {} already exists", phone);
             return Err(SellSubscriptionError::InvalidParams);
@@ -376,7 +375,7 @@ impl Ledger {
         phone: String,
     ) -> Result<(), SellSubscriptionError> {
         let phone = sanitize_phone(&phone);
-        let bayer = self.users.find_by_phone(session, &phone).await?;
+        let bayer = self.users.get_by_phone(session, &phone).await?;
         if bayer.is_some() {
             error!("User with phone {} already exists", phone);
             return Err(SellSubscriptionError::InvalidParams);

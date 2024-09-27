@@ -14,9 +14,6 @@ use teloxide::types::InlineKeyboardMarkup;
 pub struct SystemView {}
 
 impl SystemView {
-    pub fn new() -> Self {
-        Self {}
-    }
 }
 
 #[async_trait]

@@ -49,7 +49,7 @@ impl SubscriptionsStore {
         Ok(self.collection.find(doc! {}).session(&mut *session).await?)
     }
 
-    pub async fn get_by_id(
+    pub async fn get(
         &self,
         session: &mut Session,
         id: ObjectId,
@@ -126,7 +126,7 @@ impl SubscriptionsStore {
             .await?;
         Ok(())
     }
-    
+
     pub async fn dump(&self, session: &mut Session) -> Result<Vec<Subscription>, Error> {
         let mut cursor = self.collection.find(doc! {}).session(&mut *session).await?;
         let mut subscriptions = Vec::new();

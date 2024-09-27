@@ -18,7 +18,7 @@ impl TriningBg {
     }
 
     pub async fn process(&self, session: &mut Session) -> Result<()> {
-        let mut cursor = self.ledger.calendar.days_for_process(session).await?;
+        let mut cursor = self.ledger.calendar.days_to_process(session).await?;
         let now = chrono::Local::now();
         while let Some(day) = cursor.next(session).await {
             let day = day?;

@@ -3,13 +3,12 @@ use std::ops::Deref;
 use chrono::{DateTime, Local, Utc};
 use eyre::{Error, Result};
 use model::{
-    day::Day,
     ids::DayId,
     session::Session,
     slot::Slot,
-    training::{Filter, Statistics, Training, TrainingStatus},
+    training::{Training, TrainingStatus},
 };
-use mongodb::{bson::oid::ObjectId, SessionCursor};
+use mongodb::bson::oid::ObjectId;
 use storage::{calendar::CalendarStore, user::UserStore};
 use thiserror::Error;
 use tx_macro::tx;
@@ -39,27 +38,6 @@ impl Calendar {
         }
     }
 
-    pub async fn find_range(
-        &self,
-        session: &mut Session,
-        from: DateTime<Local>,
-        to: DateTime<Local>,
-    ) -> Result<SessionCursor<Day>> {
-        self.calendar.find_range(session, from, to).await
-    }
-
-    pub async fn get_day(&self, session: &mut Session, day: DayId) -> Result<Day> {
-        self.calendar.get_day(session, day).await
-    }
-
-    pub async fn week_days_after(
-        &self,
-        session: &mut Session,
-        day: DayId,
-    ) -> Result<SessionCursor<Day>> {
-        self.calendar.week_days_after(session, day).await
-    }
-
     pub async fn get_training_by_start_at(
         &self,
         session: &mut Session,
@@ -69,7 +47,8 @@ impl Calendar {
         Ok(day
             .training
             .iter()
-            .find(|slot| slot.start_at == id).cloned())
+            .find(|slot| slot.start_at == id)
+            .cloned())
     }
 
     #[tx]
@@ -186,18 +165,6 @@ impl Calendar {
         Ok(())
     }
 
-    pub async fn find_trainings(
-        &self,
-        session: &mut Session,
-        filter: Filter,
-        limit: usize,
-        offset: usize,
-    ) -> Result<Vec<Training>> {
-        self.calendar
-            .find_trainings(session, filter, limit, offset)
-            .await
-    }
-
     #[tx]
     pub async fn schedule(
         &self,
@@ -303,51 +270,9 @@ impl Calendar {
 
         Ok(None)
     }
-
-    pub async fn days_for_process(&self, session: &mut Session) -> Result<SessionCursor<Day>> {
-        self.calendar.days_to_process(session).await
-    }
 }
 
 impl Calendar {
-    pub(crate) async fn sign_up(
-        &self,
-        session: &mut Session,
-        start_at: DateTime<Utc>,
-        user_id: ObjectId,
-    ) -> Result<()> {
-        self.calendar.sign_up(session, start_at, user_id).await
-    }
-
-    pub(crate) async fn sign_out(
-        &self,
-        session: &mut Session,
-        start_at: DateTime<Utc>,
-        user_id: ObjectId,
-    ) -> Result<()> {
-        self.calendar.sign_out(session, start_at, user_id).await
-    }
-
-    pub async fn finalized(
-        &self,
-        session: &mut Session,
-        start_at: DateTime<Utc>,
-        statistics: Statistics,
-    ) -> Result<()> {
-        self.calendar.finalized(session, start_at, statistics).await
-    }
-
-    pub(crate) async fn edit_capacity(
-        &self,
-        session: &mut Session,
-        program_id: ObjectId,
-        capacity: u32,
-    ) -> Result<()> {
-        self.calendar
-            .edit_capacity(session, program_id, capacity)
-            .await
-    }
-
     pub(crate) async fn edit_duration(
         &self,
         session: &mut Session,
@@ -377,27 +302,13 @@ impl Calendar {
 
         Ok(())
     }
+}
 
-    pub(crate) async fn edit_program_name(
-        &self,
-        session: &mut Session,
-        program_id: ObjectId,
-        name: String,
-    ) -> Result<()> {
-        self.calendar
-            .edit_program_name(session, program_id, name)
-            .await
-    }
+impl Deref for Calendar {
+    type Target = CalendarStore;
 
-    pub(crate) async fn edit_program_description(
-        &self,
-        session: &mut Session,
-        program_id: ObjectId,
-        description: String,
-    ) -> Result<()> {
-        self.calendar
-            .edit_program_description(session, program_id, description)
-            .await
+    fn deref(&self) -> &Self::Target {
+        &self.calendar
     }
 }
 

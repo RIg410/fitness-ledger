@@ -58,7 +58,7 @@ impl View for PreSellView {
                     let exists = ctx
                         .ledger
                         .users
-                        .find_by_phone(&mut ctx.session, phone)
+                        .get_by_phone(&mut ctx.session, phone)
                         .await?
                         .is_some();
 

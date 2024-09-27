@@ -1,16 +1,16 @@
 use crate::history::History;
 use chrono::{DateTime, Local, Utc};
-use eyre::{bail, eyre, Error, Result};
+use eyre::{bail, eyre, Result};
 use log::info;
 use model::{
     couch::{CouchInfo, Rate},
     decimal::Decimal,
     rights::{Rights, Rule},
     session::Session,
-    subscription::Subscription,
     user::{sanitize_phone, User, UserName},
 };
 use mongodb::bson::oid::ObjectId;
+use std::ops::Deref;
 use storage::{pre_sell::PreSellStore, user::UserStore};
 use thiserror::Error;
 use tx_macro::tx;
@@ -31,16 +31,6 @@ impl Users {
         }
     }
 
-    pub async fn find_by_phone(&self, session: &mut Session, phone: &str) -> Result<Option<User>> {
-        self.store
-            .get_by_phone(session, &sanitize_phone(phone))
-            .await
-    }
-
-    pub async fn get_by_tg_id(&self, session: &mut Session, tg_id: i64) -> Result<Option<User>> {
-        self.store.get_by_tg_id(session, tg_id).await
-    }
-
     #[tx]
     pub async fn update_couch_rate(
         &self,
@@ -50,7 +40,7 @@ impl Users {
     ) -> Result<()> {
         let user = self
             .store
-            .get_by_id(session, id)
+            .get(session, id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         let couch = user.couch.ok_or_else(|| eyre!("User is not a couch"))?;
@@ -73,7 +63,7 @@ impl Users {
     ) -> Result<()> {
         let user = self
             .store
-            .get_by_id(session, id)
+            .get(session, id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         let couch = user.couch.ok_or_else(|| eyre!("User is not a couch"))?;
@@ -167,10 +157,6 @@ impl Users {
         Ok(())
     }
 
-    pub async fn count(&self, session: &mut Session) -> Result<u64> {
-        self.store.count(session).await
-    }
-
     pub async fn find(
         &self,
         session: &mut Session,
@@ -180,14 +166,6 @@ impl Users {
     ) -> Result<Vec<User>> {
         let keywords = query.split_whitespace().collect::<Vec<_>>();
         self.store.find(session, &keywords, offset, limit).await
-    }
-
-    pub async fn instructors(&self, session: &mut Session) -> Result<Vec<User>> {
-        self.store.get_instructors(session).await
-    }
-
-    pub async fn get(&self, session: &mut Session, id: ObjectId) -> Result<Option<User>> {
-        self.store.get_by_id(session, id).await
     }
 
     #[tx]
@@ -235,10 +213,6 @@ impl Users {
         }
 
         Ok(())
-    }
-
-    pub async fn find_users_to_unfreeze(&self, session: &mut Session) -> Result<Vec<User>> {
-        self.store.find_users_to_unfreeze(session).await
     }
 
     #[tx]
@@ -337,88 +311,13 @@ impl Users {
         self.logs.unfreeze(session, user.id).await?;
         self.store.unfreeze(session, tg_id).await
     }
+}
 
-    pub async fn update_couch_reward(
-        &self,
-        session: &mut Session,
-        id: ObjectId,
-        reward: Decimal,
-    ) -> Result<()> {
-        self.store.update_couch_reward(session, id, reward).await
-    }
+impl Deref for Users {
+    type Target = UserStore;
 
-    pub async fn delete_couch(&self, session: &mut Session, id: ObjectId) -> Result<()> {
-        self.store.delete_couch(session, id).await
-    }
-
-    pub async fn block_user(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        is_active: bool,
-    ) -> Result<()> {
-        self.store.block(session, tg_id, is_active).await?;
-        Ok(())
-    }
-
-    pub async fn reserve_balance(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        amount: u32,
-        sign_up_date: DateTime<Utc>,
-    ) -> Result<(), Error> {
-        self.store
-            .reserve_balance(session, tg_id, amount, sign_up_date)
-            .await?;
-        Ok(())
-    }
-
-    pub async fn unblock_balance(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        amount: u32,
-    ) -> Result<(), Error> {
-        self.store.unblock_balance(session, tg_id, amount).await?;
-        Ok(())
-    }
-
-    pub async fn add_subscription(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        sub: Subscription,
-    ) -> Result<(), Error> {
-        self.store.add_subscription(session, tg_id, sub).await?;
-        Ok(())
-    }
-
-    pub async fn charge_reserved_balance(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        amount: u32,
-    ) -> Result<(), Error> {
-        self.store
-            .charge_reserved_balance(session, tg_id, amount)
-            .await
-    }
-
-    pub async fn find_subscription_to_expire(
-        &self,
-        session: &mut Session,
-    ) -> Result<Vec<User>> {
-        self.store.find_subscription_to_expire(session).await
-    }
-
-    #[tx]
-    pub async fn expire_subscription(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-    ) -> Result<()> {
-        self.store.expire_subscription(session, tg_id).await
+    fn deref(&self) -> &Self::Target {
+        &self.store
     }
 }
 

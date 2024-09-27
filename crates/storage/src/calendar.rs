@@ -456,4 +456,54 @@ impl CalendarStore {
         }
         Ok(days)
     }
+
+    pub async fn find_trainings_to_notify(
+        &self,
+        session: &mut Session,
+    ) -> Result<Vec<Training>, eyre::Error> {
+        let now = Local::now();
+
+        let start_at = now - chrono::Duration::hours(2);
+
+        let filter = doc! {
+            "training.start_at": start_at,
+            "training.notified": false,
+        };
+        let mut cursor = self.days.find(filter).session(&mut *session).await?;
+        let mut trainings = Vec::new();
+        while let Some(day) = cursor.next(&mut *session).await {
+            let mut day = day?;
+            day.training.sort_by(|a, b| a.start_at.cmp(&b.start_at));
+            for training in day.training {
+                if training.start_at > Utc::now() {
+                    continue;
+                }
+                trainings.push(training);
+            }
+        }
+        Ok(trainings)
+    }
+
+    pub async fn notify(
+        &self,
+        session: &mut Session,
+        start_at: DateTime<Utc>,
+    ) -> Result<(), eyre::Error> {
+        info!("Notify: {:?}", start_at);
+        let filter = doc! { "training.start_at": start_at };
+        let update = doc! {
+            "$set": { "training.$.notified": true },
+            "$inc": { "version": 1 }
+        };
+        let result = self
+            .days
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
+
+        if result.modified_count != 1 {
+            return Err(eyre::eyre!("Training not found"));
+        }
+        Ok(())
+    }
 }

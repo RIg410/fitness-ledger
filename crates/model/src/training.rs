@@ -30,6 +30,8 @@ pub struct Training {
     pub is_processed: bool,
     #[serde(default)]
     pub statistics: Option<Statistics>,
+    #[serde(default)]
+    pub notified: bool,
 }
 
 impl Training {
@@ -57,6 +59,7 @@ impl Training {
             is_canceled: false,
             is_processed: false,
             statistics: None,
+            notified: false,
         }
     }
 
@@ -80,6 +83,7 @@ impl Training {
             is_canceled: false,
             is_processed: false,
             statistics: None,
+            notified: false,
         }
     }
 
@@ -106,6 +110,7 @@ impl Training {
             is_canceled: false,
             is_processed: false,
             statistics: None,
+            notified: false,
         }
     }
 

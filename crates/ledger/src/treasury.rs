@@ -16,6 +16,7 @@ use storage::treasury::TreasuryStore;
 use tx_macro::tx;
 
 use crate::history::History;
+use std::ops::Deref;
 
 #[derive(Clone)]
 pub struct Treasury {
@@ -26,18 +27,6 @@ pub struct Treasury {
 impl Treasury {
     pub fn new(store: TreasuryStore, logs: History) -> Self {
         Treasury { store, logs }
-    }
-
-    pub async fn get(
-        &self,
-        session: &mut Session,
-        id: ObjectId,
-    ) -> Result<Option<TreasuryEvent>, Error> {
-        self.store.get(session, id).await
-    }
-
-    pub async fn remove(&self, session: &mut Session, id: ObjectId) -> Result<(), Error> {
-        self.store.remove(session, id).await
     }
 
     pub async fn page(
@@ -213,5 +202,13 @@ impl Treasury {
             income,
             outcome,
         })
+    }
+}
+
+impl Deref for Treasury {
+    type Target = TreasuryStore;
+
+    fn deref(&self) -> &Self::Target {
+        &self.store
     }
 }

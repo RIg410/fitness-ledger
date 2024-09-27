@@ -43,7 +43,7 @@ impl UserStore {
             .await?)
     }
 
-    pub async fn get_by_id(&self, session: &mut Session, id: ObjectId) -> Result<Option<User>> {
+    pub async fn get(&self, session: &mut Session, id: ObjectId) -> Result<Option<User>> {
         Ok(self
             .users
             .find_one(doc! { "_id": id })
@@ -363,7 +363,7 @@ impl UserStore {
         Ok(result.modified_count > 0)
     }
 
-    pub async fn get_instructors(&self, session: &mut Session) -> Result<Vec<User>, Error> {
+    pub async fn instructors(&self, session: &mut Session) -> Result<Vec<User>, Error> {
         let filter = doc! { "couch": { "$exists": true, "$ne": null } };
         let mut cursor = self.users.find(filter).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
@@ -387,7 +387,12 @@ impl UserStore {
         Ok(result.modified_count > 0)
     }
 
-    pub async fn block(&self, session: &mut Session, tg_id: i64, is_active: bool) -> Result<bool> {
+    pub async fn block_user(
+        &self,
+        session: &mut Session,
+        tg_id: i64,
+        is_active: bool,
+    ) -> Result<bool> {
         info!("Blocking user {}: {}", tg_id, is_active);
         let result = self
             .users
