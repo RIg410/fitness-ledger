@@ -267,10 +267,8 @@ _{}_                                                                 \n
             if tr_status.can_sign_out() {
                 keymap = keymap.append_row(vec![Callback::SignOut.button("🔓 Отменить запись")]);
             }
-        } else {
-            if tr_status.can_sign_in() {
-                keymap = keymap.append_row(vec![Callback::SignUp.button("🔒 Записаться")]);
-            }
+        } else if tr_status.can_sign_in() {
+            keymap = keymap.append_row(vec![Callback::SignUp.button("🔒 Записаться")]);
         }
     }
     Ok((msg, keymap))

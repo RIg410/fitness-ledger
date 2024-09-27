@@ -37,7 +37,7 @@ pub async fn callback_handler(
 
     let result = match inner_callback_handler(
         &mut ctx,
-        widget.unwrap_or_else(|| system_handler()),
+        widget.unwrap_or_else(&system_handler),
         q.data.unwrap_or_default(),
         &state_holder,
         system_handler,
@@ -109,7 +109,7 @@ async fn inner_callback_handler(
             new_widget
         }
         crate::widget::Jmp::Stay => widget,
-        crate::widget::Jmp::Back => widget.take_back().unwrap_or_else(|| system_handler()),
+        crate::widget::Jmp::Back => widget.take_back().unwrap_or_else(&system_handler),
         crate::widget::Jmp::Home => system_handler(),
         crate::widget::Jmp::Goto(widget) => widget,
     };

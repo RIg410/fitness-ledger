@@ -53,7 +53,7 @@ impl View for ConfirmSell {
                 } else {
                     ctx.send_msg("🤑 Продано").await?;
                     ctx.reset_origin().await?;
-                    Ok(Jmp::Goto(SubscriptionView::default().into()))
+                    Ok(Jmp::Goto(SubscriptionView.into()))
                 }
             }
             Callback::Cancel => Ok(Jmp::Back),

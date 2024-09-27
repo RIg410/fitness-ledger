@@ -46,7 +46,7 @@ impl StageList<ChangeRateState> for SetRewardType {
             name: "По клиентам 👥".to_string(),
         }]);
 
-        Ok((format!("Выберите тип вознаграждения 💰"), rewards))
+        Ok(("Выберите тип вознаграждения 💰".to_string(), rewards))
     }
 
     async fn select(
@@ -117,7 +117,7 @@ impl StageText<ChangeRateState> for ClientRate {
         let min = query.parse::<Decimal>()?;
 
         state.reward_rate = Some(Rate::PerClient {
-            min: min,
+            min,
             per_client: Decimal::zero(),
         });
         Ok(Dispatch::Stage(Stage::text(ClientRatePerClient)))
@@ -146,7 +146,7 @@ impl StageText<ChangeRateState> for ClientRatePerClient {
 
         if let Some(Rate::PerClient { min, .. }) = state.reward_rate.as_mut() {
             state.reward_rate = Some(Rate::PerClient {
-                min: min.clone(),
+                min: *min,
                 per_client,
             });
         } else {
@@ -186,7 +186,7 @@ impl StageText<ChangeRateState> for FixedRateNextReward {
 
         let rate = if let Some(Rate::FixedMonthly { rate, .. }) = state.reward_rate.as_mut() {
             Rate::FixedMonthly {
-                rate: rate.clone(),
+                rate: *rate,
                 next_reward: next_reward.with_timezone(&Utc),
             }
         } else {

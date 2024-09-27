@@ -11,6 +11,12 @@ pub struct CreateProgram {
     state: Option<State>,
 }
 
+impl Default for CreateProgram {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CreateProgram {
     pub fn new() -> Self {
         Self { state: None }

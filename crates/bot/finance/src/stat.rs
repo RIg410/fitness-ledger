@@ -34,33 +34,33 @@ impl View for Stat {
             self.to.format("%d\\.%m\\.%Y")
         );
 
-        write!(
+        writeln!(
             &mut text,
-            "*Баланс*:_{}_\n",
+            "*Баланс*:_{}_",
             escape(&(stat.debit - stat.credit).to_string())
         )?;
-        write!(&mut text, "*Поступления*:\n")?;
-        write!(
+        writeln!(&mut text, "*Поступления*:")?;
+        writeln!(
             &mut text,
-            "Проданно абониментов:_{}_ на сумму _{}_\n",
+            "Проданно абониментов:_{}_ на сумму _{}_",
             stat.income.subscriptions.count,
             escape(&stat.income.subscriptions.sum.to_string())
         )?;
-        write!(
+        writeln!(
             &mut text,
-            "Другие поступления:_{}_\n",
+            "Другие поступления:_{}_",
             escape(&stat.income.other.sum.to_string())
         )?;
 
-        write!(&mut text, "*Расходы*:\n")?;
-        write!(
+        writeln!(&mut text, "*Расходы*:")?;
+        writeln!(
             &mut text,
-            "Выплачено вознаграждений: _{}_\n",
+            "Выплачено вознаграждений: _{}_",
             escape(&stat.outcome.rewards.sum.to_string())
         )?;
-        write!(
+        writeln!(
             &mut text,
-            "Другие расходы:_{}_\n",
+            "Другие расходы:_{}_",
             escape(&stat.outcome.other.sum.to_string())
         )?;
 

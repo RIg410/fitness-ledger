@@ -17,6 +17,12 @@ pub struct FeeSellView {
     state: State,
 }
 
+impl Default for FeeSellView {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FeeSellView {
     pub fn new() -> FeeSellView {
         FeeSellView {
@@ -73,7 +79,7 @@ impl View for FeeSellView {
             }
             State::SetPrice(items) => {
                 if let Ok(price) = text.parse() {
-                    State::Finish(items.clone(), price)
+                    State::Finish(items, price)
                 } else {
                     ctx.send_msg("Введите число").await?;
                     State::SetPrice(items)
@@ -131,7 +137,7 @@ impl State {
 fn render_state(state: &State) -> String {
     match state {
         State::SetItems => {
-            format!("📌 Количество занятий:_❓_\nЦена:_❓_\n")
+            "📌 Количество занятий:_❓_\nЦена:_❓_\n".to_string()
         }
         State::SetPrice(items) => {
             format!("📌 Количество занятий:_{}_\nЦена:_❓_\n", items)

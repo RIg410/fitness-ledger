@@ -17,6 +17,12 @@ pub struct CreateSubscription {
     subscription: Subscription,
 }
 
+impl Default for CreateSubscription {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CreateSubscription {
     pub fn new() -> CreateSubscription {
         CreateSubscription {
@@ -207,7 +213,7 @@ impl View for CreateSubscription {
                         Ok(Jmp::Back)
                     }
                     Err(CreateSubscriptionError::NameAlreadyExists) => {
-                        ctx.send_msg(&"Не удалось создать абонемент: Имя уже занято")
+                        ctx.send_msg("Не удалось создать абонемент: Имя уже занято")
                             .await?;
                         Ok(Jmp::Stay)
                     }

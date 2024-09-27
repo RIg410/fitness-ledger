@@ -83,15 +83,13 @@ fn render_subscriptions(msg: &mut String, user: &User) {
         for sub in subs {
             msg.push_str(&render_sub(sub));
         }
+    } else if user.balance == 0 && user.reserved_balance == 0 {
+        msg.push_str("*нет абонементов*🥺\n");
     } else {
-        if user.balance == 0 && user.reserved_balance == 0 {
-            msg.push_str("*нет абонементов*🥺\n");
-        } else {
-            msg.push_str(&format!(
-                "🎟_тестовый_\nОсталось занятий:_{}_\n",
-                user.balance + user.reserved_balance
-            ));
-        }
+        msg.push_str(&format!(
+            "🎟_тестовый_\nОсталось занятий:_{}_\n",
+            user.balance + user.reserved_balance
+        ));
     }
     msg.push_str("➖➖➖➖➖➖➖➖➖➖");
 }
@@ -117,10 +115,10 @@ pub fn user_base_info(user: &User) -> String {
 Фамилия : _{}_
 Телефон : _\\+{}_
 Дата рождения : _{}_\n",
-        fmt_user_type(&user),
-        escape(user.name.tg_user_name.as_ref().unwrap_or_else(|| &empty)),
+        fmt_user_type(user),
+        escape(user.name.tg_user_name.as_ref().unwrap_or(&empty)),
         escape(&user.name.first_name),
-        escape(&user.name.last_name.as_ref().unwrap_or_else(|| &empty)),
+        escape(user.name.last_name.as_ref().unwrap_or(&empty)),
         escape(&user.phone),
         escape(
             &user

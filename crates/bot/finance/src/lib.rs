@@ -30,7 +30,7 @@ impl View for FinanceView {
         "FinView"
     }
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let text = format!("💰 Финансы:");
+        let text = "💰 Финансы:".to_string();
         let mut keymap = InlineKeyboardMarkup::default();
 
         if ctx.has_right(Rule::MakePayment) {

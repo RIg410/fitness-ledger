@@ -225,7 +225,7 @@ impl History {
     }
 
     pub async fn process_finished(&self, session: &mut Session, training: &Training) -> Result<()> {
-        let sub_actors = training.clients.iter().map(|id| *id).collect::<Vec<_>>();
+        let sub_actors = training.clients.to_vec();
 
         let entry = HistoryRow::with_sub_actors(
             training.instructor,
@@ -239,7 +239,7 @@ impl History {
     }
 
     pub async fn process_canceled(&self, session: &mut Session, training: &Training) -> Result<()> {
-        let sub_actors = training.clients.iter().map(|id| *id).collect::<Vec<_>>();
+        let sub_actors = training.clients.to_vec();
 
         let entry = HistoryRow::with_sub_actors(
             training.instructor,

@@ -69,8 +69,7 @@ impl Calendar {
         Ok(day
             .training
             .iter()
-            .find(|slot| slot.start_at == id)
-            .map(|slot| slot.clone()))
+            .find(|slot| slot.start_at == id).cloned())
     }
 
     #[tx]
@@ -219,7 +218,7 @@ impl Calendar {
             .get_by_tg_id(session, instructor)
             .await?
             .ok_or(ScheduleError::InstructorNotFound)?;
-        if !instructor.couch.is_some() {
+        if instructor.couch.is_none() {
             return Err(ScheduleError::InstructorHasNoRights);
         }
         let collision = self

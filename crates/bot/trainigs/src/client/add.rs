@@ -84,7 +84,7 @@ async fn render(
     let users = ctx
         .ledger
         .users
-        .find(&mut ctx.session, &query, offset, LIMIT)
+        .find(&mut ctx.session, query, offset, LIMIT)
         .await?;
 
     let msg = format!(
@@ -116,7 +116,7 @@ async fn render(
         ));
     }
 
-    if raw.len() > 0 {
+    if !raw.is_empty() {
         keymap = keymap.append_row(raw);
     }
     Ok((msg, keymap))

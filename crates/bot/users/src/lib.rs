@@ -155,7 +155,7 @@ fn render_message(
         ));
     }
 
-    if raw.len() > 0 {
+    if !raw.is_empty() {
         keymap = keymap.append_row(raw);
     }
     (msg, keymap)

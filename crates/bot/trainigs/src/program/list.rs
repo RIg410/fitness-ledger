@@ -15,15 +15,11 @@ use crate::schedule::ScheduleTrainingPreset;
 
 use super::{create::CreateProgram, view::ProgramView};
 
+#[derive(Default)]
 pub struct ProgramList {
     preset: Option<ScheduleTrainingPreset>,
 }
 
-impl Default for ProgramList {
-    fn default() -> Self {
-        Self { preset: None }
-    }
-}
 
 impl ProgramList {
     pub fn new(preset: ScheduleTrainingPreset) -> Self {
@@ -60,7 +56,7 @@ impl View for ProgramList {
 }
 
 async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup), Error> {
-    let msg = format!("Тренировочные программы: 🤸🏼");
+    let msg = "Тренировочные программы: 🤸🏼".to_string();
     let mut keymap = InlineKeyboardMarkup::default();
 
     let trainings = ctx.ledger.programs.find(&mut ctx.session, None).await?;

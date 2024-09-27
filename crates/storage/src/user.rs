@@ -223,11 +223,11 @@ impl UserStore {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         user.version += 1;
-        if user.balance < amount as u32 {
+        if user.balance < amount {
             bail!("Insufficient balance");
         }
-        user.balance -= amount as u32;
-        user.reserved_balance += amount as u32;
+        user.balance -= amount;
+        user.reserved_balance += amount;
 
         let has_active = user.subscriptions.iter().any(|s| s.is_active());
         if !has_active {
@@ -446,7 +446,7 @@ impl UserStore {
             .ok_or_else(|| eyre!("User not found"))?;
         user.version += 1;
         if amount < 0 {
-            user.reserved_balance = user.reserved_balance.saturating_sub(amount.abs() as u32);
+            user.reserved_balance = user.reserved_balance.saturating_sub(amount.unsigned_abs());
         } else {
             user.reserved_balance += amount as u32;
         }
@@ -474,7 +474,7 @@ impl UserStore {
             .ok_or_else(|| eyre!("User not found"))?;
         user.version += 1;
         if amount < 0 {
-            user.balance = user.balance.saturating_sub(amount.abs() as u32);
+            user.balance = user.balance.saturating_sub(amount.unsigned_abs());
         } else {
             user.balance += amount as u32;
         }
@@ -482,7 +482,7 @@ impl UserStore {
         user.subscriptions.sort_by(|a, b| a.status.cmp(&b.status));
         if let Some(sub) = user.subscriptions.first_mut() {
             if amount < 0 {
-                sub.items = sub.items.saturating_sub(amount.abs() as u32);
+                sub.items = sub.items.saturating_sub(amount.unsigned_abs());
             } else {
                 sub.items += amount as u32;
             }

@@ -5,7 +5,7 @@ use std::sync::{atomic::AtomicBool, Arc};
 
 use crate::{
     context::{Context, Origin},
-    state::{State, StateHolder},
+    state::StateHolder,
     widget::Widget,
 };
 use eyre::Error;
@@ -23,7 +23,7 @@ async fn build_context(
         .db
         .start_session()
         .await
-        .map_err(|err| (err.into(), bot.clone()))?;
+        .map_err(|err| (err, bot.clone()))?;
     let (user, real) = if let Some(user) = ledger
         .users
         .get_by_tg_id(&mut session, tg_id.0)
@@ -35,9 +35,7 @@ async fn build_context(
         (User::new(tg_id.0), false)
     };
     session.set_actor(user.id);
-    let state = state_holder
-        .get_state(tg_id)
-        .unwrap_or_else(|| State::default());
+    let state = state_holder.get_state(tg_id).unwrap_or_default();
 
     let origin = if let Some(origin) = state.origin {
         origin

@@ -210,7 +210,7 @@ where
                     if offset > 0 {
                         list.offset += offset as usize * list.limit;
                     } else {
-                        list.offset -= offset.abs() as usize * list.limit;
+                        list.offset -= offset.unsigned_abs() as usize * list.limit;
                     }
                 }
                 _ => return Ok(Jmp::Stay),

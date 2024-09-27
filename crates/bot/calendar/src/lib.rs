@@ -20,21 +20,13 @@ use std::vec;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 use teloxide::utils::markdown::escape;
 
+#[derive(Default)]
 pub struct CalendarView {
     week_id: WeekId,
     selected_day: DayId,
     filter: Filter,
 }
 
-impl Default for CalendarView {
-    fn default() -> Self {
-        Self {
-            week_id: WeekId::default(),
-            selected_day: Default::default(),
-            filter: Default::default(),
-        }
-    }
-}
 
 impl CalendarView {
     pub fn new(week_id: WeekId, selected_day: Option<Weekday>, filter: Option<Filter>) -> Self {
@@ -163,7 +155,7 @@ pub async fn render_week(
         let stat = day
             .training
             .iter()
-            .filter_map(|t| t.statistics.clone())
+            .filter_map(|t| t.statistics)
             .sum::<Statistics>();
         msg.push_str(&escape(&format!(
             "\n 📊Заработано {}\n📊Награда инструктора {}",
@@ -171,8 +163,7 @@ pub async fn render_week(
         )));
     }
 
-    day.training
-        .sort_by(|a, b| a.get_slot().start_at().cmp(&b.get_slot().start_at()));
+    day.training.sort_by_key(|a| a.get_slot().start_at());
     for training in &day.training {
         if let Some(proto_id) = &filter.proto_id {
             if training.proto_id != *proto_id {

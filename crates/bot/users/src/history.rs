@@ -86,31 +86,29 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 } else {
                     format!("Bы заблокировали пользователя {}", actor.name)
                 }
+            } else if *is_active {
+                format!(
+                    "Вас заблокировал пользователь \\(@{}\\)",
+                    escape(&actor.name.tg_user_name.unwrap_or_default())
+                )
             } else {
-                if *is_active {
-                    format!(
-                        "Вас заблокировал пользователь \\(@{}\\)",
-                        escape(&actor.name.tg_user_name.unwrap_or_default())
-                    )
-                } else {
-                    format!(
-                        "Вас разблокировал пользователь \\(@{}\\)",
-                        escape(&actor.name.tg_user_name.unwrap_or_default())
-                    )
-                }
+                format!(
+                    "Вас разблокировал пользователь \\(@{}\\)",
+                    escape(&actor.name.tg_user_name.unwrap_or_default())
+                )
             }
         }
         model::history::Action::SignUp { start_at, name } => {
             if is_actor {
                 format!(
                     "Вы записались на тренировку *{}* на {}",
-                    escape(&name),
+                    escape(name),
                     fmt_dt(start_at)
                 )
             } else {
                 format!(
                     "Вас записал на тренировку *{}* в _{}_ пользователь \\(@{}\\)",
-                    escape(&name),
+                    escape(name),
                     fmt_dt(start_at),
                     escape(&actor.name.tg_user_name.unwrap_or_default())
                 )
@@ -120,13 +118,13 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             if is_actor {
                 format!(
                     "Вы отменили запись на тренировку *{}* на {}",
-                    escape(&name),
+                    escape(name),
                     fmt_dt(start_at)
                 )
             } else {
                 format!(
                     "Вас удалили из списка в тренировке *{}* в _{}_ пользователь \\(@{}\\)",
-                    escape(&name),
+                    escape(name),
                     fmt_dt(start_at),
                     escape(&actor.name.tg_user_name.unwrap_or_default())
                 )
@@ -163,7 +161,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             if is_actor {
                 format!(
                     "Вы продали абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",
-                    escape(&subscription.name), subscription.items, escape(&subscription.price.to_string()), escape(&phone)
+                    escape(&subscription.name), subscription.items, escape(&subscription.price.to_string()), escape(phone)
                 )
             } else {
                 format!(
@@ -205,7 +203,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                     "Вы продали абонемент\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",
                     item,
                     escape(&price.to_string()),
-                    escape(&buyer)
+                    escape(buyer)
                 )
             } else {
                 format!(
@@ -218,7 +216,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
         model::history::Action::FinalizedCanceledTraining { name, start_at } => {
             format!(
                 "Тренировка *{}* в _{}_ отменена",
-                escape(&name),
+                escape(name),
                 fmt_dt(&start_at.with_timezone(&Local))
             )
         }
@@ -226,13 +224,13 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             if is_actor {
                 format!(
                     "Вы провели тренировку *{}* в _{}_",
-                    escape(&name),
+                    escape(name),
                     fmt_dt(&start_at.with_timezone(&Local))
                 )
             } else {
                 format!(
                     "Вас посетили на тренировку *{}* в _{}_",
-                    escape(&name),
+                    escape(name),
                     fmt_dt(&start_at.with_timezone(&Local))
                 )
             }
@@ -246,7 +244,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 "Вы произвели оплату *{}* в _{}_\n{}",
                 escape(&amount.to_string()),
                 fmt_dt(&date_time.with_timezone(&Local)),
-                escape(&description)
+                escape(description)
             )
         }
         model::history::Action::Deposit {
@@ -258,14 +256,14 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 "Вы внесли депозит *{}* в _{}_\n{}",
                 escape(&amount.to_string()),
                 fmt_dt(&date_time.with_timezone(&Local)),
-                escape(&description)
+                escape(description)
             )
         }
         model::history::Action::CreateUser { name, phone } => {
             format!(
                 "Регистрация *{}*\nТелефон: _{}_",
                 escape(&name.to_string()),
-                escape(&phone)
+                escape(phone)
             )
         }
         model::history::Action::Freeze { days } => {
@@ -301,7 +299,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             if is_actor {
                 format!("Вы разморозили абонемент пользователя _{}_", escape(&sub))
             } else {
-                format!("Ваш абонемент разморозили")
+                "Ваш абонемент разморозили".to_string()
             }
         }
         model::history::Action::ChangeBalance { amount } => {

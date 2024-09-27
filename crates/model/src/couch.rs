@@ -26,7 +26,7 @@ impl CouchInfo {
     }
 
     pub fn collect_training_rewards(&mut self, training: &Training) -> Option<Reward> {
-        if training.clients.len() == 0 {
+        if training.clients.is_empty() {
             return None;
         }
         match &self.rate {

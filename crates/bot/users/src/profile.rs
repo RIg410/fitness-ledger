@@ -51,10 +51,8 @@ impl UserProfile {
             .await?
             .ok_or_else(|| eyre::eyre!("User not found"))?;
 
-        if amount < 0 {
-            if user.balance < amount.abs() as u32 {
-                return Err(eyre::eyre!("Not enough balance"));
-            }
+        if amount < 0 && user.balance < amount.unsigned_abs() {
+            return Err(eyre::eyre!("Not enough balance"));
         }
 
         ctx.ledger
@@ -73,10 +71,8 @@ impl UserProfile {
         ctx.ensure(Rule::ChangeBalance)?;
         let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
 
-        if amount < 0 {
-            if user.reserved_balance < amount.abs() as u32 {
-                return Err(eyre::eyre!("Not enough reserved balance"));
-            }
+        if amount < 0 && user.reserved_balance < amount.unsigned_abs() {
+            return Err(eyre::eyre!("Not enough reserved balance"));
         }
 
         ctx.ledger
@@ -184,15 +180,9 @@ async fn render_user_profile<ID: Into<UserIdent> + Copy>(
     let (msg, user) = render_profile_msg(ctx, id).await?;
 
     let mut keymap = InlineKeyboardMarkup::default();
-    if ctx.has_right(Rule::FreezeUsers)
-        || ctx.me.tg_id == user.tg_id
-        || !user.subscriptions.is_empty()
-    {
-        if user.freeze.is_none() {
-            if user.freeze_days != 0 {
-                keymap = keymap.append_row(Callback::Freeze.btn_row("Заморозить ❄"));
-            }
-        }
+    if (ctx.has_right(Rule::FreezeUsers)
+        || ctx.me.tg_id == user.tg_id || !user.subscriptions.is_empty()) && user.freeze.is_none() && user.freeze_days != 0 {
+        keymap = keymap.append_row(Callback::Freeze.btn_row("Заморозить ❄"));
     }
 
     if ctx.has_right(Rule::ChangeBalance) {

@@ -119,7 +119,7 @@ pub struct UserPreSell {
 pub fn sanitize_phone(phone: &str) -> String {
     phone
         .chars()
-        .filter_map(|c| if c.is_digit(10) { Some(c) } else { None })
+        .filter_map(|c| if c.is_ascii_digit() { Some(c) } else { None })
         .collect()
 }
 

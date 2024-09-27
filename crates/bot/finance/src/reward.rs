@@ -90,7 +90,7 @@ impl View for WriteSum {
         } else {
             return Ok(Jmp::Stay);
         };
-        if let Some(sum) = txt.parse::<Decimal>().ok() {
+        if let Ok(sum) = txt.parse::<Decimal>() {
             let user = ctx
                 .ledger
                 .get_user(&mut ctx.session, self.id)

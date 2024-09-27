@@ -181,7 +181,7 @@ impl Treasury {
         let mut from = txs
             .first()
             .map(|tx| tx.date_time.with_timezone(&Local))
-            .unwrap_or_else(|| Local::now());
+            .unwrap_or_else(Local::now);
         let mut to = from;
 
         for tx in txs {

@@ -43,9 +43,9 @@ impl View for Finish {
             .get_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let msg = render_msg(ctx, &training, &self.preset.as_ref().unwrap()).await?;
+        let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;
         ctx.send_msg(&msg).await?;
-        let msg = format!("Все верно?");
+        let msg = "Все верно?".to_string();
         let keymap = vec![vec![
             Callback::Yes.button("✅ Сохранить"),
             Callback::No.button("❌ Отмена"),

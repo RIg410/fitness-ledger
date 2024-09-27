@@ -25,7 +25,7 @@ impl View for SetBirthday {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let msg = format!("Введите дату рождения в формате ДД\\.ММ\\.ГГГГ");
+        let msg = "Введите дату рождения в формате ДД\\.ММ\\.ГГГГ".to_string();
         ctx.edit_origin(&msg, InlineKeyboardMarkup::default())
             .await?;
         Ok(())
@@ -33,7 +33,7 @@ impl View for SetBirthday {
 
     async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         let text = message.text().unwrap_or_default();
-        let date = chrono::NaiveDate::parse_from_str(&text, "%d.%m.%Y")
+        let date = chrono::NaiveDate::parse_from_str(text, "%d.%m.%Y")
             .map_err(Error::new)
             .and_then(|date| {
                 date.and_hms_opt(0, 0, 0)
@@ -61,7 +61,7 @@ impl View for SetBirthday {
                 Ok(Jmp::Back)
             }
             Err(_) => {
-                ctx.send_notification(&format!("Введите дату в формате ДД\\.ММ\\.ГГГГ"))
+                ctx.send_notification("Введите дату в формате ДД\\.ММ\\.ГГГГ")
                     .await?;
                 Ok(Jmp::Stay)
             }

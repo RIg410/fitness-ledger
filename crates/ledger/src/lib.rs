@@ -87,12 +87,12 @@ impl Ledger {
         id: ID,
     ) -> Result<User> {
         let id: UserIdent = id.into();
-        Ok(match id {
+        match id {
             UserIdent::TgId(tg_id) => self.users.get_by_tg_id(session, tg_id).await,
             UserIdent::Id(id) => self.users.get(session, id).await,
         }
         .context("get_user")?
-        .ok_or_else(|| eyre!("User not found:{:?}", id))?)
+        .ok_or_else(|| eyre!("User not found:{:?}", id))
     }
 
     #[tx]

@@ -32,7 +32,7 @@ pub async fn message_handler(
 
     match inner_message_handler(
         &mut ctx,
-        widget.unwrap_or_else(|| system_handler()),
+        widget.unwrap_or_else(&system_handler),
         msg,
         &state_holder,
         system_handler,
@@ -106,7 +106,7 @@ async fn inner_message_handler(
             new_widget
         }
         crate::widget::Jmp::Stay => widget,
-        crate::widget::Jmp::Back => widget.take_back().unwrap_or_else(|| system_handler()),
+        crate::widget::Jmp::Back => widget.take_back().unwrap_or_else(&system_handler),
         crate::widget::Jmp::Home => system_handler(),
         crate::widget::Jmp::Goto(new_widget) => new_widget,
     };

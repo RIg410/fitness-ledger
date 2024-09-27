@@ -17,6 +17,12 @@ use super::make_couch::make_make_couch_view;
 
 pub struct CouchingList {}
 
+impl Default for CouchingList {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CouchingList {
     pub fn new() -> CouchingList {
         CouchingList {}

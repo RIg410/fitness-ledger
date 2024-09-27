@@ -12,7 +12,7 @@ pub struct TrainingListView(Arc<dyn Fn(ObjectId) -> Widget + Send + Sync + 'stat
 
 impl TrainingListView {
     pub fn make_widget(&self, id: ObjectId) -> Widget {
-        ((self.0)(id)).into()
+        (self.0)(id)
     }
 }
 
@@ -28,7 +28,7 @@ impl CalendarView {
         selected_day: Option<Weekday>,
         filter: Option<Filter>,
     ) -> Widget {
-        ((self.0)(week_id, selected_day, filter)).into()
+        (self.0)(week_id, selected_day, filter)
     }
 }
 

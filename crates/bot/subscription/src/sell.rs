@@ -29,11 +29,11 @@ impl SellView {
     }
 
     pub fn select(&mut self, user_id: i64, _: &mut Context) -> Result<Jmp> {
-        return Ok(ConfirmSell::new(user_id, self.sell).into());
+        Ok(ConfirmSell::new(user_id, self.sell).into())
     }
 
     pub fn presell(&mut self) -> Result<Jmp> {
-        return Ok(PreSellView::new(self.sell).into());
+        Ok(PreSellView::new(self.sell).into())
     }
 }
 
@@ -89,7 +89,7 @@ async fn render(
     let users = ctx
         .ledger
         .users
-        .find(&mut ctx.session, &query, offset, LIMIT)
+        .find(&mut ctx.session, query, offset, LIMIT)
         .await?;
     let (name, price, items) = match sell {
         Sell::Sub(id) => {
@@ -136,7 +136,7 @@ async fn render(
         ));
     }
 
-    if raw.len() > 0 {
+    if !raw.is_empty() {
         keymap = keymap.append_row(raw);
     }
 
