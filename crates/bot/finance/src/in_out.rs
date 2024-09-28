@@ -47,7 +47,7 @@ impl View for InOut {
                 text.push_str("\nВведите сумму платежа:");
             }
             State::DateTime(_, _) => {
-                text.push_str("\nВведите дату платежа: Y\\-m\\-d H:M");
+                text.push_str("\nВведите дату платежа: \\d\\.m\\.Y H:M");
             }
             State::Finish(_, _, _) => {
                 text.push_str("\nВсе верно?");
@@ -88,8 +88,10 @@ impl View for InOut {
                 if text == "-" {
                     State::Finish(des, amount, Local::now())
                 } else {
-                    let dt = NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M")?;
-                    if let Some(dt) = Local.from_local_datetime(&dt).single() {
+                    let dt = NaiveDateTime::parse_from_str(text, "%d.%m.%Y %H:%M")
+                        .ok()
+                        .and_then(|dt| Local.from_local_datetime(&dt).single());
+                    if let Some(dt) = dt {
                         State::Finish(des, amount, dt)
                     } else {
                         ctx.send_msg("Введите корректную дату").await?;

@@ -5,6 +5,8 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use bot_viewer::day::fmt_dt;
+use chrono::Local;
 use eyre::eyre;
 use model::{rights::Rule, treasury::TreasuryEvent};
 use mongodb::bson::oid::ObjectId;
@@ -79,7 +81,8 @@ async fn render_event(ctx: &mut Context, event: &TreasuryEvent) -> Result<String
 
             format!(
                 "🛒 Продажа подписки: {}р пользователю {}",
-                event.debit - event.credit, user
+                event.debit - event.credit,
+                user
             )
         }
         model::treasury::Event::Reward(user_id) => {
@@ -94,25 +97,31 @@ async fn render_event(ctx: &mut Context, event: &TreasuryEvent) -> Result<String
                 model::treasury::subs::UserId::Phone(phone) => phone.to_owned(),
                 model::treasury::subs::UserId::None => "-".to_string(),
             };
-            format!("🎁 Выплата награды: {} пользователю {}", event.debit - event.credit, user)
+            format!(
+                "🎁 Выплата награды: {} пользователю {}",
+                event.debit - event.credit,
+                user
+            )
         }
         model::treasury::Event::Outcome(outcome) => {
             format!(
                 "📉 Расход: {} руб.\nОписание: {}",
-                event.debit - event.credit, outcome.description
+                event.debit - event.credit,
+                outcome.description
             )
         }
         model::treasury::Event::Income(income) => {
             format!(
                 "📈 Поступление: {} руб.\nОписание:{}",
-                event.debit - event.credit, income.description
+                event.debit - event.credit,
+                income.description
             )
         }
     };
 
     Ok(escape(&format!(
         "📅 {}\n{}",
-        event.date_time.format("%Y-%m-%d %H:%M"),
+        fmt_dt(&event.date_time.with_timezone(&Local)),
         env_text
     )))
 }
