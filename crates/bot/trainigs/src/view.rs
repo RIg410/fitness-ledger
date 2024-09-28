@@ -1,3 +1,5 @@
+use std::vec;
+
 use async_trait::async_trait;
 use bot_core::{
     callback_data::Calldata as _,
@@ -143,6 +145,21 @@ impl TrainingView {
         ctx.ensure(Rule::EditSchedule)?;
         Ok(ChangeCouch::new(self.id, all).into())
     }
+
+    async fn keep_open(&mut self, ctx: &mut Context, keep_open: bool) -> Result<Jmp> {
+        ctx.ensure(Rule::SetKeepOpen)?;
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        ctx.ledger
+            .calendar
+            .set_keep_open(&mut ctx.session, training.start_at, keep_open)
+            .await?;
+        Ok(Jmp::Stay)
+    }
 }
 
 #[async_trait]
@@ -174,6 +191,7 @@ impl View for TrainingView {
             Callback::ClientList => self.client_list(ctx).await,
             Callback::ChangeCouchOne => self.change_couch(ctx, false).await,
             Callback::ChangeCouchAll => self.change_couch(ctx, true).await,
+            Callback::KeepOpen(keep_open) => self.keep_open(ctx, keep_open).await,
         }
     }
 }
@@ -236,12 +254,20 @@ _{}_                                                                 \n
         keymap = keymap.append_row(vec![Callback::ClientList.button("🗒 Список клиентов")]);
     }
 
+    let mut row = vec![];
     if ctx.has_right(Rule::CancelTraining) {
         if tr_status.can_be_canceled() {
-            keymap = keymap.append_row(vec![Callback::Cancel.button("⛔ Отменить")]);
+            row.push(Callback::Cancel.button("⛔ Отменить"));
         }
         if tr_status.can_be_uncanceled() {
-            keymap = keymap.append_row(vec![Callback::UnCancel.button("🔓 Вернуть")]);
+            row.push(Callback::UnCancel.button("🔓 Вернуть"));
+        }
+    }
+    if ctx.has_right(Rule::SetKeepOpen) {
+        if training.keep_open {
+            row.push(Callback::KeepOpen(false).button("🔒 Закрыть для записи"));
+        } else {
+            row.push(Callback::KeepOpen(true).button("🔓 Открыть для записи"));
         }
     }
 
@@ -285,6 +311,7 @@ enum Callback {
     UnCancel,
     SignUp,
     SignOut,
+    KeepOpen(bool),
 }
 
 fn status(status: TrainingStatus, is_full: bool) -> &'static str {

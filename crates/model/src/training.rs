@@ -32,6 +32,8 @@ pub struct Training {
     pub statistics: Option<Statistics>,
     #[serde(default)]
     pub notified: Notified,
+    #[serde(default)]
+    pub keep_open: bool,
 }
 
 impl Training {
@@ -60,6 +62,7 @@ impl Training {
             is_processed: false,
             statistics: None,
             notified: Default::default(),
+            keep_open: false,
         }
     }
 
@@ -84,6 +87,7 @@ impl Training {
             is_processed: false,
             statistics: None,
             notified: Default::default(),
+            keep_open: false,
         }
     }
 
@@ -111,6 +115,7 @@ impl Training {
             is_processed: false,
             statistics: None,
             notified: Default::default(),
+            keep_open: false,
         }
     }
 
@@ -129,7 +134,7 @@ impl Training {
             } else if start_at < now {
                 TrainingStatus::InProgress
             } else if start_at - chrono::Duration::minutes(CLOSE_SING_UP as i64) < now {
-                if self.clients.is_empty() {
+                if self.clients.is_empty() && !self.keep_open {
                     TrainingStatus::ClosedToSignup
                 } else {
                     TrainingStatus::OpenToSignup {
