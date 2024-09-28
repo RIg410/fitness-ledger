@@ -149,6 +149,7 @@ name = "bg-process"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "bot-core",
  "bot-main",
  "chrono",
  "eyre",
@@ -156,6 +157,7 @@ dependencies = [
  "log",
  "model",
  "mongodb",
+ "teloxide",
  "tokio",
  "tx_macro",
 ]
@@ -240,6 +242,7 @@ dependencies = [
  "log",
  "model",
  "mongodb",
+ "parking_lot",
  "serde",
  "storage",
  "strum",

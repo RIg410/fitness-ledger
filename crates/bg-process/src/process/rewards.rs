@@ -3,7 +3,6 @@ use eyre::Error;
 use model::{couch::CouchInfo, session::Session};
 use mongodb::bson::oid::ObjectId;
 use tx_macro::tx;
-
 use crate::Ledger;
 
 pub struct RewardsBg {

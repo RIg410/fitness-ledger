@@ -31,7 +31,7 @@ pub struct Training {
     #[serde(default)]
     pub statistics: Option<Statistics>,
     #[serde(default)]
-    pub notified: bool,
+    pub notified: Notified,
 }
 
 impl Training {
@@ -59,7 +59,7 @@ impl Training {
             is_canceled: false,
             is_processed: false,
             statistics: None,
-            notified: false,
+            notified: Default::default(),
         }
     }
 
@@ -83,7 +83,7 @@ impl Training {
             is_canceled: false,
             is_processed: false,
             statistics: None,
-            notified: false,
+            notified: Default::default(),
         }
     }
 
@@ -110,7 +110,7 @@ impl Training {
             is_canceled: false,
             is_processed: false,
             statistics: None,
-            notified: false,
+            notified: Default::default(),
         }
     }
 
@@ -228,5 +228,27 @@ impl Sum<Statistics> for Statistics {
             earned: acc.earned + item.earned,
             couch_rewards: acc.couch_rewards + item.couch_rewards,
         })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Notified {
+    #[default]
+    None,
+    Tomorrow(Vec<(i64, i32)>),
+    By3Hours(Vec<(i64, i32)>),
+}
+
+impl Notified {
+    pub fn is_notified(&self) -> bool {
+        !matches!(self, Notified::None)
+    }
+
+    pub fn notification_list(&self) -> &[(i64, i32)] {
+        match self {
+            Notified::None => &[],
+            Notified::Tomorrow(list) => list,
+            Notified::By3Hours(list) => list,
+        }
     }
 }

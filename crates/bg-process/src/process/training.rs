@@ -8,6 +8,7 @@ use model::{
 };
 use tx_macro::tx;
 
+#[derive(Clone)]
 pub struct TriningBg {
     ledger: Ledger,
 }

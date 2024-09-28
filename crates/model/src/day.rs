@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{ids::DayId, slot::Slot, training::Training};
 use chrono::{DateTime, Datelike, Local, Utc};
 use mongodb::bson::oid::ObjectId;
@@ -85,6 +87,16 @@ impl Day {
         }
 
         false
+    }
+
+    pub fn notification_map(&self) -> HashMap<i64, Vec<i32>> {
+        let mut map = HashMap::new();
+        for training in &self.training {
+            for (chat_id, msg_id) in training.notified.notification_list() {
+                map.entry(*chat_id).or_insert_with(Vec::new).push(*msg_id);
+            }
+        }
+        map
     }
 }
 

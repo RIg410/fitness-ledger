@@ -51,6 +51,7 @@ hex = "0.4.3"
 itertools = "0.2.2"
 log = "0.4"
 mongodb = {version = "3.0"}
+parking_lot = "0.12.3"
 pretty_env_logger = "0.5"
 proc-macro2 = "1.0"
 quote = "1.0"

@@ -77,7 +77,7 @@ async fn inner_callback_handler(
         ctx.send_msg("Ваш аккаунт заблокирован").await?;
         return Ok(());
     }
-    ctx.system_go_back = !widget.is_back_main_view() && !widget.main_view();
+    ctx.set_system_go_back(!widget.is_back_main_view() && !widget.main_view());
 
     let widget = if data.starts_with("/") {
         match data.as_str() {
@@ -113,7 +113,7 @@ async fn inner_callback_handler(
         crate::widget::Jmp::Home => system_handler(),
         crate::widget::Jmp::Goto(widget) => widget,
     };
-    ctx.system_go_back = !new_widget.is_back_main_view();
+    ctx.set_system_go_back(!new_widget.is_back_main_view());
 
     new_widget.show(ctx).await?;
 
@@ -121,7 +121,7 @@ async fn inner_callback_handler(
         ctx.chat_id(),
         State {
             view: Some(new_widget),
-            origin: Some(ctx.origin()),
+            origin: Some(ctx.origin().clone()),
         },
     );
     Ok(())

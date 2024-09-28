@@ -4,6 +4,7 @@ use eyre::Result;
 use log::{info, warn};
 use model::session::Session;
 
+#[derive(Clone)]
 pub struct FreezeBg {
     ledger: Ledger,
 }

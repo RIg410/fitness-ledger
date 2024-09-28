@@ -100,7 +100,7 @@ where
                 Stage::List(list) => list.render(ctx, self.state.as_mut().unwrap()).await?,
             };
 
-            ctx.system_go_back = false;
+            ctx.set_system_go_back(false);
             keymap = keymap.append_row(Callback::Back.btn_row("🔙 Назад"));
             ctx.edit_origin(&msg, keymap).await?;
         }

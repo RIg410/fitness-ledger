@@ -1,10 +1,9 @@
 pub mod callback;
 pub mod message;
 
-use std::sync::{atomic::AtomicBool, Arc};
-
 use crate::{
-    context::{Context, Origin},
+    bot::{Origin, TgBot},
+    context::Context,
     state::StateHolder,
     widget::Widget,
 };
@@ -48,12 +47,14 @@ async fn build_context(
         Origin {
             chat_id: tg_id,
             message_id: id,
-            is_valid: Arc::new(AtomicBool::new(true)),
+            tkn: state_holder.get_token(tg_id),
         }
     };
 
+    let tg_bot = TgBot::new(bot, state_holder.tokens(), origin);
+
     Ok((
-        Context::new(bot, user, ledger, origin, session, real),
+        Context::new(tg_bot, user, ledger, session, real),
         state.view,
     ))
 }

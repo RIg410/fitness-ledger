@@ -19,8 +19,8 @@ use view::menu::{MainMenuItem, MainMenuView};
 
 #[derive(Clone)]
 pub struct BotApp {
-    bot: Bot,
-    state: StateHolder,
+    pub bot: Bot,
+    pub state: StateHolder,
 }
 
 impl BotApp {
