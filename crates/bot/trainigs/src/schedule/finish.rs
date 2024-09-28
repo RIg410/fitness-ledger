@@ -9,7 +9,7 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use eyre::Result;
-use ledger::calendar::ScheduleError;
+use ledger::service::calendar::ScheduleError;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};

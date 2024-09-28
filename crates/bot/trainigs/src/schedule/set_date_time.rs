@@ -6,7 +6,7 @@ use bot_core::{
 };
 use chrono::{DateTime, Datelike as _, Local, TimeZone, Timelike};
 use eyre::{Error, Result};
-use ledger::calendar::TimeSlotCollision;
+use ledger::service::calendar::TimeSlotCollision;
 use log::warn;
 use mongodb::bson::oid::ObjectId;
 use teloxide::types::Message;

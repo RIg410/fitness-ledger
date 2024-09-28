@@ -4,8 +4,9 @@ use storage::subscription::SubscriptionsStore;
 use thiserror::Error;
 use tx_macro::tx;
 
-use crate::history::History;
 use std::ops::Deref;
+
+use super::history::History;
 
 #[derive(Clone)]
 pub struct Subscriptions {

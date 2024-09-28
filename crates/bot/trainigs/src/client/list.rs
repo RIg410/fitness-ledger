@@ -8,7 +8,7 @@ use bot_core::{
 use bot_viewer::day::fmt_dt;
 use chrono::{DateTime, Local};
 use eyre::{bail, Result};
-use ledger::calendar::SignOutError;
+use ledger::service::calendar::SignOutError;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};

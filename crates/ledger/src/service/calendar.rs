@@ -13,7 +13,7 @@ use storage::{calendar::CalendarStore, user::UserStore};
 use thiserror::Error;
 use tx_macro::tx;
 
-use crate::{history::History, programs::Programs};
+use super::{history::History, programs::Programs};
 
 #[derive(Clone)]
 pub struct Calendar {

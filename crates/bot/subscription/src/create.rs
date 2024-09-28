@@ -4,7 +4,7 @@ use super::View;
 use async_trait::async_trait;
 use bot_core::{callback_data::Calldata, calldata, context::Context, widget::Jmp};
 use eyre::Result;
-use ledger::subscriptions::CreateSubscriptionError;
+use ledger::service::subscriptions::CreateSubscriptionError;
 use model::{rights::Rule, subscription::Subscription};
 use serde::{Deserialize, Serialize};
 use teloxide::{

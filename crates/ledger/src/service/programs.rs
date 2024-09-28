@@ -1,10 +1,11 @@
-use crate::history::History;
 use eyre::Error;
 use model::{program::Program, session::Session};
 use mongodb::bson::oid::ObjectId;
 use std::ops::Deref;
 use storage::program::ProgramStore;
 use tx_macro::tx;
+
+use super::history::History;
 
 #[derive(Clone)]
 pub struct Programs {

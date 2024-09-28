@@ -1,8 +1,5 @@
-use backup::Backup;
-use calendar::{Calendar, SignOutError};
 use chrono::Local;
 use eyre::{bail, eyre, Context as _, Result};
-use history::History;
 use log::{error, warn};
 use model::decimal::Decimal;
 use model::session::Session;
@@ -12,26 +9,23 @@ use model::treasury::subs::UserId;
 use model::treasury::Sell;
 use model::user::{sanitize_phone, User, UserIdent, UserPreSell};
 use mongodb::bson::oid::ObjectId;
-use programs::Programs;
-use rewards::Rewards;
+use service::backup::Backup;
+use service::history::{self, History};
+use service::programs::Programs;
+use service::rewards::Rewards;
+use service::subscriptions::Subscriptions;
+use service::treasury::Treasury;
+use service::users::Users;
+use service::{backup, statistics};
+use service::calendar::{Calendar, SignOutError};
 use storage::pre_sell::PreSellStore;
 use storage::session::Db;
 use storage::Storage;
-use subscriptions::Subscriptions;
 use thiserror::Error;
-use treasury::Treasury;
-use tx_macro::tx;
-pub use users::*;
 
-pub mod backup;
-pub mod calendar;
-pub mod history;
-pub mod programs;
-pub mod rewards;
-pub mod statistics;
-pub mod subscriptions;
-pub mod treasury;
-mod users;
+use tx_macro::tx;
+
+pub mod service;
 
 #[derive(Clone)]
 pub struct Ledger {

@@ -1,4 +1,3 @@
-use crate::history::History;
 use chrono::{DateTime, Local, Utc};
 use eyre::{bail, eyre, Result};
 use log::info;
@@ -14,6 +13,8 @@ use std::ops::Deref;
 use storage::{pre_sell::PreSellStore, user::UserStore};
 use thiserror::Error;
 use tx_macro::tx;
+
+use super::history::History;
 
 #[derive(Clone)]
 pub struct Users {

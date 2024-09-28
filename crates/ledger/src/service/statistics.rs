@@ -1,7 +1,8 @@
-use crate::calendar::Calendar;
 use chrono::{DateTime, Local};
 use eyre::Error;
 use model::{session, statistics::LedgerStatistics};
+
+use super::calendar::Calendar;
 
 #[derive(Clone)]
 pub struct Statistics {

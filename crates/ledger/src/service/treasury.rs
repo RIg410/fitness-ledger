@@ -15,8 +15,9 @@ use mongodb::bson::oid::ObjectId;
 use storage::treasury::TreasuryStore;
 use tx_macro::tx;
 
-use crate::history::History;
 use std::ops::Deref;
+
+use super::history::History;
 
 #[derive(Clone)]
 pub struct Treasury {

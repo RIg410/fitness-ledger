@@ -7,7 +7,7 @@ use bot_core::{
 use bot_viewer::user::render_profile_msg;
 use chrono::{DateTime, Local};
 use eyre::{bail, Result};
-use ledger::{calendar::SignOutError, SignUpError};
+use ledger::{service::calendar::SignOutError, SignUpError};
 use model::{rights::Rule, training::Training};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
