@@ -310,6 +310,10 @@ impl Ledger {
             .presell_subscription(session, subscription.clone(), phone.clone())
             .await?;
 
+        if self.presell.get(session, &phone).await?.is_some() {
+            return Err(SellSubscriptionError::SubscriptionAlreadySold);
+        }
+
         self.presell
             .add(
                 session,
@@ -524,6 +528,8 @@ impl Ledger {
 pub enum SellSubscriptionError {
     #[error("Subscription not found")]
     SubscriptionNotFound,
+    #[error("Subscription already sold")]
+    SubscriptionAlreadySold,
     #[error("User not found")]
     UserNotFound,
     #[error("invalid params")]
