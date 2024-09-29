@@ -46,7 +46,7 @@ impl MainMenuView {
             keymap = keymap.append_row(vec![MainMenuItem::System.into()]);
         }
 
-        ctx.edit_origin("🏠SoulFamily       🤸🏼", keymap).await?;
+        ctx.edit_origin("🏠Меню 🤸🏼", keymap).await?;
         Ok(())
     }
 }

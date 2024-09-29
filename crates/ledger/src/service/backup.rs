@@ -1,6 +1,6 @@
 use std::io::{Cursor, Write as _};
 
-use eyre::Error;
+use eyre::{Context, Error, Context as _};
 use model::session::Session;
 use storage::{
     calendar::CalendarStore, history::HistoryStore, pre_sell::PreSellStore, program::ProgramStore,
@@ -49,42 +49,42 @@ impl Backup {
 
         zip.start_file("users.json", options)?;
         zip.write_all(&serde_json::to_vec_pretty(
-            &self.users.dump(session).await?,
+            &self.users.dump(session).await.context("users")?,
         )?)?;
 
         zip.start_file("history.json", options)?;
         zip.write_all(&serde_json::to_vec_pretty(
-            &self.history.dump(session).await?,
+            &self.history.dump(session).await.context("history")?,
         )?)?;
 
         zip.start_file("programs.json", options)?;
         zip.write_all(&serde_json::to_vec_pretty(
-            &self.programs.dump(session).await?,
+            &self.programs.dump(session).await.context("programs")?,
         )?)?;
 
         zip.start_file("calendar.json", options)?;
         zip.write_all(&serde_json::to_vec_pretty(
-            &self.calendar.dump(session).await?,
+            &self.calendar.dump(session).await.context("calendar")?,
         )?)?;
 
         zip.start_file("pre_sell.json", options)?;
         zip.write_all(&serde_json::to_vec_pretty(
-            &self.pre_sell.dump(session).await?,
+            &self.pre_sell.dump(session).await.context("pre_sell")?,
         )?)?;
 
         zip.start_file("rewards.json", options)?;
         zip.write_all(&serde_json::to_vec_pretty(
-            &self.rewards.dump(session).await?,
+            &self.rewards.dump(session).await.context("rewards")?,
         )?)?;
 
         zip.start_file("subscriptions.json", options)?;
         zip.write_all(&serde_json::to_vec_pretty(
-            &self.subscriptions.dump(session).await?,
+            &self.subscriptions.dump(session).await.context("subscriptions")?,
         )?)?;
 
         zip.start_file("treasury.json", options)?;
         zip.write_all(&serde_json::to_vec_pretty(
-            &self.treasury.dump(session).await?,
+            &self.treasury.dump(session).await.context("treasury")?,
         )?)?;
 
         let mut writer = zip.finish()?;

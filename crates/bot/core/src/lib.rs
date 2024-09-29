@@ -10,7 +10,7 @@ pub mod bot;
 
 const ERROR: &str = "Что-то пошло не так. Пожалуйста, попробуйте позже.";
 
-const HOME_DESCRIPTION: &str = "🏠";
+const HOME_DESCRIPTION: &str = "🏠 Меню";
 const HOME_NAME: &str = "/start";
 
 const BACK_DESCRIPTION: &str = "🔙 Назад";
