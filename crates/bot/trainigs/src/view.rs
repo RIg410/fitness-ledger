@@ -15,7 +15,10 @@ use model::{
     training::{Training, TrainingStatus},
 };
 use serde::{Deserialize, Serialize};
-use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
+use teloxide::{
+    types::{ChatId, InlineKeyboardMarkup},
+    utils::markdown::escape,
+};
 
 use crate::{change_couch::ChangeCouch, client::list::ClientsList};
 
@@ -53,10 +56,23 @@ impl TrainingView {
             .get_training_by_start_at(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        ctx.ledger
-            .calendar
+        let to_notify = ctx
+            .ledger
             .cancel_training(&mut ctx.session, &training)
             .await?;
+        let msg = format!(
+            "Тренировка '{}' в {} *отменена*\\.",
+            escape(&training.name),
+            fmt_dt(&training.get_slot().start_at())
+        );
+        for client in to_notify {
+            if let Ok(user) = ctx.ledger.get_user(&mut ctx.session, client).await {
+                ctx.bot
+                    .send_notification_to(ChatId(user.tg_id), &msg)
+                    .await?;
+            }
+        }
+
         Ok(Jmp::Stay)
     }
 
@@ -270,6 +286,7 @@ _{}_                                                                 \n
             row.push(Callback::KeepOpen(true).button("🔓 Открыть для записи"));
         }
     }
+    keymap = keymap.append_row(row);
 
     if ctx.has_right(Rule::EditSchedule) {
         keymap = keymap.append_row(vec![

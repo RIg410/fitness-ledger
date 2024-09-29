@@ -10,6 +10,7 @@ use model::treasury::Sell;
 use model::user::{sanitize_phone, User, UserIdent, UserPreSell};
 use mongodb::bson::oid::ObjectId;
 use service::backup::Backup;
+use service::calendar::{Calendar, SignOutError};
 use service::history::{self, History};
 use service::programs::Programs;
 use service::rewards::Rewards;
@@ -17,7 +18,6 @@ use service::subscriptions::Subscriptions;
 use service::treasury::Treasury;
 use service::users::Users;
 use service::{backup, statistics};
-use service::calendar::{Calendar, SignOutError};
 use storage::pre_sell::PreSellStore;
 use storage::session::Db;
 use storage::Storage;
@@ -26,6 +26,7 @@ use thiserror::Error;
 use tx_macro::tx;
 
 pub mod service;
+pub mod training;
 
 #[derive(Clone)]
 pub struct Ledger {
@@ -209,6 +210,17 @@ impl Ledger {
             .get_training_by_start_at(session, training.get_slot().start_at())
             .await?
             .ok_or_else(|| SignOutError::TrainingNotFound)?;
+        self.sign_out_tx_less(session, &training, client, forced)
+            .await
+    }
+
+    pub(crate) async fn sign_out_tx_less(
+        &self,
+        session: &mut Session,
+        training: &Training,
+        client: ObjectId,
+        forced: bool,
+    ) -> Result<(), SignOutError> {
         let status = training.status(Local::now());
         if !forced && !status.can_sign_out() {
             return Err(SignOutError::TrainingNotOpenToSignOut);
@@ -241,7 +253,7 @@ impl Ledger {
                 session,
                 user.id,
                 training.get_slot().start_at(),
-                training.name,
+                training.name.clone(),
             )
             .await?;
         Ok(())

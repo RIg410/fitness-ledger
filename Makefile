@@ -20,3 +20,10 @@ test:
 build:
 	cargo build --release	
 	sudo docker compose build
+	
+restart: build
+	sudo docker compose up -d --build backend
+
+logs:
+	sudo docker container logs ledger-backend-1	
+

@@ -22,7 +22,7 @@ pub struct TrainingNotifier {
 #[async_trait]
 impl Task for TrainingNotifier {
     const NAME: &'static str = "notifier";
-    const CRON: &'static str = "every 1 minutes";
+    const CRON: &'static str = "every 30 minutes";
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;
@@ -101,9 +101,6 @@ impl TrainingNotifier {
                 training.name
             ));
 
-            self.notify_user(session, training.instructor, &msg, true)
-                .await?;
-
             for client in &training.clients {
                 self.notify_user(session, *client, &msg, true).await?;
             }
@@ -150,16 +147,6 @@ impl TrainingNotifier {
             ));
 
             let mut has_changes = false;
-            if !already_notified.contains(&training.instructor) {
-                if self
-                    .notify_user(session, training.instructor, &msg, false)
-                    .await?
-                {
-                    already_notified.push(training.instructor);
-                    has_changes = true;
-                }
-            }
-
             for client in &training.clients {
                 if !already_notified.contains(client) {
                     if self.notify_user(session, *client, &msg, false).await? {

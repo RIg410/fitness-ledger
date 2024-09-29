@@ -51,17 +51,19 @@ impl Calendar {
             .cloned())
     }
 
-    #[tx]
-    pub async fn cancel_training(&self, session: &mut Session, training: &Training) -> Result<()> {
-        let mut day = self.get_day(session, training.day_id()).await?;
-        let training = day.training.iter_mut().find(|slot| slot.id == training.id);
+    pub(crate) async fn cancel_training(
+        &self,
+        session: &mut Session,
+        training: &Training,
+    ) -> Result<Training> {
+        let day = self.get_day(session, training.day_id()).await?;
+        let training = day.training.into_iter().find(|slot| slot.id == training.id);
 
         if let Some(training) = training {
             self.calendar
                 .set_cancel_flag(session, training.start_at, true)
                 .await?;
-            //self.logs.cancel_training(session, training).await;
-            Ok(())
+            Ok(training)
         } else {
             Err(eyre::eyre!("Training not found"))
         }

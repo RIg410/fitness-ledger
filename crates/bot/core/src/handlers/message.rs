@@ -41,6 +41,7 @@ pub async fn message_handler(
     {
         Ok(_) => Ok(()),
         Err(err) => {
+            error!("Failed to handle message: {:#}", err);
             if ctx.is_admin() {
                 if let Err(err) = ctx
                     .send_msg(&escape(&format!("Failed to handle message: {:#}", err)))
@@ -49,7 +50,6 @@ pub async fn message_handler(
                     error!("send message error :{:#}", err);
                 }
             } else {
-                error!("Failed to handle message: {:#}", err);
                 if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
                     error!("send message error :{:#}", err);
                 }
