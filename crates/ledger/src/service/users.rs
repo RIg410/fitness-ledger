@@ -125,6 +125,7 @@ impl Users {
             created_at: Utc::now(),
             initiated: false,
             couch: None,
+            settings: Default::default(),
         };
         self.store.insert(session, user).await?;
         self.logs.create_user(session, name, phone).await?;

@@ -28,7 +28,7 @@ impl TgBot {
         }
     }
 
-    pub async fn send_document(&mut self, data: Vec<u8>, name: &'static str) -> Result<(), Error> {
+    pub async fn send_document(&self, data: Vec<u8>, name: &'static str) -> Result<(), Error> {
         self.origin.invalidate();
         self.bot
             .send_document(self.chat_id(), InputFile::memory(data).file_name(name))
@@ -74,7 +74,7 @@ impl TgBot {
         }
     }
 
-    pub async fn delete_msg(&mut self, id: MessageId) -> Result<(), eyre::Error> {
+    pub async fn delete_msg(&self, id: MessageId) -> Result<(), eyre::Error> {
         if self.origin.message_id == id {
             self.origin.invalidate();
         }
@@ -82,7 +82,7 @@ impl TgBot {
         Ok(())
     }
 
-    pub async fn send_msg(&mut self, text: &str) -> Result<MessageId, eyre::Error> {
+    pub async fn send_msg(&self, text: &str) -> Result<MessageId, eyre::Error> {
         self.origin.invalidate();
 
         Ok(self
@@ -95,7 +95,7 @@ impl TgBot {
     }
 
     pub async fn send_msg_with_markup(
-        &mut self,
+        &self,
         text: &str,
         markup: InlineKeyboardMarkup,
     ) -> Result<MessageId, eyre::Error> {
@@ -112,7 +112,7 @@ impl TgBot {
     }
 
     pub async fn send_replay_markup(
-        &mut self,
+        &self,
         text: &str,
         markup: ReplyMarkup,
     ) -> Result<MessageId, eyre::Error> {
@@ -158,7 +158,7 @@ impl TgBot {
             .parse_mode(ParseMode::MarkdownV2)
             .await?
             .id;
-        self.bot.pin_chat_message(chat_id, id).await?;
+       // self.bot.pin_chat_message(chat_id, id).await?;
         let tkn = self.tokens.get_token(chat_id);
         tkn.invalidate();
         Ok(id)

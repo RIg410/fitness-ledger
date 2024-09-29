@@ -355,10 +355,10 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             if is_actor {
                 format!(
                     "Вы выплатили вознаграждение в размере *{}* пользователю {}",
-                    amount, sub
+                    escape(&amount.to_string()), escape(&sub)
                 )
             } else {
-                format!("Вам выплатили вознаграждение в размере *{}*", amount)
+                format!("Вам выплатили вознаграждение в размере *{}*", escape(&amount.to_string()))
             }
         }
     };

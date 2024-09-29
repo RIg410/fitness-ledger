@@ -236,24 +236,21 @@ impl Sum<Statistics> for Statistics {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Notified {
-    #[default]
-    None,
-    Tomorrow(Vec<(i64, i32)>),
-    By3Hours(Vec<(i64, i32)>),
+    None {},
+    Tomorrow {},
+    ByHours(Vec<ObjectId>),
 }
 
 impl Notified {
     pub fn is_notified(&self) -> bool {
-        !matches!(self, Notified::None)
+        !matches!(self, Notified::None {})
     }
+}
 
-    pub fn notification_list(&self) -> &[(i64, i32)] {
-        match self {
-            Notified::None => &[],
-            Notified::Tomorrow(list) => list,
-            Notified::By3Hours(list) => list,
-        }
+impl Default for Notified {
+    fn default() -> Self {
+        Notified::None {}
     }
 }

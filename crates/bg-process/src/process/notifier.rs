@@ -1,31 +1,42 @@
-use std::{collections::HashMap, hash::Hash};
-
+use crate::Task;
+use async_trait::async_trait;
 use bot_core::bot::{Origin, TgBot, ValidToken};
 use bot_main::BotApp;
+use bot_viewer::day::fmt_time;
 use chrono::Local;
 use eyre::Error;
 use ledger::Ledger;
-use model::{
-    ids::DayId,
-    session::Session,
-    training::{Notified, Training},
-    user::UserIdent,
-};
+use model::{ids::DayId, session::Session, training::Notified, user::UserIdent};
+use std::sync::Arc;
 use teloxide::{
     types::{ChatId, MessageId},
     utils::markdown::escape,
 };
 
-pub struct Notifier {
+#[derive(Clone)]
+pub struct TrainingNotifier {
     pub ledger: Ledger,
-    pub bot: TgBot,
+    pub bot: Arc<TgBot>,
 }
 
-impl Notifier {
-    pub fn new(ledger: Ledger, bot: BotApp) -> Notifier {
-        Notifier {
+#[async_trait]
+impl Task for TrainingNotifier {
+    const NAME: &'static str = "notifier";
+    const CRON: &'static str = "every 1 minutes";
+
+    async fn process(&mut self) -> Result<(), Error> {
+        let mut session = self.ledger.db.start_session().await?;
+        self.notify_about_tomorrow_training(&mut session).await?;
+        self.notify_about_today_training(&mut session).await?;
+        Ok(())
+    }
+}
+
+impl TrainingNotifier {
+    pub fn new(ledger: Ledger, bot: BotApp) -> TrainingNotifier {
+        TrainingNotifier {
             ledger,
-            bot: TgBot::new(
+            bot: Arc::new(TgBot::new(
                 bot.bot,
                 bot.state.tokens(),
                 Origin {
@@ -33,7 +44,7 @@ impl Notifier {
                     message_id: MessageId(0),
                     tkn: ValidToken::new(),
                 },
-            ),
+            )),
         }
     }
 
@@ -42,54 +53,29 @@ impl Notifier {
         session: &mut Session,
         id: ID,
         msg: &str,
-        resent: &[i32],
-    ) -> Result<Option<(i64, i32)>, Error> {
-        // Ok(if let Ok(user) = self.ledger.get_user(session, id).await {
-        //     let id = self
-        //         .bot
-        //         .send_notification_to(ChatId(user.tg_id), &msg, resent)
-        //         .await?;
-        //     Some((user.tg_id, id.0))
-        // } else {
-        //     None
-        // })
-        Ok(None)
-    }
-
-    async fn notify_training(
-        &self,
-        session: &mut Session,
-        training: &Training,
-        msg: String,
-        reasent_notifications: &HashMap<i64, Vec<i32>>,
-    ) -> Result<Vec<(i64, i32)>, Error> {
-        let mut ids = vec![];
-        if let Ok(user) = self.ledger.get_user(session, training.instructor).await {
-            let id = self
-                .bot
-                .send_notification_to(ChatId(user.tg_id), &msg)
-                .await?;
-            ids.push((user.tg_id, id.0));
-        }
-
-        for client in &training.clients {
-            if let Ok(user) = self.ledger.get_user(session, *client).await {
-                let id = self
-                    .bot
-                    .send_notification_to(ChatId(user.tg_id), &msg)
-                    .await?;
-                ids.push((user.tg_id, id.0));
+        by_day: bool,
+    ) -> Result<bool, Error> {
+        if let Ok(user) = self.ledger.get_user(session, id).await {
+            if by_day {
+                if user.settings.notification.notify_by_day {
+                    self.bot
+                        .send_notification_to(ChatId(user.tg_id), &msg)
+                        .await?;
+                    return Ok(true);
+                }
+            } else {
+                let now = Local::now();
+                if let Some(hours) = user.settings.notification.notify_by_n_hours {
+                    if now + chrono::Duration::hours(hours as i64) > now {
+                        self.bot
+                            .send_notification_to(ChatId(user.tg_id), &msg)
+                            .await?;
+                        return Ok(true);
+                    }
+                }
             }
         }
-
-        Ok(ids)
-    }
-
-    pub async fn process(&self, session: &mut Session) -> Result<(), Error> {
-        // self.notify_about_tomorrow_training(session).await?;
-        // self.notify_about_today_training(session).await?;
-
-        Ok(())
+        Ok(false)
     }
 
     async fn notify_about_tomorrow_training(&self, session: &mut Session) -> Result<(), Error> {
@@ -100,7 +86,6 @@ impl Notifier {
             .get_day(session, DayId::default().next())
             .await?;
 
-        let notification_map = day.notification_map();
         for training in day.training {
             if training.is_canceled || training.is_processed || training.notified.is_notified() {
                 continue;
@@ -116,14 +101,84 @@ impl Notifier {
                 training.name
             ));
 
-            let ids = self
-                .notify_training(session, &training, msg, &notification_map)
+            self.notify_user(session, training.instructor, &msg, true)
                 .await?;
+
+            for client in &training.clients {
+                self.notify_user(session, *client, &msg, true).await?;
+            }
 
             self.ledger
                 .calendar
-                .notify(session, training.start_at, Notified::Tomorrow(ids))
+                .notify(session, training.start_at, Notified::Tomorrow {})
                 .await?;
+        }
+        Ok(())
+    }
+
+    async fn notify_about_today_training(&self, session: &mut Session) -> Result<(), Error> {
+        let now = Local::now();
+        let day = self
+            .ledger
+            .calendar
+            .get_day(session, DayId::default())
+            .await?;
+
+        for training in day.training {
+            if training.is_canceled || training.is_processed {
+                continue;
+            }
+            let start_at = training.get_slot().start_at();
+            if start_at < now {
+                continue;
+            }
+
+            let mut already_notified = match training.notified {
+                Notified::None {} => {
+                    vec![]
+                }
+                Notified::Tomorrow {} => {
+                    vec![]
+                }
+                Notified::ByHours(ids) => ids,
+            };
+
+            let msg = escape(&format!(
+                "У вас запланирована тренировка: {} в {}",
+                training.name,
+                fmt_time(&start_at)
+            ));
+
+            let mut has_changes = false;
+            if !already_notified.contains(&training.instructor) {
+                if self
+                    .notify_user(session, training.instructor, &msg, false)
+                    .await?
+                {
+                    already_notified.push(training.instructor);
+                    has_changes = true;
+                }
+            }
+
+            for client in &training.clients {
+                if !already_notified.contains(client) {
+                    if self.notify_user(session, *client, &msg, false).await? {
+                        already_notified.push(*client);
+                        has_changes = true;
+                    }
+                }
+            }
+
+            if has_changes {
+                self.ledger
+                    .calendar
+                    .notify(
+                        session,
+                        training.start_at,
+                        Notified::ByHours(already_notified),
+                    )
+                    .await?;
+            }
         }
         Ok(())
     }

@@ -1,26 +1,65 @@
 use bot_main::BotApp;
-use eyre::Error;
+use eyre::{Context, Error};
 use ledger::Ledger;
-use process::BgProcessor;
-use std::time::Duration;
-use tokio::time::{self};
+use log::info;
+use process::{
+    freeze::FreezeBg, notifier::TrainingNotifier, rewards::RewardsBg, subscription::SubscriptionBg,
+    training::TriningBg,
+};
+
+use tokio_cron_scheduler::{Job, JobScheduler};
 mod process;
 
-pub fn start(ledger: Ledger, bot: BotApp) {
-    let bg_process = BgProcessor::new(ledger, bot);
-    tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(10 * 60));
-        loop {
-            interval.tick().await;
-            if let Err(err) = process(&bg_process).await {
-                log::error!("Error in background process: {:#}", err);
-            }
-        }
-    });
+pub async fn start(ledger: Ledger, bot: BotApp) -> Result<(), Error> {
+    let sched = JobScheduler::new().await?;
+
+    sched.add(TriningBg::new(ledger.clone()).to_job()?).await?;
+    sched.add(FreezeBg::new(ledger.clone()).to_job()?).await?;
+    sched
+        .add(SubscriptionBg::new(ledger.clone()).to_job()?)
+        .await?;
+    sched.add(RewardsBg::new(ledger.clone()).to_job()?).await?;
+    sched
+        .add(TrainingNotifier::new(ledger.clone(), bot).to_job()?)
+        .await?;
+    sched.start().await?;
+    Ok(())
 }
 
-async fn process(proc: &BgProcessor) -> Result<(), Error> {
-    let mut session = proc.ledger.db.start_session().await?;
-    proc.process(&mut session).await?;
-    Ok(())
+#[async_trait::async_trait]
+pub trait Task {
+    const NAME: &'static str;
+    const CRON: &'static str;
+    async fn process(&mut self) -> Result<(), Error>;
+}
+
+#[async_trait::async_trait]
+trait CronJob {
+    async fn call(&mut self);
+    fn to_job(self) -> Result<Job, Error>;
+}
+
+#[async_trait::async_trait]
+impl<T: Task + Send + Sync + Clone + 'static> CronJob for T {
+    async fn call(&mut self) {
+        info!("Starting background {} process", Self::NAME);
+        if let Err(err) = self.process().await {
+            log::error!("Error in background {} process: {:#}", Self::NAME, err);
+        }
+    }
+
+    fn to_job(self) -> Result<Job, Error> {
+        info!("Creating job for {}. CRON: {}", Self::NAME, Self::CRON);
+        Job::new_async(Self::CRON, move |_, _| {
+            let mut task = self.clone();
+            Box::pin(async move {
+                task.call().await;
+            })
+        })
+        .context(format!(
+            "Failed to create job for {}. CRON: {}",
+            Self::NAME,
+            Self::CRON
+        ))
+    }
 }

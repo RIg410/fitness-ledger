@@ -1,21 +1,27 @@
-use crate::Ledger;
+use crate::{Ledger, Task};
+use async_trait::async_trait;
 use chrono::Local;
-use eyre::Result;
+use eyre::{Error, Result};
 use log::{info, warn};
-use model::session::Session;
 
 #[derive(Clone)]
 pub struct FreezeBg {
     ledger: Ledger,
 }
 
-impl FreezeBg {
-    pub fn new(ledger: Ledger) -> FreezeBg {
-        FreezeBg { ledger }
-    }
+#[async_trait]
+impl Task for FreezeBg {
+    const NAME: &'static str = "freeze";
+    const CRON: &'static str = "every day at 00:00";
 
-    pub async fn process(&self, session: &mut Session) -> Result<()> {
-        let users = self.ledger.users.find_users_to_unfreeze(session).await?;
+    async fn process(&mut self) -> Result<(), Error> {
+        let mut session = self.ledger.db.start_session().await?;
+
+        let users = self
+            .ledger
+            .users
+            .find_users_to_unfreeze(&mut session)
+            .await?;
         let now = Local::now();
         for user in users {
             let freeze = if let Some(freeze) = user.freeze.as_ref() {
@@ -29,8 +35,14 @@ impl FreezeBg {
                 continue;
             }
             info!("Unfreezing user {}", user.tg_id);
-            self.ledger.users.unfreeze(session, user.tg_id).await?;
+            self.ledger.users.unfreeze(&mut session, user.tg_id).await?;
         }
         Ok(())
+    }
+}
+
+impl FreezeBg {
+    pub fn new(ledger: Ledger) -> FreezeBg {
+        FreezeBg { ledger }
     }
 }

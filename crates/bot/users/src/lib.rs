@@ -16,12 +16,13 @@ use teloxide::{
 };
 
 pub mod freeze;
+pub mod history;
+pub mod notification;
 pub mod profile;
 pub mod rights;
 pub mod set_birthday;
 pub mod set_fio;
 pub mod set_phone;
-pub mod history;
 
 pub const LIMIT: u64 = 7;
 

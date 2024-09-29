@@ -1,5 +1,6 @@
-use crate::Ledger;
-use eyre::{eyre, Result};
+use crate::{Ledger, Task};
+use async_trait::async_trait;
+use eyre::{eyre, Error, Result};
 use log::{error, info};
 use model::{
     decimal::Decimal,
@@ -13,15 +14,17 @@ pub struct TriningBg {
     ledger: Ledger,
 }
 
-impl TriningBg {
-    pub fn new(ledger: Ledger) -> TriningBg {
-        TriningBg { ledger }
-    }
+#[async_trait]
+impl Task for TriningBg {
+    const NAME: &'static str = "training";
+    const CRON: &'static str = "every 1 hour";
 
-    pub async fn process(&self, session: &mut Session) -> Result<()> {
-        let mut cursor = self.ledger.calendar.days_to_process(session).await?;
+    async fn process(&mut self) -> Result<(), Error> {
+        let mut session = self.ledger.db.start_session().await?;
+
+        let mut cursor = self.ledger.calendar.days_to_process(&mut session).await?;
         let now = chrono::Local::now();
-        while let Some(day) = cursor.next(session).await {
+        while let Some(day) = cursor.next(&mut session).await {
             let day = day?;
             for training in day.training {
                 if training.is_processed {
@@ -32,10 +35,10 @@ impl TriningBg {
                     TrainingStatus::OpenToSignup { .. }
                     | TrainingStatus::ClosedToSignup
                     | TrainingStatus::InProgress => continue,
-                    TrainingStatus::Finished => self.process_finished(session, training).await,
+                    TrainingStatus::Finished => self.process_finished(&mut session, training).await,
                     TrainingStatus::Cancelled => {
                         if training.get_slot().start_at() < now {
-                            self.process_canceled(session, training).await
+                            self.process_canceled(&mut session, training).await
                         } else {
                             continue;
                         }
@@ -47,6 +50,12 @@ impl TriningBg {
             }
         }
         Ok(())
+    }
+}
+
+impl TriningBg {
+    pub fn new(ledger: Ledger) -> TriningBg {
+        TriningBg { ledger }
     }
 
     #[tx]

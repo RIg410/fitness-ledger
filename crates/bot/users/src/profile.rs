@@ -1,4 +1,4 @@
-use crate::history::HistoryList;
+use crate::{history::HistoryList, notification::NotificationView};
 
 use super::{
     freeze::FreezeProfile, rights::UserRightsView, set_birthday::SetBirthday, set_fio::SetFio,
@@ -169,6 +169,7 @@ impl View for UserProfile {
             Callback::EditPhone => self.set_phone(ctx).await,
             Callback::TrainingList => self.training_list(ctx).await,
             Callback::HistoryList => self.history_list(ctx).await,
+            Callback::Notification => Ok(NotificationView::new(self.tg_id).into()),
         }
     }
 }
@@ -181,7 +182,11 @@ async fn render_user_profile<ID: Into<UserIdent> + Copy>(
 
     let mut keymap = InlineKeyboardMarkup::default();
     if (ctx.has_right(Rule::FreezeUsers)
-        || ctx.me.tg_id == user.tg_id || !user.subscriptions.is_empty()) && user.freeze.is_none() && user.freeze_days != 0 {
+        || ctx.me.tg_id == user.tg_id
+        || !user.subscriptions.is_empty())
+        && user.freeze.is_none()
+        && user.freeze_days != 0
+    {
         keymap = keymap.append_row(Callback::Freeze.btn_row("Заморозить ❄"));
     }
 
@@ -204,9 +209,9 @@ async fn render_user_profile<ID: Into<UserIdent> + Copy>(
 
     if ctx.has_right(Rule::BlockUser) && ctx.me.tg_id != user.tg_id {
         keymap = keymap.append_row(Callback::BlockUnblock.btn_row(if user.is_active {
-            "❌ Заблокировать"
+            "Заблокировать ❌"
         } else {
-            "✅ Разблокировать"
+            "Разблокировать ✅"
         }));
     }
     if ctx.has_right(Rule::EditUserInfo) || (ctx.me.id == user.id && user.birthday.is_none()) {
@@ -218,8 +223,10 @@ async fn render_user_profile<ID: Into<UserIdent> + Copy>(
         keymap = keymap.append_row(Callback::EditPhone.btn_row("✍️ Редактировать телефон"));
     }
     if ctx.has_right(Rule::EditUserRights) {
-        keymap = keymap.append_row(Callback::EditRights.btn_row("🔒 Права"));
+        keymap = keymap.append_row(Callback::EditRights.btn_row("Права 🔒"));
     }
+    keymap = keymap.append_row(Callback::Notification.btn_row("Уведомления 🔔"));
+
     keymap = keymap.append_row(Callback::HistoryList.btn_row("История 📝"));
     Ok((msg, keymap))
 }
@@ -236,4 +243,5 @@ pub enum Callback {
     HistoryList,
     ChangeBalance(i32),
     ChangeReservedBalance(i32),
+    Notification,
 }

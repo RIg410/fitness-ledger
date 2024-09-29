@@ -1,32 +1,42 @@
+use crate::{Ledger, Task};
+use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use eyre::Error;
 use model::{couch::CouchInfo, session::Session};
 use mongodb::bson::oid::ObjectId;
 use tx_macro::tx;
-use crate::Ledger;
 
+#[derive(Clone)]
 pub struct RewardsBg {
     ledger: Ledger,
 }
 
-impl RewardsBg {
-    pub fn new(ledger: Ledger) -> RewardsBg {
-        RewardsBg { ledger }
-    }
+#[async_trait]
+impl Task for RewardsBg {
+    const NAME: &'static str = "rewards";
+    const CRON: &'static str = "every 2 hour";
 
-    pub async fn process(&self, session: &mut Session) -> Result<(), Error> {
-        let mut instructors = self.ledger.users.instructors(session).await?;
+    async fn process(&mut self) -> Result<(), Error> {
+        let mut session = self.ledger.db.start_session().await?;
+
+        let mut instructors = self.ledger.users.instructors(&mut session).await?;
 
         let now = Local::now();
         for instructor in instructors.iter_mut() {
             if let Some(couch) = instructor.couch.as_mut() {
                 if couch.rate.is_fixed_monthly() {
-                    self.process_rewards(session, instructor.id, couch, now)
+                    self.process_rewards(&mut session, instructor.id, couch, now)
                         .await?;
                 }
             }
         }
         Ok(())
+    }
+}
+
+impl RewardsBg {
+    pub fn new(ledger: Ledger) -> RewardsBg {
+        RewardsBg { ledger }
     }
 
     #[tx]

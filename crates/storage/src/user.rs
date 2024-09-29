@@ -7,7 +7,7 @@ use model::couch::CouchInfo;
 use model::rights;
 use model::session::Session;
 use model::subscription::{Status, Subscription, UserSubscription};
-use model::user::{Freeze, User};
+use model::user::{Freeze, Notification, User};
 use mongodb::bson::to_bson;
 use mongodb::options::UpdateOptions;
 use mongodb::IndexModel;
@@ -621,6 +621,23 @@ impl UserStore {
         if result.modified_count == 0 {
             return Err(Error::msg("Couch not found"));
         }
+        Ok(())
+    }
+
+    pub async fn update_notification_settings(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        settings: Notification,
+    ) -> Result<(), Error> {
+        info!("Updating notification settings: {:?}", settings);
+        self.users
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$set": { "settings.notification": to_document(&settings)? }, "$inc": { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
         Ok(())
     }
 

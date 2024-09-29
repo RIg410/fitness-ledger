@@ -37,6 +37,8 @@ pub struct User {
     pub initiated: bool,
     #[serde(default)]
     pub couch: Option<CouchInfo>,
+    #[serde(default)]
+    pub settings: UserSettings,
 }
 
 fn default_created_at() -> DateTime<Utc> {
@@ -68,6 +70,7 @@ impl User {
             created_at: Utc::now(),
             initiated: false,
             couch: None,
+            settings: UserSettings::default(),
         }
     }
 
@@ -138,6 +141,28 @@ impl From<ObjectId> for UserIdent {
 impl From<i64> for UserIdent {
     fn from(value: i64) -> Self {
         UserIdent::TgId(value)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UserSettings {
+    pub notification: Notification,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Notification {
+    pub notify_by_day: bool,
+    pub notify_by_n_hours: Option<u8>,
+}
+
+impl Default for UserSettings {
+    fn default() -> Self {
+        UserSettings {
+            notification: Notification {
+                notify_by_day: true,
+                notify_by_n_hours: Some(1),
+            },
+        }
     }
 }
 
