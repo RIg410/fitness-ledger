@@ -1,6 +1,6 @@
 use std::io::{Cursor, Write as _};
 
-use eyre::{Context, Error, Context as _};
+use eyre::{Context, Error};
 use model::session::Session;
 use storage::{
     calendar::CalendarStore, history::HistoryStore, pre_sell::PreSellStore, program::ProgramStore,

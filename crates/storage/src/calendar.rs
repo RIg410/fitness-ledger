@@ -161,9 +161,6 @@ impl CalendarStore {
             Some(day) => Ok(day),
             None => {
                 let now = Utc::now();
-                if id.id() < now - chrono::Duration::days(10) {
-                    return Err(eyre::eyre!("Day is too far in the past:{:?}", id));
-                }
                 if now + chrono::Duration::days(365 * 2) < id.id() {
                     return Err(eyre::eyre!("Day is too far in the future:{:?}", id));
                 }
@@ -457,11 +454,21 @@ impl CalendarStore {
         Ok(days)
     }
 
-    pub async fn set_keep_open(&self, session: &mut Session, start_at: DateTime<Utc>, keep_open: bool) -> Result<(), eyre::Error> {
+    pub async fn set_keep_open(
+        &self,
+        session: &mut Session,
+        start_at: DateTime<Utc>,
+        keep_open: bool,
+    ) -> Result<(), eyre::Error> {
         info!("Set keep open: {:?} {}", start_at, keep_open);
         let filter = doc! { "training.start_at": start_at };
-        let update = doc! { "$set": { "training.$.keep_open": keep_open }, "$inc": { "version": 1 } };
-        let result = self.days.update_one(filter, update).session(&mut *session).await?;
+        let update =
+            doc! { "$set": { "training.$.keep_open": keep_open }, "$inc": { "version": 1 } };
+        let result = self
+            .days
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
 
         if result.modified_count == 0 {
             return Err(eyre::eyre!("Training not found"));

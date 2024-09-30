@@ -27,7 +27,6 @@ pub struct CalendarView {
     filter: Filter,
 }
 
-
 impl CalendarView {
     pub fn new(week_id: WeekId, selected_day: Option<Weekday>, filter: Option<Filter>) -> Self {
         Self {
@@ -48,8 +47,8 @@ impl View for CalendarView {
         let (text, keymap) = render_week(
             ctx,
             self.week_id,
-            self.week_id.prev().has_week(),
-            self.week_id.next().has_week(),
+            self.week_id.prev().has_week() || ctx.is_couch() || ctx.is_admin(),
+            self.week_id.next().has_week() || ctx.is_couch() || ctx.is_admin(),
             self.selected_day,
             &self.filter,
         )
