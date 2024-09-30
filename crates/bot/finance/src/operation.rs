@@ -80,7 +80,7 @@ async fn render_event(ctx: &mut Context, event: &TreasuryEvent) -> Result<String
             };
 
             format!(
-                "🛒 Продажа подписки: {}р пользователю {}",
+                "🛒 Продажа абонемента: {}р пользователю {}",
                 event.debit - event.credit,
                 user
             )
@@ -119,11 +119,11 @@ async fn render_event(ctx: &mut Context, event: &TreasuryEvent) -> Result<String
         }
     };
 
-    Ok(escape(&format!(
+    Ok(format!(
         "📅 {}\n{}",
         fmt_dt(&event.date_time.with_timezone(&Local)),
-        env_text
-    )))
+        escape(&env_text)
+    ))
 }
 
 #[derive(Serialize, Deserialize)]

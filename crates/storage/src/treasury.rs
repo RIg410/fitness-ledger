@@ -67,17 +67,32 @@ impl TreasuryStore {
     pub async fn range(
         &self,
         session: &mut Session,
-        from: DateTime<Local>,
-        to: DateTime<Local>,
+        from: Option<DateTime<Local>>,
+        to: Option<DateTime<Local>>,
     ) -> Result<Vec<TreasuryEvent>, Error> {
-        let mut cursor = self
-            .store
-            .find(doc! {
+        let filter = match (from, to) {
+            (Some(from), Some(to)) => doc! {
                 "date_time": {
                     "$gte": from,
                     "$lt": to,
                 }
-            })
+            },
+            (Some(from), None) => doc! {
+                "date_time": {
+                    "$gte": from,
+                }
+            },
+            (None, Some(to)) => doc! {
+                "date_time": {
+                    "$lt": to,
+                }
+            },
+            (None, None) => doc! {},
+        };
+
+        let mut cursor = self
+            .store
+            .find(filter)
             .sort(doc! { "date_time": -1 })
             .session(&mut *session)
             .await?;
@@ -101,11 +116,7 @@ impl TreasuryStore {
     }
 
     pub async fn dump(&self, session: &mut Session) -> Result<Vec<TreasuryEvent>, Error> {
-        let mut cursor = self
-            .store
-            .find(doc! {})
-            .session(&mut *session)
-            .await?;
+        let mut cursor = self.store.find(doc! {}).session(&mut *session).await?;
         let mut events = Vec::new();
         while let Some(event) = cursor.next(&mut *session).await {
             events.push(event?);

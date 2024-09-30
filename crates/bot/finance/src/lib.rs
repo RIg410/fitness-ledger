@@ -11,14 +11,14 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use chrono::Duration;
+use chrono::{Datelike as _, Local};
 use eyre::Result;
 use history::history_view;
 use in_out::{InOut, Io};
 use model::rights::Rule;
 use reward::SelectCouch;
 use serde::{Deserialize, Serialize};
-use stat::Stat;
+use stat::{Stat, StatRange};
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 #[derive(Default)]
@@ -51,8 +51,12 @@ impl View for FinanceView {
         }
 
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "Статистика 📊",
-            Callback::Stat.to_data(),
+            "Общая статистика 📊",
+            Callback::StatAll.to_data(),
+        )]);
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+            "Статистика за месяц 📈",
+            Callback::StatByMonth.to_data(),
         )]);
 
         keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
@@ -81,10 +85,16 @@ impl View for FinanceView {
                 ctx.ensure(Rule::ViewFinance)?;
                 Ok(Jmp::Next(history_view()))
             }
-            Callback::Stat => {
+            Callback::StatAll => {
                 ctx.ensure(Rule::ViewFinance)?;
-                let now = chrono::Local::now();
-                Ok(Stat::new(now - Duration::days(90), now).into())
+                Ok(Stat::new(StatRange::Full).into())
+            }
+            Callback::StatByMonth => {
+                ctx.ensure(Rule::ViewFinance)?;
+                Ok(Stat::new(StatRange::Month(
+                    Local::now().with_day(1).unwrap_or_default(),
+                ))
+                .into())
             }
         }
     }
@@ -96,5 +106,6 @@ enum Callback {
     Payment,
     Deposit,
     History,
-    Stat,
+    StatByMonth,
+    StatAll,
 }

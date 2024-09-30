@@ -159,8 +159,8 @@ impl Treasury {
     pub async fn aggregate(
         &self,
         session: &mut Session,
-        from: DateTime<Local>,
-        to: DateTime<Local>,
+        from: Option<DateTime<Local>>,
+        to: Option<DateTime<Local>>,
     ) -> Result<TreasuryAggregate, Error> {
         let txs = self.store.range(session, from, to).await?;
         let mut debit = Decimal::zero();
