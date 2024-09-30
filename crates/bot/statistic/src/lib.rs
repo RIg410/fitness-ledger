@@ -2,13 +2,16 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use bot_core::{context::Context, widget::View};
-use bot_viewer::day::fmt_weekday;
-use chrono::{Local, Weekday};
+use bot_viewer::day::{fmt_date, fmt_weekday};
+use chrono::Weekday;
 use eyre::Error;
 use itertools::Itertools;
 use model::{
     rights::Rule,
-    statistics::{EntryInfo, TimeSlot, UserStat},
+    statistics::{
+        calendar::{EntryInfo, TimeSlot, UserStat},
+        history::SubscriptionStatistics,
+    },
 };
 use mongodb::bson::oid::ObjectId;
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
@@ -30,14 +33,12 @@ impl View for StatisticsView {
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), Error> {
         ctx.ensure(Rule::ViewStatistics)?;
-        let to = Local::now();
-        let from = to - chrono::Duration::days(365);
+
         let stat = ctx
             .ledger
             .statistics
-            .calculate(&mut ctx.session, from, to)
+            .calendar(&mut ctx.session, None, None)
             .await?;
-
         ctx.send_notification("📊Статистика посещений:").await?;
         by_program(ctx, stat.by_program).await?;
         by_weekday(ctx, stat.by_weekday).await?;
@@ -45,10 +46,56 @@ impl View for StatisticsView {
         by_time_slot(ctx, stat.by_time_slot).await?;
         user_stat(ctx, stat.users).await?;
 
+        let stat = ctx
+            .ledger
+            .statistics
+            .subscriptions(&mut ctx.session, None, None)
+            .await?;
+        subscriptions(ctx, &stat).await?;
+
         ctx.edit_origin("📊Статистика там ☝️", InlineKeyboardMarkup::default())
             .await?;
         Ok(())
     }
+}
+
+async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Result<(), Error> {
+    let mut msg = "📊Статистика по абонементам".to_string();
+    msg.push_str(&format!(
+        "\nc _{}_ по _{}_:",
+        fmt_date(&stat.from),
+        fmt_date(&stat.to)
+    ));
+
+    msg.push_str(&format!(
+        "\n\nВсего продано абонементов: *{}* на сумму *{}*",
+        stat.subs_count,
+        escape(&stat.total_subs_sum.to_string())
+    ));
+
+    for sub in &stat.subs {
+        msg.push_str(&format!(
+            "\n\n\n📚{}:\nВсего продано: *{}* на сумму *{}*",
+            escape(&sub.name),
+            sub.total,
+            escape(&sub.sum.to_string())
+        ));
+    }
+
+    msg.push_str(&format!(
+        "\n\n\nПродано пробных занятий: *{}* из них купили абонимент: *{}*",
+        stat.test_subs_count, stat.users_buy_test_sub_and_stay,
+    ));
+
+    if stat.unresolved_presells > 0 {
+        msg.push_str(&format!(
+            "\n\nКупили пробное занятия но не зашли в бот:*{}*",
+            stat.unresolved_presells
+        ));
+    }
+
+    ctx.send_notification(&msg).await?;
+    Ok(())
 }
 
 async fn user_stat(ctx: &mut Context, users: HashMap<ObjectId, UserStat>) -> Result<(), Error> {

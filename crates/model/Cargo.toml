@@ -13,3 +13,4 @@ eyre.workspace = true
 mongodb.workspace = true
 serde.workspace = true
 strum.workspace = true
+log.workspace = true

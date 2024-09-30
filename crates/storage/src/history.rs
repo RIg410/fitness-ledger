@@ -1,8 +1,9 @@
 use bson::{doc, oid::ObjectId};
+use chrono::{DateTime, Local, Utc};
 use eyre::Error;
 use futures_util::TryStreamExt as _;
 use model::{history::HistoryRow, session::Session};
-use mongodb::{Collection, IndexModel};
+use mongodb::{Collection, IndexModel, SessionCursor};
 use std::sync::Arc;
 
 const COLLECTION: &str = "history";
@@ -31,6 +32,34 @@ impl HistoryStore {
         Ok(HistoryStore {
             store: Arc::new(store),
         })
+    }
+
+    pub async fn find_range(
+        &self,
+        session: &mut Session,
+        from: Option<DateTime<Local>>,
+        to: Option<DateTime<Local>>,
+    ) -> Result<SessionCursor<HistoryRow>, Error> {
+        let filter = match (from, to) {
+            (Some(from), Some(to)) => doc! {
+                "date_time": {
+                    "$gte": from.with_timezone(&Utc),
+                    "$lt": to.with_timezone(&Utc),
+                }
+            },
+            (Some(from), None) => doc! {
+                "date_time": {
+                    "$gte": from.with_timezone(&Utc),
+                }
+            },
+            (None, Some(to)) => doc! {
+                "date_time": {
+                    "$lt": to.with_timezone(&Utc),
+                }
+            },
+            (None, None) => doc! {},
+        };
+        Ok(self.store.find(filter).session(&mut *session).await?)
     }
 
     pub async fn store(&self, session: &mut Session, entry: HistoryRow) -> Result<(), Error> {

@@ -47,6 +47,14 @@ impl UserStore {
             .await?)
     }
 
+    pub async fn find_by_phone(&self, session: &mut Session, phone: &str) -> Result<Option<User>> {
+        Ok(self
+            .users
+            .find_one(doc! { "phone": phone })
+            .session(&mut *session)
+            .await?)
+    }
+
     fn ident_filter<ID: Into<UserIdent>>(&self, id: ID) -> Document {
         match id.into() {
             UserIdent::TgId(tg_id) => doc! { "tg_id": tg_id },

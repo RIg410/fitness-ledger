@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use bson::doc;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Utc};
 use eyre::Error;
 use model::{session::Session, treasury::TreasuryEvent};
-use mongodb::{options::IndexOptions, Collection, IndexModel};
+use mongodb::{options::IndexOptions, Collection, IndexModel, SessionCursor};
 
 const COLLECTION: &str = "treasury";
 
@@ -64,6 +64,34 @@ impl TreasuryStore {
         Ok(events)
     }
 
+    pub async fn find_range(
+        &self,
+        session: &mut Session,
+        from: Option<DateTime<Local>>,
+        to: Option<DateTime<Local>>,
+    ) -> Result<SessionCursor<TreasuryEvent>, Error> {
+        let filter = match (from, to) {
+            (Some(from), Some(to)) => doc! {
+                "date_time": {
+                    "$gte": from.with_timezone(&Utc),
+                    "$lt": to.with_timezone(&Utc),
+                }
+            },
+            (Some(from), None) => doc! {
+                "date_time": {
+                    "$gte": from.with_timezone(&Utc),
+                }
+            },
+            (None, Some(to)) => doc! {
+                "date_time": {
+                    "$lt": to.with_timezone(&Utc),
+                }
+            },
+            (None, None) => doc! {},
+        };
+        Ok(self.store.find(filter).session(&mut *session).await?)
+    }
+
     pub async fn range(
         &self,
         session: &mut Session,
@@ -73,18 +101,18 @@ impl TreasuryStore {
         let filter = match (from, to) {
             (Some(from), Some(to)) => doc! {
                 "date_time": {
-                    "$gte": from,
-                    "$lt": to,
+                    "$gte": from.with_timezone(&Utc),
+                    "$lt": to.with_timezone(&Utc),
                 }
             },
             (Some(from), None) => doc! {
                 "date_time": {
-                    "$gte": from,
+                    "$gte": from.with_timezone(&Utc),
                 }
             },
             (None, Some(to)) => doc! {
                 "date_time": {
-                    "$lt": to,
+                    "$lt": to.with_timezone(&Utc),
                 }
             },
             (None, None) => doc! {},

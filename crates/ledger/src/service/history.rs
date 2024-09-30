@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use chrono::{DateTime, Local, Utc};
 use eyre::Result;
@@ -293,5 +293,13 @@ impl History {
             },
         );
         self.store.store(session, entry).await
+    }
+}
+
+impl Deref for History {
+    type Target = HistoryStore;
+
+    fn deref(&self) -> &Self::Target {
+        &self.store
     }
 }

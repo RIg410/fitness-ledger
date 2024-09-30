@@ -1646,6 +1646,7 @@ dependencies = [
  "bson",
  "chrono",
  "eyre",
+ "log",
  "mongodb",
  "serde",
  "strum",

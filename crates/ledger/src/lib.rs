@@ -59,7 +59,7 @@ impl Ledger {
         let subscriptions = Subscriptions::new(storage.subscriptions, history.clone());
         let presell = storage.presell.clone();
         let rewards = Rewards::new(storage.rewards);
-        let statistics = statistics::Statistics::new(calendar.clone());
+        let statistics = statistics::Statistics::new(calendar.clone(), history.clone(), users.clone());
         Ledger {
             users,
             calendar,

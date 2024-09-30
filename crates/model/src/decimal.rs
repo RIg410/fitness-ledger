@@ -1,5 +1,6 @@
 use std::{
     fmt::{Debug, Display},
+    iter::Sum,
     str::FromStr,
 };
 
@@ -128,6 +129,12 @@ impl std::ops::Div for Decimal {
 
     fn div(self, other: Decimal) -> Decimal {
         Decimal((self.0 * 10i64.pow(DECIMALS as u32)) / other.0)
+    }
+}
+
+impl Sum for Decimal {
+    fn sum<I: Iterator<Item = Decimal>>(iter: I) -> Decimal {
+        iter.fold(Decimal::zero(), |acc, x| acc + x)
     }
 }
 

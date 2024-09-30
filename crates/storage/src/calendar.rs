@@ -38,11 +38,27 @@ impl CalendarStore {
     pub async fn find_range(
         &self,
         session: &mut Session,
-        from: DateTime<Local>,
-        to: DateTime<Local>,
+        from: Option<DateTime<Local>>,
+        to: Option<DateTime<Local>>,
     ) -> Result<SessionCursor<Day>> {
-        let filter = doc! {
-            "date_time": { "$gte": from.with_timezone(&Utc), "$lt": to.with_timezone(&Utc) },
+        let filter = match (from, to) {
+            (Some(from), Some(to)) => doc! {
+                "date_time": {
+                    "$gte": from.with_timezone(&Utc),
+                    "$lt": to.with_timezone(&Utc),
+                }
+            },
+            (Some(from), None) => doc! {
+                "date_time": {
+                    "$gte": from.with_timezone(&Utc),
+                }
+            },
+            (None, Some(to)) => doc! {
+                "date_time": {
+                    "$lt": to.with_timezone(&Utc),
+                }
+            },
+            (None, None) => doc! {},
         };
         Ok(self.days.find(filter).session(&mut *session).await?)
     }
