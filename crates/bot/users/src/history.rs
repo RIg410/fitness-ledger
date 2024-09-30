@@ -316,10 +316,10 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 format!(
                     "Вы изменили баланс пользователя {} на _{}_ занятий",
                     escape(&sub),
-                    amount
+                    escape(&amount.to_string())
                 )
             } else {
-                format!("Ваш баланс изменен на _{}_ занятий", amount)
+                format!("Ваш баланс изменен на _{}_ занятий", escape(&amount.to_string()))
             }
         }
         model::history::Action::ChangeReservedBalance { amount } => {
@@ -336,10 +336,10 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 format!(
                     "Вы изменили резерв пользователя {} на _{}_ занятий",
                     escape(&sub),
-                    amount
+                    escape(&amount.to_string())
                 )
             } else {
-                format!("Ваш резерв изменен на _{}_ занятий", amount)
+                format!("Ваш резерв изменен на _{}_ занятий", escape(&amount.to_string()))
             }
         }
         model::history::Action::PayReward { amount } => {
