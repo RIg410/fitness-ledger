@@ -17,6 +17,7 @@ use teloxide::{
 
 pub mod freeze;
 pub mod history;
+pub mod rewards;
 pub mod notification;
 pub mod profile;
 pub mod rights;

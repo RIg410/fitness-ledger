@@ -38,7 +38,7 @@ impl RewardsStore {
         let mut cursor = self
             .rewards
             .find(doc! {
-                "couch_id": couch_id
+                "couch": couch_id
             })
             .skip(offset)
             .limit(limit)

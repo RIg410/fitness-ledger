@@ -1,4 +1,4 @@
-use crate::{history::HistoryList, notification::NotificationView};
+use crate::{history::HistoryList, notification::NotificationView, rewards::RewardsList};
 
 use super::{
     freeze::FreezeProfile, rights::UserRightsView, set_birthday::SetBirthday, set_fio::SetFio,
@@ -117,6 +117,15 @@ impl UserProfile {
         Ok(HistoryList::new(user.id).into())
     }
 
+    async fn rewards_list(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
+        let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
+        if user.is_couch() && (ctx.is_me(user.id) || ctx.has_right(Rule::ViewRewards)) {
+            Ok(RewardsList::new(user.id).into())
+        } else {
+            Ok(Jmp::Stay)
+        }
+    }
+
     async fn set_fio(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
             Ok(SetFio::new(self.tg_id).into())
@@ -169,6 +178,7 @@ impl View for UserProfile {
             Callback::EditPhone => self.set_phone(ctx).await,
             Callback::TrainingList => self.training_list(ctx).await,
             Callback::HistoryList => self.history_list(ctx).await,
+            Callback::RewardsList => self.rewards_list(ctx).await,
             Callback::Notification => Ok(NotificationView::new(self.tg_id).into()),
         }
     }
@@ -228,6 +238,9 @@ async fn render_user_profile<ID: Into<UserIdent> + Copy>(
     keymap = keymap.append_row(Callback::Notification.btn_row("Уведомления 🔔"));
 
     keymap = keymap.append_row(Callback::HistoryList.btn_row("История 📝"));
+    if user.is_couch() && (ctx.is_me(id) || ctx.has_right(Rule::ViewRewards)) {
+        keymap = keymap.append_row(Callback::RewardsList.btn_row("Вознаграждения 📝"));
+    }
     Ok((msg, keymap))
 }
 
@@ -241,6 +254,7 @@ pub enum Callback {
     Freeze,
     TrainingList,
     HistoryList,
+    RewardsList,
     ChangeBalance(i32),
     ChangeReservedBalance(i32),
     Notification,

@@ -114,6 +114,8 @@ pub enum Rule {
     ViewStatistics,
 
     System,
+
+    ViewRewards,
 }
 
 impl Rule {
