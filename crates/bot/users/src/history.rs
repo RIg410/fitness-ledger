@@ -355,11 +355,22 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             if is_actor {
                 format!(
                     "Вы выплатили вознаграждение в размере *{}* пользователю {}",
-                    escape(&amount.to_string()), escape(&sub)
+                    escape(&amount.to_string()),
+                    escape(&sub)
                 )
             } else {
-                format!("Вам выплатили вознаграждение в размере *{}*", escape(&amount.to_string()))
+                format!(
+                    "Вам выплатили вознаграждение в размере *{}*",
+                    escape(&amount.to_string())
+                )
             }
+        }
+        model::history::Action::ExpireSubscription { subscription } => {
+            format!(
+                "Абонемент *{}* пользователя _{}_ истек",
+                escape(&subscription.name),
+                escape(&actor.name.tg_user_name.unwrap_or_default())
+            )
         }
     };
 

@@ -184,7 +184,7 @@ impl Calendar {
 
         let instructor = self
             .users
-            .get_by_tg_id(session, instructor)
+            .get(session, instructor)
             .await?
             .ok_or(ScheduleError::InstructorNotFound)?;
         if instructor.couch.is_none() {

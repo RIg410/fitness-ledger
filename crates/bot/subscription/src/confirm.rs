@@ -81,7 +81,7 @@ async fn render(
     let user = ctx
         .ledger
         .users
-        .get_by_tg_id(&mut ctx.session, user_id)
+        .get(&mut ctx.session, user_id)
         .await?
         .ok_or_else(|| eyre!("User not found:{}", user_id))?;
 

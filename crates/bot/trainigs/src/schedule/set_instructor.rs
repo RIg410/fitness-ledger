@@ -35,7 +35,7 @@ impl View for SetInstructor {
     fn name(&self) -> &'static str {
         "SetInstructor"
     }
-    
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
@@ -54,7 +54,7 @@ impl View for SetInstructor {
                 let instructor = ctx
                     .ledger
                     .users
-                    .get_by_tg_id(&mut ctx.session, instructor_id)
+                    .get(&mut ctx.session, instructor_id)
                     .await?
                     .ok_or_else(|| eyre::eyre!("Instructor not found"))?;
                 let mut preset = self.preset.take().unwrap();

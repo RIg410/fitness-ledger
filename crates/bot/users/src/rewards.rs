@@ -82,7 +82,7 @@ fn fmt_row(log: &Reward) -> String {
             name,
         } => {
             format!(
-                "*{}*\n начислено *{}* - тренировка '{}' '{}' с {} клиентами",
+                "*{}*\n начислено *{}* \\- тренировка '{}' '{}' клиентов \\- {}",
                 fmt_dt(&log.created_at.with_timezone(&Local)),
                 escape(&log.reward.to_string()),
                 escape(name),
@@ -92,7 +92,7 @@ fn fmt_row(log: &Reward) -> String {
         }
         model::couch::RewardSource::FixedMonthly {} => {
             format!(
-                "*{}*\n начислено *{}* - _ежемесячное вознаграждение_",
+                "*{}*\n начислено *{}* \\- _ежемесячное вознаграждение_",
                 fmt_dt(&log.created_at.with_timezone(&Local)),
                 escape(&log.reward.to_string())
             )

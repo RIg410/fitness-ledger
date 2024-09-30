@@ -80,13 +80,12 @@ impl Ledger {
         session: &mut Session,
         id: ID,
     ) -> Result<User> {
-        let id: UserIdent = id.into();
-        match id {
-            UserIdent::TgId(tg_id) => self.users.get_by_tg_id(session, tg_id).await,
-            UserIdent::Id(id) => self.users.get(session, id).await,
-        }
-        .context("get_user")?
-        .ok_or_else(|| eyre!("User not found:{:?}", id))
+        let id = id.into();
+        self.users
+            .get(session, id)
+            .await
+            .context("get_user")?
+            .ok_or_else(|| eyre!("User not found:{:?}", id))
     }
 
     #[tx]
@@ -98,7 +97,7 @@ impl Ledger {
     ) -> Result<()> {
         let user = self
             .users
-            .get_by_tg_id(session, tg_id)
+            .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         if !is_active {
@@ -268,7 +267,7 @@ impl Ledger {
     ) -> Result<(), SellSubscriptionError> {
         let buyer = self
             .users
-            .get_by_tg_id(session, buyer)
+            .get(session, buyer)
             .await?
             .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
 
@@ -347,7 +346,7 @@ impl Ledger {
     ) -> Result<(), SellSubscriptionError> {
         let buyer = self
             .users
-            .get_by_tg_id(session, buyer)
+            .get(session, buyer)
             .await?
             .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
 

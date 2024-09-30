@@ -126,10 +126,19 @@ pub fn sanitize_phone(phone: &str) -> String {
         .collect()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum UserIdent {
     TgId(i64),
     Id(ObjectId),
+}
+
+impl Display for UserIdent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            UserIdent::TgId(tg_id) => write!(f, "{}", tg_id),
+            UserIdent::Id(id) => write!(f, "{}", id),
+        }
+    }
 }
 
 impl From<ObjectId> for UserIdent {

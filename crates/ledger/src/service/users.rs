@@ -33,6 +33,18 @@ impl Users {
     }
 
     #[tx]
+    pub async fn expire_subscription(&self, session: &mut Session, id: ObjectId) -> Result<()> {
+        let expired = self.store.expire_subscription(session, id).await?;
+        for subscription in expired {
+            self.logs
+                .expire_subscription(session, id, subscription)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    #[tx]
     pub async fn update_couch_rate(
         &self,
         session: &mut Session,
@@ -96,7 +108,7 @@ impl Users {
             Rights::customer()
         };
 
-        let user = self.get_by_tg_id(session, tg_id).await?;
+        let user = self.get(session, tg_id).await?;
         if user.is_some() {
             return Err(eyre::eyre!("User {} already exists", tg_id));
         }
@@ -142,7 +154,7 @@ impl Users {
     ) -> Result<()> {
         let user = self
             .store
-            .get_by_tg_id(session, tg_id)
+            .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         if user.couch.is_some() {
@@ -180,7 +192,7 @@ impl Users {
     ) -> Result<(), SetDateError> {
         let user = self
             .store
-            .get_by_tg_id(session, id)
+            .get(session, id)
             .await
             .map_err(SetDateError::Common)?;
         let user = user.ok_or(SetDateError::UserNotFound)?;
@@ -221,7 +233,7 @@ impl Users {
     pub async fn freeze(&self, session: &mut Session, tg_id: i64, days: u32) -> Result<()> {
         let user = self
             .store
-            .get_by_tg_id(session, tg_id)
+            .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
@@ -246,7 +258,7 @@ impl Users {
     ) -> Result<()> {
         let user = self
             .store
-            .get_by_tg_id(session, tg_id)
+            .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
@@ -263,7 +275,7 @@ impl Users {
     ) -> Result<()> {
         let user = self
             .store
-            .get_by_tg_id(session, tg_id)
+            .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
@@ -306,7 +318,7 @@ impl Users {
     pub async fn unfreeze(&self, session: &mut Session, tg_id: i64) -> Result<()> {
         let user = self
             .store
-            .get_by_tg_id(session, tg_id)
+            .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 

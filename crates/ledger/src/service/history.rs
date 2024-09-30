@@ -6,7 +6,7 @@ use model::{
     decimal::Decimal,
     history::{Action, HistoryRow},
     session::Session,
-    subscription::Subscription,
+    subscription::{Subscription, UserSubscription},
     training::Training,
     user::UserName,
 };
@@ -25,17 +25,24 @@ impl History {
         }
     }
 
+    pub async fn expire_subscription(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        subscription: UserSubscription,
+    ) -> Result<()> {
+        let entry = HistoryRow::new(id, Action::ExpireSubscription { subscription });
+        self.store.store(session, entry).await
+    }
+
     pub async fn pay_reward(
         &self,
         session: &mut Session,
         user: ObjectId,
         amount: Decimal,
     ) -> Result<()> {
-        let entry = HistoryRow::with_sub_actors(
-            session.actor(),
-            vec![user],
-            Action::PayReward { amount },
-        );
+        let entry =
+            HistoryRow::with_sub_actors(session.actor(), vec![user], Action::PayReward { amount });
         self.store.store(session, entry).await
     }
 

@@ -27,7 +27,7 @@ impl View for UserRightsView {
         let user = ctx
             .ledger
             .users
-            .get_by_tg_id(&mut ctx.session, self.tg_id)
+            .get(&mut ctx.session, self.tg_id)
             .await?
             .ok_or_else(|| eyre::eyre!("Failed to load user"))?;
         let (text, markup) = render_user_rights(&user);

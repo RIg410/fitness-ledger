@@ -25,7 +25,7 @@ async fn build_context(
         .map_err(|err| (err, bot.clone()))?;
     let (user, real) = if let Some(user) = ledger
         .users
-        .get_by_tg_id(&mut session, tg_id.0)
+        .get(&mut session, tg_id.0)
         .await
         .map_err(|err| (err, bot.clone()))?
     {

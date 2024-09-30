@@ -63,7 +63,7 @@ impl Context {
         let user = self
             .ledger
             .users
-            .get_by_tg_id(&mut self.session, self.me.tg_id)
+            .get(&mut self.session, self.me.tg_id)
             .await?
             .ok_or_else(|| eyre::eyre!("Failed to load existing user:{}", self.me.id))?;
 

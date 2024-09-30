@@ -32,7 +32,7 @@ impl UserProfile {
         let user = ctx
             .ledger
             .users
-            .get_by_tg_id(&mut ctx.session, self.tg_id)
+            .get(&mut ctx.session, self.tg_id)
             .await?
             .ok_or_else(|| eyre::eyre!("User not found"))?;
         ctx.ledger
@@ -47,7 +47,7 @@ impl UserProfile {
         let user = ctx
             .ledger
             .users
-            .get_by_tg_id(&mut ctx.session, self.tg_id)
+            .get(&mut ctx.session, self.tg_id)
             .await?
             .ok_or_else(|| eyre::eyre!("User not found"))?;
 

@@ -23,7 +23,7 @@ impl Task for SubscriptionBg {
         for user in users {
             self.ledger
                 .users
-                .expire_subscription(&mut session, user.tg_id)
+                .expire_subscription(&mut session, user.id)
                 .await?;
         }
         Ok(())

@@ -1,4 +1,4 @@
-use bson::to_document;
+use bson::{to_document, Document};
 use chrono::{DateTime, Duration, Local, Utc};
 use eyre::{bail, eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
@@ -7,7 +7,7 @@ use model::couch::CouchInfo;
 use model::rights;
 use model::session::Session;
 use model::subscription::{Status, Subscription, UserSubscription};
-use model::user::{Freeze, Notification, User};
+use model::user::{Freeze, Notification, User, UserIdent};
 use mongodb::bson::to_bson;
 use mongodb::options::UpdateOptions;
 use mongodb::IndexModel;
@@ -35,20 +35,23 @@ impl UserStore {
         })
     }
 
-    pub async fn get_by_tg_id(&self, session: &mut Session, tg_id: i64) -> Result<Option<User>> {
+    pub async fn get<ID: Into<UserIdent>>(
+        &self,
+        session: &mut Session,
+        id: ID,
+    ) -> Result<Option<User>> {
         Ok(self
             .users
-            .find_one(doc! { "tg_id": tg_id })
+            .find_one(self.ident_filter(id))
             .session(&mut *session)
             .await?)
     }
 
-    pub async fn get(&self, session: &mut Session, id: ObjectId) -> Result<Option<User>> {
-        Ok(self
-            .users
-            .find_one(doc! { "_id": id })
-            .session(&mut *session)
-            .await?)
+    fn ident_filter<ID: Into<UserIdent>>(&self, id: ID) -> Document {
+        match id.into() {
+            UserIdent::TgId(tg_id) => doc! { "tg_id": tg_id },
+            UserIdent::Id(id) => doc! { "_id": id },
+        }
     }
 
     pub async fn insert(&self, session: &mut Session, user: User) -> Result<()> {
@@ -170,12 +173,18 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn freeze(&self, session: &mut Session, tg_id: i64, days: u32) -> Result<()> {
-        info!("Freeze account:{}", tg_id);
+    pub async fn freeze<ID: Into<UserIdent>>(
+        &self,
+        session: &mut Session,
+        id: ID,
+        days: u32,
+    ) -> Result<()> {
+        let id = id.into();
+        info!("Freeze account:{}", id);
         let mut user = self
-            .get_by_tg_id(session, tg_id)
+            .get(session, id)
             .await?
-            .ok_or_else(|| eyre!("User not found:{}", tg_id))?;
+            .ok_or_else(|| eyre!("User not found:{}", id))?;
         user.version += 1;
 
         if user.freeze_days < days {
@@ -201,10 +210,7 @@ impl UserStore {
         });
 
         self.users
-            .update_one(
-                doc! { "tg_id": tg_id },
-                doc! { "$set": to_document(&user)? },
-            )
+            .update_one(self.ident_filter(id), doc! { "$set": to_document(&user)? })
             .session(&mut *session)
             .await?;
         Ok(())
@@ -219,7 +225,7 @@ impl UserStore {
     ) -> Result<()> {
         info!("Reserving balance for user {}: {}", tg_id, amount);
         let mut user = self
-            .get_by_tg_id(session, tg_id)
+            .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         user.version += 1;
@@ -260,7 +266,7 @@ impl UserStore {
     ) -> Result<()> {
         info!("Charging blocked balance for user {}: {}", tg_id, amount);
         let mut user = self
-            .get_by_tg_id(session, tg_id)
+            .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         if user.reserved_balance < amount {
@@ -446,7 +452,7 @@ impl UserStore {
     ) -> Result<()> {
         info!("Changing reserved balance for user {}: {}", tg_id, amount);
         let mut user = self
-            .get_by_tg_id(session, tg_id)
+            .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         user.version += 1;
@@ -474,7 +480,7 @@ impl UserStore {
     ) -> Result<()> {
         info!("Changing balance for user {}: {}", tg_id, amount);
         let mut user = self
-            .get_by_tg_id(session, tg_id)
+            .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         user.version += 1;
@@ -515,11 +521,16 @@ impl UserStore {
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn expire_subscription(&self, session: &mut Session, tg_id: i64) -> Result<()> {
+    pub async fn expire_subscription<ID: Into<UserIdent>>(
+        &self,
+        session: &mut Session,
+        id: ID,
+    ) -> Result<Vec<UserSubscription>> {
+        let id = id.into();
         let now = Local::now().with_timezone(&Utc);
-        info!("Expire subscription for user {}", tg_id);
+        info!("Expire subscription for user {}", id);
         let mut user = self
-            .get_by_tg_id(session, tg_id)
+            .get(session, id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         user.version += 1;
@@ -531,15 +542,24 @@ impl UserStore {
                 user.balance -= sub.items;
             });
 
-        user.subscriptions.retain(|sub| !sub.is_expired(now));
+        let (expired, actual) = user.subscriptions.into_iter().fold(
+            (Vec::new(), Vec::new()),
+            |(mut expired, mut actual), sub| {
+                if sub.is_expired(now) {
+                    expired.push(sub);
+                } else {
+                    actual.push(sub);
+                }
+                (expired, actual)
+            },
+        );
+
+        user.subscriptions = actual;
         self.users
-            .update_one(
-                doc! { "tg_id": tg_id },
-                doc! { "$set": to_document(&user)? },
-            )
+            .update_one(self.ident_filter(id), doc! { "$set": to_document(&user)? })
             .session(&mut *session)
             .await?;
-        Ok(())
+        Ok(expired)
     }
 
     pub async fn set_phone(&self, session: &mut Session, tg_id: i64, phone: &str) -> Result<()> {

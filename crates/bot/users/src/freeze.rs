@@ -35,7 +35,7 @@ impl View for FreezeProfile {
                 let user = ctx
                     .ledger
                     .users
-                    .get_by_tg_id(&mut ctx.session, self.tg_id)
+                    .get(&mut ctx.session, self.tg_id)
                     .await?
                     .ok_or_else(|| eyre!("User not found!"))?;
                 ctx.send_msg_with_markup(
@@ -94,7 +94,7 @@ impl View for FreezeProfile {
                 let user = ctx
                     .ledger
                     .users
-                    .get_by_tg_id(&mut ctx.session, self.tg_id)
+                    .get(&mut ctx.session, self.tg_id)
                     .await?
                     .ok_or_else(|| eyre!("User not found!"))?;
                 if user.freeze_days < self.days {
