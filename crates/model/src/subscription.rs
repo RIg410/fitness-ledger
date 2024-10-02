@@ -18,6 +18,14 @@ pub struct Subscription {
     pub freeze_days: u32,
     #[serde(default)]
     pub expiration_days: u32,
+    #[serde(default = "default_user_can_buy")]
+    pub user_can_buy: bool,
+    #[serde(default)]
+    pub subscription_type: SubscriptionType,
+}
+
+fn default_user_can_buy() -> bool {
+    true
 }
 
 impl Subscription {
@@ -27,6 +35,8 @@ impl Subscription {
         price: Decimal,
         freeze_days: u32,
         expiration_days: u32,
+        user_can_buy: bool,
+        subscription_type: SubscriptionType,
     ) -> Self {
         Subscription {
             id: ObjectId::new(),
@@ -36,6 +46,8 @@ impl Subscription {
             version: 0,
             freeze_days,
             expiration_days,
+            user_can_buy,
+            subscription_type,
         }
     }
 }
@@ -52,6 +64,8 @@ pub struct UserSubscription {
     pub status: Status,
     #[serde(default)]
     pub price: Decimal,
+    #[serde(default)]
+    pub subscription_type: SubscriptionType,
 }
 
 impl UserSubscription {
@@ -85,6 +99,7 @@ impl From<Subscription> for UserSubscription {
             days: value.expiration_days,
             status: Status::NotActive,
             price: value.price,
+            subscription_type: value.subscription_type,
         }
     }
 }
@@ -136,5 +151,23 @@ impl PartialOrd for Status {
                 },
             ) => l_start_date.partial_cmp(r_start_date),
         }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub enum SubscriptionType {
+    Group {},
+    Personal { couch_filter: Option<ObjectId> },
+}
+
+impl SubscriptionType {
+    pub fn is_personal(&self) -> bool {
+        matches!(self, SubscriptionType::Personal { .. })
+    }
+}
+
+impl Default for SubscriptionType {
+    fn default() -> Self {
+        SubscriptionType::Group {}
     }
 }

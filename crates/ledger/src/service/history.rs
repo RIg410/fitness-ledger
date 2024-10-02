@@ -116,35 +116,6 @@ impl History {
         self.store.store(session, entry).await
     }
 
-    pub async fn sell_free_subscription(
-        &self,
-        session: &mut Session,
-        price: Decimal,
-        item: u32,
-        buyer: ObjectId,
-    ) -> Result<()> {
-        let entry = HistoryRow::with_sub_actors(
-            session.actor(),
-            vec![buyer],
-            Action::SellFreeSub { price, item },
-        );
-        self.store.store(session, entry).await
-    }
-
-    pub async fn presell_free_subscription(
-        &self,
-        session: &mut Session,
-        price: Decimal,
-        item: u32,
-        buyer: String,
-    ) -> Result<()> {
-        let entry = HistoryRow::new(
-            session.actor(),
-            Action::PreSellFreeSub { price, item, buyer },
-        );
-        self.store.store(session, entry).await
-    }
-
     pub async fn sell_subscription(
         &self,
         session: &mut Session,

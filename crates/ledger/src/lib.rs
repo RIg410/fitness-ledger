@@ -3,7 +3,6 @@ use eyre::{bail, eyre, Context as _, Result};
 use log::{error, warn};
 use model::decimal::Decimal;
 use model::session::Session;
-use model::subscription::Subscription;
 use model::training::{Training, TrainingStatus};
 use model::treasury::subs::UserId;
 use model::treasury::Sell;
@@ -59,7 +58,8 @@ impl Ledger {
         let subscriptions = Subscriptions::new(storage.subscriptions, history.clone());
         let presell = storage.presell.clone();
         let rewards = Rewards::new(storage.rewards);
-        let statistics = statistics::Statistics::new(calendar.clone(), history.clone(), users.clone());
+        let statistics =
+            statistics::Statistics::new(calendar.clone(), history.clone(), users.clone());
         Ledger {
             users,
             calendar,
@@ -332,89 +332,6 @@ impl Ledger {
 
         self.treasury
             .presell(session, phone, Sell::Sub(subscription))
-            .await?;
-        Ok(())
-    }
-
-    #[tx]
-    pub async fn sell_free_subscription(
-        &self,
-        session: &mut Session,
-        price: Decimal,
-        item: u32,
-        buyer: i64,
-    ) -> Result<(), SellSubscriptionError> {
-        let buyer = self
-            .users
-            .get(session, buyer)
-            .await?
-            .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
-
-        self.history
-            .sell_free_subscription(session, price, item, buyer.id)
-            .await?;
-        self.users
-            .add_subscription(
-                session,
-                buyer.tg_id,
-                Subscription {
-                    id: ObjectId::new(),
-                    name: item.to_string(),
-                    items: item,
-                    price,
-                    version: 0,
-                    freeze_days: 0,
-                    expiration_days: 30,
-                },
-            )
-            .await?;
-
-        self.treasury
-            .sell(session, buyer.id, Sell::Free(item, price))
-            .await?;
-        Ok(())
-    }
-
-    #[tx]
-    pub async fn presell_free_subscription(
-        &self,
-        session: &mut Session,
-        price: Decimal,
-        item: u32,
-        phone: String,
-    ) -> Result<(), SellSubscriptionError> {
-        let phone = sanitize_phone(&phone);
-        let bayer = self.users.get_by_phone(session, &phone).await?;
-        if bayer.is_some() {
-            error!("User with phone {} already exists", phone);
-            return Err(SellSubscriptionError::InvalidParams);
-        }
-        self.history
-            .presell_free_subscription(session, price, item, phone.clone())
-            .await?;
-
-        self.presell
-            .add(
-                session,
-                UserPreSell {
-                    id: ObjectId::new(),
-                    subscription: Subscription {
-                        id: ObjectId::new(),
-                        name: item.to_string(),
-                        items: item,
-                        price,
-                        version: 0,
-                        freeze_days: 0,
-                        expiration_days: 30,
-                    }
-                    .into(),
-                    phone: phone.clone(),
-                },
-            )
-            .await?;
-
-        self.treasury
-            .presell(session, phone, Sell::Free(item, price))
             .await?;
         Ok(())
     }

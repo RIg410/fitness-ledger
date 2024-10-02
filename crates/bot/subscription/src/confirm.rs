@@ -41,12 +41,6 @@ impl View for ConfirmSell {
                             .sell_subscription(&mut ctx.session, sub, self.user_id)
                             .await
                     }
-                    Sell::Free { price, items } => {
-                        ctx.ensure(Rule::FreeSell)?;
-                        ctx.ledger
-                            .sell_free_subscription(&mut ctx.session, price, items, self.user_id)
-                            .await
-                    }
                 };
                 if let Err(err) = result {
                     Err(err.into())
@@ -76,7 +70,6 @@ async fn render(
                 .ok_or_else(|| eyre::eyre!("Subscription {} not found", id))?;
             (sub.name, sub.price, sub.items)
         }
-        Sell::Free { price, items } => ("🤑".to_owned(), price, items),
     };
     let user = ctx
         .ledger

@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
 use bot_viewer::user::fmt_user_type;
 use eyre::{eyre, Error, Result};
-use model::{decimal::Decimal, rights::Rule, user::User};
+use model::{rights::Rule, user::User};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -101,7 +101,6 @@ async fn render(
                 .ok_or_else(|| eyre!("Subscription {} not found", id))?;
             (sub.name, sub.price, sub.items)
         }
-        Sell::Free { price, items } => ("🤑".to_owned(), *price, *items),
     };
 
     let msg = format!(
@@ -146,16 +145,11 @@ async fn render(
 #[derive(Clone, Copy)]
 pub enum Sell {
     Sub(ObjectId),
-    Free { price: Decimal, items: u32 },
 }
 
 impl Sell {
     pub fn with_id(id: ObjectId) -> Self {
         Self::Sub(id)
-    }
-
-    pub fn free(price: Decimal, items: u32) -> Self {
-        Self::Free { price, items }
     }
 }
 

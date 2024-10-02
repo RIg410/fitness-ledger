@@ -34,7 +34,6 @@ impl BotApp {
     pub async fn start(self, ledger: Ledger) -> Result<()> {
         let state = self.state;
         let bot = self.bot;
-        bot.delete_my_commands().await?;
         bot.set_my_commands(vec![
             MainMenuItem::Home.into(),
             MainMenuItem::Profile.into(),

@@ -2,7 +2,11 @@ use bson::oid::ObjectId;
 use chrono::{DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{decimal::Decimal, subscription::{Subscription, UserSubscription}, user::UserName};
+use crate::{
+    decimal::Decimal,
+    subscription::{Subscription, UserSubscription},
+    user::UserName,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HistoryRow {
@@ -56,15 +60,6 @@ pub enum Action {
     PreSellSub {
         subscription: Subscription,
         phone: String,
-    },
-    SellFreeSub {
-        price: Decimal,
-        item: u32,
-    },
-    PreSellFreeSub {
-        price: Decimal,
-        item: u32,
-        buyer: String,
     },
     FinalizedCanceledTraining {
         name: String,

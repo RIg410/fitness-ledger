@@ -96,12 +96,6 @@ impl View for PreSellView {
                             .presell_subscription(&mut ctx.session, sub, phone)
                             .await
                     }
-                    Sell::Free { price, items } => {
-                        ctx.ensure(Rule::FreeSell)?;
-                        ctx.ledger
-                            .presell_free_subscription(&mut ctx.session, price, items, phone)
-                            .await
-                    }
                 };
                 if let Err(err) = result {
                     Err(err.into())
@@ -142,7 +136,6 @@ async fn render_confirm(
                 .ok_or_else(|| eyre::eyre!("Subscription {} not found", id))?;
             (sub.name, sub.price, sub.items)
         }
-        Sell::Free { price, items } => ("🤑".to_owned(), price, items),
     };
 
     let text = format!(

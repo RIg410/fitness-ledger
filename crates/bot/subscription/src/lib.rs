@@ -1,10 +1,10 @@
 pub mod confirm;
 pub mod create;
 pub mod edit;
-pub mod free_sell;
 pub mod presell;
 pub mod sell;
 pub mod view;
+pub mod edit_type;
 
 use async_trait::async_trait;
 use bot_core::{
@@ -15,7 +15,6 @@ use bot_core::{
 };
 use create::CreateSubscription;
 use eyre::Result;
-use free_sell::FeeSellView;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -47,10 +46,6 @@ impl View for SubscriptionView {
                 ctx.ensure(Rule::CreateSubscription)?;
                 Ok(CreateSubscription::new().into())
             }
-            Callback::FreeSell => {
-                ctx.ensure(Rule::FreeSell)?;
-                Ok(FeeSellView::new().into())
-            }
         }
     }
 }
@@ -64,7 +59,17 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     let can_sell = ctx.has_right(Rule::SellSubscription);
 
     let delimiter = escape("-------------------------\n");
-    for subscription in subscriptions {
+    msg.push_str(&delimiter);
+    msg.push_str("_Групповые абонементы:_\n");
+
+    for subscription in &subscriptions {
+        if !can_sell && !subscription.user_can_buy {
+            continue;
+        }
+        if subscription.subscription_type.is_personal() {
+            continue;
+        }
+
         msg.push_str(&format!(
             "*{}* \\- _{}_р\n",
             escape(&subscription.name),
@@ -79,13 +84,34 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
         }
     }
     msg.push_str(&delimiter);
+    msg.push_str("_Индивидуальные абонементы:_\n");
+
+    for subscription in &subscriptions {
+        if !can_sell && !subscription.user_can_buy {
+            continue;
+        }
+        if !subscription.subscription_type.is_personal() {
+            continue;
+        }
+
+        msg.push_str(&format!(
+            "*{}* \\- _{}_р\n",
+            escape(&subscription.name),
+            subscription.price.to_string().replace(".", ",")
+        ));
+
+        if can_sell {
+            keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+                subscription.name.clone(),
+                Callback::Select(subscription.id.bytes()).to_data(),
+            )]);
+        }
+    }
+
+    msg.push_str(&delimiter);
     if can_sell {
         msg.push_str("Для продажи тарифа нажмите на него");
     }
-    if ctx.has_right(Rule::FreeSell) {
-        keymap = keymap.append_row(Callback::FreeSell.btn_row("🤑 Свободная продажа"));
-    }
-
     if ctx.has_right(Rule::CreateSubscription) {
         keymap = keymap.append_row(Callback::CreateSubscription.btn_row("🗒 Создать тариф"));
     }
@@ -97,5 +123,4 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
 enum Callback {
     Select([u8; 12]),
     CreateSubscription,
-    FreeSell,
 }

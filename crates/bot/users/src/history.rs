@@ -172,47 +172,6 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             }
         }
-        model::history::Action::SellFreeSub { price, item } => {
-            if is_actor {
-                let sub = if let Some(subject) = log.sub_actors.first() {
-                    ctx.ledger
-                        .get_user(&mut ctx.session, *subject)
-                        .await?
-                        .name
-                        .to_string()
-                } else {
-                    "-".to_string()
-                };
-                format!(
-                    "Вы продали абонемент\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",
-                    item,
-                    escape(&price.to_string()),
-                    escape(&sub)
-                )
-            } else {
-                format!(
-                    "Вы купили абонемент\nКоличество занятий:_{}_\nСумма:_{}_",
-                    item,
-                    escape(&price.to_string())
-                )
-            }
-        }
-        model::history::Action::PreSellFreeSub { price, item, buyer } => {
-            if is_actor {
-                format!(
-                    "Вы продали абонемент\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",
-                    item,
-                    escape(&price.to_string()),
-                    escape(buyer)
-                )
-            } else {
-                format!(
-                    "Вы купили абонемент\nКоличество занятий:_{}_\nСумма:_{}_",
-                    item,
-                    escape(&price.to_string())
-                )
-            }
-        }
         model::history::Action::FinalizedCanceledTraining { name, start_at } => {
             format!(
                 "Тренировка *{}* в _{}_ отменена",

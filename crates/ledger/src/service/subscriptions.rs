@@ -32,24 +32,18 @@ impl Subscriptions {
     pub async fn create_subscription(
         &self,
         session: &mut Session,
-        name: String,
-        items: u32,
-        price: Decimal,
-        freeze_days: u32,
-        expiration_days: u32,
+        sub: Subscription,
     ) -> Result<(), CreateSubscriptionError> {
-        if self.get_by_name(session, &name).await?.is_some() {
+        if self.get_by_name(session, &sub.name).await?.is_some() {
             return Err(CreateSubscriptionError::NameAlreadyExists);
         }
-        if items == 0 {
+        if sub.items == 0 {
             return Err(CreateSubscriptionError::InvalidItems);
         }
 
-        if price <= Decimal::zero() {
+        if sub.price < Decimal::zero() {
             return Err(CreateSubscriptionError::InvalidPrice);
         }
-        let sub = Subscription::new(name, items, price, expiration_days, freeze_days);
-        //self.logs.create_sub(session, sub.clone()).await;
         self.store.insert(session, sub).await?;
         Ok(())
     }

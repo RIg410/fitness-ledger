@@ -1,5 +1,3 @@
-use std::num::NonZero;
-
 use super::View;
 use async_trait::async_trait;
 use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
@@ -7,6 +5,7 @@ use eyre::Result;
 use model::{decimal::Decimal, rights::Rule};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use std::num::NonZero;
 use teloxide::{
     types::{InlineKeyboardMarkup, Message},
     utils::markdown::escape,
@@ -45,6 +44,33 @@ impl EditSubscription {
         Ok(Jmp::Stay)
     }
 
+    pub async fn edit_freeze_days(&self, ctx: &mut Context, value: u32) -> Result<Jmp> {
+        ctx.ensure(Rule::EditSubscription)?;
+        ctx.ledger
+            .subscriptions
+            .edit_freeze_days(&mut ctx.session, self.id, value)
+            .await?;
+        Ok(Jmp::Stay)
+    }
+
+    pub async fn edit_expiration_days(&self, ctx: &mut Context, value: u32) -> Result<Jmp> {
+        ctx.ensure(Rule::EditSubscription)?;
+        ctx.ledger
+            .subscriptions
+            .edit_expiration_days(&mut ctx.session, self.id, value)
+            .await?;
+        Ok(Jmp::Stay)
+    }
+
+    pub async fn edit_can_buy_by_user(&self, ctx: &mut Context, value: bool) -> Result<Jmp> {
+        ctx.ensure(Rule::EditSubscription)?;
+        ctx.ledger
+            .subscriptions
+            .edit_can_buy_by_user(&mut ctx.session, self.id, value)
+            .await?;
+        Ok(Jmp::Stay)
+    }
+
     pub async fn edit_name(&self, ctx: &mut Context, value: String) -> Result<Jmp> {
         ctx.ensure(Rule::EditSubscription)?;
         ctx.ledger
@@ -64,7 +90,7 @@ impl View for EditSubscription {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         ctx.ensure(Rule::EditSubscription)?;
         if State::Init == self.state {
-            let keymap = InlineKeyboardMarkup::default();
+            let mut keymap = InlineKeyboardMarkup::default();
             match self.edit_type {
                 EditType::Name => {
                     ctx.send_msg_with_markup("Введите новое название", keymap)
@@ -76,6 +102,22 @@ impl View for EditSubscription {
                 }
                 EditType::Items => {
                     ctx.send_msg_with_markup("Введите новое количество занятий", keymap)
+                        .await?;
+                }
+                EditType::FreezeDays => {
+                    ctx.send_msg_with_markup("Введите новое количество дней заморозки", keymap)
+                        .await?;
+                }
+                EditType::ExpirationDays => {
+                    ctx.send_msg_with_markup("Введите новое количество дней действия", keymap)
+                        .await?;
+                }
+                EditType::CanBuyByUser => {
+                    keymap = keymap.append_row(vec![
+                        Callback::Yes.button("✅ Да"),
+                        Callback::No.button("❌ Нет"),
+                    ]);
+                    ctx.send_msg_with_markup("Выберите, можно ли покупать подписку", keymap)
                         .await?;
                 }
             }
@@ -103,6 +145,24 @@ impl View for EditSubscription {
                         format!("цену на {}", text)
                     }
                     EditType::Name => format!("название на {}", text),
+                    EditType::FreezeDays => {
+                        if let Err(err) = text.parse::<NonZero<u32>>() {
+                            ctx.send_msg(&format!("Неверный формат: {}", err)).await?;
+                            return Ok(Jmp::Stay);
+                        }
+                        format!("количество дней заморозки на {}", text)
+                    }
+                    EditType::ExpirationDays => {
+                        if let Err(err) = text.parse::<NonZero<u32>>() {
+                            ctx.send_msg(&format!("Неверный формат: {}", err)).await?;
+                            return Ok(Jmp::Stay);
+                        }
+                        format!("количество дней действия на {}", text)
+                    }
+                    EditType::CanBuyByUser => {
+                        ctx.delete_msg(message.id).await?;
+                        return Ok(Jmp::Stay);
+                    }
                 };
                 self.state = State::Confirm(text);
                 let mut keymap = InlineKeyboardMarkup::default();
@@ -136,12 +196,21 @@ impl View for EditSubscription {
                     EditType::Price => self.edit_price(ctx, value.parse()?).await?,
                     EditType::Items => self.edit_items(ctx, value.parse()?).await?,
                     EditType::Name => self.edit_name(ctx, value).await?,
+                    EditType::FreezeDays => self.edit_freeze_days(ctx, value.parse()?).await?,
+                    EditType::ExpirationDays => {
+                        self.edit_expiration_days(ctx, value.parse()?).await?
+                    }
+                    EditType::CanBuyByUser => self.edit_can_buy_by_user(ctx, true).await?,
                 };
                 ctx.send_msg("Изменения сохранены ✅").await?;
                 ctx.reset_origin().await?;
                 Ok(Jmp::Back)
             }
             Callback::No => {
+                if self.edit_type == EditType::CanBuyByUser {
+                    self.edit_can_buy_by_user(ctx, false).await?;
+                }
+
                 ctx.reset_origin().await?;
                 Ok(Jmp::Back)
             }
@@ -155,11 +224,14 @@ enum State {
     Confirm(String),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum EditType {
     Price,
     Name,
     Items,
+    FreezeDays,
+    ExpirationDays,
+    CanBuyByUser,
 }
 
 #[derive(Serialize, Deserialize)]

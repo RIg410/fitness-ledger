@@ -1,11 +1,14 @@
-use std::sync::Arc;
-
 use crate::session::Db;
-use bson::{doc, oid::ObjectId};
+use bson::{doc, oid::ObjectId, to_document};
 use eyre::Error;
 use log::info;
-use model::{decimal::Decimal, session::Session, subscription::Subscription};
+use model::{
+    decimal::Decimal,
+    session::Session,
+    subscription::{Subscription, SubscriptionType},
+};
 use mongodb::Collection;
+use std::sync::Arc;
 
 const TABLE_NAME: &str = "subscriptions";
 
@@ -73,6 +76,24 @@ impl SubscriptionsStore {
             .await?)
     }
 
+    pub async fn edit_type(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        subscription_type: &SubscriptionType,
+    ) -> Result<(), Error> {
+        self.collection
+            .update_one(
+                doc! { "_id": id },
+                doc! {
+                    "$set": {"subscription_type": to_document(subscription_type)?}
+                },
+            )
+            .session(session)
+            .await?;
+        Ok(())
+    }
+
     pub async fn edit_price(
         &self,
         session: &mut Session,
@@ -102,6 +123,60 @@ impl SubscriptionsStore {
                 doc! { "_id": id },
                 doc! {
                     "$set": {"items": items}
+                },
+            )
+            .session(session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn edit_freeze_days(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        freeze_days: u32,
+    ) -> Result<(), Error> {
+        self.collection
+            .update_one(
+                doc! { "_id": id },
+                doc! {
+                    "$set": {"freeze_days": freeze_days}
+                },
+            )
+            .session(session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn edit_expiration_days(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        expiration_days: u32,
+    ) -> Result<(), Error> {
+        self.collection
+            .update_one(
+                doc! { "_id": id },
+                doc! {
+                    "$set": {"expiration_days": expiration_days}
+                },
+            )
+            .session(session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn edit_can_buy_by_user(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        user_can_buy: bool,
+    ) -> Result<(), Error> {
+        self.collection
+            .update_one(
+                doc! { "_id": id },
+                doc! {
+                    "$set": {"user_can_buy": user_can_buy}
                 },
             )
             .session(session)

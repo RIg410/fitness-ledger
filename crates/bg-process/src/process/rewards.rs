@@ -48,10 +48,14 @@ impl RewardsBg {
         now: DateTime<Local>,
     ) -> Result<(), Error> {
         if let Some(reward) = couch.collect_monthly_rewards(couch_id, now)? {
-            self.ledger.rewards.add_reward(session, reward).await?;
+            // self.ledger.rewards.add_reward(session, reward).await?;
+            // self.ledger
+            //     .users
+            //     .update_couch_reward(session, couch_id, couch.reward)
+            //     .await?;
             self.ledger
                 .users
-                .update_couch_reward(session, couch_id, couch.reward)
+                .update_couch_rate(session, couch_id, couch.rate.clone())
                 .await?;
         }
         Ok(())
