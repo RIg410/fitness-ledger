@@ -59,7 +59,7 @@ impl Users {
         let couch = user.couch.ok_or_else(|| eyre!("User is not a couch"))?;
         let couch = CouchInfo {
             description: couch.description,
-            rate: rate.clone(),
+            rate,
             reward: couch.reward,
         };
         self.store.set_couch(session, user.tg_id, &couch).await?;

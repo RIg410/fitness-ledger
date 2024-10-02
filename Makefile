@@ -19,7 +19,7 @@ test:
 
 build:
 	cargo build --release	
-	sudo docker image prune -a 
+	sudo docker image prune -a -f
 	sudo docker compose build backend
 	
 restart: build

@@ -229,7 +229,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             } else {
                 format!(
-                    "Вас посетили на тренировку *{}* в _{}_",
+                    "Вы посетили тренировку *{}* в _{}_",
                     escape(name),
                     fmt_dt(&start_at.with_timezone(&Local))
                 )

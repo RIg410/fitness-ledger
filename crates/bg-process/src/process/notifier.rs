@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use bot_core::bot::{Origin, TgBot, ValidToken};
 use bot_main::BotApp;
 use bot_viewer::day::fmt_time;
-use chrono::Local;
+use chrono::{DateTime, Local};
 use eyre::Error;
 use ledger::Ledger;
 use model::{ids::DayId, session::Session, training::Notified, user::UserIdent};
@@ -51,6 +51,7 @@ impl TrainingNotifier {
     async fn notify_user<ID: Into<UserIdent>>(
         &self,
         session: &mut Session,
+        start_at: DateTime<Local>,
         id: ID,
         msg: &str,
         by_day: bool,
@@ -66,7 +67,7 @@ impl TrainingNotifier {
             } else {
                 let now = Local::now();
                 if let Some(hours) = user.settings.notification.notify_by_n_hours {
-                    if now + chrono::Duration::hours(hours as i64) > now {
+                    if now + chrono::Duration::hours(hours as i64) > start_at {
                         self.bot
                             .send_notification_to(ChatId(user.tg_id), &msg)
                             .await?;
@@ -102,7 +103,8 @@ impl TrainingNotifier {
             ));
 
             for client in &training.clients {
-                self.notify_user(session, *client, &msg, true).await?;
+                self.notify_user(session, training.get_slot().start_at(), *client, &msg, true)
+                    .await?;
             }
 
             self.ledger
@@ -129,6 +131,7 @@ impl TrainingNotifier {
             if start_at < now {
                 continue;
             }
+            let start_at = training.get_slot().start_at();
 
             let mut already_notified = match training.notified {
                 Notified::None {} => {
@@ -149,7 +152,10 @@ impl TrainingNotifier {
             let mut has_changes = false;
             for client in &training.clients {
                 if !already_notified.contains(client) {
-                    if self.notify_user(session, *client, &msg, false).await? {
+                    if self
+                        .notify_user(session, start_at, *client, &msg, false)
+                        .await?
+                    {
                         already_notified.push(*client);
                         has_changes = true;
                     }
@@ -170,3 +176,5 @@ impl TrainingNotifier {
         Ok(())
     }
 }
+
+

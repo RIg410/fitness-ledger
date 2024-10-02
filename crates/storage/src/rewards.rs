@@ -28,6 +28,14 @@ impl RewardsStore {
         Ok(())
     }
 
+    pub async fn delete(&self, session: &mut Session, reward: Reward) -> Result<(), Error> {
+        self.rewards
+            .delete_one(doc! {"_id": reward.id})
+            .session(session)
+            .await?;
+        Ok(())
+    }
+
     pub async fn get(
         &self,
         session: &mut Session,
