@@ -1,9 +1,8 @@
+use super::history::History;
 use chrono::{DateTime, Local, Utc};
 use eyre::{bail, eyre, Result};
 use log::info;
 use model::{
-    couch::{CouchInfo, Rate},
-    decimal::Decimal,
     rights::{Rights, Rule},
     session::Session,
     user::{sanitize_phone, User, UserName},
@@ -14,13 +13,13 @@ use storage::{pre_sell::PreSellStore, user::UserStore};
 use thiserror::Error;
 use tx_macro::tx;
 
-use super::history::History;
+pub mod couch;
 
 #[derive(Clone)]
 pub struct Users {
-    store: UserStore,
-    presell: PreSellStore,
-    logs: History,
+    pub(super) store: UserStore,
+    pub(super) presell: PreSellStore,
+    pub(super) logs: History,
 }
 
 impl Users {
@@ -34,61 +33,32 @@ impl Users {
 
     #[tx]
     pub async fn expire_subscription(&self, session: &mut Session, id: ObjectId) -> Result<()> {
-        let expired = self.store.expire_subscription(session, id).await?;
+        let mut user = self
+            .store
+            .get(session, id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+
+        let now = Utc::now();
+        let (expired, actual) = user.subscriptions.into_iter().fold(
+            (Vec::new(), Vec::new()),
+            |(mut expired, mut actual), sub| {
+                if sub.is_expired(now) {
+                    expired.push(sub);
+                } else {
+                    actual.push(sub);
+                }
+                (expired, actual)
+            },
+        );
+
         for subscription in expired {
             self.logs
                 .expire_subscription(session, id, subscription)
                 .await?;
         }
-
-        Ok(())
-    }
-
-    #[tx]
-    pub async fn update_couch_rate(
-        &self,
-        session: &mut Session,
-        id: ObjectId,
-        rate: Rate,
-    ) -> Result<()> {
-        let user = self
-            .store
-            .get(session, id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-        let couch = user.couch.ok_or_else(|| eyre!("User is not a couch"))?;
-        let couch = CouchInfo {
-            description: couch.description,
-            rate,
-            reward: couch.reward,
-        };
-        self.store.set_couch(session, user.tg_id, &couch).await?;
-        // self.logs.update_couch_rate(session, user.id, rate).await;
-        Ok(())
-    }
-
-    #[tx]
-    pub async fn update_couch_description(
-        &self,
-        session: &mut Session,
-        id: ObjectId,
-        description: String,
-    ) -> Result<()> {
-        let user = self
-            .store
-            .get(session, id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-        let couch = user.couch.ok_or_else(|| eyre!("User is not a couch"))?;
-        let couch = CouchInfo {
-            description: description.clone(),
-            rate: couch.rate,
-            reward: couch.reward,
-        };
-        self.store.set_couch(session, user.tg_id, &couch).await?;
-        // self.logs
-        //     .update_couch_description(session, user.id, description)
-        //     .await;
+        user.subscriptions = actual;
+        self.store.update(session, &user).await?;
         Ok(())
     }
 
@@ -126,10 +96,8 @@ impl Users {
             rights,
             phone: phone.clone(),
             birthday: None,
-            balance: subscriptions.iter().map(|s| s.items).sum(),
             is_active: true,
             id: ObjectId::new(),
-            reserved_balance: 0,
             subscriptions,
             freeze_days: 0,
             freeze: None,
@@ -141,33 +109,6 @@ impl Users {
         };
         self.store.insert(session, user).await?;
         self.logs.create_user(session, name, phone).await?;
-        Ok(())
-    }
-
-    #[tx]
-    pub async fn make_user_instructor(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        description: String,
-        rate: Rate,
-    ) -> Result<()> {
-        let user = self
-            .store
-            .get(session, tg_id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-        if user.couch.is_some() {
-            bail!("Already instructor");
-        }
-
-        let couch = CouchInfo {
-            description,
-            reward: Decimal::zero(),
-            rate,
-        };
-        self.store.set_couch(session, tg_id, &couch).await?;
-        // self.logs.make_user_instructor(session, tg_id, couch).await;
         Ok(())
     }
 
@@ -199,7 +140,6 @@ impl Users {
         if !forced && user.birthday.is_some() {
             return Err(SetDateError::AlreadySet);
         }
-        // self.logs.set_user_birthday(session, id, date).await;
         self.store
             .set_birthday(session, user.tg_id, date)
             .await
@@ -215,9 +155,6 @@ impl Users {
         rule: Rule,
         is_active: bool,
     ) -> Result<()> {
-        // self.logs
-        //     .edit_user_rule(session, tg_id, rule, is_active)
-        //     .await;
         if is_active {
             self.store.add_rule(session, tg_id, &rule).await?;
             info!("Adding rule {:?} to user {}", rule, tg_id);
@@ -250,44 +187,6 @@ impl Users {
     }
 
     #[tx]
-    pub async fn change_balance(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        amount: i32,
-    ) -> Result<()> {
-        let user = self
-            .store
-            .get(session, tg_id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-
-        self.logs.change_balance(session, user.id, amount).await?;
-        self.store.change_balance(session, tg_id, amount).await
-    }
-
-    #[tx]
-    pub async fn change_reserved_balance(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        amount: i32,
-    ) -> Result<()> {
-        let user = self
-            .store
-            .get(session, tg_id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-
-        self.logs
-            .change_reserved_balance(session, user.id, amount)
-            .await?;
-        self.store
-            .change_reserved_balance(session, tg_id, amount)
-            .await
-    }
-
-    #[tx]
     pub async fn set_name(
         &self,
         session: &mut Session,
@@ -295,9 +194,6 @@ impl Users {
         first_name: &str,
         last_name: &str,
     ) -> Result<()> {
-        // self.logs
-        //     .set_user_name(session, tg_id, first_name, last_name)
-        //     .await;
         self.store
             .set_first_name(session, tg_id, first_name)
             .await?;
@@ -309,7 +205,6 @@ impl Users {
     pub async fn set_phone(&self, session: &mut Session, tg_id: i64, phone: &str) -> Result<()> {
         let phone = sanitize_phone(phone);
         self.store.set_phone(session, tg_id, &phone).await?;
-        // self.logs.set_phone(session, tg_id, phone).await;
         Ok(())
     }
 }

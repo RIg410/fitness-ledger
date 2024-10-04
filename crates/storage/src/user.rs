@@ -224,105 +224,6 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn reserve_balance(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        amount: u32,
-        sign_up_date: DateTime<Utc>,
-    ) -> Result<()> {
-        info!("Reserving balance for user {}: {}", tg_id, amount);
-        let mut user = self
-            .get(session, tg_id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-        user.version += 1;
-        if user.balance < amount {
-            bail!("Insufficient balance");
-        }
-        user.balance -= amount;
-        user.reserved_balance += amount;
-
-        let has_active = user.subscriptions.iter().any(|s| s.is_active());
-        if !has_active {
-            user.subscriptions.sort_by(|a, b| a.status.cmp(&b.status));
-            if let Some(sub) = user.subscriptions.first_mut() {
-                sub.activate(sign_up_date);
-            }
-        }
-
-        let updated = self
-            .users
-            .update_one(
-                doc! { "tg_id": tg_id },
-                doc! { "$set": to_document(&user)? },
-            )
-            .session(&mut *session)
-            .await?;
-
-        if updated.modified_count != 1 {
-            return Err(Error::msg("User not found or insufficient balance"));
-        }
-        Ok(())
-    }
-
-    pub async fn charge_reserved_balance(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        amount: u32,
-    ) -> Result<()> {
-        info!("Charging blocked balance for user {}: {}", tg_id, amount);
-        let mut user = self
-            .get(session, tg_id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-        if user.reserved_balance < amount {
-            bail!("Insufficient reserved balance");
-        }
-        user.version += 1;
-        user.reserved_balance = user.reserved_balance.saturating_sub(amount);
-
-        let active = user.subscriptions.iter_mut().find(|s| s.is_active());
-        if let Some(sub) = active {
-            sub.items = sub.items.saturating_sub(amount);
-        }
-        user.subscriptions.retain(|sub| sub.items > 0);
-
-        self.users
-            .update_one(
-                doc! { "tg_id": tg_id },
-                doc! { "$set": to_document(&user)? },
-            )
-            .session(&mut *session)
-            .await?;
-        Ok(())
-    }
-
-    pub async fn unblock_balance(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        amount: u32,
-    ) -> Result<()> {
-        info!("Unblocking balance for user {}: {}", tg_id, amount);
-        let amount = amount as i32;
-        let result = self
-            .users
-            .update_one(
-                doc! { "tg_id": tg_id, "reserved_balance": { "$gte": amount } },
-                doc! { "$inc": { "reserved_balance": -amount, "balance": amount , "version": 1} },
-            )
-            .session(&mut *session)
-            .await?;
-        if result.modified_count == 0 {
-            return Err(Error::msg(
-                "User not found or insufficient reserved_balance",
-            ));
-        }
-        Ok(())
-    }
-
     pub async fn set_first_name(
         &self,
         session: &mut Session,
@@ -452,72 +353,6 @@ impl UserStore {
         Ok(result.modified_count > 0)
     }
 
-    pub async fn change_reserved_balance(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        amount: i32,
-    ) -> Result<()> {
-        info!("Changing reserved balance for user {}: {}", tg_id, amount);
-        let mut user = self
-            .get(session, tg_id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-        user.version += 1;
-        if amount < 0 {
-            user.reserved_balance = user.reserved_balance.saturating_sub(amount.unsigned_abs());
-        } else {
-            user.reserved_balance += amount as u32;
-        }
-
-        self.users
-            .update_one(
-                doc! { "tg_id": tg_id },
-                doc! { "$set": to_document(&user)? },
-            )
-            .session(&mut *session)
-            .await?;
-        Ok(())
-    }
-
-    pub async fn change_balance(
-        &self,
-        session: &mut Session,
-        tg_id: i64,
-        amount: i32,
-    ) -> Result<()> {
-        info!("Changing balance for user {}: {}", tg_id, amount);
-        let mut user = self
-            .get(session, tg_id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-        user.version += 1;
-        if amount < 0 {
-            user.balance = user.balance.saturating_sub(amount.unsigned_abs());
-        } else {
-            user.balance += amount as u32;
-        }
-
-        user.subscriptions.sort_by(|a, b| a.status.cmp(&b.status));
-        if let Some(sub) = user.subscriptions.first_mut() {
-            if amount < 0 {
-                sub.items = sub.items.saturating_sub(amount.unsigned_abs());
-            } else {
-                sub.items += amount as u32;
-            }
-        }
-        user.subscriptions.retain(|sub| sub.items > 0);
-
-        self.users
-            .update_one(
-                doc! { "tg_id": tg_id },
-                doc! { "$set": to_document(&user)? },
-            )
-            .session(&mut *session)
-            .await?;
-        Ok(())
-    }
-
     pub async fn find_subscription_to_expire(
         &self,
         session: &mut Session,
@@ -527,47 +362,6 @@ impl UserStore {
         };
         let mut cursor = self.users.find(filter).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
-    }
-
-    pub async fn expire_subscription<ID: Into<UserIdent>>(
-        &self,
-        session: &mut Session,
-        id: ID,
-    ) -> Result<Vec<UserSubscription>> {
-        let id = id.into();
-        let now = Local::now().with_timezone(&Utc);
-        info!("Expire subscription for user {}", id);
-        let mut user = self
-            .get(session, id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-        user.version += 1;
-
-        user.subscriptions
-            .iter()
-            .filter(|sub| sub.is_expired(now))
-            .for_each(|sub| {
-                user.balance -= sub.items;
-            });
-
-        let (expired, actual) = user.subscriptions.into_iter().fold(
-            (Vec::new(), Vec::new()),
-            |(mut expired, mut actual), sub| {
-                if sub.is_expired(now) {
-                    expired.push(sub);
-                } else {
-                    actual.push(sub);
-                }
-                (expired, actual)
-            },
-        );
-
-        user.subscriptions = actual;
-        self.users
-            .update_one(self.ident_filter(id), doc! { "$set": to_document(&user)? })
-            .session(&mut *session)
-            .await?;
-        Ok(expired)
     }
 
     pub async fn set_phone(&self, session: &mut Session, tg_id: i64, phone: &str) -> Result<()> {
@@ -664,6 +458,14 @@ impl UserStore {
                 doc! { "_id": id },
                 doc! { "$set": { "settings.notification": to_document(&settings)? }, "$inc": { "version": 1 } },
             )
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn update(&self, session: &mut Session, user: &User) -> Result<()> {
+        self.users
+            .update_one(doc! { "_id": user.id }, doc! { "$set": to_document(user)? })
             .session(&mut *session)
             .await?;
         Ok(())

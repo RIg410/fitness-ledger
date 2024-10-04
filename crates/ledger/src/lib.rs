@@ -1,12 +1,12 @@
 use chrono::Local;
-use eyre::{bail, eyre, Context as _, Result};
+use eyre::{eyre, Context as _, Result};
 use log::{error, warn};
 use model::decimal::Decimal;
 use model::session::Session;
 use model::training::{Training, TrainingStatus};
 use model::treasury::subs::UserId;
 use model::treasury::Sell;
-use model::user::{sanitize_phone, User, UserIdent, UserPreSell};
+use model::user::{sanitize_phone, FindFor, User, UserIdent, UserPreSell};
 use mongodb::bson::oid::ObjectId;
 use service::backup::Backup;
 use service::calendar::{Calendar, SignOutError};
@@ -95,13 +95,12 @@ impl Ledger {
         tg_id: i64,
         is_active: bool,
     ) -> Result<()> {
-        let user = self
+        let mut user = self
             .users
             .get(session, tg_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         if !is_active {
-            let mut reserved_balance = user.reserved_balance;
             let users_training = self
                 .calendar
                 .find_trainings(
@@ -121,18 +120,15 @@ impl Ledger {
                     continue;
                 }
 
-                if reserved_balance == 0 {
-                    bail!("Not enough reserved balance");
-                }
-                reserved_balance -= 1;
-
-                self.users
-                    .unblock_balance(session, user.tg_id, reserved_balance)
-                    .await?;
+                let sub = user
+                    .find_subscription(FindFor::Unlock, &training)
+                    .ok_or_else(|| eyre!("User not found"))?;
+                sub.unlock_balance();
                 self.calendar
                     .sign_out(session, training.start_at, user.id)
                     .await?;
             }
+            self.users.update(session, &user).await?;
         }
         self.history.block_user(session, user.id, is_active).await?;
         self.users.block_user(session, tg_id, is_active).await?;
@@ -165,7 +161,11 @@ impl Ledger {
             return Err(SignUpError::ClientAlreadySignedUp);
         }
 
-        let user = self
+        if training.clients.len() as u32 >= training.capacity {
+            return Err(SignUpError::TrainingIsFull);
+        }
+
+        let mut user = self
             .users
             .get(session, client)
             .await?
@@ -175,12 +175,15 @@ impl Ledger {
             return Err(SignUpError::UserIsCouch);
         }
 
-        if user.balance == 0 {
+        let subscription = user
+            .find_subscription(FindFor::Lock, &training)
+            .ok_or_else(|| SignUpError::NotEnoughBalance)?;
+
+        if subscription.lock_balance(training.start_at) {
             return Err(SignUpError::NotEnoughBalance);
         }
-        self.users
-            .reserve_balance(session, user.tg_id, 1, training.start_at)
-            .await?;
+
+        self.users.update(session, &user).await?;
 
         self.calendar
             .sign_up(session, training.start_at, client)
@@ -233,16 +236,21 @@ impl Ledger {
             return Err(SignOutError::ClientNotSignedUp);
         }
 
-        let user = self
+        let mut user = self
             .users
             .get(session, client)
             .await?
             .ok_or_else(|| SignOutError::UserNotFound)?;
-        if user.reserved_balance == 0 {
+
+        let sub = user
+            .find_subscription(FindFor::Unlock, training)
+            .ok_or_else(|| SignOutError::NotEnoughReservedBalance)?;
+        sub.unlock_balance();
+
+        if !sub.unlock_balance() {
             return Err(SignOutError::NotEnoughReservedBalance);
         }
-
-        self.users.unblock_balance(session, user.tg_id, 1).await?;
+        self.users.update(session, &user).await?;
 
         self.calendar
             .sign_out(session, training.start_at, client)
@@ -396,9 +404,6 @@ impl Ledger {
         id: ObjectId,
         value: String,
     ) -> Result<()> {
-        // self.history
-        //     .edit_program_description(session, id, value.clone())
-        //     .await?;
         self.programs
             .edit_description(session, id, value.clone())
             .await?;
@@ -419,7 +424,6 @@ impl Ledger {
             warn!("Couch has trainings");
             return Ok(false);
         } else {
-            // self.history.delete_couch(session, id).await;
             self.users.delete_couch(session, id).await?;
             Ok(true)
         }
@@ -482,6 +486,8 @@ pub enum SignUpError {
     Common(#[from] eyre::Error),
     #[error("Not enough balance")]
     NotEnoughBalance,
+    #[error("Training is full")]
+    TrainingIsFull,
 }
 
 impl From<mongodb::error::Error> for SignUpError {

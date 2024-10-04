@@ -55,6 +55,9 @@ impl ClientView {
             .await;
         match result {
             Ok(_) => {}
+            Err(SignUpError::TrainingIsFull) => {
+                ctx.send_notification("Тренировка заполнена").await?;
+            }
             Err(SignUpError::ClientAlreadySignedUp) => {
                 ctx.send_notification("Уже добавлен").await?;
             }
@@ -123,7 +126,7 @@ impl View for ClientView {
     fn name(&self) -> &'static str {
         "ClientView"
     }
-    
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let (msg, _) = render_profile_msg(ctx, self.id).await?;
         let mut keymap = InlineKeyboardMarkup::default();

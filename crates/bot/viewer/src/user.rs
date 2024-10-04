@@ -13,17 +13,19 @@ pub fn render_sub(sub: &UserSubscription) -> String {
     match sub.status {
         Status::NotActive => {
             format!(
-                "🎟_{}_\nОсталось занятий:_{}_\nНе активен\\. \n",
+                "🎟_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nНе активен\\. \n",
                 escape(&sub.name),
-                sub.items,
+                sub.balance,
+                sub.locked_balance,
             )
         }
         Status::Active { start_date } => {
             let end_date = start_date + chrono::Duration::days(i64::from(sub.days));
             format!(
-                "🎟_{}_\nОсталось занятий:_{}_\nДействует до:_{}_\n",
+                "🎟_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nДействует до:_{}_\n",
                 escape(&sub.name),
-                sub.items,
+                sub.balance,
+                sub.locked_balance,
                 end_date.with_timezone(&Local).format("%d\\.%m\\.%Y")
             )
         }
@@ -40,7 +42,6 @@ pub async fn render_profile_msg<ID: Into<UserIdent> + Copy>(
     if let Some(couch) = user.couch.as_ref() {
         render_couch_info(ctx, id, &mut msg, couch);
     } else {
-        render_balance_info(&mut msg, &user, ctx.has_right(Rule::ViewProfile));
         render_subscriptions(&mut msg, &user);
         render_trainings(ctx, &mut msg, &user).await?;
     }
@@ -78,33 +79,37 @@ async fn render_trainings(ctx: &mut Context, msg: &mut String, user: &User) -> R
 fn render_subscriptions(msg: &mut String, user: &User) {
     let mut subs = user.subscriptions.iter().collect::<Vec<_>>();
     subs.sort_by(|a, b| a.status.cmp(&b.status));
+
     msg.push_str("Абонементы:\n");
-    if !subs.is_empty() {
-        for sub in subs {
+
+    let has_group = subs.iter().any(|s| !s.tp.is_personal());
+    let has_personal = subs.iter().any(|s| s.tp.is_personal());
+
+    if has_group {
+        msg.push_str("Групповые:\n");
+        for sub in &subs {
+            if sub.tp.is_personal() {
+                continue;
+            }
             msg.push_str(&render_sub(sub));
         }
-    } else if user.balance == 0 && user.reserved_balance == 0 {
-        msg.push_str("*нет абонементов*🥺\n");
-    } else {
-        msg.push_str(&format!(
-            "🎟_тестовый_\nОсталось занятий:_{}_\n",
-            user.balance + user.reserved_balance
-        ));
+        msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
     }
-    msg.push_str("➖➖➖➖➖➖➖➖➖➖");
-}
 
-fn render_balance_info(msg: &mut String, user: &User, sys_info: bool) {
+    if has_personal {
+        msg.push_str("Персональные:\n");
+
+        for sub in &subs {
+            if !sub.tp.is_personal() {
+                continue;
+            }
+            msg.push_str(&render_sub(sub));
+        }
+    }
+    if subs.is_empty() {
+        msg.push_str("*нет абонементов*🥺\n");
+    }
     msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
-    let sys_info = if sys_info {
-        format!("\n*Резерв : _{}_ занятий*", user.reserved_balance)
-    } else {
-        "".to_owned()
-    };
-    msg.push_str(&format!(
-        "*Баланс : _{}_ занятий*{}\n",
-        user.balance, sys_info
-    ));
 }
 
 pub fn user_base_info(user: &User) -> String {

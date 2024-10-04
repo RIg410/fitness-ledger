@@ -249,7 +249,7 @@ impl StageYesNo<State> for Confirm {
         };
         ctx.ledger
             .users
-            .make_user_instructor(&mut ctx.session, user.tg_id, desc.clone(), rate.clone())
+            .make_user_couch(&mut ctx.session, user.tg_id, desc.clone(), rate.clone())
             .await?;
         ctx.send_notification("Инструктор успешно создан 🎉")
             .await?;

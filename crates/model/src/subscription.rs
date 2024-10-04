@@ -55,17 +55,23 @@ impl Subscription {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[non_exhaustive]
 pub struct UserSubscription {
+    #[serde(default)]
+    pub id: ObjectId,
     pub subscription_id: ObjectId,
     pub name: String,
-    pub items: u32,
+    items: u32,
     #[serde(default = "default_days")]
     pub days: u32,
     #[serde(default)]
     pub status: Status,
     #[serde(default)]
-    pub price: Decimal,
+    price: Decimal,
     #[serde(default)]
-    pub subscription_type: SubscriptionType,
+    pub tp: SubscriptionType,
+    #[serde(default)]
+    pub balance: u32,
+    #[serde(default)]
+    pub locked_balance: u32,
 }
 
 impl UserSubscription {
@@ -88,6 +94,51 @@ impl UserSubscription {
             start_date: sign_up_date,
         };
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.balance == 0 && self.locked_balance == 0
+    }
+
+    pub fn item_price(&self) -> Decimal {
+        if self.items == 0 {
+            Decimal::zero()
+        } else {
+            self.price / Decimal::from(self.items)
+        }
+    }
+
+    pub fn lock_balance(&mut self, sign_up_date: DateTime<Utc>) -> bool {
+        if self.balance == 0 {
+            return false;
+        }
+
+        if !self.is_active() {
+            self.activate(sign_up_date);
+        }
+
+        self.balance -= 1;
+        self.locked_balance += 1;
+        true
+    }
+
+    pub fn unlock_balance(&mut self) -> bool {
+        if self.locked_balance == 0 {
+            return false;
+        }
+
+        self.balance += 1;
+        self.locked_balance -= 1;
+        true
+    }
+
+    pub fn change_locked_balance(&mut self) -> bool {
+        if self.locked_balance == 0 {
+            return false;
+        }
+
+        self.locked_balance -= 1;
+        true
+    }
 }
 
 impl From<Subscription> for UserSubscription {
@@ -99,7 +150,10 @@ impl From<Subscription> for UserSubscription {
             days: value.expiration_days,
             status: Status::NotActive,
             price: value.price,
-            subscription_type: value.subscription_type,
+            tp: value.subscription_type,
+            balance: value.items,
+            locked_balance: 0,
+            id: ObjectId::new(),
         }
     }
 }

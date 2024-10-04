@@ -118,10 +118,25 @@ impl TrainingView {
             return Ok(Jmp::Stay);
         }
 
-        if ctx.me.balance < 1 {
-            ctx.send_msg("Недостаточно средств на балансе🥺").await?;
+        if training.is_full() {
+            ctx.send_msg("Мест нет🥺").await?;
             return Ok(Jmp::Stay);
         }
+
+        if let Some(sub) = ctx
+            .me
+            .find_subscription(model::user::FindFor::Lock, &training)
+        {
+            if sub.locked_balance < 1 {
+                ctx.send_msg("Недостаточно заблокированных занятий🥺")
+                    .await?;
+                return Ok(Jmp::Stay);
+            }
+        } else {
+            ctx.send_msg("Нет подходящего абонемента🥺").await?;
+            return Ok(Jmp::Stay);
+        }
+
         if ctx.me.freeze.is_some() {
             ctx.send_msg("Ваш абонемент заморожен🥶").await?;
             return Ok(Jmp::Stay);

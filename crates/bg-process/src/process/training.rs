@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use eyre::{eyre, Error, Result};
 use log::{error, info};
 use model::{
-    decimal::Decimal,
     session::Session,
     training::{Statistics, Training, TrainingStatus},
 };
@@ -65,30 +64,24 @@ impl TriningBg {
         let mut statistic = Statistics::default();
 
         for client in &training.clients {
-            let user = self
+            let mut user = self
                 .ledger
                 .users
                 .get(session, *client)
                 .await?
                 .ok_or_else(|| eyre!("User not found"))?;
-            if user.reserved_balance == 0 {
-                return Err(eyre!("Not enough reserved balance:{}", user.tg_id));
-            }
-            if let Some(active) = user.subscriptions.iter().find(|s| s.is_active()) {
-                if active.price.is_zero() {
-                    statistic.earned += Decimal::int(450);
-                } else {
-                    statistic.earned += active.price / Decimal::int(active.items as i64);
+            if let Some(sub) = user.find_subscription(model::user::FindFor::Charge, &training) {
+                if !sub.change_locked_balance() {
+                    return Err(eyre!("Not enough balance:{}", user.id));
                 }
+                statistic.earned += sub.item_price();
             } else {
-                statistic.earned += Decimal::int(450);
+                return Err(eyre!("Subscription not found for user:{}", user.id));
             }
-
-            self.ledger
-                .users
-                .charge_reserved_balance(session, user.tg_id, 1)
-                .await?;
+            user.subscriptions.retain(|s| !s.is_empty());
+            self.ledger.users.update(session, &user).await?;
         }
+
         let mut couch = self.ledger.get_user(session, training.instructor).await?;
         if let Some(couch_info) = couch.couch.as_mut() {
             if let Some(reward) = couch_info.collect_training_rewards(&training) {
@@ -116,20 +109,21 @@ impl TriningBg {
     async fn process_canceled(&self, session: &mut Session, training: Training) -> Result<()> {
         info!("Finalize canceled training:{:?}", training);
         for client in &training.clients {
-            let user = self
+            let mut user = self
                 .ledger
                 .users
                 .get(session, *client)
                 .await?
                 .ok_or_else(|| eyre!("User not found"))?;
-            if user.reserved_balance == 0 {
-                return Err(eyre!("Not enough reserved balance:{}", user.tg_id));
+            if let Some(sub) = user.find_subscription(model::user::FindFor::Unlock, &training) {
+                if !sub.change_locked_balance() {
+                    return Err(eyre!("Not enough locked balance:{}", user.id));
+                }
+            } else {
+                return Err(eyre!("Subscription not found for user:{}", user.id));
             }
 
-            self.ledger
-                .users
-                .unblock_balance(session, user.tg_id, 1)
-                .await?;
+            self.ledger.users.update(session, &user).await?;
         }
         self.ledger
             .calendar

@@ -2,7 +2,11 @@ use core::fmt;
 use std::fmt::{Display, Formatter};
 
 use super::rights::Rights;
-use crate::{couch::CouchInfo, subscription::UserSubscription};
+use crate::{
+    couch::CouchInfo,
+    subscription::{self, UserSubscription},
+    training::Training,
+};
 use chrono::{DateTime, Local, TimeZone as _, Utc};
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
@@ -17,9 +21,6 @@ pub struct User {
     pub rights: Rights,
     pub phone: String,
     pub birthday: Option<DateTime<Local>>,
-    pub balance: u32,
-    #[serde(default)]
-    pub reserved_balance: u32,
     #[serde(default = "default_is_active")]
     pub is_active: bool,
     #[serde(default)]
@@ -60,9 +61,7 @@ impl User {
             rights: Rights::customer(),
             phone: "".to_owned(),
             birthday: None,
-            balance: 0,
             is_active: true,
-            reserved_balance: 0,
             version: 0,
             subscriptions: vec![],
             freeze_days: 0,
@@ -77,6 +76,41 @@ impl User {
     pub fn is_couch(&self) -> bool {
         self.couch.is_some()
     }
+
+    pub fn find_subscription(
+        &mut self,
+        reason: FindFor,
+        training: &Training,
+    ) -> Option<&mut UserSubscription> {
+        self.subscriptions.sort_by(|a, b| a.status.cmp(&b.status));
+        self.subscriptions
+            .iter_mut()
+            .filter(|s| match s.tp {
+                subscription::SubscriptionType::Group {} => !training.is_personal,
+                subscription::SubscriptionType::Personal { couch_filter } => {
+                    if training.is_personal {
+                        if let Some(couch) = couch_filter {
+                            training.instructor == couch
+                        } else {
+                            true
+                        }
+                    } else {
+                        false
+                    }
+                }
+            })
+            .find(|s| match reason {
+                FindFor::Lock => s.balance > 0,
+                FindFor::Charge => s.locked_balance > 0,
+                FindFor::Unlock => s.locked_balance > 0,
+            })
+    }
+}
+
+pub enum FindFor {
+    Lock,
+    Charge,
+    Unlock,
 }
 
 fn default_is_active() -> bool {

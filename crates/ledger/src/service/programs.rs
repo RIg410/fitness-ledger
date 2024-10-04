@@ -26,6 +26,7 @@ impl Programs {
         description: String,
         duration_min: u32,
         capacity: u32,
+        is_personal: bool,
     ) -> Result<(), Error> {
         let proto = Program {
             id: ObjectId::new(),
@@ -34,6 +35,7 @@ impl Programs {
             duration_min,
             capacity,
             version: 0,
+            is_personal,
         };
         let training = self.get_by_name(session, &proto.name).await?;
         if training.is_some() {

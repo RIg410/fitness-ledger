@@ -11,6 +11,8 @@ pub struct Program {
     pub capacity: u32,
     #[serde(default)]
     pub version: u64,
+    #[serde(default)]
+    pub is_personal: bool,
 }
 
 impl Default for Program {
@@ -22,6 +24,7 @@ impl Default for Program {
             duration_min: 0,
             capacity: 0,
             version: 0,
+            is_personal: false,
         }
     }
 }

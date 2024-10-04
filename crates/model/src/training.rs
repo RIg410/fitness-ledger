@@ -34,6 +34,8 @@ pub struct Training {
     pub notified: Notified,
     #[serde(default)]
     pub keep_open: bool,
+    #[serde(default)]
+    pub is_personal: bool,
 }
 
 impl Training {
@@ -46,6 +48,7 @@ impl Training {
         instructor: ObjectId,
         capacity: u32,
         is_one_time: bool,
+        is_personal: bool,
     ) -> Training {
         Training {
             id: ObjectId::new(),
@@ -63,6 +66,7 @@ impl Training {
             statistics: None,
             notified: Default::default(),
             keep_open: false,
+            is_personal,
         }
     }
 
@@ -88,6 +92,7 @@ impl Training {
             statistics: None,
             notified: Default::default(),
             keep_open: false,
+            is_personal: program.is_personal,
         }
     }
 
@@ -116,6 +121,7 @@ impl Training {
             statistics: None,
             notified: Default::default(),
             keep_open: false,
+            is_personal: training.is_personal,
         }
     }
 

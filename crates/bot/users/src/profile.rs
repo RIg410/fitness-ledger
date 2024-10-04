@@ -42,47 +42,6 @@ impl UserProfile {
         Ok(Jmp::Stay)
     }
 
-    async fn change_balance(&mut self, ctx: &mut Context, amount: i32) -> Result<Jmp, eyre::Error> {
-        ctx.ensure(Rule::ChangeBalance)?;
-        let user = ctx
-            .ledger
-            .users
-            .get(&mut ctx.session, self.tg_id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("User not found"))?;
-
-        if amount < 0 && user.balance < amount.unsigned_abs() {
-            return Err(eyre::eyre!("Not enough balance"));
-        }
-
-        ctx.ledger
-            .users
-            .change_balance(&mut ctx.session, user.tg_id, amount)
-            .await?;
-        ctx.reload_user().await?;
-        Ok(Jmp::Stay)
-    }
-
-    async fn change_reserved_balance(
-        &mut self,
-        ctx: &mut Context,
-        amount: i32,
-    ) -> Result<Jmp, eyre::Error> {
-        ctx.ensure(Rule::ChangeBalance)?;
-        let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
-
-        if amount < 0 && user.reserved_balance < amount.unsigned_abs() {
-            return Err(eyre::eyre!("Not enough reserved balance"));
-        }
-
-        ctx.ledger
-            .users
-            .change_reserved_balance(&mut ctx.session, user.tg_id, amount)
-            .await?;
-        ctx.reload_user().await?;
-        Ok(Jmp::Stay)
-    }
-
     async fn freeze_user(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
         if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
             return Err(eyre::eyre!("User has no rights to perform this action"));
@@ -170,10 +129,6 @@ impl View for UserProfile {
             Callback::EditFio => self.set_fio(ctx).await,
             Callback::EditRights => self.edit_rights(ctx).await,
             Callback::Freeze => self.freeze_user(ctx).await,
-            Callback::ChangeBalance(amount) => self.change_balance(ctx, amount).await,
-            Callback::ChangeReservedBalance(amount) => {
-                self.change_reserved_balance(ctx, amount).await
-            }
             Callback::SetBirthday => self.set_birthday(ctx).await,
             Callback::EditPhone => self.set_phone(ctx).await,
             Callback::TrainingList => self.training_list(ctx).await,
@@ -198,17 +153,6 @@ async fn render_user_profile<ID: Into<UserIdent> + Copy>(
         && user.freeze_days != 0
     {
         keymap = keymap.append_row(Callback::Freeze.btn_row("Заморозить ❄"));
-    }
-
-    if ctx.has_right(Rule::ChangeBalance) {
-        keymap = keymap.append_row(vec![
-            Callback::ChangeBalance(-1).button("Списать баланс 💸"),
-            Callback::ChangeBalance(1).button("Пополнить баланс 💰"),
-        ]);
-        keymap = keymap.append_row(vec![
-            Callback::ChangeReservedBalance(-1).button("Списать зарезервированный баланс 💸"),
-            Callback::ChangeReservedBalance(1).button("Пополнить зарезервированный баланс 💰"),
-        ]);
     }
 
     if user.is_couch() {
@@ -255,7 +199,5 @@ pub enum Callback {
     TrainingList,
     HistoryList,
     RewardsList,
-    ChangeBalance(i32),
-    ChangeReservedBalance(i32),
     Notification,
 }
