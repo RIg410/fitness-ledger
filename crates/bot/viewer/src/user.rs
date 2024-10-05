@@ -91,6 +91,7 @@ fn render_subscriptions(msg: &mut String, user: &User) {
             if sub.tp.is_personal() {
                 continue;
             }
+            msg.push_str("\n");
             msg.push_str(&render_sub(sub));
         }
         msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
@@ -103,6 +104,7 @@ fn render_subscriptions(msg: &mut String, user: &User) {
             if !sub.tp.is_personal() {
                 continue;
             }
+            msg.push_str("\n");
             msg.push_str(&render_sub(sub));
         }
     }

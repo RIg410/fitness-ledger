@@ -14,6 +14,7 @@ use thiserror::Error;
 use tx_macro::tx;
 
 pub mod couch;
+pub mod subscription;
 
 #[derive(Clone)]
 pub struct Users {
@@ -29,37 +30,6 @@ impl Users {
             logs,
             presell,
         }
-    }
-
-    #[tx]
-    pub async fn expire_subscription(&self, session: &mut Session, id: ObjectId) -> Result<()> {
-        let mut user = self
-            .store
-            .get(session, id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-
-        let now = Utc::now();
-        let (expired, actual) = user.subscriptions.into_iter().fold(
-            (Vec::new(), Vec::new()),
-            |(mut expired, mut actual), sub| {
-                if sub.is_expired(now) {
-                    expired.push(sub);
-                } else {
-                    actual.push(sub);
-                }
-                (expired, actual)
-            },
-        );
-
-        for subscription in expired {
-            self.logs
-                .expire_subscription(session, id, subscription)
-                .await?;
-        }
-        user.subscriptions = actual;
-        self.store.update(session, &user).await?;
-        Ok(())
     }
 
     #[tx]
@@ -106,6 +76,8 @@ impl Users {
             initiated: false,
             couch: None,
             settings: Default::default(),
+            balance: 0,
+            reserved_balance: 0,
         };
         self.store.insert(session, user).await?;
         self.logs.create_user(session, name, phone).await?;

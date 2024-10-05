@@ -78,6 +78,7 @@ pub enum Rule {
     EditUserRights,
     BlockUser,
     EditUserInfo,
+    EditUserSubscription,
     FreezeUsers,
     ChangeBalance,
 

@@ -1,4 +1,7 @@
-use crate::{history::HistoryList, notification::NotificationView, rewards::RewardsList};
+use crate::{
+    history::HistoryList, notification::NotificationView, rewards::RewardsList,
+    subscriptions::SubscriptionsList,
+};
 
 use super::{
     freeze::FreezeProfile, rights::UserRightsView, set_birthday::SetBirthday, set_fio::SetFio,
@@ -135,6 +138,10 @@ impl View for UserProfile {
             Callback::HistoryList => self.history_list(ctx).await,
             Callback::RewardsList => self.rewards_list(ctx).await,
             Callback::Notification => Ok(NotificationView::new(self.tg_id).into()),
+            Callback::SubscriptionsList => {
+                ctx.ensure(Rule::EditUserSubscription)?;
+                Ok(SubscriptionsList::new(self.tg_id).into())
+            }
         }
     }
 }
@@ -176,6 +183,11 @@ async fn render_user_profile<ID: Into<UserIdent> + Copy>(
         keymap = keymap.append_row(Callback::EditFio.btn_row("✍️ Редактировать ФИО"));
         keymap = keymap.append_row(Callback::EditPhone.btn_row("✍️ Редактировать телефон"));
     }
+
+    if ctx.has_right(Rule::EditUserSubscription) {
+        keymap = keymap.append_row(Callback::SubscriptionsList.btn_row("Абонементы 📝"));
+    }
+
     if ctx.has_right(Rule::EditUserRights) {
         keymap = keymap.append_row(Callback::EditRights.btn_row("Права 🔒"));
     }
@@ -200,4 +212,5 @@ pub enum Callback {
     HistoryList,
     RewardsList,
     Notification,
+    SubscriptionsList,
 }

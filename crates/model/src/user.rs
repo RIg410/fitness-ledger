@@ -1,10 +1,13 @@
 use core::fmt;
-use std::fmt::{Display, Formatter};
+use std::{
+    cmp::Ordering,
+    fmt::{Display, Formatter},
+};
 
 use super::rights::Rights;
 use crate::{
     couch::CouchInfo,
-    subscription::{self, UserSubscription},
+    subscription::{self, Status, UserSubscription},
     training::Training,
 };
 use chrono::{DateTime, Local, TimeZone as _, Utc};
@@ -40,6 +43,10 @@ pub struct User {
     pub couch: Option<CouchInfo>,
     #[serde(default)]
     pub settings: UserSettings,
+
+    pub balance: u32,
+    #[serde(default)]
+    pub reserved_balance: u32,
 }
 
 fn default_created_at() -> DateTime<Utc> {
@@ -70,6 +77,8 @@ impl User {
             initiated: false,
             couch: None,
             settings: UserSettings::default(),
+            balance: 0,
+            reserved_balance: 0,
         }
     }
 
@@ -82,7 +91,13 @@ impl User {
         reason: FindFor,
         training: &Training,
     ) -> Option<&mut UserSubscription> {
-        self.subscriptions.sort_by(|a, b| a.status.cmp(&b.status));
+        self.subscriptions
+            .sort_by(|a, b| match (&a.status, &b.status) {
+                (Status::Active { start_date: a }, Status::Active { start_date: b }) => a.cmp(b),
+                (Status::Active { .. }, Status::NotActive) => Ordering::Greater,
+                (Status::NotActive, Status::Active { .. }) => Ordering::Less,
+                (Status::NotActive, Status::NotActive) => Ordering::Equal,
+            });
         self.subscriptions
             .iter_mut()
             .filter(|s| match s.tp {

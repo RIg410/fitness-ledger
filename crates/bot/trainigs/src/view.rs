@@ -127,9 +127,8 @@ impl TrainingView {
             .me
             .find_subscription(model::user::FindFor::Lock, &training)
         {
-            if sub.locked_balance < 1 {
-                ctx.send_msg("Недостаточно заблокированных занятий🥺")
-                    .await?;
+            if sub.balance < 1 {
+                ctx.send_msg("В абонементе нет занятий🥺").await?;
                 return Ok(Jmp::Stay);
             }
         } else {

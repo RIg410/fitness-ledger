@@ -179,7 +179,7 @@ impl Ledger {
             .find_subscription(FindFor::Lock, &training)
             .ok_or_else(|| SignUpError::NotEnoughBalance)?;
 
-        if subscription.lock_balance(training.start_at) {
+        if !subscription.lock_balance(training.start_at) {
             return Err(SignUpError::NotEnoughBalance);
         }
 
@@ -245,7 +245,6 @@ impl Ledger {
         let sub = user
             .find_subscription(FindFor::Unlock, training)
             .ok_or_else(|| SignOutError::NotEnoughReservedBalance)?;
-        sub.unlock_balance();
 
         if !sub.unlock_balance() {
             return Err(SignOutError::NotEnoughReservedBalance);
