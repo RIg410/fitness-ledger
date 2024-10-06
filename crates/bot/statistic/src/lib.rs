@@ -114,7 +114,7 @@ async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Resu
         msg.push_str("\n\nОткуда пришли:");
         for (come_from, stat) in &stat.come_from {
             msg.push_str(&format!(
-                "\n\n📚{}:\nВсего продано: *{}* на сумму *{}*\nкупили тестовое:*{}*\nкупили абонемент:*{}*",
+                "\n\n📚{}:\nВсего пользователей: *{}* на сумму *{}*\nкупили тестовое:*{}*\nкупили абонемент:*{}*",
                 fmt_come_from(ctx, come_from).await?,
                 stat.total_users,
                 escape(&stat.sum.to_string()),
