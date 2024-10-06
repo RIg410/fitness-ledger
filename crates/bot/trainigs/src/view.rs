@@ -48,34 +48,6 @@ impl TrainingView {
         Ok(Jmp::Stay)
     }
 
-    async fn cancel_training(&mut self, ctx: &mut Context) -> Result<Jmp> {
-        ctx.ensure(Rule::CancelTraining)?;
-        let training = ctx
-            .ledger
-            .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let to_notify = ctx
-            .ledger
-            .cancel_training(&mut ctx.session, &training)
-            .await?;
-        let msg = format!(
-            "Тренировка '{}' в {} *отменена*\\.",
-            escape(&training.name),
-            fmt_dt(&training.get_slot().start_at())
-        );
-        for client in to_notify {
-            if let Ok(user) = ctx.ledger.get_user(&mut ctx.session, client).await {
-                ctx.bot
-                    .send_notification_to(ChatId(user.tg_id), &msg)
-                    .await?;
-            }
-        }
-
-        Ok(Jmp::Stay)
-    }
-
     async fn delete_training(&mut self, ctx: &mut Context, all: bool) -> Result<Jmp> {
         ctx.ensure(Rule::EditSchedule)?;
         let training = ctx
@@ -213,7 +185,7 @@ impl View for TrainingView {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::CouchInfo => self.couch_info(ctx).await,
-            Callback::Cancel => self.cancel_training(ctx).await,
+            Callback::Cancel => return Ok(Jmp::Next(ConfirmCancelTraining::new(self.id).into())),
             Callback::Delete(all) => self.delete_training(ctx, all).await,
             Callback::UnCancel => self.restore_training(ctx).await,
             Callback::SignUp => self.sign_up(ctx).await,
@@ -359,4 +331,84 @@ fn status(status: TrainingStatus, is_full: bool) -> &'static str {
         TrainingStatus::Cancelled => "⛔Отменена",
         TrainingStatus::Finished => "✔️Завершена",
     }
+}
+
+pub struct ConfirmCancelTraining {
+    id: DateTime<Local>,
+}
+
+impl ConfirmCancelTraining {
+    pub fn new(id: DateTime<Local>) -> Self {
+        Self { id }
+    }
+
+    async fn cancel_training(&mut self, ctx: &mut Context) -> Result<Jmp> {
+        ctx.ensure(Rule::CancelTraining)?;
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        let to_notify = ctx
+            .ledger
+            .cancel_training(&mut ctx.session, &training)
+            .await?;
+        let msg = format!(
+            "Тренировка '{}' в {} *отменена*\\.",
+            escape(&training.name),
+            fmt_dt(&training.get_slot().start_at())
+        );
+        for client in to_notify {
+            if let Ok(user) = ctx.ledger.get_user(&mut ctx.session, client).await {
+                ctx.bot
+                    .send_notification_to(ChatId(user.tg_id), &msg)
+                    .await?;
+            }
+        }
+
+        Ok(Jmp::Stay)
+    }
+}
+
+#[async_trait]
+impl View for ConfirmCancelTraining {
+    fn name(&self) -> &'static str {
+        "ConfirmCancelTraining"
+    }
+
+    async fn show(&mut self, ctx: &mut Context) -> Result<()> {
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        let msg = format!(
+            "Вы уверены, что хотите отменить тренировку '{}' в {}?",
+            escape(&training.name),
+            fmt_dt(&training.get_slot().start_at())
+        );
+        let mut keymap = InlineKeyboardMarkup::default();
+        keymap = keymap.append_row(vec![
+            CancelCallback::Cancel.button("✅ Да"),
+            CancelCallback::Stay.button("❌ нет"),
+        ]);
+        ctx.edit_origin(&msg, keymap).await?;
+        Ok(())
+    }
+
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
+        match calldata!(data) {
+            CancelCallback::Cancel => self.cancel_training(ctx).await?,
+            CancelCallback::Stay => Jmp::Stay,
+        };
+        Ok(Jmp::Back)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+enum CancelCallback {
+    Cancel,
+    Stay,
 }
