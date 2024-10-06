@@ -120,6 +120,44 @@ impl User {
                 FindFor::Unlock => s.locked_balance > 0,
             })
     }
+
+    pub fn group_balance(&self) -> Balance {
+        let balance = self
+            .subscriptions
+            .iter()
+            .filter(|s| !s.tp.is_personal())
+            .map(|s| s.balance)
+            .sum();
+        let locked_balance = self
+            .subscriptions
+            .iter()
+            .filter(|s| !s.tp.is_personal())
+            .map(|s| s.locked_balance)
+            .sum();
+        Balance {
+            balance,
+            locked_balance,
+        }
+    }
+
+    pub fn personal_balance(&self) -> Balance {
+        let balance = self
+            .subscriptions
+            .iter()
+            .filter(|s| s.tp.is_personal())
+            .map(|s| s.balance)
+            .sum();
+        let locked_balance = self
+            .subscriptions
+            .iter()
+            .filter(|s| s.tp.is_personal())
+            .map(|s| s.locked_balance)
+            .sum();
+        Balance {
+            balance,
+            locked_balance,
+        }
+    }
 }
 
 pub enum FindFor {
@@ -221,6 +259,17 @@ impl Default for UserSettings {
                 notify_by_n_hours: Some(1),
             },
         }
+    }
+}
+
+pub struct Balance {
+    pub balance: u32,
+    pub locked_balance: u32,
+}
+
+impl Balance {
+    pub fn is_empty(&self) -> bool {
+        self.balance == 0 && self.locked_balance == 0
     }
 }
 

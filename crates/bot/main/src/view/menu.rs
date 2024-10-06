@@ -13,7 +13,10 @@ use bot_users::{profile::UserProfile, Query, UsersView};
 use eyre::{bail, Ok, Result};
 use model::rights::Rule;
 use strum::EnumIter;
-use teloxide::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message};
+use teloxide::{
+    types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    utils::markdown::escape,
+};
 
 use crate::system::SystemView;
 
@@ -46,7 +49,47 @@ impl MainMenuView {
             keymap = keymap.append_row(vec![MainMenuItem::System.into()]);
         }
 
-        ctx.edit_origin("🏠Меню 🤸🏼", keymap).await?;
+        let group_balance = ctx.me.group_balance();
+        let personal_balance = ctx.me.personal_balance();
+
+        let mut txt = "🏠 *Меню* 🤸🏼\n".to_string();
+
+        if ctx.me.is_couch() {
+            txt.push_str(&format!(
+                "Накопленное вознаграждение: *{}*",
+                escape(&ctx.me.couch.as_ref().unwrap().reward.to_string())
+            ));
+        } else {
+            if group_balance.is_empty() {
+                txt.push_str("👥 Групповые занятия: 🅾️\n");
+            } else {
+                let lock = if group_balance.locked_balance == 0 {
+                    ""
+                } else {
+                    &format!("\\(*{}* резерв\\)", group_balance.locked_balance)
+                };
+
+                txt.push_str(&format!(
+                    "\n👥 Групповые занятия: *{}*{}",
+                    group_balance.balance, lock
+                ));
+            }
+
+            if !personal_balance.is_empty() {
+                let lock: &str = if personal_balance.locked_balance == 0 {
+                    ""
+                } else {
+                    &format!("\\(*{}* резерв\\)", personal_balance.locked_balance)
+                };
+
+                txt.push_str(&format!(
+                    "\n🧑 Индивидуальные занятия: *{}*{}",
+                    personal_balance.balance, lock
+                ));
+            }
+        }
+
+        ctx.edit_origin(&txt, keymap).await?;
         Ok(())
     }
 }
