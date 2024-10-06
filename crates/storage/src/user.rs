@@ -8,7 +8,7 @@ use model::rights;
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
 use model::subscription::{Status, Subscription, UserSubscription};
-use model::user::{Freeze, Notification, User, UserIdent};
+use model::user::{Freeze, Notification, User, UserIdent, UserName};
 use mongodb::bson::to_bson;
 use mongodb::options::UpdateOptions;
 use mongodb::{
@@ -81,6 +81,43 @@ impl UserStore {
         Ok(())
     }
 
+    pub async fn set_tg_id(&self, session: &mut Session, id: ObjectId, tg_id: i64) -> Result<()> {
+        info!("Setting tg_id for user {}: {}", tg_id, id);
+        let result = self
+            .users
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$set": { "tg_id": tg_id }, "$inc": { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        if result.modified_count == 0 {
+            return Err(Error::msg("User not found"));
+        }
+        Ok(())
+    }
+
+    pub async fn set_name(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        name: UserName,
+    ) -> Result<()> {
+        info!("Setting name for user {}: {}", id, name);
+        let result = self
+            .users
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$set": { "name": to_document(&name)? }, "$inc": { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+        if result.modified_count == 0 {
+            return Err(Error::msg("User not found"));
+        }
+        Ok(())
+    }
+
     pub async fn count(&self, session: &mut Session) -> Result<u64> {
         Ok(self
             .users
@@ -123,20 +160,21 @@ impl UserStore {
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn add_subscription(
+    pub async fn add_subscription<ID: Into<UserIdent>>(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ID,
         sub: Subscription,
     ) -> Result<()> {
-        info!("Add subscription for user {}: {:?}", tg_id, sub);
+        let id = id.into();
+        info!("Add subscription for user {}: {:?}", id, sub);
         let freeze_days = sub.freeze_days as i32;
         let amount = sub.items as i32;
 
         let result = self
             .users
             .update_one(
-                doc! { "tg_id": tg_id },
+                self.ident_filter(id),
                 doc! {
                 "$inc": {
                     "balance": amount,
