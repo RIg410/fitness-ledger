@@ -149,6 +149,8 @@ impl SubscriptionsStatisticsCollector {
                 })
                 .collect(),
             come_from,
+            people_without_subs: user_stat.users_without_subscriptions,
+            total_users: user_stat.users_count as u32,
         }
     }
 }
@@ -178,6 +180,8 @@ pub struct SubscriptionStatistics {
     pub users_buy_test_sub_and_stay: u32,
     pub unresolved_presells: u32,
     pub people_buys_only_test_sub: Vec<ObjectId>,
+    pub people_without_subs: Vec<ObjectId>,
+    pub total_users: u32,
     pub come_from: HashMap<ComeFrom, ComeFromStat>,
 }
 

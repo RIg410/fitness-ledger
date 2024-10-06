@@ -124,6 +124,26 @@ async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Resu
         }
     }
 
+    if stat.people_without_subs.len() > 0 {
+        msg.push_str(&format!(
+            "\n\nКлиенты без абонементов {}:",
+            stat.people_without_subs.len()
+        ));
+        for id in &stat.people_without_subs {
+            let user = ctx.ledger.users.get(&mut ctx.session, *id).await?;
+            if let Some(user) = user {
+                msg.push_str(&format!("\n👤{}", fmt_phone(&user.phone)));
+            } else {
+                msg.push_str(&format!("\n👤{}", id));
+            }
+        }
+    }
+
+    msg.push_str(&format!("\n👥Всего клиентов: *{}*", stat.total_users));
+    msg.push_str(&format!(
+        "\nКлиентов с абонементами: *{}*",
+        stat.total_users as usize - stat.people_without_subs.len()
+    ));
     ctx.send_notification(&msg).await?;
     Ok(())
 }

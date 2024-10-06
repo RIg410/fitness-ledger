@@ -25,6 +25,8 @@ impl Default for ComeFrom {
 
 pub struct UsersStat {
     pub come_from: HashMap<ComeFrom, Vec<ObjectId>>,
+    pub users_count: u64,
+    pub users_without_subscriptions: Vec<ObjectId>,
 }
 
 impl UsersStat {
@@ -33,6 +35,10 @@ impl UsersStat {
             .entry(user.come_from)
             .or_insert_with(Vec::new)
             .push(user.id.clone());
+        self.users_count += 1;
+        if !user.subscriptions.is_empty() {
+            self.users_without_subscriptions.push(user.id.clone());
+        }
     }
 }
 
@@ -40,6 +46,8 @@ impl Default for UsersStat {
     fn default() -> Self {
         Self {
             come_from: Default::default(),
+            users_count: 0,
+            users_without_subscriptions: Default::default(),
         }
     }
 }
