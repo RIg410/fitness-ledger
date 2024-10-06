@@ -63,31 +63,6 @@ impl Treasury {
         Ok(())
     }
 
-    pub(crate) async fn presell(
-        &self,
-        session: &mut Session,
-        phone: String,
-        sell: Sell,
-    ) -> Result<(), Error> {
-        let debit = sell.debit();
-
-        let sub = SellSubscription {
-            buyer_id: UserId::Phone(phone),
-            info: sell.into(),
-        };
-
-        let event = TreasuryEvent {
-            id: ObjectId::new(),
-            date_time: Utc::now(),
-            event: Event::SellSubscription(sub),
-            debit,
-            credit: Decimal::zero(),
-            actor: session.actor(),
-        };
-        self.store.insert(session, event).await?;
-        Ok(())
-    }
-
     #[tx]
     pub async fn payment(
         &self,

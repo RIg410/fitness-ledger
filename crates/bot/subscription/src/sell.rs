@@ -1,28 +1,30 @@
+use crate::SubscriptionView;
+
 use super::{confirm::ConfirmSell, View};
 use async_trait::async_trait;
 use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
-use bot_viewer::{fmt_phone, user::fmt_user_type};
-use eyre::{eyre, Error, Result};
-use model::{
-    rights::Rule,
-    user::{sanitize_phone, User},
-};
+use bot_viewer::{fmt_phone, user::fmt_come_from};
+use eyre::Result;
+use model::{rights::Rule, statistics::marketing::ComeFrom, user::sanitize_phone};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::types::{InlineKeyboardMarkup, Message};
+use teloxide::{
+    types::{InlineKeyboardMarkup, Message},
+    utils::markdown::escape,
+};
 
 pub const LIMIT: u64 = 7;
 
 pub struct SellView {
     sell: ObjectId,
-    state: State,
+    state: SellViewState,
 }
 
 impl SellView {
     pub fn new(sell: ObjectId) -> SellView {
         SellView {
             sell,
-            state: State::SelectUser,
+            state: SellViewState::SelectUser,
         }
     }
 }
@@ -38,24 +40,22 @@ impl View for SellView {
         let mut keymap = InlineKeyboardMarkup::default();
 
         match &self.state {
-            State::SelectUser => {
+            SellViewState::SelectUser => {
                 text = "Введите номер телефона пользователя".to_string();
             }
-            State::FindByPhone(phone) => {
+            SellViewState::FindByPhone(phone) => {
                 if ctx
                     .ledger
                     .users
                     .get_by_phone(&mut ctx.session, &phone)
                     .await?
-                    .is_some()
+                    .is_none()
                 {
-                    return Ok(());
-                } else {
                     text = format!(
                         "Пользователь с номером *{}* не найден\\. Создать нового пользователя?",
                         fmt_phone(phone)
                     );
-                    keymap = keymap.append_row(Callback::CreateNewUser.btn_row("Создать"));
+                    keymap = keymap.append_row(SellViewCallback::CreateNewUser.btn_row("Создать"));
                 }
             }
         }
@@ -70,13 +70,24 @@ impl View for SellView {
 
         if query.starts_with("8") {
             let query = "7".to_string() + &query[1..];
-            self.state = State::FindByPhone(sanitize_phone(&query));
+            self.state = SellViewState::FindByPhone(sanitize_phone(&query));
         } else if query.starts_with("+7") {
-            self.state = State::FindByPhone(sanitize_phone(&query));
+            self.state = SellViewState::FindByPhone(sanitize_phone(&query));
         } else {
             ctx.send_msg("Номер телефона должен начинаться с 8 или \\+7")
                 .await?;
             return Ok(Jmp::Stay);
+        }
+
+        if let SellViewState::FindByPhone(phone) = &self.state {
+            if let Some(user) = ctx
+                .ledger
+                .users
+                .get_by_phone(&mut ctx.session, phone)
+                .await?
+            {
+                return Ok(Jmp::Next(ConfirmSell::new(user.tg_id, self.sell).into()));
+            }
         }
 
         Ok(Jmp::Stay)
@@ -85,93 +96,242 @@ impl View for SellView {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         ctx.ensure(Rule::SellSubscription)?;
         match calldata!(data) {
-            Callback::CreateNewUser => Ok(Jmp::Stay),
+            SellViewCallback::CreateNewUser => {
+                if let SellViewState::FindByPhone(phone) = &self.state {
+                    return Ok(Jmp::Next(SetName::new(self.sell, phone.clone()).into()));
+                }
+            }
+        }
+        Ok(Jmp::Stay)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum SellViewCallback {
+    CreateNewUser,
+}
+
+enum SellViewState {
+    SelectUser,
+    FindByPhone(String),
+}
+
+struct SetName {
+    sell: ObjectId,
+    phone: String,
+}
+
+impl SetName {
+    pub fn new(sell: ObjectId, phone: String) -> SetName {
+        SetName { sell, phone }
+    }
+}
+
+#[async_trait]
+impl View for SetName {
+    fn name(&self) -> &'static str {
+        "CreateUser"
+    }
+
+    async fn show(&mut self, ctx: &mut Context) -> Result<()> {
+        ctx.edit_origin(
+            "Введите имя пользователя\\.",
+            InlineKeyboardMarkup::default(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn handle_message(&mut self, ctx: &mut Context, msg: &Message) -> Result<Jmp> {
+        ctx.delete_msg(msg.id).await?;
+        let name = msg.text().unwrap_or_default();
+        if name.is_empty() {
+            ctx.send_msg("Имя не может быть пустым").await?;
+            return Ok(Jmp::Stay);
+        }
+
+        let parts: Vec<_> = name.split(' ').collect();
+        let first_name = parts.get(0).unwrap_or(&"").to_string();
+        let last_name = parts.get(1).map(|s| s.to_string());
+
+        Ok(Jmp::Next(
+            SelectComeFrom::new(self.sell, self.phone.clone(), first_name, last_name).into(),
+        ))
+    }
+}
+
+pub struct SelectComeFrom {
+    sell: ObjectId,
+    phone: String,
+    first_name: String,
+    last_name: Option<String>,
+}
+
+impl SelectComeFrom {
+    pub fn new(
+        sell: ObjectId,
+        phone: String,
+        first_name: String,
+        last_name: Option<String>,
+    ) -> SelectComeFrom {
+        SelectComeFrom {
+            sell,
+            phone,
+            first_name,
+            last_name,
         }
     }
 }
 
-// async fn render(
-//     sell: &Sell,
-//     ctx: &mut Context,
-//     query: &str,
-// ) -> Result<(String, InlineKeyboardMarkup), Error> {
+#[async_trait]
+impl View for SelectComeFrom {
+    fn name(&self) -> &'static str {
+        "SelectFrom"
+    }
 
-//     //     let user = ctx
-//     //         .ledger.users
-//     //         .get_by_phone(&mut ctx.session, query)
-//     //         .await?;
+    async fn show(&mut self, ctx: &mut Context) -> Result<()> {
+        let mut markup = InlineKeyboardMarkup::default();
+        markup = markup.append_row(ComeFromCalldata::Type(ComeFrom::Website {}).btn_row("Сайт"));
+        markup =
+            markup.append_row(ComeFromCalldata::Type(ComeFrom::Instagram {}).btn_row("Instagram"));
+        markup = markup.append_row(ComeFromCalldata::Type(ComeFrom::VK {}).btn_row("VK"));
+        markup = markup
+            .append_row(ComeFromCalldata::Type(ComeFrom::YandexMap {}).btn_row("Яндекс.Карты"));
+        markup = markup
+            .append_row(ComeFromCalldata::Type(ComeFrom::DirectAdds {}).btn_row("Прямая реклама"));
+        markup =
+            markup.append_row(ComeFromCalldata::Type(ComeFrom::VkAdds {}).btn_row("Реклама ВК"));
+        markup = markup.append_row(ComeFromCalldata::Type(ComeFrom::DoubleGIS {}).btn_row("2ГИС"));
+        markup =
+            markup.append_row(ComeFromCalldata::Type(ComeFrom::Unknown {}).btn_row("Неизвестно"));
 
-//     //     let (name, price, items) = match sell {
-//     //         Sell::Sub(id) => {
-//     //             let sub = ctx
-//     //                 .ledger
-//     //                 .subscriptions
-//     //                 .get(&mut ctx.session, *id)
-//     //                 .await?
-//     //                 .ok_or_else(|| eyre!("Subscription {} not found", id))?;
-//     //             (sub.name, sub.price, sub.items)
-//     //         }
-//     //     };
+        ctx.edit_origin("Выберите откуда пришел пользователь:", markup)
+            .await?;
+        Ok(())
+    }
 
-//     //     let msg = format!(
-//     //         "📌 Тариф: _{}_\nКоличество занятий:_{}_\nЦена:_{}_\n\n
-//     // Что бы найти пользователя, введите телефон пользователя\\.\n
-//     // Телефон: _'{}'_",
-//     //         escape(&name),
-//     //         items,
-//     //         price.to_string().replace(".", ","),
-//     //         escape(&fmt_phone(&query)),
-//     //     );
-//     //     let mut keymap = InlineKeyboardMarkup::default();
-
-//     //     for user in &users {
-//     //         keymap = keymap.append_row(vec![make_button(user)]);
-//     //     }
-
-//     //     keymap = keymap.append_row(Callback::PreSell.btn_row("Новый пользователь 🪪"));
-
-//     //     let mut raw = vec![];
-
-//     //     if !raw.is_empty() {
-//     //         keymap = keymap.append_row(raw);
-//     //     }
-
-//     //     Ok((msg, keymap))
-// }
-
-// #[derive(Clone, Copy)]
-// pub enum Sell {
-//     Sub(ObjectId),
-// }
-
-// impl Sell {
-//     pub fn with_id(id: ObjectId) -> Self {
-//         Self::Sub(id)
-//     }
-// }
-
-// fn remove_non_alphanumeric(input: &str) -> String {
-//     input.chars().filter(|c| c.is_alphanumeric()).collect()
-// }
-
-// fn make_button(user: &User) -> InlineKeyboardButton {
-//     InlineKeyboardButton::callback(
-//         format!(
-//             "{}{} {}",
-//             fmt_user_type(user),
-//             user.name.first_name,
-//             user.name.last_name.as_ref().unwrap_or(&"".to_string())
-//         ),
-//         Callback::Select(user.tg_id).to_data(),
-//     )
-// }
-
-#[derive(Debug, Serialize, Deserialize)]
-enum Callback {
-    CreateNewUser,
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
+        ctx.ensure(Rule::SellSubscription)?;
+        match calldata!(data) {
+            ComeFromCalldata::Type(come_from) => Ok(Jmp::Next(
+                CreateUserAndSell::new(
+                    self.sell,
+                    self.phone.clone(),
+                    self.first_name.clone(),
+                    self.last_name.clone(),
+                    come_from,
+                )
+                .into(),
+            )),
+        }
+    }
 }
 
-enum State {
-    SelectUser,
-    FindByPhone(String),
+#[derive(Serialize, Deserialize)]
+enum ComeFromCalldata {
+    Type(ComeFrom),
+}
+
+pub struct CreateUserAndSell {
+    sell: ObjectId,
+    phone: String,
+    first_name: String,
+    last_name: Option<String>,
+    come_from: ComeFrom,
+}
+
+impl CreateUserAndSell {
+    pub fn new(
+        sell: ObjectId,
+        phone: String,
+        first_name: String,
+        last_name: Option<String>,
+        come_from: ComeFrom,
+    ) -> CreateUserAndSell {
+        CreateUserAndSell {
+            sell,
+            phone,
+            first_name,
+            last_name,
+            come_from,
+        }
+    }
+}
+
+#[async_trait]
+impl View for CreateUserAndSell {
+    fn name(&self) -> &'static str {
+        "CreateUserAndSell"
+    }
+
+    async fn show(&mut self, ctx: &mut Context) -> Result<()> {
+        let sub = ctx
+            .ledger
+            .subscriptions
+            .get(&mut ctx.session, self.sell)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Subscription {} not found", self.sell))?;
+
+        let text = format!(
+            "
+ 📌  Продажа
+Тариф: *{}*\nКоличество занятий:*{}*\nЦена:*{}*\n
+Пользователь:
+    Имя:*{}*
+    Фамилия:*{}*
+    Номер:*{}*
+    Источник: *{}*\n\n
+    Все верно? 
+    ",
+            escape(&sub.name),
+            sub.items,
+            sub.price.to_string().replace(".", ","),
+            escape(&self.first_name),
+            escape(&self.last_name.clone().unwrap_or_else(|| "-".to_string())),
+            fmt_phone(&self.phone),
+            fmt_come_from(ctx, &self.come_from).await?
+        );
+
+        let mut keymap = InlineKeyboardMarkup::default();
+        keymap = keymap.append_row(vec![
+            Callback::Sell.button("✅ Да"),
+            Callback::Cancel.button("❌ Отмена"),
+        ]);
+        ctx.edit_origin(&text, keymap).await?;
+        Ok(())
+    }
+
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
+        match calldata!(data) {
+            Callback::Sell => {
+                ctx.ensure(Rule::SellSubscription)?;
+                let result = ctx
+                    .ledger
+                    .presell_subscription(
+                        &mut ctx.session,
+                        self.sell,
+                        self.phone.clone(),
+                        self.first_name.clone(),
+                        self.last_name.clone(),
+                        self.come_from,
+                    )
+                    .await;
+
+                if let Err(err) = result {
+                    Err(err.into())
+                } else {
+                    ctx.send_msg("🤑 Продано").await?;
+                    ctx.reset_origin().await?;
+                    Ok(Jmp::Goto(SubscriptionView.into()))
+                }
+            }
+            Callback::Cancel => Ok(Jmp::Back),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+enum Callback {
+    Sell,
+    Cancel,
 }

@@ -6,7 +6,7 @@ use model::session::Session;
 use model::training::{Training, TrainingStatus};
 use model::treasury::subs::UserId;
 use model::treasury::Sell;
-use model::user::{sanitize_phone, FindFor, User, UserIdent, UserPreSell};
+use model::user::{sanitize_phone, FindFor, User, UserIdent};
 use mongodb::bson::oid::ObjectId;
 use service::backup::Backup;
 use service::calendar::{Calendar, SignOutError};
@@ -255,7 +255,7 @@ impl Ledger {
             .sign_out(session, training.start_at, client)
             .await?;
         self.history
-            .sign_up(
+            .sign_out(
                 session,
                 user.id,
                 training.get_slot().start_at(),
@@ -302,43 +302,36 @@ impl Ledger {
     pub async fn presell_subscription(
         &self,
         session: &mut Session,
-        subscription: ObjectId,
+        sub_id: ObjectId,
         phone: String,
-    ) -> Result<(), SellSubscriptionError> {
+        first_name: String,
+        last_name: Option<String>,
+        come_from: model::statistics::marketing::ComeFrom,
+    ) -> Result<()> {
         let phone = sanitize_phone(&phone);
-        let bayer = self.users.get_by_phone(session, &phone).await?;
-        if bayer.is_some() {
-            error!("User with phone {} already exists", phone);
-            return Err(SellSubscriptionError::InvalidParams);
-        }
+        let buyer = if let Some(bayer) = self.users.get_by_phone(session, &phone).await? {
+            bayer
+        } else {
+            self.users
+                .create_uninit(session, phone, first_name, last_name, come_from)
+                .await?
+        };
 
         let subscription = self
             .subscriptions
-            .get(session, subscription)
+            .get(session, sub_id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
-
         self.history
-            .presell_subscription(session, subscription.clone(), phone.clone())
+            .sell_subscription(session, subscription.clone(), buyer.id)
             .await?;
 
-        if self.presell.get(session, &phone).await?.is_some() {
-            return Err(SellSubscriptionError::SubscriptionAlreadySold);
-        }
-
-        self.presell
-            .add(
-                session,
-                UserPreSell {
-                    id: ObjectId::new(),
-                    subscription: subscription.clone().into(),
-                    phone: phone.clone(),
-                },
-            )
+        self.users
+            .add_subscription(session, buyer.id, subscription.clone())
             .await?;
 
         self.treasury
-            .presell(session, phone, Sell::Sub(subscription))
+            .sell(session, buyer.id, Sell::Sub(subscription))
             .await?;
         Ok(())
     }
@@ -356,9 +349,6 @@ impl Ledger {
         self.calendar
             .edit_capacity(session, program_id, value)
             .await?;
-        // self.history
-        //     .edit_program_capacity(session, program_id, value)
-        //     .await;
         Ok(())
     }
 
@@ -369,9 +359,6 @@ impl Ledger {
         program_id: ObjectId,
         value: u32,
     ) -> Result<()> {
-        // self.history
-        //     .edit_program_duration(session, program_id, value)
-        //     .await?;
         self.calendar
             .edit_duration(session, program_id, value)
             .await?;
@@ -388,9 +375,6 @@ impl Ledger {
         id: ObjectId,
         value: String,
     ) -> Result<()> {
-        // self.history
-        //     .edit_program_name(session, id, value.clone())
-        //     .await?;
         self.programs.edit_name(session, id, value.clone()).await?;
         self.calendar.edit_program_name(session, id, value).await?;
         Ok(())
