@@ -7,6 +7,7 @@ use std::{
 use super::rights::Rights;
 use crate::{
     couch::CouchInfo,
+    statistics::marketing::ComeFrom,
     subscription::{self, Status, UserSubscription},
     training::Training,
 };
@@ -43,6 +44,8 @@ pub struct User {
     pub couch: Option<CouchInfo>,
     #[serde(default)]
     pub settings: UserSettings,
+    #[serde(default)]
+    pub come_from: ComeFrom,
 }
 
 fn default_created_at() -> DateTime<Utc> {
@@ -73,6 +76,7 @@ impl User {
             initiated: false,
             couch: None,
             settings: UserSettings::default(),
+            come_from: ComeFrom::default(),
         }
     }
 

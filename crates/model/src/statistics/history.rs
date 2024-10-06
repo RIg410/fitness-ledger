@@ -6,6 +6,8 @@ use log::warn;
 
 use crate::{decimal::Decimal, history::HistoryRow, subscription::Subscription};
 
+use super::marketing::{ComeFrom, UsersStat};
+
 #[derive(Debug)]
 pub struct SubscriptionsStatisticsCollector {
     test_sub_id: ObjectId,
@@ -99,7 +101,23 @@ impl SubscriptionsStatisticsCollector {
         }
     }
 
-    pub fn finish(self) -> SubscriptionStatistics {
+    pub fn finish(self, user_stat: UsersStat) -> SubscriptionStatistics {
+        let come_from = user_stat
+            .come_from
+            .into_iter()
+            .map(|(come_from, users)| {
+                users.into_iter().fold(
+                    (come_from, ComeFromStat::default()),
+                    |(come_from, mut stat), user_id| {
+                        if let Some(user) = self.by_users.get(&user_id) {
+                            stat.extend(user);
+                        }
+                        (come_from, stat)
+                    },
+                )
+            })
+            .collect();
+
         SubscriptionStatistics {
             subs: self.subs.into_iter().map(|(_, stat)| stat).collect(),
             test_subs_count: self
@@ -130,6 +148,7 @@ impl SubscriptionsStatisticsCollector {
                     }
                 })
                 .collect(),
+            come_from,
         }
     }
 }
@@ -159,4 +178,26 @@ pub struct SubscriptionStatistics {
     pub users_buy_test_sub_and_stay: u32,
     pub unresolved_presells: u32,
     pub people_buys_only_test_sub: Vec<ObjectId>,
+    pub come_from: HashMap<ComeFrom, ComeFromStat>,
+}
+
+#[derive(Debug, Default)]
+pub struct ComeFromStat {
+    pub total_users: u32,
+    pub buy_test_subs: u32,
+    pub buy_subs: u32,
+    pub sum: Decimal,
+}
+
+impl ComeFromStat {
+    pub fn extend(&mut self, user: &UserStat) {
+        self.total_users += 1;
+        if user.has_test_sub {
+            self.buy_test_subs += 1;
+        }
+        if user.total_subs > 1 {
+            self.buy_subs += 1;
+        }
+        self.sum += user.sum;
+    }
 }

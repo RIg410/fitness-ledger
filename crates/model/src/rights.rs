@@ -81,6 +81,8 @@ pub enum Rule {
     EditUserSubscription,
     FreezeUsers,
     ChangeBalance,
+    ViewMarketingInfo,
+    EditMarketingInfo,
 
     // Training
     EditTraining,

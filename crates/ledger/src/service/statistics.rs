@@ -1,3 +1,4 @@
+use super::{calendar::Calendar, history::History, users::Users};
 use chrono::{DateTime, Local};
 use eyre::Error;
 use model::{
@@ -5,11 +6,10 @@ use model::{
     statistics::{
         calendar::LedgerStatistics,
         history::{SubscriptionStatistics, SubscriptionsStatisticsCollector},
+        marketing::UsersStat,
     },
 };
 use mongodb::bson::oid::ObjectId;
-
-use super::{calendar::Calendar, history::History, users::Users};
 
 #[derive(Clone)]
 pub struct Statistics {
@@ -56,6 +56,8 @@ impl Statistics {
             stat.extend(day?);
         }
 
+        let come_from = self.users_statistic(session, from, to).await?;
+
         for number_to_resolve in stat
             .get_unresolved_presells()
             .into_iter()
@@ -70,6 +72,21 @@ impl Statistics {
             }
         }
 
-        Ok(stat.finish())
+        Ok(stat.finish(come_from))
+    }
+
+    async fn users_statistic(
+        &self,
+        session: &mut session::Session,
+        from: Option<DateTime<Local>>,
+        to: Option<DateTime<Local>>,
+    ) -> Result<UsersStat, Error> {
+        let mut stat = UsersStat::default();
+        let mut cursor = self.users.find_all(session, from, to).await?;
+        while let Some(user) = cursor.next(&mut *session).await {
+            stat.extend(&user?);
+        }
+
+        Ok(stat)
     }
 }

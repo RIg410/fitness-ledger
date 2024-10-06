@@ -2,7 +2,11 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use bot_core::{context::Context, widget::View};
-use bot_viewer::{day::{fmt_date, fmt_weekday}, fmt_phone};
+use bot_viewer::{
+    day::{fmt_date, fmt_weekday},
+    fmt_phone,
+    user::fmt_come_from,
+};
 use chrono::Weekday;
 use eyre::Error;
 use itertools::Itertools;
@@ -103,6 +107,20 @@ async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Resu
             } else {
                 msg.push_str(&format!("\n👤{}", id));
             }
+        }
+    }
+
+    if stat.come_from.len() > 0 {
+        msg.push_str("\n\nОткуда пришли:");
+        for (come_from, stat) in &stat.come_from {
+            msg.push_str(&format!(
+                "\n\n📚{}:\nВсего продано: *{}* на сумму *{}*\nкупили тестовое:*{}*\nкупили абонемент:*{}*",
+                fmt_come_from(ctx, come_from).await?,
+                stat.total_users,
+                escape(&stat.sum.to_string()),
+                stat.buy_test_subs,
+                stat.buy_subs,
+            ));
         }
     }
 

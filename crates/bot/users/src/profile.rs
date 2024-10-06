@@ -1,6 +1,5 @@
 use crate::{
-    history::HistoryList, notification::NotificationView, rewards::RewardsList,
-    subscriptions::SubscriptionsList,
+    come_from::MarketingInfoView, history::HistoryList, notification::NotificationView, rewards::RewardsList, subscriptions::SubscriptionsList
 };
 
 use super::{
@@ -142,6 +141,10 @@ impl View for UserProfile {
                 ctx.ensure(Rule::EditUserSubscription)?;
                 Ok(SubscriptionsList::new(self.tg_id).into())
             }
+            Callback::EditMarketingInfo => {
+                ctx.ensure(Rule::EditMarketingInfo)?;
+                Ok(MarketingInfoView::new(self.tg_id).into())
+            },
         }
     }
 }
@@ -184,6 +187,10 @@ async fn render_user_profile<ID: Into<UserIdent> + Copy>(
         keymap = keymap.append_row(Callback::EditPhone.btn_row("✍️ Редактировать телефон"));
     }
 
+    if ctx.has_right(Rule::EditMarketingInfo) {
+        keymap = keymap.append_row(Callback::EditMarketingInfo.btn_row("Изменить источник 📝"));
+    }
+
     if ctx.has_right(Rule::EditUserSubscription) {
         keymap = keymap.append_row(Callback::SubscriptionsList.btn_row("Абонементы 📝"));
     }
@@ -213,4 +220,5 @@ pub enum Callback {
     RewardsList,
     Notification,
     SubscriptionsList,
+    EditMarketingInfo,
 }

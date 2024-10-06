@@ -76,6 +76,7 @@ impl Users {
             initiated: false,
             couch: None,
             settings: Default::default(),
+            come_from: Default::default(),
         };
         self.store.insert(session, user).await?;
         self.logs.create_user(session, name, phone).await?;

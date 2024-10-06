@@ -4,6 +4,7 @@ use eyre::Error;
 use model::{
     couch::{CouchInfo, Rate},
     rights::Rule,
+    statistics::marketing::ComeFrom,
     subscription::{Status, UserSubscription},
     user::{User, UserIdent},
 };
@@ -39,6 +40,13 @@ pub async fn render_profile_msg<ID: Into<UserIdent> + Copy>(
     let user = ctx.ledger.get_user(&mut ctx.session, id).await?;
 
     let mut msg = user_base_info(&user);
+    if ctx.has_right(Rule::ViewMarketingInfo) {
+        msg.push_str(&format!(
+            "Источник : _{}_\n",
+            fmt_come_from(ctx, &user.come_from).await?
+        ));
+    }
+
     if let Some(couch) = user.couch.as_ref() {
         render_couch_info(ctx, id, &mut msg, couch);
     } else {
@@ -186,4 +194,17 @@ pub fn fmt_user_type(user: &User) -> &str {
     } else {
         "🟢"
     }
+}
+
+pub async fn fmt_come_from(_: &mut Context, from: &ComeFrom) -> Result<String, Error> {
+    Ok(match from {
+        ComeFrom::Unknown {} => "Неизвестно".to_string(),
+        ComeFrom::DoubleGIS {} => "2ГИС".to_string(),
+        ComeFrom::Website {} => "Сайт".to_string(),
+        ComeFrom::Instagram {} => "Инстаграм".to_string(),
+        ComeFrom::VK {} => "ВКонтакте".to_string(),
+        ComeFrom::YandexMap {} => "Яндекс.Карты".to_string(),
+        ComeFrom::DirectAdds {} => "Прямые рекламные объявления".to_string(),
+        ComeFrom::VkAdds {} => "Рекламные объявления ВКонтакте".to_string(),
+    })
 }

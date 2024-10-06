@@ -6,15 +6,16 @@ use log::info;
 use model::couch::CouchInfo;
 use model::rights;
 use model::session::Session;
+use model::statistics::marketing::ComeFrom;
 use model::subscription::{Status, Subscription, UserSubscription};
 use model::user::{Freeze, Notification, User, UserIdent};
 use mongodb::bson::to_bson;
 use mongodb::options::UpdateOptions;
-use mongodb::IndexModel;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     Collection, Database,
 };
+use mongodb::{IndexModel, SessionCursor};
 use std::sync::Arc;
 
 const COLLECTION: &str = "users";
@@ -463,6 +464,24 @@ impl UserStore {
         Ok(())
     }
 
+    pub async fn update_come_from<ID: Into<UserIdent>>(
+        &self,
+        session: &mut Session,
+        id: ID,
+        come_from: ComeFrom,
+    ) -> Result<(), Error> {
+        info!("Updating come_from: {:?}", come_from);
+        self.users
+            .update_one(
+                self.ident_filter(id),
+                doc! { "$set": { "come_from": to_document(&come_from)? }, "$inc": { "version": 1 } },
+            )
+            .session(&mut *session)
+            .await?;
+
+        Ok(())
+    }
+
     pub async fn update(&self, session: &mut Session, user: &User) -> Result<()> {
         self.users
             .update_one(doc! { "_id": user.id }, doc! { "$set": to_document(user)? })
@@ -474,5 +493,27 @@ impl UserStore {
     pub async fn dump(&self, session: &mut Session) -> Result<Vec<User>> {
         let mut cursor = self.users.find(doc! {}).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
+    }
+
+    pub async fn find_all(
+        &self,
+        session: &mut Session,
+        from: Option<DateTime<Local>>,
+        to: Option<DateTime<Local>>,
+    ) -> Result<SessionCursor<User>, Error> {
+        let filter = match (from, to) {
+            (Some(from), Some(to)) => doc! {
+                "created_at": { "$gte": from, "$lte": to }
+            },
+            (Some(from), None) => doc! {
+                "created_at": { "$gte": from }
+            },
+            (None, Some(to)) => doc! {
+                "created_at": { "$lte": to }
+            },
+            (None, None) => doc! {},
+        };
+
+        Ok(self.users.find(filter).session(&mut *session).await?)
     }
 }
