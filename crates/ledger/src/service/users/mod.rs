@@ -5,6 +5,7 @@ use log::info;
 use model::{
     rights::{Rights, Rule},
     session::Session,
+    statistics::marketing::ComeFrom,
     user::{sanitize_phone, User, UserName},
 };
 use mongodb::bson::oid::ObjectId;
@@ -60,27 +61,75 @@ impl Users {
             vec![]
         };
 
+        let user = self.get_by_phone(session, &phone).await?;
+        if let Some(user) = user {
+            self.store.set_tg_id(session, user.id, tg_id).await?;
+            self.store.set_name(session, user.id, name).await?;
+        } else {
+            let user = User {
+                tg_id,
+                name: name.clone(),
+                rights,
+                phone: phone.clone(),
+                birthday: None,
+                is_active: true,
+                id: ObjectId::new(),
+                subscriptions,
+                freeze_days: 0,
+                freeze: None,
+                version: 0,
+                created_at: Utc::now(),
+                couch: None,
+                settings: Default::default(),
+                come_from: Default::default(),
+            };
+            self.store.insert(session, user).await?;
+            self.logs.create_user(session, name, phone).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn create_uninit(
+        &self,
+        session: &mut Session,
+        phone: String,
+        first_name: String,
+        last_name: Option<String>,
+        come_from: ComeFrom,
+    ) -> Result<User> {
+        let phone = sanitize_phone(&phone);
+
+        let user = self.get_by_phone(session, &phone).await?;
+        if user.is_some() {
+            return Err(eyre::eyre!("User {} already exists", phone));
+        }
+
+        let user_name = UserName {
+            tg_user_name: None,
+            first_name,
+            last_name,
+        };
+
         let user = User {
-            tg_id,
-            name: name.clone(),
-            rights,
+            tg_id: -1,
+            name: user_name.clone(),
+            rights: Rights::customer(),
             phone: phone.clone(),
             birthday: None,
             is_active: true,
             id: ObjectId::new(),
-            subscriptions,
+            subscriptions: vec![],
             freeze_days: 0,
             freeze: None,
             version: 0,
             created_at: Utc::now(),
-            initiated: false,
             couch: None,
             settings: Default::default(),
-            come_from: Default::default(),
+            come_from,
         };
-        self.store.insert(session, user).await?;
-        self.logs.create_user(session, name, phone).await?;
-        Ok(())
+        self.store.insert(session, user.clone()).await?;
+        self.logs.create_user(session, user_name, phone).await?;
+        Ok(user)
     }
 
     pub async fn find(

@@ -39,8 +39,6 @@ pub struct User {
     #[serde(default = "default_created_at")]
     pub created_at: DateTime<Utc>,
     #[serde(default)]
-    pub initiated: bool,
-    #[serde(default)]
     pub couch: Option<CouchInfo>,
     #[serde(default)]
     pub settings: UserSettings,
@@ -73,7 +71,6 @@ impl User {
             freeze_days: 0,
             freeze: None,
             created_at: Utc::now(),
-            initiated: false,
             couch: None,
             settings: UserSettings::default(),
             come_from: ComeFrom::default(),
