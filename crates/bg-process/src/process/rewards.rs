@@ -14,7 +14,7 @@ pub struct RewardsBg {
 #[async_trait]
 impl Task for RewardsBg {
     const NAME: &'static str = "rewards";
-    const CRON: &'static str = "every 2 hour";
+    const CRON: &'static str = "every 5 hour";
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;
@@ -48,14 +48,14 @@ impl RewardsBg {
         now: DateTime<Local>,
     ) -> Result<(), Error> {
         if let Some(reward) = couch.collect_monthly_rewards(couch_id, now)? {
-            // self.ledger.rewards.add_reward(session, reward).await?;
-            // self.ledger
-            //     .users
-            //     .update_couch_reward(session, couch_id, couch.reward)
-            //     .await?;
+            self.ledger.rewards.add_reward(session, reward).await?;
             self.ledger
                 .users
-                .update_couch_rate(session, couch_id, couch.rate.clone())
+                .update_couch_reward(session, couch_id, couch.reward)
+                .await?;
+            self.ledger
+                .users
+                .update_couch_rate_tx_less(session, couch_id, dbg!(couch.rate.clone()))
                 .await?;
         }
         Ok(())

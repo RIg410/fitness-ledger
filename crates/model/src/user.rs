@@ -43,10 +43,6 @@ pub struct User {
     pub couch: Option<CouchInfo>,
     #[serde(default)]
     pub settings: UserSettings,
-
-    pub balance: u32,
-    #[serde(default)]
-    pub reserved_balance: u32,
 }
 
 fn default_created_at() -> DateTime<Utc> {
@@ -77,8 +73,6 @@ impl User {
             initiated: false,
             couch: None,
             settings: UserSettings::default(),
-            balance: 0,
-            reserved_balance: 0,
         }
     }
 

@@ -63,12 +63,16 @@ impl CouchInfo {
     ) -> Result<Option<Reward>, Error> {
         Ok(match self.rate.clone() {
             Rate::FixedMonthly { rate, next_reward } => {
-                if date_time.with_timezone(&Utc) > next_reward {
+                let next_reward = next_reward.with_timezone(&Local);
+                if date_time > next_reward {
                     self.rate = Rate::FixedMonthly {
                         rate,
-                        next_reward: next_reward.checked_add_months(Months::new(1)).ok_or_else(
-                            || eyre!("Failed to collect next reward date:{}", next_reward),
-                        )?,
+                        next_reward: next_reward
+                            .checked_add_months(Months::new(1))
+                            .ok_or_else(|| {
+                                eyre!("Failed to collect next reward date:{}", next_reward)
+                            })?
+                            .with_timezone(&Utc),
                     };
                     self.reward += rate;
                     let reward = Reward {

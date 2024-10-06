@@ -76,8 +76,6 @@ impl Users {
             initiated: false,
             couch: None,
             settings: Default::default(),
-            balance: 0,
-            reserved_balance: 0,
         };
         self.store.insert(session, user).await?;
         self.logs.create_user(session, name, phone).await?;

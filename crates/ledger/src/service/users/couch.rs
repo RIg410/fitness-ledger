@@ -17,6 +17,15 @@ impl Users {
         id: ObjectId,
         rate: Rate,
     ) -> Result<()> {
+        self.update_couch_rate_tx_less(session, id, rate).await
+    }
+
+    pub async fn update_couch_rate_tx_less(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        rate: Rate,
+    ) -> Result<()> {
         let user = self
             .store
             .get(session, id)

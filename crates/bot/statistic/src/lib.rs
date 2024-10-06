@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use bot_core::{context::Context, widget::View};
-use bot_viewer::day::{fmt_date, fmt_weekday};
+use bot_viewer::{day::{fmt_date, fmt_weekday}, fmt_phone};
 use chrono::Weekday;
 use eyre::Error;
 use itertools::Itertools;
@@ -92,6 +92,18 @@ async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Resu
             "\n\nКупили пробное занятия но не зашли в бот:*{}*",
             stat.unresolved_presells
         ));
+    }
+
+    if stat.people_buys_only_test_sub.len() > 0 {
+        msg.push_str("\n\nКупили только пробное занятие:");
+        for id in &stat.people_buys_only_test_sub {
+            let user = ctx.ledger.users.get(&mut ctx.session, *id).await?;
+            if let Some(user) = user {
+                msg.push_str(&format!("\n👤{}", fmt_phone(&user.phone)));
+            } else {
+                msg.push_str(&format!("\n👤{}", id));
+            }
+        }
     }
 
     ctx.send_notification(&msg).await?;

@@ -119,6 +119,17 @@ impl SubscriptionsStatisticsCollector {
             subs_count: self.by_users.values().map(|stat| stat.total_subs).sum(),
             from: self.from.unwrap_or_default(),
             to: self.to.unwrap_or_default(),
+            people_buys_only_test_sub: self
+                .by_users
+                .iter()
+                .filter_map(|(id, stat)| {
+                    if stat.total_subs == 1 && stat.has_test_sub {
+                        Some(*id)
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
         }
     }
 }
@@ -147,4 +158,5 @@ pub struct SubscriptionStatistics {
     pub total_subs_sum: Decimal,
     pub users_buy_test_sub_and_stay: u32,
     pub unresolved_presells: u32,
+    pub people_buys_only_test_sub: Vec<ObjectId>,
 }
