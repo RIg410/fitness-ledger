@@ -2,7 +2,7 @@ use crate::edit_type::EditSubscriptionType;
 
 use super::{
     edit::{EditSubscription, EditType},
-    sell::{Sell, SellView},
+    sell::SellView,
     View,
 };
 use async_trait::async_trait;
@@ -52,7 +52,7 @@ impl View for SubscriptionOption {
             }
             Callback::Sell => {
                 ctx.ensure(Rule::SellSubscription)?;
-                Ok(SellView::new(Sell::with_id(self.id)).into())
+                Ok(SellView::new(self.id).into())
             }
             Callback::EditPrice => {
                 ctx.ensure(Rule::EditSubscription)?;
