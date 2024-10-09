@@ -1,5 +1,6 @@
 use crate::{
-    come_from::MarketingInfoView, history::HistoryList, notification::NotificationView, rewards::RewardsList, subscriptions::SubscriptionsList
+    come_from::MarketingInfoView, history::HistoryList, notification::NotificationView,
+    rewards::RewardsList, subscriptions::SubscriptionsList,
 };
 
 use super::{
@@ -16,17 +17,18 @@ use bot_core::{
 use bot_trainigs::list::TrainingList;
 use bot_viewer::user::render_profile_msg;
 use eyre::Error;
-use model::{rights::Rule, user::UserIdent};
+use model::rights::Rule;
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
 pub struct UserProfile {
-    tg_id: i64,
+    id: ObjectId,
 }
 
 impl UserProfile {
-    pub fn new(tg_id: i64) -> UserProfile {
-        UserProfile { tg_id }
+    pub fn new(id: ObjectId) -> UserProfile {
+        UserProfile { id }
     }
 
     async fn block_user(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
@@ -34,38 +36,38 @@ impl UserProfile {
         let user = ctx
             .ledger
             .users
-            .get(&mut ctx.session, self.tg_id)
+            .get(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("User not found"))?;
         ctx.ledger
-            .block_user(&mut ctx.session, self.tg_id, !user.is_active)
+            .block_user(&mut ctx.session, self.id, !user.is_active)
             .await?;
         ctx.reload_user().await?;
         Ok(Jmp::Stay)
     }
 
     async fn freeze_user(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
-        if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
+        if !ctx.has_right(Rule::FreezeUsers) && ctx.me.id != self.id {
             return Err(eyre::eyre!("User has no rights to perform this action"));
         }
-        Ok(FreezeProfile::new(self.tg_id).into())
+        Ok(FreezeProfile::new(self.id).into())
     }
 
     async fn edit_rights(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
         ctx.ensure(Rule::EditUserRights)?;
-        Ok(UserRightsView::new(self.tg_id).into())
+        Ok(UserRightsView::new(self.id).into())
     }
 
     async fn set_birthday(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
-        if ctx.has_right(Rule::EditUserInfo) || ctx.me.tg_id == self.tg_id {
-            Ok(SetBirthday::new(self.tg_id).into())
+        if ctx.has_right(Rule::EditUserInfo) || ctx.me.id == self.id {
+            Ok(SetBirthday::new(self.id).into())
         } else {
             Ok(Jmp::Stay)
         }
     }
 
     async fn training_list(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
-        let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
+        let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
         if user.is_couch() {
             Ok(TrainingList::couches(user.id).into())
         } else {
@@ -74,12 +76,12 @@ impl UserProfile {
     }
 
     async fn history_list(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
-        let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
+        let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
         Ok(HistoryList::new(user.id).into())
     }
 
     async fn rewards_list(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
-        let user = ctx.ledger.get_user(&mut ctx.session, self.tg_id).await?;
+        let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
         if user.is_couch() && (ctx.is_me(user.id) || ctx.has_right(Rule::ViewRewards)) {
             Ok(RewardsList::new(user.id).into())
         } else {
@@ -89,7 +91,7 @@ impl UserProfile {
 
     async fn set_fio(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
-            Ok(SetFio::new(self.tg_id).into())
+            Ok(SetFio::new(self.id).into())
         } else {
             Ok(Jmp::Stay)
         }
@@ -97,7 +99,7 @@ impl UserProfile {
 
     async fn set_phone(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
         if ctx.has_right(Rule::EditUserInfo) {
-            Ok(SetPhone::new(self.tg_id).into())
+            Ok(SetPhone::new(self.id).into())
         } else {
             Ok(Jmp::Stay)
         }
@@ -111,7 +113,7 @@ impl View for UserProfile {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let (msg, keymap) = render_user_profile(ctx, self.tg_id).await?;
+        let (msg, keymap) = render_user_profile(ctx, self.id).await?;
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
@@ -136,22 +138,22 @@ impl View for UserProfile {
             Callback::TrainingList => self.training_list(ctx).await,
             Callback::HistoryList => self.history_list(ctx).await,
             Callback::RewardsList => self.rewards_list(ctx).await,
-            Callback::Notification => Ok(NotificationView::new(self.tg_id).into()),
+            Callback::Notification => Ok(NotificationView::new(self.id).into()),
             Callback::SubscriptionsList => {
                 ctx.ensure(Rule::EditUserSubscription)?;
-                Ok(SubscriptionsList::new(self.tg_id).into())
+                Ok(SubscriptionsList::new(self.id).into())
             }
             Callback::EditMarketingInfo => {
                 ctx.ensure(Rule::EditMarketingInfo)?;
-                Ok(MarketingInfoView::new(self.tg_id).into())
-            },
+                Ok(MarketingInfoView::new(self.id).into())
+            }
         }
     }
 }
 
-async fn render_user_profile<ID: Into<UserIdent> + Copy>(
+async fn render_user_profile(
     ctx: &mut Context,
-    id: ID,
+    id: ObjectId,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
     let (msg, user) = render_profile_msg(ctx, id).await?;
 

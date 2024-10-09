@@ -5,15 +5,16 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::{InlineKeyboardButton, InlineKeyboardMarkup}, utils::markdown::escape};
 
 pub struct NotificationView {
-    pub id: i64,
+    pub id: ObjectId,
 }
 
 impl NotificationView {
-    pub fn new(id: i64) -> Self {
+    pub fn new(id: ObjectId) -> Self {
         NotificationView { id }
     }
 }

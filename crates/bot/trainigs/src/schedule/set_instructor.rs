@@ -54,11 +54,11 @@ impl View for SetInstructor {
                 let instructor = ctx
                     .ledger
                     .users
-                    .get(&mut ctx.session, instructor_id)
+                    .get(&mut ctx.session, ObjectId::from_bytes(instructor_id))
                     .await?
                     .ok_or_else(|| eyre::eyre!("Instructor not found"))?;
                 let mut preset = self.preset.take().unwrap();
-                preset.instructor = Some(instructor.tg_id);
+                preset.instructor = Some(instructor.id);
                 return Ok(preset.into_next_view(self.id).into());
             }
         }
@@ -91,10 +91,10 @@ fn make_instructor_button(instructor: &User) -> InlineKeyboardButton {
             .as_ref()
             .unwrap_or(&"".to_string())
     );
-    Callback::SelectInstructor(instructor.tg_id).button(name)
+    Callback::SelectInstructor(instructor.id.bytes()).button(name)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 enum Callback {
-    SelectInstructor(i64),
+    SelectInstructor([u8; 12]),
 }

@@ -6,14 +6,15 @@ use bot_core::{
 use chrono::{Local, TimeZone as _};
 use eyre::{Error, Result};
 use model::rights::Rule;
+use mongodb::bson::oid::ObjectId;
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
 pub struct SetBirthday {
-    id: i64,
+    id: ObjectId,
 }
 
 impl SetBirthday {
-    pub fn new(id: i64) -> SetBirthday {
+    pub fn new(id: ObjectId) -> SetBirthday {
         SetBirthday { id }
     }
 }

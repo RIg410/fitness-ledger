@@ -11,7 +11,7 @@ impl Users {
     pub async fn change_subscription_balance(
         &self,
         session: &mut Session,
-        user_id: i64,
+        user_id: ObjectId,
         id: ObjectId,
         delta: i64,
     ) -> Result<()> {
@@ -40,7 +40,7 @@ impl Users {
     pub async fn change_subscription_days(
         &self,
         session: &mut Session,
-        user_id: i64,
+        user_id: ObjectId,
         id: ObjectId,
         delta: i64,
     ) -> Result<()> {

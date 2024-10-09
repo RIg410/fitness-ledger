@@ -94,7 +94,7 @@ pub async fn create_user(
     session: &mut Session,
 ) -> Result<(), eyre::Error> {
     info!("Creating user with chat_id: {}", chat_id);
-    let user = ledger.users.get(session, from.id.0 as i64).await?;
+    let user = ledger.users.get_by_tg_id(session, from.id.0 as i64).await?;
     if user.is_some() {
         return Err(eyre::eyre!("User {} already exists", chat_id));
     }

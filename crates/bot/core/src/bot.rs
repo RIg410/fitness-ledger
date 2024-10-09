@@ -152,13 +152,16 @@ impl TgBot {
         chat_id: ChatId,
         text: &str,
     ) -> Result<MessageId, RequestError> {
+        if chat_id.0 == -1 {
+            return Ok(MessageId(0));
+        }
         let id = self
             .bot
             .send_message(chat_id, text)
             .parse_mode(ParseMode::MarkdownV2)
             .await?
             .id;
-       // self.bot.pin_chat_message(chat_id, id).await?;
+        // self.bot.pin_chat_message(chat_id, id).await?;
         let tkn = self.tokens.get_token(chat_id);
         tkn.invalidate();
         Ok(id)

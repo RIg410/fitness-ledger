@@ -1,10 +1,7 @@
 use crate::bot::TgBot;
 use ledger::Ledger;
-use model::{
-    rights::Rule,
-    session::Session,
-    user::{User, UserIdent},
-};
+use model::{rights::Rule, session::Session, user::User};
+use mongodb::bson::oid::ObjectId;
 use std::ops::{Deref, DerefMut};
 
 pub struct Context {
@@ -32,11 +29,8 @@ impl Context {
         }
     }
 
-    pub fn is_me<ID: Into<UserIdent>>(&self, id: ID) -> bool {
-        match id.into() {
-            UserIdent::TgId(tg_id) => self.me.tg_id == tg_id,
-            UserIdent::Id(id) => self.me.id == id,
-        }
+    pub fn is_me(&self, id: ObjectId) -> bool {
+        self.me.id == id
     }
 
     pub fn is_couch(&self) -> bool {
@@ -63,7 +57,7 @@ impl Context {
         let user = self
             .ledger
             .users
-            .get(&mut self.session, self.me.tg_id)
+            .get(&mut self.session, self.me.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Failed to load existing user:{}", self.me.id))?;
 

@@ -3,17 +3,18 @@ use async_trait::async_trait;
 use bot_core::{callback_data::Calldata, calldata, context::Context, widget::Jmp};
 use bot_viewer::user::fmt_user_type;
 use model::{rights::Rule, user::User};
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
 #[derive(Default)]
 pub struct UserRightsView {
-    tg_id: i64,
+    id: ObjectId,
 }
 
 impl UserRightsView {
-    pub fn new(tg_id: i64) -> UserRightsView {
-        UserRightsView { tg_id }
+    pub fn new(id: ObjectId) -> UserRightsView {
+        UserRightsView { id: id }
     }
 }
 
@@ -27,7 +28,7 @@ impl View for UserRightsView {
         let user = ctx
             .ledger
             .users
-            .get(&mut ctx.session, self.tg_id)
+            .get(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Failed to load user"))?;
         let (text, markup) = render_user_rights(&user);
@@ -44,7 +45,7 @@ impl View for UserRightsView {
                 let rule = Rule::try_from(rule_id)?;
                 ctx.ledger
                     .users
-                    .edit_user_rule(&mut ctx.session, self.tg_id, rule, is_active)
+                    .edit_user_rule(&mut ctx.session, self.id, rule, is_active)
                     .await?;
                 ctx.reload_user().await?;
                 Ok(Jmp::Stay)

@@ -6,8 +6,9 @@ use model::{
     rights::Rule,
     statistics::marketing::ComeFrom,
     subscription::{Status, UserSubscription},
-    user::{User, UserIdent},
+    user::User,
 };
+use mongodb::bson::oid::ObjectId;
 use teloxide::utils::markdown::escape;
 
 pub fn render_sub(sub: &UserSubscription) -> String {
@@ -33,10 +34,7 @@ pub fn render_sub(sub: &UserSubscription) -> String {
     }
 }
 
-pub async fn render_profile_msg<ID: Into<UserIdent> + Copy>(
-    ctx: &mut Context,
-    id: ID,
-) -> Result<(String, User), Error> {
+pub async fn render_profile_msg(ctx: &mut Context, id: ObjectId) -> Result<(String, User), Error> {
     let user = ctx.ledger.get_user(&mut ctx.session, id).await?;
 
     let mut msg = user_base_info(&user);
@@ -145,12 +143,7 @@ pub fn user_base_info(user: &User) -> String {
     )
 }
 
-fn render_couch_info<ID: Into<UserIdent>>(
-    ctx: &mut Context,
-    id: ID,
-    msg: &mut String,
-    couch: &CouchInfo,
-) {
+fn render_couch_info(ctx: &mut Context, id: ObjectId, msg: &mut String, couch: &CouchInfo) {
     msg.push_str("➖➖➖➖➖➖➖➖➖➖");
     msg.push_str(&format!("\n[Анкета]({})", escape(&couch.description)));
     if ctx.has_right(Rule::ViewCouchRates) || ctx.is_me(id) {

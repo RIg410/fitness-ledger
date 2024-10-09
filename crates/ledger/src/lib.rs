@@ -6,7 +6,7 @@ use model::session::Session;
 use model::training::{Training, TrainingStatus};
 use model::treasury::subs::UserId;
 use model::treasury::Sell;
-use model::user::{sanitize_phone, FindFor, User, UserIdent};
+use model::user::{sanitize_phone, FindFor, User};
 use mongodb::bson::oid::ObjectId;
 use service::backup::Backup;
 use service::calendar::{Calendar, SignOutError};
@@ -75,12 +75,7 @@ impl Ledger {
         }
     }
 
-    pub async fn get_user<ID: Into<UserIdent>>(
-        &self,
-        session: &mut Session,
-        id: ID,
-    ) -> Result<User> {
-        let id = id.into();
+    pub async fn get_user(&self, session: &mut Session, id: ObjectId) -> Result<User> {
         self.users
             .get(session, id)
             .await
@@ -92,12 +87,12 @@ impl Ledger {
     pub async fn block_user(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         is_active: bool,
     ) -> Result<()> {
         let mut user = self
             .users
-            .get(session, tg_id)
+            .get(session, id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         if !is_active {
@@ -131,7 +126,7 @@ impl Ledger {
             self.users.update(session, &user).await?;
         }
         self.history.block_user(session, user.id, is_active).await?;
-        self.users.block_user(session, tg_id, is_active).await?;
+        self.users.block_user(session, user.id, is_active).await?;
         Ok(())
     }
 
@@ -270,7 +265,7 @@ impl Ledger {
         &self,
         session: &mut Session,
         subscription: ObjectId,
-        buyer: i64,
+        buyer: ObjectId,
     ) -> Result<(), SellSubscriptionError> {
         let buyer = self
             .users
@@ -289,7 +284,7 @@ impl Ledger {
             .await?;
 
         self.users
-            .add_subscription(session, buyer.tg_id, subscription.clone())
+            .add_subscription(session, buyer.id, subscription.clone())
             .await?;
 
         self.treasury

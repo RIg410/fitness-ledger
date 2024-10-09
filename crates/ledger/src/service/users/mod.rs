@@ -49,7 +49,7 @@ impl Users {
             Rights::customer()
         };
 
-        let user = self.get(session, tg_id).await?;
+        let user = self.get_by_tg_id(session, tg_id).await?;
         if user.is_some() {
             return Err(eyre::eyre!("User {} already exists", tg_id));
         }
@@ -147,7 +147,7 @@ impl Users {
     pub async fn set_user_birthday(
         &self,
         session: &mut Session,
-        id: i64,
+        id: ObjectId,
         date: DateTime<Local>,
         forced: bool,
     ) -> Result<(), SetDateError> {
@@ -161,7 +161,7 @@ impl Users {
             return Err(SetDateError::AlreadySet);
         }
         self.store
-            .set_birthday(session, user.tg_id, date)
+            .set_birthday(session, user.id, date)
             .await
             .map_err(SetDateError::Common)?;
         Ok(())
@@ -171,26 +171,26 @@ impl Users {
     pub async fn edit_user_rule(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         rule: Rule,
         is_active: bool,
     ) -> Result<()> {
         if is_active {
-            self.store.add_rule(session, tg_id, &rule).await?;
-            info!("Adding rule {:?} to user {}", rule, tg_id);
+            self.store.add_rule(session, id, &rule).await?;
+            info!("Adding rule {:?} to user {}", rule, id);
         } else {
-            self.store.remove_rule(session, tg_id, &rule).await?;
-            info!("Removing rule {:?} from user {}", rule, tg_id);
+            self.store.remove_rule(session, id, &rule).await?;
+            info!("Removing rule {:?} from user {}", rule, id);
         }
 
         Ok(())
     }
 
     #[tx]
-    pub async fn freeze(&self, session: &mut Session, tg_id: i64, days: u32) -> Result<()> {
+    pub async fn freeze(&self, session: &mut Session, id: ObjectId, days: u32) -> Result<()> {
         let user = self
             .store
-            .get(session, tg_id)
+            .get(session, id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
@@ -202,7 +202,7 @@ impl Users {
         }
 
         self.logs.freeze(session, user.id, days).await?;
-        self.store.freeze(session, tg_id, days).await?;
+        self.store.freeze(session, id, days).await?;
         Ok(())
     }
 
@@ -210,35 +210,33 @@ impl Users {
     pub async fn set_name(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         first_name: &str,
         last_name: &str,
     ) -> Result<()> {
-        self.store
-            .set_first_name(session, tg_id, first_name)
-            .await?;
-        self.store.set_last_name(session, tg_id, last_name).await?;
+        self.store.set_first_name(session, id, first_name).await?;
+        self.store.set_last_name(session, id, last_name).await?;
         Ok(())
     }
 
     #[tx]
-    pub async fn set_phone(&self, session: &mut Session, tg_id: i64, phone: &str) -> Result<()> {
+    pub async fn set_phone(&self, session: &mut Session, id: ObjectId, phone: &str) -> Result<()> {
         let phone = sanitize_phone(phone);
-        self.store.set_phone(session, tg_id, &phone).await?;
+        self.store.set_phone(session, id, &phone).await?;
         Ok(())
     }
 }
 
 impl Users {
-    pub async fn unfreeze(&self, session: &mut Session, tg_id: i64) -> Result<()> {
+    pub async fn unfreeze(&self, session: &mut Session, id: ObjectId) -> Result<()> {
         let user = self
             .store
-            .get(session, tg_id)
+            .get(session, id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
         self.logs.unfreeze(session, user.id).await?;
-        self.store.unfreeze(session, tg_id).await
+        self.store.unfreeze(session, id).await
     }
 }
 

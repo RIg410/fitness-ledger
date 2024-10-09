@@ -7,15 +7,16 @@ use bot_core::{
 };
 use bot_viewer::user::fmt_come_from;
 use model::{rights::Rule, statistics::marketing::ComeFrom};
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
 pub struct MarketingInfoView {
-    id: i64,
+    id: ObjectId,
 }
 
 impl MarketingInfoView {
-    pub fn new(id: i64) -> Self {
+    pub fn new(id: ObjectId) -> Self {
         MarketingInfoView { id }
     }
 }

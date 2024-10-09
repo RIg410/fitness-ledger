@@ -131,7 +131,7 @@ impl View for MainMenuView {
         ctx.delete_msg(msg.id).await?;
         self.send_self(ctx).await?;
         Ok(match command {
-            MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id).into(),
+            MainMenuItem::Profile => UserProfile::new(ctx.me.id).into(),
             MainMenuItem::Schedule => CalendarView::default().into(),
             MainMenuItem::Users => UsersView::new(Query::default()).into(),
             MainMenuItem::Subscription => SubscriptionView::default().into(),
@@ -156,7 +156,7 @@ impl View for MainMenuView {
         };
         self.send_self(ctx).await?;
         Ok(match command {
-            MainMenuItem::Profile => UserProfile::new(ctx.me.tg_id).into(),
+            MainMenuItem::Profile => UserProfile::new(ctx.me.id).into(),
             MainMenuItem::Schedule => CalendarView::default().into(),
             MainMenuItem::Users => UsersView::new(Query::default()).into(),
             MainMenuItem::Subscription => SubscriptionView::default().into(),

@@ -6,7 +6,8 @@ use bot_viewer::day::fmt_time;
 use chrono::{DateTime, Local};
 use eyre::Error;
 use ledger::Ledger;
-use model::{ids::DayId, session::Session, training::Notified, user::UserIdent};
+use model::{ids::DayId, session::Session, training::Notified};
+use mongodb::bson::oid::ObjectId;
 use std::sync::Arc;
 use teloxide::{
     types::{ChatId, MessageId},
@@ -48,11 +49,11 @@ impl TrainingNotifier {
         }
     }
 
-    async fn notify_user<ID: Into<UserIdent>>(
+    async fn notify_user(
         &self,
         session: &mut Session,
         start_at: DateTime<Local>,
-        id: ID,
+        id: ObjectId,
         msg: &str,
         by_day: bool,
     ) -> Result<bool, Error> {
@@ -176,5 +177,3 @@ impl TrainingNotifier {
         Ok(())
     }
 }
-
-

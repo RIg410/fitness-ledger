@@ -208,33 +208,6 @@ pub fn sanitize_phone(phone: &str) -> String {
         .collect()
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum UserIdent {
-    TgId(i64),
-    Id(ObjectId),
-}
-
-impl Display for UserIdent {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            UserIdent::TgId(tg_id) => write!(f, "{}", tg_id),
-            UserIdent::Id(id) => write!(f, "{}", id),
-        }
-    }
-}
-
-impl From<ObjectId> for UserIdent {
-    fn from(value: ObjectId) -> Self {
-        UserIdent::Id(value)
-    }
-}
-
-impl From<i64> for UserIdent {
-    fn from(value: i64) -> Self {
-        UserIdent::TgId(value)
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserSettings {
     pub notification: Notification,

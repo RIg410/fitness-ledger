@@ -4,14 +4,15 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use eyre::Result;
+use mongodb::bson::oid::ObjectId;
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
 pub struct SetPhone {
-    id: i64,
+    id: ObjectId,
 }
 
 impl SetPhone {
-    pub fn new(id: i64) -> SetPhone {
+    pub fn new(id: ObjectId) -> SetPhone {
         SetPhone { id }
     }
 }

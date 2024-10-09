@@ -2,14 +2,15 @@ use super::View;
 use async_trait::async_trait;
 use bot_core::{context::Context, widget::Jmp};
 use eyre::Result;
+use mongodb::bson::oid::ObjectId;
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
 pub struct SetFio {
-    id: i64,
+    id: ObjectId,
 }
 
 impl SetFio {
-    pub fn new(id: i64) -> SetFio {
+    pub fn new(id: ObjectId) -> SetFio {
         SetFio { id }
     }
 }

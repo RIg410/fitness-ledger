@@ -8,6 +8,7 @@ use bot_core::{
 use bot_viewer::user::fmt_user_type;
 use model::rights::Rule;
 use model::user::User;
+use mongodb::bson::oid::ObjectId;
 use profile::UserProfile;
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -15,17 +16,17 @@ use teloxide::{
     utils::markdown::escape,
 };
 
+pub mod come_from;
 pub mod freeze;
 pub mod history;
-pub mod rewards;
 pub mod notification;
 pub mod profile;
+pub mod rewards;
 pub mod rights;
 pub mod set_birthday;
 pub mod set_fio;
 pub mod set_phone;
 pub mod subscriptions;
-pub mod come_from;
 
 pub const LIMIT: u64 = 7;
 
@@ -93,7 +94,7 @@ impl View for UsersView {
                 self.query.offset = self.query.offset.saturating_sub(LIMIT);
             }
             Callback::Select(user_id) => {
-                return Ok(UserProfile::new(user_id).into());
+                return Ok(UserProfile::new(ObjectId::from_bytes(user_id)).into());
             }
         }
 
@@ -166,7 +167,7 @@ fn render_message(
 }
 
 fn make_button(user: &User) -> InlineKeyboardButton {
-    Callback::Select(user.tg_id).button(format!(
+    Callback::Select(user.id.bytes()).button(format!(
         "{}{} {}",
         fmt_user_type(user),
         user.name.first_name,
@@ -178,7 +179,7 @@ fn make_button(user: &User) -> InlineKeyboardButton {
 enum Callback {
     Next,
     Prev,
-    Select(i64),
+    Select([u8; 12]),
 }
 
 fn remove_non_alphanumeric(input: &str) -> String {

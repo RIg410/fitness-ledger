@@ -173,7 +173,7 @@ impl Calendar {
         session: &mut Session,
         object_id: ObjectId,
         start_at: DateTime<Local>,
-        instructor: i64,
+        instructor: ObjectId,
         is_one_time: bool,
     ) -> Result<(), ScheduleError> {
         let program = self

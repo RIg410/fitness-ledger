@@ -37,7 +37,7 @@ impl Users {
             rate,
             reward: couch.reward,
         };
-        self.store.set_couch(session, user.tg_id, &couch).await?;
+        self.store.set_couch(session, user.id, &couch).await?;
         Ok(())
     }
 
@@ -59,7 +59,7 @@ impl Users {
             rate: couch.rate,
             reward: couch.reward,
         };
-        self.store.set_couch(session, user.tg_id, &couch).await?;
+        self.store.set_couch(session, user.id, &couch).await?;
         Ok(())
     }
 
@@ -67,13 +67,13 @@ impl Users {
     pub async fn make_user_couch(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         description: String,
         rate: Rate,
     ) -> Result<()> {
         let user = self
             .store
-            .get(session, tg_id)
+            .get(session, id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         if user.couch.is_some() {
@@ -85,7 +85,7 @@ impl Users {
             reward: Decimal::zero(),
             rate,
         };
-        self.store.set_couch(session, tg_id, &couch).await?;
+        self.store.set_couch(session, id, &couch).await?;
         Ok(())
     }
 }

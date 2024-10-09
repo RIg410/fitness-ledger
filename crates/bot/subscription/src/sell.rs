@@ -86,7 +86,7 @@ impl View for SellView {
                 .get_by_phone(&mut ctx.session, phone)
                 .await?
             {
-                return Ok(Jmp::Next(ConfirmSell::new(user.tg_id, self.sell).into()));
+                return Ok(Jmp::Next(ConfirmSell::new(user.id, self.sell).into()));
             }
         }
 

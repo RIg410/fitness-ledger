@@ -7,16 +7,17 @@ use bot_core::{
 };
 use bot_viewer::user::render_sub;
 use model::rights::Rule;
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
 pub struct SubscriptionsList {
-    id: i64,
+    id: ObjectId,
     index: usize,
 }
 
 impl SubscriptionsList {
-    pub fn new(id: i64) -> Self {
+    pub fn new(id: ObjectId) -> Self {
         SubscriptionsList { id, index: 0 }
     }
 }

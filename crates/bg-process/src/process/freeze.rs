@@ -35,7 +35,7 @@ impl Task for FreezeBg {
                 continue;
             }
             info!("Unfreezing user {}", user.tg_id);
-            self.ledger.users.unfreeze(&mut session, user.tg_id).await?;
+            self.ledger.users.unfreeze(&mut session, user.id).await?;
         }
         Ok(())
     }

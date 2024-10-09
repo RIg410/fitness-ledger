@@ -3,20 +3,21 @@ use async_trait::async_trait;
 use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
 use eyre::{eyre, Context as _, Result};
 use model::rights::Rule;
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
 pub struct FreezeProfile {
-    tg_id: i64,
+    id: ObjectId,
     state: State,
     days: u32,
 }
 
 impl FreezeProfile {
-    pub fn new(tg_id: i64) -> FreezeProfile {
+    pub fn new(id: ObjectId) -> FreezeProfile {
         FreezeProfile {
-            tg_id,
+            id,
             state: State::SetDays,
             days: 0,
         }
@@ -35,7 +36,7 @@ impl View for FreezeProfile {
                 let user = ctx
                     .ledger
                     .users
-                    .get(&mut ctx.session, self.tg_id)
+                    .get(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre!("User not found!"))?;
                 ctx.send_msg_with_markup(
@@ -94,7 +95,7 @@ impl View for FreezeProfile {
                 let user = ctx
                     .ledger
                     .users
-                    .get(&mut ctx.session, self.tg_id)
+                    .get(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre!("User not found!"))?;
                 if user.freeze_days < self.days {
@@ -107,14 +108,14 @@ impl View for FreezeProfile {
                     ctx.send_msg("абонемент уже заморожен").await?;
                     return Ok(Jmp::Back);
                 }
-                if !ctx.has_right(Rule::FreezeUsers) && ctx.me.tg_id != self.tg_id {
+                if !ctx.has_right(Rule::FreezeUsers) && ctx.me.id != self.id {
                     ctx.send_msg("Нет прав").await?;
                     return Ok(Jmp::Back);
                 }
 
                 ctx.ledger
                     .users
-                    .freeze(&mut ctx.session, user.tg_id, self.days)
+                    .freeze(&mut ctx.session, user.id, self.days)
                     .await
                     .context("freeze")?;
             }

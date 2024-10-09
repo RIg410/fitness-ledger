@@ -10,12 +10,12 @@ use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
 pub struct ConfirmSell {
-    user_id: i64,
+    user_id: ObjectId,
     sub: ObjectId,
 }
 
 impl ConfirmSell {
-    pub fn new(user_id: i64, sell: ObjectId) -> ConfirmSell {
+    pub fn new(user_id: ObjectId, sell: ObjectId) -> ConfirmSell {
         ConfirmSell { user_id, sub: sell }
     }
 }
@@ -56,7 +56,7 @@ impl View for ConfirmSell {
 
 async fn render(
     ctx: &mut Context,
-    user_id: i64,
+    user_id: ObjectId,
     sub: ObjectId,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
     let sub = ctx

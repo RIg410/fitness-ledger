@@ -1,4 +1,4 @@
-use bson::{to_document, Document};
+use bson::to_document;
 use chrono::{DateTime, Duration, Local, Utc};
 use eyre::{bail, eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
@@ -8,7 +8,7 @@ use model::rights;
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
 use model::subscription::{Status, Subscription, UserSubscription};
-use model::user::{Freeze, Notification, User, UserIdent, UserName};
+use model::user::{Freeze, Notification, User, UserName};
 use mongodb::bson::to_bson;
 use mongodb::options::UpdateOptions;
 use mongodb::{
@@ -36,14 +36,10 @@ impl UserStore {
         })
     }
 
-    pub async fn get<ID: Into<UserIdent>>(
-        &self,
-        session: &mut Session,
-        id: ID,
-    ) -> Result<Option<User>> {
+    pub async fn get(&self, session: &mut Session, id: ObjectId) -> Result<Option<User>> {
         Ok(self
             .users
-            .find_one(self.ident_filter(id))
+            .find_one(doc! { "_id": id })
             .session(&mut *session)
             .await?)
     }
@@ -56,19 +52,12 @@ impl UserStore {
             .await?)
     }
 
-    fn ident_filter<ID: Into<UserIdent>>(&self, id: ID) -> Document {
-        match id.into() {
-            UserIdent::TgId(tg_id) => doc! { "tg_id": tg_id },
-            UserIdent::Id(id) => doc! { "_id": id },
-        }
-    }
-
     pub async fn insert(&self, session: &mut Session, user: User) -> Result<()> {
         info!("Inserting user: {:?}", user);
         let result = self
             .users
             .update_one(
-                doc! { "tg_id": user.tg_id },
+                doc! { "_id": user.id },
                 doc! { "$setOnInsert": to_document(&user)? },
             )
             .session(&mut *session)
@@ -79,6 +68,14 @@ impl UserStore {
         }
 
         Ok(())
+    }
+
+    pub async fn get_by_tg_id(&self, session: &mut Session, tg_id: i64) -> Result<Option<User>> {
+        Ok(self
+            .users
+            .find_one(doc! { "tg_id": tg_id })
+            .session(&mut *session)
+            .await?)
     }
 
     pub async fn set_tg_id(&self, session: &mut Session, id: ObjectId, tg_id: i64) -> Result<()> {
@@ -160,13 +157,12 @@ impl UserStore {
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn add_subscription<ID: Into<UserIdent>>(
+    pub async fn add_subscription(
         &self,
         session: &mut Session,
-        id: ID,
+        id: ObjectId,
         sub: Subscription,
     ) -> Result<()> {
-        let id = id.into();
         info!("Add subscription for user {}: {:?}", id, sub);
         let freeze_days = sub.freeze_days as i32;
         let amount = sub.items as i32;
@@ -174,7 +170,7 @@ impl UserStore {
         let result = self
             .users
             .update_one(
-                self.ident_filter(id),
+                doc! { "_id": id },
                 doc! {
                 "$inc": {
                     "balance": amount,
@@ -203,12 +199,12 @@ impl UserStore {
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn unfreeze(&self, session: &mut Session, tg_id: i64) -> Result<()> {
-        info!("Unfreeze account:{}", tg_id);
+    pub async fn unfreeze(&self, session: &mut Session, id: ObjectId) -> Result<()> {
+        info!("Unfreeze account:{}", id);
         let result = self
             .users
             .update_one(
-                doc! { "tg_id": tg_id },
+                doc! { "_id": id },
                 doc! { "$unset": { "freeze": "" }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
@@ -220,13 +216,7 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn freeze<ID: Into<UserIdent>>(
-        &self,
-        session: &mut Session,
-        id: ID,
-        days: u32,
-    ) -> Result<()> {
-        let id = id.into();
+    pub async fn freeze(&self, session: &mut Session, id: ObjectId, days: u32) -> Result<()> {
         info!("Freeze account:{}", id);
         let mut user = self
             .get(session, id)
@@ -257,7 +247,7 @@ impl UserStore {
         });
 
         self.users
-            .update_one(self.ident_filter(id), doc! { "$set": to_document(&user)? })
+            .update_one(doc! { "_id": id }, doc! { "$set": to_document(&user)? })
             .session(&mut *session)
             .await?;
         Ok(())
@@ -266,14 +256,14 @@ impl UserStore {
     pub async fn set_first_name(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         first_name: &str,
     ) -> Result<bool> {
-        info!("Setting first_name for user {}: {}", tg_id, first_name);
+        info!("Setting first_name for user {}: {}", id, first_name);
         let result = self
             .users
             .update_one(
-                doc! { "tg_id": tg_id },
+                doc! { "_id": id },
                 doc! { "$set": { "name.first_name": first_name }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
@@ -284,14 +274,14 @@ impl UserStore {
     pub async fn set_last_name(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         last_name: &str,
     ) -> Result<bool> {
-        info!("Setting last_name for user {}: {}", tg_id, last_name);
+        info!("Setting last_name for user {}: {}", id, last_name);
         let result = self
             .users
             .update_one(
-                doc! { "tg_id": tg_id },
+                doc! { "_id": id },
                 doc! { "$set": { "name.last_name": last_name }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
@@ -302,14 +292,14 @@ impl UserStore {
     pub async fn set_tg_user_name(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         tg_user_name: &str,
     ) -> Result<bool> {
-        info!("Setting tg_user_name for user {}: {}", tg_id, tg_user_name);
+        info!("Setting tg_user_name for user {}: {}", id, tg_user_name);
         let result = self
             .users
             .update_one(
-                doc! { "tg_id": tg_id },
+                doc! { "_id": id },
                 doc! { "$set": { "name.tg_user_name": tg_user_name }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
@@ -326,14 +316,14 @@ impl UserStore {
     pub async fn set_birthday(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         birthday: DateTime<Local>,
     ) -> Result<bool> {
-        info!("Setting birthday for user {}: {}", tg_id, birthday);
+        info!("Setting birthday for user {}: {}", id, birthday);
         let result = self
             .users
             .update_one(
-                doc! { "tg_id": tg_id },
+                doc! { "_id": id },
                 doc! { "$set": { "birthday": to_bson(&birthday)? }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
@@ -344,14 +334,14 @@ impl UserStore {
     pub async fn block_user(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         is_active: bool,
     ) -> Result<bool> {
-        info!("Blocking user {}: {}", tg_id, is_active);
+        info!("Blocking user {}: {}", id, is_active);
         let result = self
             .users
             .update_one(
-                doc! { "tg_id": tg_id },
+                doc! { "_id": id },
                 doc! { "$set": { "is_active": is_active }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
@@ -362,13 +352,13 @@ impl UserStore {
     pub async fn add_rule(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         rule: &rights::Rule,
     ) -> Result<bool> {
-        info!("Adding rule {:?} to user {}", rule, tg_id);
+        info!("Adding rule {:?} to user {}", rule, id);
         let result = self.users
             .update_one(
-                doc! { "tg_id": tg_id },
+                doc! { "_id": id },
                 doc! { "$addToSet": { "rights.rights": format!("{:?}", rule) }, "$inc": { "version": 1 } },
             ).session(&mut *session)
             .await?;
@@ -378,13 +368,13 @@ impl UserStore {
     pub async fn remove_rule(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         rule: &rights::Rule,
     ) -> Result<bool> {
-        info!("Removing rule {:?} from user {}", rule, tg_id);
+        info!("Removing rule {:?} from user {}", rule, id);
         let result = self.users
             .update_one(
-                doc! { "tg_id": tg_id },
+                doc! { "_id": id },
                 doc! { "$pull": { "rights.rights": format!("{:?}", rule) }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
@@ -403,12 +393,12 @@ impl UserStore {
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn set_phone(&self, session: &mut Session, tg_id: i64, phone: &str) -> Result<()> {
-        info!("Setting phone for user {}: {}", tg_id, phone);
+    pub async fn set_phone(&self, session: &mut Session, id: ObjectId, phone: &str) -> Result<()> {
+        info!("Setting phone for user {}: {}", id, phone);
         let result = self
             .users
             .update_one(
-                doc! { "tg_id": tg_id },
+                doc! { "_id": id },
                 doc! { "$set": { "phone": phone }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
@@ -434,13 +424,13 @@ impl UserStore {
     pub async fn set_couch(
         &self,
         session: &mut Session,
-        tg_id: i64,
+        id: ObjectId,
         couch: &CouchInfo,
     ) -> Result<()> {
-        info!("Setting couch for user {}: {:?}", tg_id, couch);
+        info!("Setting couch for user {}: {:?}", id, couch);
         self.users
             .update_one(
-                doc! { "tg_id": tg_id },
+                doc! { "_id": id },
                 doc! { "$set": { "couch": to_document(couch)? }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
@@ -502,16 +492,16 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn update_come_from<ID: Into<UserIdent>>(
+    pub async fn update_come_from(
         &self,
         session: &mut Session,
-        id: ID,
+        id: ObjectId,
         come_from: ComeFrom,
     ) -> Result<(), Error> {
         info!("Updating come_from: {:?}", come_from);
         self.users
             .update_one(
-                self.ident_filter(id),
+                doc! { "_id": id },
                 doc! { "$set": { "come_from": to_document(&come_from)? }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)

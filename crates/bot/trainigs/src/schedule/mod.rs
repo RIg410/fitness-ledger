@@ -17,7 +17,7 @@ mod set_instructor;
 pub struct ScheduleTrainingPreset {
     pub day: Option<DateTime<Local>>,
     pub date_time: Option<DateTime<Local>>,
-    pub instructor: Option<i64>,
+    pub instructor: Option<ObjectId>,
     pub is_one_time: Option<bool>,
 }
 
