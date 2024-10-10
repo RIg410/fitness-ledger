@@ -17,7 +17,7 @@ pub struct SubscriptionBg {
 #[async_trait]
 impl Task for SubscriptionBg {
     const NAME: &'static str = "subscription";
-    const CRON: &'static str = "every 2 minutes";
+    const CRON: &'static str = "every day at 13:00";
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;
