@@ -78,8 +78,7 @@ impl TriningBg {
             } else {
                 return Err(eyre!("Subscription not found for user:{}", user.id));
             }
-            user.subscriptions.retain(|s| !s.is_empty());
-            self.ledger.users.update(session, &user).await?;
+            self.ledger.users.update(session, user).await?;
         }
 
         let mut couch = self.ledger.get_user(session, training.instructor).await?;
@@ -123,7 +122,7 @@ impl TriningBg {
                 return Err(eyre!("Subscription not found for user:{}", user.id));
             }
 
-            self.ledger.users.update(session, &user).await?;
+            self.ledger.users.update(session, user).await?;
         }
         self.ledger
             .calendar

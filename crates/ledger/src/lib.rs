@@ -95,6 +95,7 @@ impl Ledger {
             .get(session, id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
+        let user_id = user.id;
         if !is_active {
             let users_training = self
                 .calendar
@@ -123,10 +124,10 @@ impl Ledger {
                     .sign_out(session, training.start_at, user.id)
                     .await?;
             }
-            self.users.update(session, &user).await?;
+            self.users.update(session, user).await?;
         }
-        self.history.block_user(session, user.id, is_active).await?;
-        self.users.block_user(session, user.id, is_active).await?;
+        self.history.block_user(session, user_id, is_active).await?;
+        self.users.block_user(session, user_id, is_active).await?;
         Ok(())
     }
 
@@ -165,7 +166,7 @@ impl Ledger {
             .get(session, client)
             .await?
             .ok_or_else(|| SignUpError::UserNotFound)?;
-
+        let user_id = user.id;
         if user.couch.is_some() {
             return Err(SignUpError::UserIsCouch);
         }
@@ -174,11 +175,11 @@ impl Ledger {
             .find_subscription(FindFor::Lock, &training)
             .ok_or_else(|| SignUpError::NotEnoughBalance)?;
 
-        if !subscription.lock_balance(training.start_at) {
+        if !subscription.lock_balance() {
             return Err(SignUpError::NotEnoughBalance);
         }
 
-        self.users.update(session, &user).await?;
+        self.users.update(session, user).await?;
 
         self.calendar
             .sign_up(session, training.start_at, client)
@@ -186,7 +187,7 @@ impl Ledger {
         self.history
             .sign_up(
                 session,
-                user.id,
+                user_id,
                 training.get_slot().start_at(),
                 training.name,
             )
@@ -236,7 +237,7 @@ impl Ledger {
             .get(session, client)
             .await?
             .ok_or_else(|| SignOutError::UserNotFound)?;
-
+        let user_id = user.id;
         let sub = user
             .find_subscription(FindFor::Unlock, training)
             .ok_or_else(|| SignOutError::NotEnoughReservedBalance)?;
@@ -244,7 +245,7 @@ impl Ledger {
         if !sub.unlock_balance() {
             return Err(SignOutError::NotEnoughReservedBalance);
         }
-        self.users.update(session, &user).await?;
+        self.users.update(session, user).await?;
 
         self.calendar
             .sign_out(session, training.start_at, client)
@@ -252,7 +253,7 @@ impl Ledger {
         self.history
             .sign_out(
                 session,
-                user.id,
+                user_id,
                 training.get_slot().start_at(),
                 training.name.clone(),
             )

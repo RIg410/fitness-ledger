@@ -119,6 +119,8 @@ pub enum Rule {
     System,
 
     ViewRewards,
+
+    ReceiveNotificationsAboutSubscriptions,
 }
 
 impl Rule {

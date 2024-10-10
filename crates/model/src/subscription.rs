@@ -1,6 +1,6 @@
 use crate::decimal::Decimal;
 use bson::oid::ObjectId;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -86,10 +86,17 @@ impl UserSubscription {
         matches!(self.status, Status::Active { .. })
     }
 
-    pub fn activate(&mut self, sign_up_date: DateTime<Utc>) {
-        self.status = Status::Active {
-            start_date: sign_up_date,
-        };
+    pub fn activate(&mut self) {
+        let sign_up_date = Local::now()
+            .date_naive()
+            .and_hms_opt(23, 59, 59)
+            .and_then(|dt| Utc.from_local_datetime(&dt).single());
+
+        if let Some(start_date) = sign_up_date {
+            self.status = Status::Active { start_date };
+        } else {
+            log::error!("Failed to get current date");
+        }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -104,13 +111,13 @@ impl UserSubscription {
         }
     }
 
-    pub fn lock_balance(&mut self, sign_up_date: DateTime<Utc>) -> bool {
+    pub fn lock_balance(&mut self) -> bool {
         if self.balance == 0 {
             return false;
         }
 
         if !self.is_active() {
-            self.activate(sign_up_date);
+            self.activate();
         }
 
         self.balance -= 1;

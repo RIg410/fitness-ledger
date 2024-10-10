@@ -7,7 +7,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::day::fmt_dt;
+use bot_viewer::{day::fmt_dt, fmt_phone};
 use chrono::{DateTime, Local};
 use eyre::{bail, Result};
 use model::{
@@ -106,7 +106,7 @@ impl TrainingView {
         } else {
             ctx.send_msg("Нет подходящего абонемента🥺").await?;
             return Ok(Jmp::Stay);
-        }
+        };
 
         if ctx.me.freeze.is_some() {
             ctx.send_msg("Ваш абонемент заморожен🥶").await?;
@@ -116,6 +116,45 @@ impl TrainingView {
         ctx.ledger
             .sign_up(&mut ctx.session, &training, ctx.me.id, false)
             .await?;
+
+        let mut msg: String = format!(
+            "Вы записались на тренировку '*{}*' в _{}_\\.\n",
+            escape(&training.name),
+            fmt_dt(&training.get_slot().start_at())
+        );
+
+        let balance = ctx.me.available_balance_for_training(&training);
+        if balance <= 1 {
+            msg.push_str("Ваш абонемент заканчивается🥺");
+            if let Ok(users) = ctx
+                .ledger
+                .users
+                .find_users_with_right(
+                    &mut ctx.session,
+                    Rule::ReceiveNotificationsAboutSubscriptions,
+                )
+                .await
+            {
+                for user in users {
+                    let res = ctx
+                        .bot
+                        .send_notification_to(
+                            ChatId(user.tg_id),
+                            &format!(
+                                "У {} {} заканчивается абонемент\\.",
+                                escape(&ctx.me.name.to_string()),
+                                fmt_phone(&ctx.me.phone)
+                            ),
+                        )
+                        .await;
+                    if let Err(e) = res {
+                        log::error!("Failed to send notification to {}: {}", user.tg_id, e);
+                    }
+                }
+            }
+        }
+        ctx.send_notification(&msg).await?;
+
         Ok(Jmp::Stay)
     }
 

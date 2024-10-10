@@ -32,7 +32,7 @@ impl Users {
                     sub.balance = sub.balance.saturating_sub(delta.abs() as u32);
                 }
             });
-        self.store.update(session, &user).await?;
+        self.store.update(session, user).await?;
         Ok(())
     }
 
@@ -64,12 +64,12 @@ impl Users {
                     sub.status.activate(Utc::now());
                 }
             });
-        self.store.update(session, &user).await?;
+        self.store.update(session, user).await?;
         Ok(())
     }
 
     #[tx]
-    pub async fn expire_subscription(&self, session: &mut Session, id: ObjectId) -> Result<()> {
+    pub async fn expire_subscription(&self, session: &mut Session, id: ObjectId) -> Result<bool> {
         let mut user = self
             .store
             .get(session, id)
@@ -89,13 +89,18 @@ impl Users {
             },
         );
 
+        let mut expired_sub = false;
         for subscription in expired {
+            if !subscription.is_empty() {
+                expired_sub = true;
+            }
+
             self.logs
                 .expire_subscription(session, id, subscription)
                 .await?;
         }
         user.subscriptions = actual;
-        self.store.update(session, &user).await?;
-        Ok(())
+        self.store.update(session, user).await?;
+        Ok(expired_sub)
     }
 }

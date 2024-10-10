@@ -4,7 +4,7 @@ use eyre::{bail, eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
 use log::info;
 use model::couch::CouchInfo;
-use model::rights;
+use model::rights::{self, Rule};
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
 use model::subscription::{Status, Subscription, UserSubscription};
@@ -34,6 +34,16 @@ impl UserStore {
         Ok(UserStore {
             users: Arc::new(users),
         })
+    }
+
+    pub async fn find_users_with_right(
+        &self,
+        session: &mut Session,
+        role: Rule,
+    ) -> Result<Vec<User>> {
+        let filter = doc! { "rights.rights": { "$elemMatch": { "$eq": format!("{:?}", role) } } };
+        let mut cursor = self.users.find(filter).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
     pub async fn get(&self, session: &mut Session, id: ObjectId) -> Result<Option<User>> {
@@ -510,9 +520,11 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn update(&self, session: &mut Session, user: &User) -> Result<()> {
+    pub async fn update(&self, session: &mut Session, mut user: User) -> Result<()> {
+        user.gc();
+
         self.users
-            .update_one(doc! { "_id": user.id }, doc! { "$set": to_document(user)? })
+            .update_one(doc! { "_id": user.id }, doc! { "$set": to_document(&user)? })
             .session(&mut *session)
             .await?;
         Ok(())

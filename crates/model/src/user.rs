@@ -86,6 +86,7 @@ impl User {
         reason: FindFor,
         training: &Training,
     ) -> Option<&mut UserSubscription> {
+        let start_at = training.get_slot().start_at();
         self.subscriptions
             .sort_by(|a, b| match (&a.status, &b.status) {
                 (Status::Active { start_date: a }, Status::Active { start_date: b }) => a.cmp(b),
@@ -110,7 +111,15 @@ impl User {
                 }
             })
             .find(|s| match reason {
-                FindFor::Lock => s.balance > 0,
+                FindFor::Lock => {
+                    if let Status::Active { start_date } = s.status {
+                        let expiration_date = start_date.with_timezone(&Local)
+                            + chrono::Duration::days(i64::from(s.days));
+                        expiration_date > start_at && s.balance > 0
+                    } else {
+                        s.balance > 0
+                    }
+                }
                 FindFor::Charge => s.locked_balance > 0,
                 FindFor::Unlock => s.locked_balance > 0,
             })
@@ -152,6 +161,31 @@ impl User {
             balance,
             locked_balance,
         }
+    }
+
+    pub fn available_balance_for_training(&self, training: &Training) -> u32 {
+        self.subscriptions
+            .iter()
+            .filter(|s| match s.tp {
+                subscription::SubscriptionType::Group {} => !training.is_personal,
+                subscription::SubscriptionType::Personal { couch_filter } => {
+                    if training.is_personal {
+                        if let Some(couch) = couch_filter {
+                            training.instructor == couch
+                        } else {
+                            true
+                        }
+                    } else {
+                        false
+                    }
+                }
+            })
+            .map(|s| s.balance)
+            .sum()
+    }
+
+    pub fn gc(&mut self) {
+        self.subscriptions.retain(|s| !s.is_empty());
     }
 }
 

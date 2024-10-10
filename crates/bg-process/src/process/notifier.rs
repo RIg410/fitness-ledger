@@ -1,7 +1,6 @@
 use crate::Task;
 use async_trait::async_trait;
-use bot_core::bot::{Origin, TgBot, ValidToken};
-use bot_main::BotApp;
+use bot_core::bot::TgBot;
 use bot_viewer::day::fmt_time;
 use chrono::{DateTime, Local};
 use eyre::Error;
@@ -9,10 +8,7 @@ use ledger::Ledger;
 use model::{ids::DayId, session::Session, training::Notified};
 use mongodb::bson::oid::ObjectId;
 use std::sync::Arc;
-use teloxide::{
-    types::{ChatId, MessageId},
-    utils::markdown::escape,
-};
+use teloxide::{types::ChatId, utils::markdown::escape};
 
 #[derive(Clone)]
 pub struct TrainingNotifier {
@@ -34,19 +30,8 @@ impl Task for TrainingNotifier {
 }
 
 impl TrainingNotifier {
-    pub fn new(ledger: Ledger, bot: BotApp) -> TrainingNotifier {
-        TrainingNotifier {
-            ledger,
-            bot: Arc::new(TgBot::new(
-                bot.bot,
-                bot.state.tokens(),
-                Origin {
-                    chat_id: ChatId(0),
-                    message_id: MessageId(0),
-                    tkn: ValidToken::new(),
-                },
-            )),
-        }
+    pub fn new(ledger: Ledger, bot: Arc<TgBot>) -> TrainingNotifier {
+        TrainingNotifier { ledger, bot }
     }
 
     async fn notify_user(

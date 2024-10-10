@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use bot_core::bot::{Origin, TgBot, ValidToken};
 use bot_main::BotApp;
 use eyre::{Context, Error};
 use ledger::Ledger;
@@ -7,16 +10,26 @@ use process::{
     training::TriningBg,
 };
 
+use teloxide::types::{ChatId, MessageId};
 use tokio_cron_scheduler::{Job, JobScheduler};
 mod process;
 
 pub async fn start(ledger: Ledger, bot: BotApp) -> Result<(), Error> {
+    let bot = Arc::new(TgBot::new(
+        bot.bot,
+        bot.state.tokens(),
+        Origin {
+            chat_id: ChatId(0),
+            message_id: MessageId(0),
+            tkn: ValidToken::new(),
+        },
+    ));
     let sched = JobScheduler::new().await?;
 
     sched.add(TriningBg::new(ledger.clone()).to_job()?).await?;
     sched.add(FreezeBg::new(ledger.clone()).to_job()?).await?;
     sched
-        .add(SubscriptionBg::new(ledger.clone()).to_job()?)
+        .add(SubscriptionBg::new(ledger.clone(), bot.clone()).to_job()?)
         .await?;
     sched.add(RewardsBg::new(ledger.clone()).to_job()?).await?;
     sched
