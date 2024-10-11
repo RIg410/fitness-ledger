@@ -9,7 +9,7 @@ use bot_viewer::user::fmt_come_from;
 use model::{rights::Rule, statistics::marketing::ComeFrom};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::types::InlineKeyboardMarkup;
+use teloxide::{types::InlineKeyboardMarkup};
 
 pub struct MarketingInfoView {
     id: ObjectId,
@@ -42,6 +42,7 @@ impl View for MarketingInfoView {
         markup = markup.append_row(Callback::DirectAdds {}.btn_row("Прямые рекламные каналы"));
         markup = markup.append_row(Callback::VkAdds {}.btn_row("Реклама ВК"));
         markup = markup.append_row(Callback::DoubleGIS {}.btn_row("2ГИС"));
+        markup = markup.append_row(Callback::YandexDirect {}.btn_row("Яндекс.Директ"));
         markup = markup.append_row(Callback::Unknown {}.btn_row("Неизвестно"));
         ctx.edit_origin(&txt, markup).await?;
         Ok(())
@@ -58,6 +59,7 @@ impl View for MarketingInfoView {
             Callback::DirectAdds => ComeFrom::DirectAdds {},
             Callback::VkAdds => ComeFrom::VkAdds {},
             Callback::DoubleGIS => ComeFrom::DoubleGIS {},
+            Callback::YandexDirect => ComeFrom::YandexDirect {},
         };
 
         ctx.ledger
@@ -78,4 +80,5 @@ enum Callback {
     DirectAdds,
     VkAdds,
     DoubleGIS,
+    YandexDirect,
 }

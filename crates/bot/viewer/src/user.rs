@@ -204,8 +204,9 @@ pub async fn fmt_come_from(_: &mut Context, from: &ComeFrom) -> Result<String, E
         ComeFrom::Website {} => "Сайт".to_string(),
         ComeFrom::Instagram {} => "Инстаграм".to_string(),
         ComeFrom::VK {} => "ВКонтакте".to_string(),
-        ComeFrom::YandexMap {} => "Яндекс.Карты".to_string(),
+        ComeFrom::YandexMap {} => "Яндекс\\.Карты".to_string(),
         ComeFrom::DirectAdds {} => "Прямые рекламные объявления".to_string(),
         ComeFrom::VkAdds {} => "Рекламные объявления ВКонтакте".to_string(),
+        ComeFrom::YandexDirect {} => "Яндекс\\.Директ".to_string(),
     })
 }

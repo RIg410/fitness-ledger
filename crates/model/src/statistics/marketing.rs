@@ -12,6 +12,7 @@ pub enum ComeFrom {
     Instagram {},
     VK {},
     YandexMap {},
+    YandexDirect {},
     DirectAdds {},
     VkAdds {},
     DoubleGIS {},
