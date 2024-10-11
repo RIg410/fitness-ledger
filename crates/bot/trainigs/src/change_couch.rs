@@ -5,12 +5,16 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use bot_viewer::day::fmt_dt;
 use chrono::{DateTime, Local};
 use eyre::Result;
 use model::{rights::Rule, user::User};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
+use teloxide::{
+    types::{ChatId, InlineKeyboardButton, InlineKeyboardMarkup},
+    utils::markdown::escape,
+};
 
 pub struct ChangeCouch {
     start_at: DateTime<Local>,
@@ -35,6 +39,8 @@ impl ChangeCouch {
                 .await?;
             return Ok(());
         }
+        let old_couch = training.instructor;
+        let new_couch = id;
         ctx.ledger
             .calendar
             .change_couch(
@@ -44,6 +50,26 @@ impl ChangeCouch {
                 self.all,
             )
             .await?;
+
+        ctx.send_notification("Тренер успешно изменен").await?;
+        let old_couch = ctx.ledger.get_user(&mut ctx.session, old_couch).await?;
+        let new_couch = ctx.ledger.get_user(&mut ctx.session, new_couch).await?;
+        let msg = format!(
+            "Произошла замена инструктора *{}* ➡️ *{}* на тренировке: *{}* в *{}*",
+            escape(&old_couch.name.first_name),
+            escape(&new_couch.name.first_name),
+            escape(&training.name),
+            fmt_dt(&training.get_slot().start_at())
+        );
+        ctx.send_notification_to(ChatId(old_couch.tg_id), &msg)
+            .await?;
+        ctx.send_notification_to(ChatId(new_couch.tg_id), &msg)
+            .await?;
+        for client in training.clients.iter() {
+            let client = ctx.ledger.get_user(&mut ctx.session, *client).await?;
+            ctx.send_notification_to(ChatId(client.tg_id), &msg).await?;
+        }
+
         Ok(())
     }
 }
