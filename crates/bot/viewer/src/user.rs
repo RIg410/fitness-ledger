@@ -2,7 +2,7 @@ use bot_core::context::Context;
 use chrono::Local;
 use eyre::Error;
 use model::{
-    couch::{CouchInfo, Rate},
+    couch::{CouchInfo, GroupRate, PersonalRate},
     rights::Rule,
     statistics::marketing::ComeFrom,
     subscription::{Status, UserSubscription},
@@ -148,31 +148,39 @@ fn render_couch_info(ctx: &mut Context, id: ObjectId, msg: &mut String, couch: &
     msg.push_str(&format!("\n[Анкета]({})", escape(&couch.description)));
     if ctx.has_right(Rule::ViewCouchRates) || ctx.is_me(id) {
         msg.push_str(&format!(
-            "\nНакопленная награда : _{}_💰\n{}\n",
+            "\nНакопленная награда : _{}_💰\n{}\n{}\n",
             escape(&couch.reward.to_string()),
-            fmt_rate(&couch.rate)
+            fmt_group_rate(&couch.group_rate),
+            fmt_personal_rate(&couch.personal_rate),
         ));
     }
 }
 
-pub fn fmt_rate(rate: &Rate) -> String {
+pub fn fmt_group_rate(rate: &GroupRate) -> String {
     match rate {
-        Rate::FixedMonthly { rate, next_reward } => {
+        GroupRate::FixedMonthly { rate, next_reward } => {
             format!(
                 "Фиксированный месячный тариф : _{}_💰\nСледующая награда : _{}_\n",
                 escape(&rate.to_string()),
                 next_reward.with_timezone(&Local).format("%d\\.%m\\.%Y")
             )
         }
-        Rate::PerClient { min, per_client } => {
+        GroupRate::PerClient { min, per_client } => {
             format!(
                 "За клиента : _{}_💰\nМинимальная награда : _{}_💰\n",
                 escape(&per_client.to_string()),
                 escape(&min.to_string())
             )
         }
-        Rate::None => "Тариф не определен".to_string(),
+        GroupRate::None => "Тариф не определен".to_string(),
     }
+}
+
+pub fn fmt_personal_rate(rate: &PersonalRate) -> String {
+    format!(
+        "Вознаграждение за персональные тренировки : _{}%_💰",
+        rate.couch_interest
+    )
 }
 
 pub fn fmt_user_type(user: &User) -> &str {

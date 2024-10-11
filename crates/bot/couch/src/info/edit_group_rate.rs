@@ -8,16 +8,16 @@ use bot_core::{
         Dispatch, Stage,
     },
 };
-use bot_viewer::user::fmt_rate;
+use bot_viewer::user::fmt_group_rate;
 use chrono::{Local, NaiveDate, TimeZone as _, Utc};
 use eyre::Error;
-use model::{couch::Rate, decimal::Decimal};
+use model::{couch::GroupRate, decimal::Decimal};
 use mongodb::bson::oid::ObjectId;
 
 #[derive(Default)]
 pub struct ChangeRateState {
     pub user: ObjectId,
-    pub reward_rate: Option<Rate>,
+    pub reward_rate: Option<GroupRate>,
 }
 
 pub struct SetRewardType;
@@ -58,7 +58,7 @@ impl StageList<ChangeRateState> for SetRewardType {
         let id = id.as_i64().ok_or_else(|| eyre::eyre!("Invalid id"))?;
         Ok(match id {
             0 => {
-                state.reward_rate = Some(Rate::None);
+                state.reward_rate = Some(GroupRate::None);
                 Dispatch::Stage(Stage::yes_no(Confirm))
             }
             1 => Dispatch::Stage(Stage::text(FixedRate)),
@@ -76,7 +76,11 @@ pub struct FixedRate;
 
 #[async_trait]
 impl StageText<ChangeRateState> for FixedRate {
-    async fn message(&self, _: &mut Context, _: &mut ChangeRateState) -> Result<String, eyre::Error> {
+    async fn message(
+        &self,
+        _: &mut Context,
+        _: &mut ChangeRateState,
+    ) -> Result<String, eyre::Error> {
         Ok("Введите фиксированное вознаграждение 💵".to_string())
     }
 
@@ -87,7 +91,7 @@ impl StageText<ChangeRateState> for FixedRate {
         query: &str,
     ) -> Result<Dispatch<ChangeRateState>, Error> {
         let rate = query.parse::<Decimal>()?;
-        let rate = Rate::FixedMonthly {
+        let rate = GroupRate::FixedMonthly {
             rate,
             next_reward: Utc::now(),
         };
@@ -104,7 +108,11 @@ struct ClientRate;
 
 #[async_trait]
 impl StageText<ChangeRateState> for ClientRate {
-    async fn message(&self, _: &mut Context, _: &mut ChangeRateState) -> Result<String, eyre::Error> {
+    async fn message(
+        &self,
+        _: &mut Context,
+        _: &mut ChangeRateState,
+    ) -> Result<String, eyre::Error> {
         Ok("Введите минимальное вознаграждение 💵".to_string())
     }
 
@@ -116,7 +124,7 @@ impl StageText<ChangeRateState> for ClientRate {
     ) -> Result<Dispatch<ChangeRateState>, Error> {
         let min = query.parse::<Decimal>()?;
 
-        state.reward_rate = Some(Rate::PerClient {
+        state.reward_rate = Some(GroupRate::PerClient {
             min,
             per_client: Decimal::zero(),
         });
@@ -132,7 +140,11 @@ struct ClientRatePerClient;
 
 #[async_trait]
 impl StageText<ChangeRateState> for ClientRatePerClient {
-    async fn message(&self, _: &mut Context, _: &mut ChangeRateState) -> Result<String, eyre::Error> {
+    async fn message(
+        &self,
+        _: &mut Context,
+        _: &mut ChangeRateState,
+    ) -> Result<String, eyre::Error> {
         Ok("Введите вознаграждение за клиента 💵".to_string())
     }
 
@@ -144,8 +156,8 @@ impl StageText<ChangeRateState> for ClientRatePerClient {
     ) -> Result<Dispatch<ChangeRateState>, Error> {
         let per_client = query.parse::<Decimal>()?;
 
-        if let Some(Rate::PerClient { min, .. }) = state.reward_rate.as_mut() {
-            state.reward_rate = Some(Rate::PerClient {
+        if let Some(GroupRate::PerClient { min, .. }) = state.reward_rate.as_mut() {
+            state.reward_rate = Some(GroupRate::PerClient {
                 min: *min,
                 per_client,
             });
@@ -164,7 +176,11 @@ struct FixedRateNextReward;
 
 #[async_trait]
 impl StageText<ChangeRateState> for FixedRateNextReward {
-    async fn message(&self, _: &mut Context, _: &mut ChangeRateState) -> Result<String, eyre::Error> {
+    async fn message(
+        &self,
+        _: &mut Context,
+        _: &mut ChangeRateState,
+    ) -> Result<String, eyre::Error> {
         Ok("Введите дату следующего вознаграждения 📅\nY\\.m\\.d".to_string())
     }
 
@@ -184,8 +200,8 @@ impl StageText<ChangeRateState> for FixedRateNextReward {
             .earliest()
             .ok_or_else(|| eyre::eyre!("Invalid time"))?;
 
-        let rate = if let Some(Rate::FixedMonthly { rate, .. }) = state.reward_rate.as_mut() {
-            Rate::FixedMonthly {
+        let rate = if let Some(GroupRate::FixedMonthly { rate, .. }) = state.reward_rate.as_mut() {
+            GroupRate::FixedMonthly {
                 rate: *rate,
                 next_reward: next_reward.with_timezone(&Utc),
             }
@@ -211,10 +227,14 @@ impl StageYesNo<ChangeRateState> for Confirm {
         } else {
             eyre::bail!("User, description or rate not found");
         };
-        Ok(format!("Вознаграждение: {}\n", fmt_rate(rate)))
+        Ok(format!("Вознаграждение: {}\n", fmt_group_rate(rate)))
     }
 
-    async fn yes(&self, ctx: &mut Context, state: &mut ChangeRateState) -> Result<Dispatch<ChangeRateState>, Error> {
+    async fn yes(
+        &self,
+        ctx: &mut Context,
+        state: &mut ChangeRateState,
+    ) -> Result<Dispatch<ChangeRateState>, Error> {
         let rate = if let Some(rate) = state.reward_rate.as_ref() {
             rate
         } else {

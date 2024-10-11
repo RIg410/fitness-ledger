@@ -9,7 +9,10 @@ use crate::{decimal::Decimal, training::Training};
 pub struct CouchInfo {
     pub description: String,
     pub reward: Decimal,
-    pub rate: Rate,
+    #[serde(rename = "rate")]
+    pub group_rate: GroupRate,
+    #[serde(default)]
+    pub personal_rate: PersonalRate,
 }
 
 impl CouchInfo {
@@ -29,9 +32,9 @@ impl CouchInfo {
         if training.clients.is_empty() {
             return None;
         }
-        match &self.rate {
-            Rate::FixedMonthly { .. } => None,
-            Rate::PerClient { min, per_client } => {
+        match &self.group_rate {
+            GroupRate::FixedMonthly { .. } => None,
+            GroupRate::PerClient { min, per_client } => {
                 let mut reward_sum = *per_client * Decimal::int(training.clients.len() as i64);
                 if reward_sum < *min {
                     reward_sum = *min;
@@ -43,7 +46,7 @@ impl CouchInfo {
                     couch: training.instructor,
                     created_at: Local::now().with_timezone(&Utc),
                     reward: reward_sum,
-                    rate: self.rate.clone(),
+                    rate: self.group_rate.clone(),
                     source: RewardSource::Training {
                         start_at: training.start_at,
                         clients: training.clients.len() as u32,
@@ -52,7 +55,7 @@ impl CouchInfo {
                 };
                 Some(reward)
             }
-            Rate::None => None,
+            GroupRate::None => None,
         }
     }
 
@@ -61,11 +64,11 @@ impl CouchInfo {
         id: ObjectId,
         date_time: DateTime<Local>,
     ) -> Result<Option<Reward>, Error> {
-        Ok(match self.rate.clone() {
-            Rate::FixedMonthly { rate, next_reward } => {
+        Ok(match self.group_rate.clone() {
+            GroupRate::FixedMonthly { rate, next_reward } => {
                 let next_reward = next_reward.with_timezone(&Local);
                 if date_time > next_reward {
-                    self.rate = Rate::FixedMonthly {
+                    self.group_rate = GroupRate::FixedMonthly {
                         rate,
                         next_reward: next_reward
                             .checked_add_months(Months::new(1))
@@ -80,7 +83,7 @@ impl CouchInfo {
                         couch: id,
                         created_at: Local::now().with_timezone(&Utc),
                         reward: rate,
-                        rate: self.rate.clone(),
+                        rate: self.group_rate.clone(),
                         source: RewardSource::FixedMonthly {},
                     };
                     Some(reward)
@@ -88,14 +91,14 @@ impl CouchInfo {
                     None
                 }
             }
-            Rate::PerClient { .. } => None,
-            Rate::None => None,
+            GroupRate::PerClient { .. } => None,
+            GroupRate::None => None,
         })
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub enum Rate {
+pub enum GroupRate {
     FixedMonthly {
         rate: Decimal,
         #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
@@ -109,9 +112,23 @@ pub enum Rate {
     None,
 }
 
-impl Rate {
+impl GroupRate {
     pub fn is_fixed_monthly(&self) -> bool {
-        matches!(self, Rate::FixedMonthly { .. })
+        matches!(self, GroupRate::FixedMonthly { .. })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PersonalRate {
+    // couch_interest is a percentage of the reward that the couch gets
+    pub couch_interest: Decimal,
+}
+
+impl Default for PersonalRate {
+    fn default() -> Self {
+        PersonalRate {
+            couch_interest: Decimal::int(50),
+        }
     }
 }
 
@@ -123,7 +140,7 @@ pub struct Reward {
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub created_at: DateTime<Utc>,
     pub reward: Decimal,
-    pub rate: Rate,
+    pub rate: GroupRate,
     pub source: RewardSource,
 }
 

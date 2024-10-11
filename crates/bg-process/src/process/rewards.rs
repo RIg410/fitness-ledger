@@ -24,7 +24,7 @@ impl Task for RewardsBg {
         let now = Local::now();
         for instructor in instructors.iter_mut() {
             if let Some(couch) = instructor.couch.as_mut() {
-                if couch.rate.is_fixed_monthly() {
+                if couch.group_rate.is_fixed_monthly() {
                     self.process_rewards(&mut session, instructor.id, couch, now)
                         .await?;
                 }
@@ -55,7 +55,7 @@ impl RewardsBg {
                 .await?;
             self.ledger
                 .users
-                .update_couch_rate_tx_less(session, couch_id, dbg!(couch.rate.clone()))
+                .update_couch_rate_tx_less(session, couch_id, dbg!(couch.group_rate.clone()))
                 .await?;
         }
         Ok(())

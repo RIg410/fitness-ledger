@@ -1,6 +1,6 @@
 use eyre::{bail, eyre, Result};
 use model::{
-    couch::{CouchInfo, Rate},
+    couch::{CouchInfo, GroupRate, PersonalRate},
     decimal::Decimal,
     session::Session,
 };
@@ -15,16 +15,17 @@ impl Users {
         &self,
         session: &mut Session,
         id: ObjectId,
-        rate: Rate,
+        rate: GroupRate,
     ) -> Result<()> {
         self.update_couch_rate_tx_less(session, id, rate).await
     }
 
-    pub async fn update_couch_rate_tx_less(
+    #[tx]
+    pub async fn update_couch_personal_rate(
         &self,
         session: &mut Session,
         id: ObjectId,
-        rate: Rate,
+        personal_rate: PersonalRate,
     ) -> Result<()> {
         let user = self
             .store
@@ -34,8 +35,31 @@ impl Users {
         let couch = user.couch.ok_or_else(|| eyre!("User is not a couch"))?;
         let couch = CouchInfo {
             description: couch.description,
-            rate,
+            group_rate: couch.group_rate,
             reward: couch.reward,
+            personal_rate,
+        };
+        self.store.set_couch(session, user.id, &couch).await?;
+        Ok(())
+    }
+
+    pub async fn update_couch_rate_tx_less(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        rate: GroupRate,
+    ) -> Result<()> {
+        let user = self
+            .store
+            .get(session, id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        let couch = user.couch.ok_or_else(|| eyre!("User is not a couch"))?;
+        let couch = CouchInfo {
+            description: couch.description,
+            group_rate: rate,
+            reward: couch.reward,
+            personal_rate: couch.personal_rate,
         };
         self.store.set_couch(session, user.id, &couch).await?;
         Ok(())
@@ -56,8 +80,9 @@ impl Users {
         let couch = user.couch.ok_or_else(|| eyre!("User is not a couch"))?;
         let couch = CouchInfo {
             description: description.clone(),
-            rate: couch.rate,
+            group_rate: couch.group_rate,
             reward: couch.reward,
+            personal_rate: couch.personal_rate,
         };
         self.store.set_couch(session, user.id, &couch).await?;
         Ok(())
@@ -69,7 +94,8 @@ impl Users {
         session: &mut Session,
         id: ObjectId,
         description: String,
-        rate: Rate,
+        group_rate: GroupRate,
+        personal_rate: PersonalRate,
     ) -> Result<()> {
         let user = self
             .store
@@ -83,7 +109,8 @@ impl Users {
         let couch = CouchInfo {
             description,
             reward: Decimal::zero(),
-            rate,
+            group_rate,
+            personal_rate,
         };
         self.store.set_couch(session, id, &couch).await?;
         Ok(())
