@@ -7,9 +7,11 @@ pub mod session;
 pub mod subscription;
 pub mod treasury;
 pub mod user;
+pub mod requests;
 
 use eyre::Result;
 use history::HistoryStore;
+use requests::RequestStore;
 use rewards::RewardsStore;
 use session::Db;
 use user::UserStore;
@@ -27,6 +29,7 @@ pub struct Storage {
     pub history: HistoryStore,
     pub presell: pre_sell::PreSellStore,
     pub rewards: RewardsStore,
+    pub requests: RequestStore,
 }
 
 impl Storage {
@@ -40,6 +43,8 @@ impl Storage {
         let presell = pre_sell::PreSellStore::new(&db).await?;
         let logs = history::HistoryStore::new(&db).await?;
         let couch = RewardsStore::new(&db).await?;
+        let requests = RequestStore::new(&db).await?;
+
         Ok(Storage {
             db,
             users,
@@ -50,6 +55,7 @@ impl Storage {
             history: logs,
             presell,
             rewards: couch,
+            requests,
         })
     }
 }

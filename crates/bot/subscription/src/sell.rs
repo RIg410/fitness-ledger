@@ -202,6 +202,8 @@ impl View for SelectComeFrom {
         markup =
             markup.append_row(ComeFromCalldata::Type(ComeFrom::VkAdds {}).btn_row("Реклама ВК"));
         markup = markup.append_row(ComeFromCalldata::Type(ComeFrom::DoubleGIS {}).btn_row("2ГИС"));
+        markup = markup
+            .append_row(ComeFromCalldata::Type(ComeFrom::YandexDirect {}).btn_row("Яндекс.Директ"));
         markup =
             markup.append_row(ComeFromCalldata::Type(ComeFrom::Unknown {}).btn_row("Неизвестно"));
 

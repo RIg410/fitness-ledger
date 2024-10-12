@@ -12,6 +12,7 @@ use service::backup::Backup;
 use service::calendar::{Calendar, SignOutError};
 use service::history::{self, History};
 use service::programs::Programs;
+use service::requests::Requests;
 use service::rewards::Rewards;
 use service::subscriptions::Subscriptions;
 use service::treasury::Treasury;
@@ -40,6 +41,7 @@ pub struct Ledger {
     pub rewards: Rewards,
     pub statistics: statistics::Statistics,
     pub backup: backup::Backup,
+    pub requests: Requests,
 }
 
 impl Ledger {
@@ -60,6 +62,7 @@ impl Ledger {
         let rewards = Rewards::new(storage.rewards);
         let statistics =
             statistics::Statistics::new(calendar.clone(), history.clone(), users.clone());
+        let requests = Requests::new(storage.requests);
         Ledger {
             users,
             calendar,
@@ -72,6 +75,7 @@ impl Ledger {
             rewards,
             statistics,
             backup,
+            requests,
         }
     }
 

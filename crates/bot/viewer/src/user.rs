@@ -179,7 +179,7 @@ pub fn fmt_group_rate(rate: &GroupRate) -> String {
 pub fn fmt_personal_rate(rate: &PersonalRate) -> String {
     format!(
         "Вознаграждение за персональные тренировки : _{}%_💰",
-        rate.couch_interest
+        escape(&rate.couch_interest.to_string())
     )
 }
 

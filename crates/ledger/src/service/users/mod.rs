@@ -40,6 +40,7 @@ impl Users {
         tg_id: i64,
         name: UserName,
         phone: String,
+        come_from: ComeFrom,
     ) -> Result<()> {
         let phone = sanitize_phone(&phone);
         let is_first_user = self.store.count(session).await? == 0;
@@ -81,7 +82,7 @@ impl Users {
                 created_at: Utc::now(),
                 couch: None,
                 settings: Default::default(),
-                come_from: Default::default(),
+                come_from,
             };
             self.store.insert(session, user).await?;
             self.logs.create_user(session, name, phone).await?;

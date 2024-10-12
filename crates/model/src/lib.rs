@@ -12,3 +12,4 @@ pub mod training;
 pub mod treasury;
 pub mod user;
 pub mod statistics;
+pub mod request;

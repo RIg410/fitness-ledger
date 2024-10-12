@@ -7,3 +7,4 @@ pub mod statistics;
 pub mod subscriptions;
 pub mod treasury;
 pub mod users;
+pub mod requests;

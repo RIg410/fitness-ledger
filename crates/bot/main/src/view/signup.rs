@@ -7,7 +7,7 @@ use bot_core::{
 use eyre::{bail, Context as _};
 use ledger::Ledger;
 use log::info;
-use model::{session::Session, user::UserName};
+use model::{session::Session, statistics::marketing::ComeFrom, user::UserName};
 use teloxide::types::{
     ButtonRequest, Contact, KeyboardButton, KeyboardMarkup, KeyboardRemove, Message, ReplyMarkup,
 };
@@ -98,6 +98,12 @@ pub async fn create_user(
     if user.is_some() {
         return Err(eyre::eyre!("User {} already exists", chat_id));
     }
+
+    let come_from = ledger
+        .requests
+        .come_from(session, &contact.phone_number)
+        .await?;
+
     ledger
         .users
         .create(
@@ -109,6 +115,7 @@ pub async fn create_user(
                 last_name: from.last_name.clone(),
             },
             contact.phone_number.clone(),
+            come_from,
         )
         .await
         .context("Failed to create user")?;
