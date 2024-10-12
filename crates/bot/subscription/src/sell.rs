@@ -191,22 +191,9 @@ impl View for SelectComeFrom {
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let mut markup = InlineKeyboardMarkup::default();
-        markup = markup.append_row(ComeFromCalldata::Type(ComeFrom::Website {}).btn_row("Сайт"));
-        markup =
-            markup.append_row(ComeFromCalldata::Type(ComeFrom::Instagram {}).btn_row("Instagram"));
-        markup = markup.append_row(ComeFromCalldata::Type(ComeFrom::VK {}).btn_row("VK"));
-        markup = markup
-            .append_row(ComeFromCalldata::Type(ComeFrom::YandexMap {}).btn_row("Яндекс.Карты"));
-        markup = markup
-            .append_row(ComeFromCalldata::Type(ComeFrom::DirectAdds {}).btn_row("Прямая реклама"));
-        markup =
-            markup.append_row(ComeFromCalldata::Type(ComeFrom::VkAdds {}).btn_row("Реклама ВК"));
-        markup = markup.append_row(ComeFromCalldata::Type(ComeFrom::DoubleGIS {}).btn_row("2ГИС"));
-        markup = markup
-            .append_row(ComeFromCalldata::Type(ComeFrom::YandexDirect {}).btn_row("Яндекс.Директ"));
-        markup =
-            markup.append_row(ComeFromCalldata::Type(ComeFrom::Unknown {}).btn_row("Неизвестно"));
-
+        for come_from in ComeFrom::iter() {
+            markup = markup.append_row(come_from.btn_row(fmt_come_from(come_from)));
+        }
         ctx.edit_origin("Выберите откуда пришел пользователь:", markup)
             .await?;
         Ok(())
@@ -214,24 +201,18 @@ impl View for SelectComeFrom {
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         ctx.ensure(Rule::SellSubscription)?;
-        match calldata!(data) {
-            ComeFromCalldata::Type(come_from) => Ok(Jmp::Next(
-                CreateUserAndSell::new(
-                    self.sell,
-                    self.phone.clone(),
-                    self.first_name.clone(),
-                    self.last_name.clone(),
-                    come_from,
-                )
-                .into(),
-            )),
-        }
+        let come_from = calldata!(data);
+        Ok(Jmp::Next(
+            CreateUserAndSell::new(
+                self.sell,
+                self.phone.clone(),
+                self.first_name.clone(),
+                self.last_name.clone(),
+                come_from,
+            )
+            .into(),
+        ))
     }
-}
-
-#[derive(Serialize, Deserialize)]
-enum ComeFromCalldata {
-    Type(ComeFrom),
 }
 
 pub struct CreateUserAndSell {
@@ -291,7 +272,7 @@ impl View for CreateUserAndSell {
             escape(&self.first_name),
             escape(&self.last_name.clone().unwrap_or_else(|| "-".to_string())),
             fmt_phone(&self.phone),
-            fmt_come_from(ctx, &self.come_from).await?
+            fmt_come_from(self.come_from)
         );
 
         let mut keymap = InlineKeyboardMarkup::default();

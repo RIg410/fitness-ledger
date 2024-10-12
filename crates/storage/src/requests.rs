@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bson::doc;
 use chrono::{DateTime, Local};
 use eyre::Error;
-use model::{request::Request, session::Session, user::sanitize_phone};
+use model::{request::Request, session::Session};
 use mongodb::{Collection, IndexModel, SessionCursor};
 
 const COLLECTION: &str = "requests";
@@ -31,8 +31,15 @@ impl RequestStore {
         })
     }
 
-    pub async fn add(&self, session: &mut Session, mut request: Request) -> Result<(), Error> {
-        request.phone = sanitize_phone(&request.phone);
+    pub async fn update(&self, session: &mut Session, request: Request) -> Result<(), Error> {
+        self.requests
+            .replace_one(doc! { "_id": request.id }, request)
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn add(&self, session: &mut Session, request: Request) -> Result<(), Error> {
         self.requests
             .insert_one(request)
             .session(&mut *session)
@@ -45,7 +52,6 @@ impl RequestStore {
         session: &mut Session,
         phone: &str,
     ) -> Result<Option<Request>, Error> {
-        let phone = sanitize_phone(phone);
         let request = self
             .requests
             .find_one(doc! { "phone": phone })

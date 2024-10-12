@@ -236,10 +236,17 @@ pub struct UserPreSell {
 }
 
 pub fn sanitize_phone(phone: &str) -> String {
-    phone
-        .chars()
-        .filter_map(|c| if c.is_ascii_digit() { Some(c) } else { None })
-        .collect()
+    if phone.starts_with("8") {
+        ("7".to_string() + &phone[1..])
+            .chars()
+            .filter_map(|c| if c.is_ascii_digit() { Some(c) } else { None })
+            .collect()
+    } else {
+        phone
+            .chars()
+            .filter_map(|c| if c.is_ascii_digit() { Some(c) } else { None })
+            .collect()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

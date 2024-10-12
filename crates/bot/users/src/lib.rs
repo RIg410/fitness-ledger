@@ -76,6 +76,10 @@ impl View for UsersView {
             query = "".to_string();
         }
 
+        if query.starts_with("8") {
+            query = "7".to_string() + &query[1..];
+        }
+
         self.query = Query {
             query: remove_non_alphanumeric(&query),
             offset: 0,

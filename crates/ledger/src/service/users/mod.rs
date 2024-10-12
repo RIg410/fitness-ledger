@@ -41,7 +41,7 @@ impl Users {
         name: UserName,
         phone: String,
         come_from: ComeFrom,
-    ) -> Result<()> {
+    ) -> Result<ObjectId> {
         let phone = sanitize_phone(&phone);
         let is_first_user = self.store.count(session).await? == 0;
         let rights = if is_first_user {
@@ -66,6 +66,7 @@ impl Users {
         if let Some(user) = user {
             self.store.set_tg_id(session, user.id, tg_id).await?;
             self.store.set_name(session, user.id, name).await?;
+            Ok(user.id)
         } else {
             let user = User {
                 tg_id,
@@ -84,10 +85,11 @@ impl Users {
                 settings: Default::default(),
                 come_from,
             };
+            let id = user.id;
             self.store.insert(session, user).await?;
             self.logs.create_user(session, name, phone).await?;
+            Ok(id)
         }
-        Ok(())
     }
 
     pub async fn create_uninit(

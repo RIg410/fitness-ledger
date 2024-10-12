@@ -16,3 +16,23 @@ pub struct Request {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
 }
+
+impl Request {
+    pub fn new(
+        phone: String,
+        comment: String,
+        come_from: ComeFrom,
+        first_name: Option<String>,
+        last_name: Option<String>,
+    ) -> Request {
+        Request {
+            id: ObjectId::new(),
+            phone,
+            comment,
+            created_at: Utc::now(),
+            come_from,
+            first_name,
+            last_name,
+        }
+    }
+}

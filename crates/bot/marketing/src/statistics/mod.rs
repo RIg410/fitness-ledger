@@ -21,13 +21,7 @@ use mongodb::bson::oid::ObjectId;
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
 #[derive(Default)]
-pub struct StatisticsView {}
-
-impl StatisticsView {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
+pub struct StatisticsView;
 
 #[async_trait]
 impl View for StatisticsView {

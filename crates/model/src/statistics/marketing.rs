@@ -18,6 +18,24 @@ pub enum ComeFrom {
     DoubleGIS {},
 }
 
+impl ComeFrom {
+    pub fn iter() -> impl Iterator<Item = ComeFrom> {
+        [
+            ComeFrom::Unknown {},
+            ComeFrom::Website {},
+            ComeFrom::Instagram {},
+            ComeFrom::VK {},
+            ComeFrom::YandexMap {},
+            ComeFrom::YandexDirect {},
+            ComeFrom::DirectAdds {},
+            ComeFrom::VkAdds {},
+            ComeFrom::DoubleGIS {},
+        ]
+        .iter()
+        .copied()
+    }
+}
+
 impl Default for ComeFrom {
     fn default() -> Self {
         ComeFrom::Unknown {}

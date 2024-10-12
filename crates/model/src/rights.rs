@@ -81,7 +81,6 @@ pub enum Rule {
     EditUserSubscription,
     FreezeUsers,
     ChangeBalance,
-    ViewMarketingInfo,
     EditMarketingInfo,
 
     // Training
@@ -119,6 +118,11 @@ pub enum Rule {
     System,
 
     ViewRewards,
+
+    ViewMarketingInfo,
+    ViewRequestsHistory,
+    CreateRequest,
+    RequestsHistory,
 
     ReceiveNotificationsAboutSubscriptions,
 }

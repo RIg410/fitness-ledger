@@ -4,6 +4,9 @@ pub mod training;
 pub mod user;
 
 pub fn fmt_phone(phone: &str) -> String {
+    if phone.len() != 11 {
+        return phone.to_string();
+    }
     let mut result = String::with_capacity(16);
     result.push_str("\\+7 \\(");
     result.push_str(&phone[1..4]);

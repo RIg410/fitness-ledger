@@ -15,8 +15,9 @@ impl Requests {
     }
 
     pub async fn come_from(&self, session: &mut Session, phone: &str) -> Result<ComeFrom, Error> {
+        let phone = model::user::sanitize_phone(phone);
         self.store
-            .get_by_phone(session, phone)
+            .get_by_phone(session, &phone)
             .await
             .map(|r| r.map(|r| r.come_from).unwrap_or_default())
     }

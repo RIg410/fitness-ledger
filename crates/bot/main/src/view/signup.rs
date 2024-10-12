@@ -7,7 +7,8 @@ use bot_core::{
 use eyre::{bail, Context as _};
 use ledger::Ledger;
 use log::info;
-use model::{session::Session, statistics::marketing::ComeFrom, user::UserName};
+use model::{session::Session, user::UserName};
+use mongodb::bson::oid::ObjectId;
 use teloxide::types::{
     ButtonRequest, Contact, KeyboardButton, KeyboardMarkup, KeyboardRemove, Message, ReplyMarkup,
 };
@@ -52,7 +53,7 @@ impl View for SignUpView {
         }
 
         if let Some(contact) = msg.contact() {
-            create_user(&ctx.ledger, msg.chat.id.0, contact, from, &mut ctx.session)
+            let id = create_user(&ctx.ledger, msg.chat.id.0, contact, from, &mut ctx.session)
                 .await
                 .context("Failed to create user")?;
             ctx.send_replay_markup(
@@ -60,6 +61,7 @@ impl View for SignUpView {
                 ReplyMarkup::KeyboardRemove(KeyboardRemove::new()),
             )
             .await?;
+            ctx.me.id = id;
             ctx.reload_user().await?;
             let view = MainMenuView;
             view.send_self(ctx).await?;
@@ -92,7 +94,7 @@ pub async fn create_user(
     contact: &Contact,
     from: &teloxide::types::User,
     session: &mut Session,
-) -> Result<(), eyre::Error> {
+) -> Result<ObjectId, eyre::Error> {
     info!("Creating user with chat_id: {}", chat_id);
     let user = ledger.users.get_by_tg_id(session, from.id.0 as i64).await?;
     if user.is_some() {
@@ -104,7 +106,7 @@ pub async fn create_user(
         .come_from(session, &contact.phone_number)
         .await?;
 
-    ledger
+    let id = ledger
         .users
         .create(
             session,
@@ -119,5 +121,5 @@ pub async fn create_user(
         )
         .await
         .context("Failed to create user")?;
-    Ok(())
+    Ok(id)
 }

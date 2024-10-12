@@ -2,7 +2,9 @@ use chrono::Local;
 use eyre::{eyre, Context as _, Result};
 use log::{error, warn};
 use model::decimal::Decimal;
+use model::request::Request;
 use model::session::Session;
+use model::statistics::marketing::ComeFrom;
 use model::training::{Training, TrainingStatus};
 use model::treasury::subs::UserId;
 use model::treasury::Sell;
@@ -85,6 +87,40 @@ impl Ledger {
             .await
             .context("get_user")?
             .ok_or_else(|| eyre!("User not found:{:?}", id))
+    }
+
+    #[tx]
+    pub async fn create_request(
+        &self,
+        session: &mut Session,
+        phone: String,
+        come_from: ComeFrom,
+        comment: String,
+        first_name: Option<String>,
+        last_name: Option<String>,
+    ) -> Result<()> {
+        let phone = sanitize_phone(&phone);
+        let user = self.users.get_by_phone(session, &phone).await?;
+        if let Some(user) = user {
+            self.users
+                .update_come_from(session, user.id, come_from)
+                .await?;
+        }
+        if let Some(mut request) = self.requests.get_by_phone(session, &phone).await? {
+            request.come_from = come_from;
+            request.comment = comment;
+            request.first_name = first_name;
+            request.last_name = last_name;
+            self.requests.update(session, request).await?;
+        } else {
+            self.requests
+                .add(
+                    session,
+                    Request::new(phone, comment, come_from, first_name, last_name),
+                )
+                .await?;
+        }
+        Ok(())
     }
 
     #[tx]

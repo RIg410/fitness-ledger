@@ -18,6 +18,7 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
+bot-marketing = { path = "crates/bot/marketing" }
 bg-process = {path = "crates/bg-process"}
 bot-calendar = {path = "crates/bot/calendar"}
 bot-core = {path = "crates/bot/core"}

@@ -1,20 +1,16 @@
 [package]
-edition = "2021"
-name = "bot-main"
-version = "0.1.0"
+name = "bot-marketing"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+version.workspace = true
 
 [dependencies]
 async-trait.workspace = true
 bincode.workspace = true
-bot-calendar.workspace = true
 bot-core.workspace = true
-bot-couch.workspace = true
-bot-finance.workspace = true
-bot-marketing.workspace = true
-bot-subscription.workspace = true
-bot-trainigs.workspace = true
-bot-users.workspace = true
 bot-viewer.workspace = true
+bot-views.workspace = true
 chrono.workspace = true
 eyre.workspace = true
 hex.workspace = true

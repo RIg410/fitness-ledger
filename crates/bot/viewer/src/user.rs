@@ -39,10 +39,7 @@ pub async fn render_profile_msg(ctx: &mut Context, id: ObjectId) -> Result<(Stri
 
     let mut msg = user_base_info(&user);
     if ctx.has_right(Rule::ViewMarketingInfo) {
-        msg.push_str(&format!(
-            "Источник : _{}_\n",
-            fmt_come_from(ctx, &user.come_from).await?
-        ));
+        msg.push_str(&format!("Источник : _{}_\n", fmt_come_from(user.come_from)));
     }
 
     if let Some(couch) = user.couch.as_ref() {
@@ -197,16 +194,16 @@ pub fn fmt_user_type(user: &User) -> &str {
     }
 }
 
-pub async fn fmt_come_from(_: &mut Context, from: &ComeFrom) -> Result<String, Error> {
-    Ok(match from {
-        ComeFrom::Unknown {} => "Неизвестно".to_string(),
-        ComeFrom::DoubleGIS {} => "2ГИС".to_string(),
-        ComeFrom::Website {} => "Сайт".to_string(),
-        ComeFrom::Instagram {} => "Инстаграм".to_string(),
-        ComeFrom::VK {} => "ВКонтакте".to_string(),
-        ComeFrom::YandexMap {} => "Яндекс\\.Карты".to_string(),
-        ComeFrom::DirectAdds {} => "Прямые рекламные объявления".to_string(),
-        ComeFrom::VkAdds {} => "Рекламные объявления ВКонтакте".to_string(),
-        ComeFrom::YandexDirect {} => "Яндекс\\.Директ".to_string(),
-    })
+pub fn fmt_come_from(from: ComeFrom) -> &'static str {
+    match from {
+        ComeFrom::Unknown {} => "Неизвестно",
+        ComeFrom::DoubleGIS {} => "2ГИС",
+        ComeFrom::Website {} => "Сайт",
+        ComeFrom::Instagram {} => "Инстаграм",
+        ComeFrom::VK {} => "ВКонтакте",
+        ComeFrom::YandexMap {} => "Яндекс Карты",
+        ComeFrom::DirectAdds {} => "Прямые рекламные объявления",
+        ComeFrom::VkAdds {} => "Рекламные объявления ВКонтакте",
+        ComeFrom::YandexDirect {} => "Яндекс Директ",
+    }
 }
