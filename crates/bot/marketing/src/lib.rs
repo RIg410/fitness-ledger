@@ -25,7 +25,7 @@ impl View for Marketing {
         let text = "Маркетинг🚀";
         let mut keymap = InlineKeyboardMarkup::default();
 
-        if ctx.has_right(model::rights::Rule::ViewRequestsHistory) {
+        if ctx.has_right(model::rights::Rule::ViewMarketingInfo) {
             keymap = keymap.append_row(Calldata::Request.btn_row("Заявки 🈸"));
         }
         if ctx.has_right(model::rights::Rule::ViewStatistics) {
@@ -39,7 +39,7 @@ impl View for Marketing {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         match calldata!(data) {
             Calldata::Request => {
-                ctx.ensure(model::rights::Rule::ViewRequestsHistory)?;
+                ctx.ensure(model::rights::Rule::ViewMarketingInfo)?;
                 Ok(requests::Requests.into())
             }
             Calldata::Statistics => {

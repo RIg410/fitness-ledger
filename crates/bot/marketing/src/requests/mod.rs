@@ -22,7 +22,7 @@ impl View for Requests {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        ctx.ensure(Rule::ViewRequestsHistory)?;
+        ctx.ensure(Rule::ViewMarketingInfo)?;
 
         let text = "Заявки 🈸";
         let mut keymap: InlineKeyboardMarkup = InlineKeyboardMarkup::default();
@@ -31,7 +31,7 @@ impl View for Requests {
             keymap = keymap.append_row(Calldata::Create.btn_row("Создать заявку"));
         }
 
-        if ctx.has_right(Rule::ViewRequestsHistory) {
+        if ctx.has_right(Rule::RequestsHistory) {
             keymap = keymap.append_row(Calldata::History.btn_row("История 🈸"));
         }
 
@@ -46,7 +46,7 @@ impl View for Requests {
                 Ok(create::SetPhone.into())
             }
             Calldata::History => {
-                ctx.ensure(Rule::ViewRequestsHistory)?;
+                ctx.ensure(Rule::RequestsHistory)?;
                 Ok(RequestHistory::new().into())
             }
         }

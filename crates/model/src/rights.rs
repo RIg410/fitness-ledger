@@ -120,7 +120,6 @@ pub enum Rule {
     ViewRewards,
 
     ViewMarketingInfo,
-    ViewRequestsHistory,
     CreateRequest,
     RequestsHistory,
 

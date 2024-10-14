@@ -114,7 +114,7 @@ impl Ledger {
             self.requests.update(session, request).await?;
         } else {
             self.requests
-                .add(
+                .create(
                     session,
                     Request::new(phone, comment, come_from, first_name, last_name),
                 )

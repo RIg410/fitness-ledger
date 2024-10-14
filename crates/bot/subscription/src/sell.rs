@@ -5,7 +5,9 @@ use async_trait::async_trait;
 use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
 use bot_viewer::{fmt_phone, user::fmt_come_from};
 use eyre::Result;
-use model::{rights::Rule, statistics::marketing::ComeFrom, user::sanitize_phone};
+use model::{
+    request::Request, rights::Rule, statistics::marketing::ComeFrom, user::sanitize_phone,
+};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -299,6 +301,27 @@ impl View for CreateUserAndSell {
                         self.come_from,
                     )
                     .await;
+
+                let request = ctx
+                    .ledger
+                    .requests
+                    .get_by_phone(&mut ctx.session, &self.phone)
+                    .await?;
+                if request.is_none() {
+                    ctx.ledger
+                        .requests
+                        .create(
+                            &mut ctx.session,
+                            Request::new(
+                                self.phone.clone(),
+                                "Продано 🤑".to_string(),
+                                self.come_from,
+                                Some(self.first_name.clone()),
+                                self.last_name.clone(),
+                            ),
+                        )
+                        .await?;
+                }
 
                 if let Err(err) = result {
                     Err(err.into())

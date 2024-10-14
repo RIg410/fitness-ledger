@@ -39,7 +39,7 @@ impl RequestStore {
         Ok(())
     }
 
-    pub async fn add(&self, session: &mut Session, request: Request) -> Result<(), Error> {
+    pub async fn create(&self, session: &mut Session, request: Request) -> Result<(), Error> {
         self.requests
             .insert_one(request)
             .session(&mut *session)
@@ -89,6 +89,7 @@ impl RequestStore {
             .session(&mut *session)
             .skip(offset)
             .limit(limit)
+            .sort(doc! {"created_at": -1})
             .await?;
 
         let mut requests = Vec::new();

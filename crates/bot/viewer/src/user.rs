@@ -203,7 +203,7 @@ pub fn fmt_come_from(from: ComeFrom) -> &'static str {
         ComeFrom::VK {} => "ВКонтакте",
         ComeFrom::YandexMap {} => "Яндекс Карты",
         ComeFrom::DirectAdds {} => "Прямые рекламные объявления",
-        ComeFrom::VkAdds {} => "Рекламные объявления ВКонтакте",
+        ComeFrom::VkAdds {} => "Таргет ВКонтакте",
         ComeFrom::YandexDirect {} => "Яндекс Директ",
     }
 }

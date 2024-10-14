@@ -31,7 +31,7 @@ impl View for RequestHistory {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        ctx.ensure(Rule::ViewRequestsHistory)?;
+        ctx.ensure(Rule::RequestsHistory)?;
 
         let requests = ctx
             .ledger
@@ -72,7 +72,7 @@ enum Calldata {
 
 fn fmt_row(request: &Request) -> String {
     format!(
-        "Заявка от *{}*; *{}*\n\
+        "Заявка от *{}* ; *{}*\n\
         Комментарий: _{}_\n\
         Дата: _{}_\n",
         fmt_phone(&request.phone),
