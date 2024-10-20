@@ -16,12 +16,12 @@ use teloxide::{
     utils::markdown::escape,
 };
 
-pub struct InOut {
+pub struct TreasuryOp {
     state: State,
-    io: Io,
+    io: Op,
 }
-impl InOut {
-    pub fn new(io: Io) -> Self {
+impl TreasuryOp {
+    pub fn new(io: Op) -> Self {
         Self {
             state: State::Description,
             io,
@@ -30,7 +30,7 @@ impl InOut {
 }
 
 #[async_trait]
-impl View for InOut {
+impl View for TreasuryOp {
     fn name(&self) -> &'static str {
         "FinInOut"
     }
@@ -73,7 +73,8 @@ impl View for InOut {
         self.state = match state {
             State::Description => State::Amount(text.to_string()),
             State::Amount(des) => {
-                if let Ok(amount) = Decimal::from_str(text) {
+                if let Ok(amount) = u64::from_str(text) {
+                    let amount = Decimal::int(amount as i64);
                     if ctx.has_right(Rule::FinanceHistoricalDate) {
                         State::DateTime(des, amount)
                     } else {
@@ -111,7 +112,7 @@ impl View for InOut {
         match calldata!(data) {
             Callback::Save => match &self.state {
                 State::Finish(description, amount, date) => match self.io {
-                    Io::Deposit => {
+                    Op::Deposit => {
                         ctx.ledger
                             .treasury
                             .deposit(&mut ctx.session, *amount, description.to_string(), date)
@@ -119,7 +120,7 @@ impl View for InOut {
                         ctx.send_msg("✅ Платеж сохранен").await?;
                         Ok(Jmp::Back)
                     }
-                    Io::Payment => {
+                    Op::Payment => {
                         ctx.ledger
                             .treasury
                             .payment(&mut ctx.session, *amount, description.to_string(), date)
@@ -185,16 +186,16 @@ impl State {
 }
 
 #[derive(Clone, Copy)]
-pub enum Io {
+pub enum Op {
     Deposit,
     Payment,
 }
 
-impl Io {
+impl Op {
     pub fn render(&self) -> &str {
         match self {
-            Io::Deposit => "🤑Внести средства",
-            Io::Payment => "💳Оплатить",
+            Op::Deposit => "🤑Внести средства",
+            Op::Payment => "💳Оплатить",
         }
     }
 }

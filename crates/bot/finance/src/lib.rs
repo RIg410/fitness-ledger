@@ -1,8 +1,11 @@
 pub mod history;
 pub mod in_out;
+pub mod marketing;
 pub mod operation;
+pub mod pay_rent;
 pub mod reward;
 pub mod stat;
+pub mod sub_rent;
 
 use async_trait::async_trait;
 use bot_core::{
@@ -14,12 +17,12 @@ use bot_core::{
 use chrono::{Datelike as _, Local};
 use eyre::Result;
 use history::history_view;
-use in_out::{InOut, Io};
+use in_out::{Op, TreasuryOp};
 use model::rights::Rule;
 use reward::SelectCouch;
 use serde::{Deserialize, Serialize};
 use stat::{Stat, StatRange};
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
+use teloxide::types::InlineKeyboardMarkup;
 
 #[derive(Default)]
 pub struct FinanceView;
@@ -34,35 +37,22 @@ impl View for FinanceView {
         let mut keymap = InlineKeyboardMarkup::default();
 
         if ctx.has_right(Rule::MakePayment) {
-            keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-                "Оплатить 💳",
-                Callback::Payment.to_data(),
-            )]);
-            keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-                "Ваплата ЗП 🎁",
-                Callback::PayReward.to_data(),
-            )]);
+            keymap = keymap.append_row(Callback::Payment.btn_row("Оплатить 💳"));
+            keymap = keymap.append_row(Callback::PayReward.btn_row("Ваплата ЗП 🎁"));
+            keymap = keymap.append_row(Callback::PayRent.btn_row("Оплата аренды 🏠"));
+            keymap = keymap.append_row(Callback::PayMarketing.btn_row("Оплата маркетинга 📈"));
+
+            keymap = keymap.append_row(Callback::SubRent.btn_row("Субаренда 🏠"));
         }
+
         if ctx.has_right(Rule::MakeDeposit) {
-            keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-                "Внести средства 🤑",
-                Callback::Deposit.to_data(),
-            )]);
+            keymap = keymap.append_row(Callback::Deposit.btn_row("Внести средства 🤑"));
         }
 
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "Общая статистика 📊",
-            Callback::StatAll.to_data(),
-        )]);
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "Статистика за месяц 📈",
-            Callback::StatByMonth.to_data(),
-        )]);
+        keymap = keymap.append_row(Callback::StatAll.btn_row("Общая статистика 📊"));
+        keymap = keymap.append_row(Callback::StatByMonth.btn_row("Статистика за месяц 📈"));
 
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "История 📜",
-            Callback::History.to_data(),
-        )]);
+        keymap = keymap.append_row(Callback::History.btn_row("История 📜"));
         ctx.edit_origin(&text, keymap).await?;
         Ok(())
     }
@@ -71,11 +61,11 @@ impl View for FinanceView {
         match calldata!(data) {
             Callback::Payment => {
                 ctx.ensure(Rule::MakePayment)?;
-                Ok(InOut::new(Io::Payment).into())
+                Ok(TreasuryOp::new(Op::Payment).into())
             }
             Callback::Deposit => {
                 ctx.ensure(Rule::MakeDeposit)?;
-                Ok(InOut::new(Io::Deposit).into())
+                Ok(TreasuryOp::new(Op::Deposit).into())
             }
             Callback::PayReward => {
                 ctx.ensure(Rule::MakePayment)?;
@@ -96,6 +86,18 @@ impl View for FinanceView {
                 ))
                 .into())
             }
+            Callback::PayRent => {
+                ctx.ensure(Rule::MakePayment)?;
+                Ok(pay_rent::PayRent.into())
+            }
+            Callback::PayMarketing => {
+                ctx.ensure(Rule::MakePayment)?;
+                Ok(marketing::PayRent.into())
+            }
+            Callback::SubRent => {
+                ctx.ensure(Rule::MakePayment)?;
+                Ok(sub_rent::TakeSubRent.into())
+            }
         }
     }
 }
@@ -103,8 +105,13 @@ impl View for FinanceView {
 #[derive(Serialize, Deserialize)]
 enum Callback {
     PayReward,
+    PayRent,
+    PayMarketing,
     Payment,
+
     Deposit,
+    SubRent,
+
     History,
     StatByMonth,
     StatAll,

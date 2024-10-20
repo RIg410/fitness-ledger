@@ -3,7 +3,7 @@ pub mod income;
 pub mod outcome;
 pub mod subs;
 
-use crate::{decimal::Decimal, subscription::Subscription};
+use crate::{decimal::Decimal, statistics::marketing::ComeFrom, subscription::Subscription};
 use bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
 use income::Income;
@@ -24,12 +24,23 @@ pub struct TreasuryEvent {
     pub credit: Decimal,
 }
 
+impl TreasuryEvent {
+    pub fn sum(&self) -> Decimal {
+        self.debit - self.credit
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Event {
+    // income
     SellSubscription(SellSubscription),
-    Reward(UserId),
-    Outcome(Outcome),
     Income(Income),
+    SubRent,
+    // outcome
+    Rent,
+    Outcome(Outcome),
+    Reward(UserId),
+    Marketing(ComeFrom),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -9,7 +9,7 @@ use bot_core::{
     },
     widget::{View, Widget},
 };
-use bot_viewer::day::fmt_dt;
+use bot_viewer::{day::fmt_dt, user::fmt_come_from};
 use chrono::Local;
 use eyre::{eyre, Error, Result};
 use model::{rights::Rule, treasury::TreasuryEvent};
@@ -80,6 +80,15 @@ pub fn make_list_item(idx: usize, event: &TreasuryEvent) -> ListItem {
         model::treasury::Event::Outcome(out) => format!("{} 📉{}", idx, escape(&out.description)),
         model::treasury::Event::Income(income) => {
             format!("{} 📈{}", idx, escape(&income.description))
+        }
+        model::treasury::Event::SubRent => {
+            format!("📈{} Суб аренда", idx)
+        }
+        model::treasury::Event::Rent => {
+            format!("📉{} Аренда", idx)
+        }
+        model::treasury::Event::Marketing(come_from) => {
+            format!("📊{} Маркетинг ({})", idx, fmt_come_from(*come_from))
         }
     };
 

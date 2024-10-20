@@ -3,6 +3,7 @@ use eyre::Error;
 use model::{
     decimal::Decimal,
     session::Session,
+    statistics::marketing::ComeFrom,
     treasury::{
         aggregate::{AggIncome, AggOutcome, TreasuryAggregate},
         income::Income,
@@ -80,6 +81,68 @@ impl Treasury {
             event: Event::Outcome(Outcome { description }),
             debit: Decimal::zero(),
             credit: amount,
+            actor: session.actor(),
+        };
+
+        self.store.insert(session, event).await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn payment_rent(&self, session: &mut Session, amount: Decimal) -> Result<(), Error> {
+        let dt = Local::now();
+        self.logs
+            .payment(session, amount, "Аренда".to_string(), &dt)
+            .await?;
+        let event = TreasuryEvent {
+            id: ObjectId::new(),
+            date_time: dt.with_timezone(&Utc),
+            event: Event::Rent,
+            debit: Decimal::zero(),
+            credit: amount,
+            actor: session.actor(),
+        };
+
+        self.store.insert(session, event).await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn pay_for_marketing(
+        &self,
+        session: &mut Session,
+        amount: Decimal,
+        come_from: ComeFrom,
+    ) -> Result<(), Error> {
+        let dt = Local::now();
+        self.logs
+            .payment(session, amount, "маркетинг".to_string(), &dt)
+            .await?;
+        let event = TreasuryEvent {
+            id: ObjectId::new(),
+            date_time: dt.with_timezone(&Utc),
+            event: Event::Marketing(come_from),
+            debit: Decimal::zero(),
+            credit: amount,
+            actor: session.actor(),
+        };
+
+        self.store.insert(session, event).await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn take_sub_rent(&self, session: &mut Session, amount: Decimal) -> Result<(), Error> {
+        let dt = Local::now();
+        self.logs
+            .payment(session, amount, "Субаренда".to_string(), &dt)
+            .await?;
+        let event = TreasuryEvent {
+            id: ObjectId::new(),
+            date_time: dt.with_timezone(&Utc),
+            event: Event::SubRent,
+            debit: amount,
+            credit: Decimal::zero(),
             actor: session.actor(),
         };
 
@@ -166,6 +229,19 @@ impl Treasury {
                 }
                 Event::Income(_) => {
                     income.other.add(tx.debit);
+                }
+                Event::SubRent => {
+                    outcome.sub_rent.add(tx.debit);
+                }
+                Event::Rent => {
+                    outcome.sub_rent.add(tx.credit);
+                }
+                Event::Marketing(come_from) => {
+                    outcome
+                        .marketing
+                        .entry(come_from)
+                        .or_default()
+                        .add(tx.credit);
                 }
             }
         }

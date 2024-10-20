@@ -5,7 +5,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::day::fmt_dt;
+use bot_viewer::{day::fmt_dt, user::fmt_come_from};
 use chrono::Local;
 use eyre::eyre;
 use model::{rights::Rule, treasury::TreasuryEvent};
@@ -81,7 +81,7 @@ async fn render_event(ctx: &mut Context, event: &TreasuryEvent) -> Result<String
 
             format!(
                 "🛒 Продажа абонемента: {}р пользователю {}",
-                event.debit - event.credit,
+                event.sum(),
                 user
             )
         }
@@ -97,25 +97,30 @@ async fn render_event(ctx: &mut Context, event: &TreasuryEvent) -> Result<String
                 model::treasury::subs::UserId::Phone(phone) => phone.to_owned(),
                 model::treasury::subs::UserId::None => "-".to_string(),
             };
-            format!(
-                "🎁 Выплата награды: {} пользователю {}",
-                event.debit - event.credit,
-                user
-            )
+            format!("🎁 Выплата награды: {} пользователю {}", event.sum(), user)
         }
         model::treasury::Event::Outcome(outcome) => {
             format!(
                 "📉 Расход: {} руб.\nОписание: {}",
-                event.debit - event.credit,
+                event.sum(),
                 outcome.description
             )
         }
         model::treasury::Event::Income(income) => {
             format!(
                 "📈 Поступление: {} руб.\nОписание:{}",
-                event.debit - event.credit,
+                event.sum(),
                 income.description
             )
+        }
+        model::treasury::Event::SubRent => {
+            format!("🏠 Субаренда: {} руб.", event.sum())
+        }
+        model::treasury::Event::Rent => {
+            format!("🏠 Аренда: {} руб.", event.sum())
+        }
+        model::treasury::Event::Marketing(come_from) =>  {
+            format!("📊 Маркетинг: {} руб. ({})", event.sum(), fmt_come_from(*come_from))
         }
     };
 
