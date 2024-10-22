@@ -23,10 +23,6 @@ build:
 	sudo docker compose build backend
 	sudo docker compose build nginx
 
-	
-restart-back: build
-	sudo docker compose up -d --build backend
-
 restart-nginx: build
 	sudo docker compose up -d --build nginx
 

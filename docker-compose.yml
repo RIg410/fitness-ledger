@@ -15,11 +15,13 @@ services:
     build: .
     restart: always
     ports:
-      - 127.0.0.1:80:3000
+      - 127.0.0.1:3000:3000
     environment:
       MONGO_URL: $MONGO_URL
       TG_TOKEN: $TG_TOKEN
       RUST_LOG: $RUST_LOG
+      MINI_APP_KEY: $MINI_APP_KEY
+      APP_URL: $APP_URL
   nginx:
       image: nginx:latest
       container_name: nginx
