@@ -13,3 +13,4 @@ pub mod treasury;
 pub mod user;
 pub mod statistics;
 pub mod request;
+pub mod auth;

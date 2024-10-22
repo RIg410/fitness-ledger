@@ -9,35 +9,40 @@ members = [
   "crates/bg-process",
   "crates/bot/*",
   "crates/ledger",
-  "crates/mini-app",
+  "crates/mini-app/*",
   "crates/model",
   "crates/storage",
   "crates/tx_macro",
-  "bins",
+  "bins", 
 ]
 resolver = "2"
 
 [workspace.dependencies]
-bot-marketing = { path = "crates/bot/marketing" }
 bg-process = {path = "crates/bg-process"}
 bot-calendar = {path = "crates/bot/calendar"}
 bot-core = {path = "crates/bot/core"}
 bot-couch = {path = "crates/bot/couch"}
 bot-finance = {path = "crates/bot/finance"}
 bot-main = {path = "crates/bot/main"}
+bot-marketing = {path = "crates/bot/marketing"}
 bot-statistic = {path = "crates/bot/statistic"}
 bot-subscription = {path = "crates/bot/subscription"}
 bot-trainigs = {path = "crates/bot/trainigs"}
 bot-users = {path = "crates/bot/users"}
 bot-viewer = {path = "crates/bot/viewer"}
 bot-views = {path = "crates/bot/views"}
+
+mini-app-main = {path = "crates/mini-app/main"}
+
 ledger = {path = "crates/ledger"}
-mini-app = {path = "crates/mini-app"}
 model = {path = "crates/model"}
 storage = {path = "crates/storage"}
 tx_macro = {path = "crates/tx_macro"}
 
 #libs 
+axum = "0.7.7"
+axum-extra = {version = "0.9.4", features = ["cookie-private"]}
+askama = "0.12.1"
 async-trait = "0.1.81"
 bincode = "1.3.3"
 bson = {version = "2", features = ["chrono-0_4"]}
@@ -49,6 +54,7 @@ eyre = "0.6"
 futures = "0.3"
 futures-util = "0.3.30"
 hex = "0.4.3"
+rand = "0.8.4"
 itertools = "0.2.2"
 log = "0.4"
 mongodb = {version = "3.0"}

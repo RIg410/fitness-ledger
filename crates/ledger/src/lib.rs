@@ -10,6 +10,7 @@ use model::treasury::subs::UserId;
 use model::treasury::Sell;
 use model::user::{sanitize_phone, FindFor, User};
 use mongodb::bson::oid::ObjectId;
+use service::auth::AuthService;
 use service::backup::Backup;
 use service::calendar::{Calendar, SignOutError};
 use service::history::{self, History};
@@ -24,7 +25,6 @@ use storage::pre_sell::PreSellStore;
 use storage::session::Db;
 use storage::Storage;
 use thiserror::Error;
-
 use tx_macro::tx;
 
 pub mod service;
@@ -44,6 +44,7 @@ pub struct Ledger {
     pub statistics: statistics::Statistics,
     pub backup: backup::Backup,
     pub requests: Requests,
+    pub auth: AuthService,
 }
 
 impl Ledger {
@@ -65,6 +66,8 @@ impl Ledger {
         let statistics =
             statistics::Statistics::new(calendar.clone(), history.clone(), users.clone());
         let requests = Requests::new(storage.requests);
+        let auth = AuthService::new(storage.auth_keys, users.clone());
+
         Ledger {
             users,
             calendar,
@@ -78,6 +81,7 @@ impl Ledger {
             statistics,
             backup,
             requests,
+            auth,
         }
     }
 

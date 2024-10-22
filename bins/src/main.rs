@@ -22,6 +22,9 @@ async fn main() -> eyre::Result<()> {
     let token = env::var("TG_TOKEN").context("Failed to get TG_TOKEN from env")?;
     info!("Starting bot...");
     let bot: bot_main::BotApp = bot_main::BotApp::new(token);
+    info!("Starting mini app...");
+    mini_app_main::spawn(ledger.clone(), bot.clone())?;
+
     info!("Starting background process...");
     bg_process::start(ledger.clone(), bot.clone()).await?;
     info!("Starting bot...");

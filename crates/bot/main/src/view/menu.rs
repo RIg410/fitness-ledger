@@ -12,9 +12,10 @@ use bot_trainigs::program::list::ProgramList;
 use bot_users::{profile::UserProfile, Query, UsersView};
 use eyre::{bail, Ok, Result};
 use model::rights::Rule;
+use std::env;
 use strum::EnumIter;
 use teloxide::{
-    types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo},
     utils::markdown::escape,
 };
 
@@ -47,6 +48,24 @@ impl MainMenuView {
 
         if ctx.has_right(Rule::System) {
             keymap = keymap.append_row(vec![MainMenuItem::System.into()]);
+        }
+
+        if ctx.has_right(Rule::MiniApp) {
+            if let (Result::Ok(url), Result::Ok(app_key)) =
+                (env::var("APP_URL"), env::var("MINI_APP_KEY"))
+            {
+                let key = ctx
+                    .ledger
+                    .auth
+                    .gen_key(&mut ctx.session, ctx.me.id)
+                    .await?
+                    .key;
+                let url = format!("{}?user_key={}&app_key={}", url, key, app_key);
+                keymap = keymap.append_row(vec![InlineKeyboardButton::web_app(
+                    "App",
+                    WebAppInfo { url: url.parse()? },
+                )]);
+            }
         }
 
         let group_balance = ctx.me.group_balance();

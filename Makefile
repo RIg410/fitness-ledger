@@ -21,8 +21,20 @@ build:
 	cargo build --release	
 	sudo docker image prune -a -f
 	sudo docker compose build backend
+	sudo docker compose build nginx
+
 	
+restart-back: build
+	sudo docker compose up -d --build backend
+
+restart-nginx: build
+	sudo docker compose up -d --build nginx
+
+restart-back: build
+	sudo docker compose up -d --build backend
+
 restart: build
+	sudo docker compose up -d --build nginx
 	sudo docker compose up -d --build backend
 
 logs:

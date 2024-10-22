@@ -124,6 +124,8 @@ pub enum Rule {
     RequestsHistory,
 
     ReceiveNotificationsAboutSubscriptions,
+    
+    MiniApp,
 }
 
 impl Rule {

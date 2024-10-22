@@ -1,5 +1,5 @@
 [package]
-name = "ledger-cli"
+name = "mini-app-main"
 
 edition.workspace = true
 license.workspace = true
@@ -7,15 +7,14 @@ publish.workspace = true
 version.workspace = true
 
 [dependencies]
+askama.workspace = true
+axum-extra.workspace = true
+axum.workspace = true
+bot-core.workspace = true
 bot-main.workspace = true
-ledger.workspace = true
-mini-app-main.workspace = true
-storage.workspace = true
-bg-process.workspace = true
-
-color-eyre.workspace = true
-dotenv.workspace = true
 eyre.workspace = true
+ledger.workspace = true
 log.workspace = true
-pretty_env_logger.workspace = true
+serde.workspace = true
+teloxide.workspace = true
 tokio.workspace = true
