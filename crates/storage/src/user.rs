@@ -392,15 +392,14 @@ impl UserStore {
         Ok(result.modified_count > 0)
     }
 
-    pub async fn find_subscription_to_expire(
+    pub async fn find_users_with_active_subs(
         &self,
         session: &mut Session,
-    ) -> Result<Vec<User>, Error> {
+    ) -> Result<SessionCursor<User>, Error> {
         let filter = doc! {
-            "subscriptions.end_date": { "$lte": Local::now().with_timezone(&Utc) }
+            "subscriptions": { "$elemMatch": { "status": { "$ne": "NotActive" } } }
         };
-        let mut cursor = self.users.find(filter).session(&mut *session).await?;
-        Ok(cursor.stream(&mut *session).try_collect().await?)
+        Ok(self.users.find(filter).session(&mut *session).await?)
     }
 
     pub async fn set_phone(&self, session: &mut Session, id: ObjectId, phone: &str) -> Result<()> {
@@ -524,7 +523,10 @@ impl UserStore {
         user.gc();
 
         self.users
-            .update_one(doc! { "_id": user.id }, doc! { "$set": to_document(&user)? })
+            .update_one(
+                doc! { "_id": user.id },
+                doc! { "$set": to_document(&user)? },
+            )
             .session(&mut *session)
             .await?;
         Ok(())

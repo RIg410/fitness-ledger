@@ -13,6 +13,7 @@ bot-main.workspace = true
 bot-viewer.workspace = true
 chrono.workspace = true
 eyre.workspace = true
+futures-util.workspace = true
 ledger.workspace = true
 log.workspace = true
 model.workspace = true

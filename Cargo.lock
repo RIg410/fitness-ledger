@@ -309,6 +309,7 @@ dependencies = [
  "bot-viewer",
  "chrono",
  "eyre",
+ "futures-util",
  "ledger",
  "log",
  "model",
