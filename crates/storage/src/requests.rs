@@ -83,7 +83,7 @@ impl RequestStore {
             .requests
             .find(doc! {
                 "remind_later.date_time": {
-                    "$gte": now,
+                    "$lt": now,
                 }
             })
             .session(&mut *session)

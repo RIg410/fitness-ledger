@@ -54,7 +54,9 @@ impl ClientView {
             .sign_up(&mut ctx.session, &training, self.id, true)
             .await;
         match result {
-            Ok(_) => {}
+            Ok(_) => {
+                ctx.send_notification("Добавлен").await?;
+            }
             Err(SignUpError::TrainingIsFull) => {
                 ctx.send_notification("Тренировка заполнена").await?;
             }

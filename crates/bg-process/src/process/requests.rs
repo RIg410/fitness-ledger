@@ -55,7 +55,8 @@ impl RequestNotifier {
         request: &mut Request,
     ) -> Result<(), Error> {
         let msg = format!("Напоминание по заявке\n{}", fmt_request(&request));
-        self.bot.send_notification_to(ChatId(user), &msg).await?;
+        let id = self.bot.send_notification_to(ChatId(user), &msg).await?;
+        self.bot.pin_message(ChatId(user), id).await?;
         request.remind_later = None;
         ledger.requests.update(&mut *session, request).await?;
         Ok(())

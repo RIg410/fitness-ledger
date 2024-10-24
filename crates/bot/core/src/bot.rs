@@ -147,6 +147,15 @@ impl TgBot {
         self.bot.answer_callback_query(id).await
     }
 
+    pub async fn pin_message(&self, chat_id: ChatId, id: MessageId) -> Result<(), RequestError> {
+        if id.0 == 0 {
+            return Ok(());
+        }
+
+        self.bot.pin_chat_message(chat_id, id).await?;
+        Ok(())
+    }
+
     pub async fn send_notification_to(
         &self,
         chat_id: ChatId,
@@ -161,7 +170,6 @@ impl TgBot {
             .parse_mode(ParseMode::MarkdownV2)
             .await?
             .id;
-        // self.bot.pin_chat_message(chat_id, id).await?;
         let tkn = self.tokens.get_token(chat_id);
         tkn.invalidate();
         Ok(id)

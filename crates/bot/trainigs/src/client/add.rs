@@ -1,5 +1,10 @@
 use async_trait::async_trait;
-use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::{Jmp, View}};
+use bot_core::{
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    widget::{Jmp, View},
+};
 use bot_viewer::user::fmt_user_type;
 use chrono::{DateTime, Local};
 use eyre::{Error, Result};
@@ -36,7 +41,7 @@ impl View for AddClientView {
     fn name(&self) -> &'static str {
         "AddClientView"
     }
-    
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let (text, keymap) = render(ctx, &self.query, self.offset).await?;
         ctx.edit_origin(&text, keymap).await?;
@@ -52,6 +57,9 @@ impl View for AddClientView {
         }
 
         self.query = remove_non_alphanumeric(&query);
+        if self.query.starts_with("8") {
+            self.query = format!("7{}", &self.query[1..]);
+        }
         self.offset = 0;
         Ok(Jmp::Stay)
     }
