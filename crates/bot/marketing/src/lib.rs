@@ -40,7 +40,7 @@ impl View for Marketing {
         match calldata!(data) {
             Calldata::Request => {
                 ctx.ensure(model::rights::Rule::ViewMarketingInfo)?;
-                Ok(requests::Requests.into())
+                Ok(requests::Requests::new().into())
             }
             Calldata::Statistics => {
                 ctx.ensure(model::rights::Rule::ViewStatistics)?;

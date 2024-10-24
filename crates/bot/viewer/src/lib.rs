@@ -1,11 +1,14 @@
+use teloxide::utils::markdown::escape;
+
 pub mod day;
 pub mod subscription;
 pub mod training;
 pub mod user;
+pub mod request;
 
 pub fn fmt_phone(phone: &str) -> String {
     if phone.len() != 11 {
-        return phone.to_string();
+        return escape(phone);
     }
     let mut result = String::with_capacity(16);
     result.push_str("\\+7 \\(");

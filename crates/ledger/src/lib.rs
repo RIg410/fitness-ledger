@@ -1,8 +1,8 @@
-use chrono::Local;
+use chrono::{Local, Utc};
 use eyre::{eyre, Context as _, Result};
 use log::{error, warn};
 use model::decimal::Decimal;
-use model::request::Request;
+use model::request::{RemindLater, Request, RequestHistoryRow};
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
 use model::training::{Training, TrainingStatus};
@@ -102,6 +102,7 @@ impl Ledger {
         comment: String,
         first_name: Option<String>,
         last_name: Option<String>,
+        remember_later: Option<RemindLater>,
     ) -> Result<()> {
         let phone = sanitize_phone(&phone);
         let user = self.users.get_by_phone(session, &phone).await?;
@@ -111,16 +112,20 @@ impl Ledger {
                 .await?;
         }
         if let Some(mut request) = self.requests.get_by_phone(session, &phone).await? {
-            request.come_from = come_from;
+            request.remind_later = remember_later;
+            request.history.push(RequestHistoryRow {
+                comment: request.comment.clone(),
+                date_time: request.created_at,
+            });
+            request.created_at = Utc::now();
             request.comment = comment;
-            request.first_name = first_name;
-            request.last_name = last_name;
-            self.requests.update(session, request).await?;
+            request.come_from = come_from;
+            self.requests.update(session, &request).await?;
         } else {
             self.requests
                 .create(
                     session,
-                    Request::new(phone, comment, come_from, first_name, last_name),
+                    Request::new(phone, comment, come_from, first_name, last_name, remember_later),
                 )
                 .await?;
         }

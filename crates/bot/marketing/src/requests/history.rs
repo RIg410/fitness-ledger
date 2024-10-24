@@ -5,12 +5,11 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::{day::fmt_dt, fmt_phone, user::fmt_come_from};
-use chrono::Local;
+use bot_viewer::request::fmt_request;
 use eyre::Result;
-use model::{request::Request, rights::Rule};
+use model::rights::Rule;
 use serde::{Deserialize, Serialize};
-use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
+use teloxide::types::InlineKeyboardMarkup;
 
 pub const LIMIT: u64 = 7;
 
@@ -40,7 +39,7 @@ impl View for RequestHistory {
             .await?;
         let mut msg = "*Заявки:*".to_string();
         for req in &requests {
-            msg.push_str(&format!("\n\n📌{}", fmt_row(req)));
+            msg.push_str(&format!("\n\n📌{}", fmt_request(req)));
         }
         let mut keymap = vec![];
         if self.offset > 0 {
@@ -68,16 +67,4 @@ impl View for RequestHistory {
 #[derive(Serialize, Deserialize)]
 enum Calldata {
     Offset(u64),
-}
-
-fn fmt_row(request: &Request) -> String {
-    format!(
-        "Заявка от *{}* ; *{}*\n\
-        Комментарий: _{}_\n\
-        Дата: _{}_\n",
-        fmt_phone(&request.phone),
-        fmt_come_from(request.come_from),
-        escape(&request.comment),
-        fmt_dt(&request.created_at.with_timezone(&Local))
-    )
 }

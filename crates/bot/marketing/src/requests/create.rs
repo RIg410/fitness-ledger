@@ -6,8 +6,10 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::{fmt_phone, user::fmt_come_from};
-use model::{rights::Rule, statistics::marketing::ComeFrom, user::sanitize_phone};
+use bot_viewer::{day::fmt_dt, fmt_phone, user::fmt_come_from};
+use model::{
+    request::RemindLater, rights::Rule, statistics::marketing::ComeFrom, user::sanitize_phone,
+};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -51,7 +53,7 @@ impl View for SetPhone {
 }
 
 pub struct SetComeFrom {
-    phone: String,
+    pub phone: String,
 }
 
 #[async_trait]
@@ -108,14 +110,33 @@ impl View for SetDescription {
     ) -> Result<Jmp, eyre::Error> {
         ctx.bot.delete_msg(msg.id).await?;
         let comment = msg.text().unwrap_or_default().to_string();
-        Ok(Jmp::Next(
-            SetName {
-                phone: self.phone.clone(),
-                come_from: self.come_from,
-                comment: comment.clone(),
-            }
-            .into(),
-        ))
+
+        let request = ctx
+            .ledger
+            .requests
+            .get_by_phone(&mut ctx.session, &sanitize_phone(&self.phone))
+            .await?;
+        if request.is_some() {
+            Ok(Jmp::Next(
+                RemindLaterView {
+                    phone: self.phone.clone(),
+                    come_from: self.come_from,
+                    comment: comment.clone(),
+                    first_name: None,
+                    last_name: None,
+                }
+                .into(),
+            ))
+        } else {
+            Ok(Jmp::Next(
+                SetName {
+                    phone: self.phone.clone(),
+                    come_from: self.come_from,
+                    comment: comment.clone(),
+                }
+                .into(),
+            ))
+        }
     }
 }
 
@@ -148,7 +169,7 @@ impl View for SetName {
         let first_name = parts.get(0).map(|s| s.to_string());
         let last_name = parts.get(1).map(|s| s.to_string());
         Ok(Jmp::Next(
-            Comfirm {
+            RemindLaterView {
                 phone: self.phone.clone(),
                 come_from: self.come_from,
                 comment: self.comment.clone(),
@@ -160,12 +181,140 @@ impl View for SetName {
     }
 }
 
+pub struct RemindLaterView {
+    phone: String,
+    come_from: ComeFrom,
+    comment: String,
+    first_name: Option<String>,
+    last_name: Option<String>,
+}
+
+#[async_trait]
+impl View for RemindLaterView {
+    fn name(&self) -> &'static str {
+        "RemindLater"
+    }
+
+    async fn show(&mut self, ctx: &mut bot_core::context::Context) -> Result<(), eyre::Error> {
+        let text = "Напомнить позже?";
+        let mut markup = InlineKeyboardMarkup::default();
+        markup = markup.append_row(vec![
+            CalldataYesNo::Yes.button("✅Да"),
+            CalldataYesNo::No.button("❌Нет"),
+        ]);
+        ctx.bot.edit_origin(&text, markup).await?;
+        Ok(())
+    }
+
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
+        match calldata!(data) {
+            CalldataYesNo::Yes => Ok(Jmp::Next(
+                SetRemindLater {
+                    phone: self.phone.clone(),
+                    come_from: self.come_from,
+                    comment: self.comment.clone(),
+                    first_name: self.first_name.clone(),
+                    last_name: self.last_name.clone(),
+                }
+                .into(),
+            )),
+            CalldataYesNo::No => Ok(Jmp::Next(
+                Comfirm {
+                    phone: self.phone.clone(),
+                    come_from: self.come_from,
+                    comment: self.comment.clone(),
+                    first_name: self.first_name.clone(),
+                    last_name: self.last_name.clone(),
+                    remind_later: None,
+                }
+                .into(),
+            )),
+        }
+    }
+}
+
+pub struct SetRemindLater {
+    phone: String,
+    come_from: ComeFrom,
+    comment: String,
+    first_name: Option<String>,
+    last_name: Option<String>,
+}
+
+#[async_trait]
+impl View for SetRemindLater {
+    fn name(&self) -> &'static str {
+        "SetRemindLater"
+    }
+
+    async fn show(&mut self, ctx: &mut bot_core::context::Context) -> Result<(), eyre::Error> {
+        let text = "Напомнить через:";
+        let markup = InlineKeyboardMarkup::default();
+        let mut markup = markup
+            .append_row(RememberLaterCalldata::new(chrono::Duration::hours(1)).btn_row("час"));
+        markup = markup
+            .append_row(RememberLaterCalldata::new(chrono::Duration::hours(2)).btn_row("2 часа"));
+        markup = markup
+            .append_row(RememberLaterCalldata::new(chrono::Duration::hours(3)).btn_row("3 часа"));
+        markup = markup
+            .append_row(RememberLaterCalldata::new(chrono::Duration::days(1)).btn_row("завтра"));
+        markup = markup.append_row(
+            RememberLaterCalldata::new(chrono::Duration::days(2)).btn_row("послезавтра"),
+        );
+        markup = markup
+            .append_row(RememberLaterCalldata::new(chrono::Duration::days(7)).btn_row("неделя"));
+        markup = markup
+            .append_row(RememberLaterCalldata::new(chrono::Duration::days(14)).btn_row("2 недели"));
+        markup = markup
+            .append_row(RememberLaterCalldata::new(chrono::Duration::days(30)).btn_row("месяц"));
+        markup = markup
+            .append_row(RememberLaterCalldata::new(chrono::Duration::days(90)).btn_row("3 месяца"));
+        ctx.bot.edit_origin(&text, markup).await?;
+        Ok(())
+    }
+
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
+        let remind_later: RememberLaterCalldata = calldata!(data);
+        let now = chrono::Local::now();
+        let remind_later = now + chrono::Duration::seconds(remind_later.remind_later as i64);
+
+        Ok(Jmp::Next(
+            Comfirm {
+                phone: self.phone.clone(),
+                come_from: self.come_from,
+                comment: self.comment.clone(),
+                first_name: self.first_name.clone(),
+                last_name: self.last_name.clone(),
+                remind_later: Some(RemindLater {
+                    date_time: remind_later.with_timezone(&chrono::Utc),
+                    user_id: ctx.me.id,
+                }),
+            }
+            .into(),
+        ))
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RememberLaterCalldata {
+    remind_later: u64,
+}
+
+impl RememberLaterCalldata {
+    pub fn new(duration: chrono::Duration) -> Self {
+        Self {
+            remind_later: duration.num_seconds() as u64,
+        }
+    }
+}
+
 pub struct Comfirm {
     phone: String,
     come_from: ComeFrom,
     comment: String,
     first_name: Option<String>,
     last_name: Option<String>,
+    remind_later: Option<RemindLater>,
 }
 
 #[async_trait]
@@ -175,7 +324,7 @@ impl View for Comfirm {
     }
 
     async fn show(&mut self, ctx: &mut bot_core::context::Context) -> Result<(), eyre::Error> {
-        let text = format!(
+        let mut text = format!(
             "Все верно?:\n\
             Телефон: *{}*\n\
             Откуда пришел: *{}*\n\
@@ -184,6 +333,13 @@ impl View for Comfirm {
             fmt_come_from(self.come_from),
             escape(&self.comment)
         );
+        if let Some(rl) = self.remind_later.as_ref() {
+            text.push_str(&format!(
+                "Напомнить: *{}*\n",
+                fmt_dt(&rl.date_time.with_timezone(&chrono::Local))
+            ));
+        }
+
         let mut markup = InlineKeyboardMarkup::default();
         markup = markup.append_row(vec![
             CalldataYesNo::Yes.button("✅Да"),
@@ -205,6 +361,7 @@ impl View for Comfirm {
                         self.comment.clone(),
                         self.first_name.clone(),
                         self.last_name.clone(),
+                        self.remind_later.clone(),
                     )
                     .await?;
                 ctx.send_msg("Заявка создана").await?;

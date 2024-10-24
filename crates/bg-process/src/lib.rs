@@ -6,8 +6,7 @@ use eyre::{Context, Error};
 use ledger::Ledger;
 use log::info;
 use process::{
-    freeze::FreezeBg, notifier::TrainingNotifier, rewards::RewardsBg, subscription::SubscriptionBg,
-    training::TriningBg,
+    freeze::FreezeBg, notifier::TrainingNotifier, requests::RequestNotifier, rewards::RewardsBg, subscription::SubscriptionBg, training::TriningBg
 };
 
 use teloxide::types::{ChatId, MessageId};
@@ -33,8 +32,9 @@ pub async fn start(ledger: Ledger, bot: BotApp) -> Result<(), Error> {
         .await?;
     sched.add(RewardsBg::new(ledger.clone()).to_job()?).await?;
     sched
-        .add(TrainingNotifier::new(ledger.clone(), bot).to_job()?)
+        .add(TrainingNotifier::new(ledger.clone(), bot.clone()).to_job()?)
         .await?;
+    sched.add(RequestNotifier::new(ledger.clone(), bot).to_job()?).await?;
     sched.start().await?;
     Ok(())
 }

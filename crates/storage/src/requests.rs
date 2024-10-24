@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bson::doc;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Utc};
 use eyre::Error;
 use model::{request::Request, session::Session};
 use mongodb::{Collection, IndexModel, SessionCursor};
@@ -31,7 +31,7 @@ impl RequestStore {
         })
     }
 
-    pub async fn update(&self, session: &mut Session, request: Request) -> Result<(), Error> {
+    pub async fn update(&self, session: &mut Session, request: &Request) -> Result<(), Error> {
         self.requests
             .replace_one(doc! { "_id": request.id }, request)
             .session(&mut *session)
@@ -75,6 +75,25 @@ impl RequestStore {
         }
         let cursor = self.requests.find(query).session(&mut *session).await?;
         Ok(cursor)
+    }
+
+    pub async fn to_notify(&self, session: &mut Session) -> Result<Vec<Request>, Error> {
+        let now = Utc::now();
+        let mut cursor = self
+            .requests
+            .find(doc! {
+                "remind_later.date_time": {
+                    "$gte": now,
+                }
+            })
+            .session(&mut *session)
+            .await?;
+
+        let mut requests = Vec::new();
+        while let Some(request) = cursor.next(&mut *session).await {
+            requests.push(request?);
+        }
+        Ok(requests)
     }
 
     pub async fn get_all_page(
