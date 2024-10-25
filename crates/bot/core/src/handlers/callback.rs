@@ -5,6 +5,7 @@ use crate::{
     widget::Widget,
     BACK_NAME, ERROR,
 };
+use env::Env;
 use ledger::Ledger;
 use log::error;
 use teloxide::{
@@ -16,6 +17,7 @@ use teloxide::{
 
 pub async fn callback_handler(
     bot: Bot,
+    env: Env,
     q: CallbackQuery,
     ledger: Ledger,
     state_holder: StateHolder,
@@ -23,7 +25,7 @@ pub async fn callback_handler(
 ) -> ResponseResult<()> {
     let (mut ctx, widget) = if let Some(original_message) = &q.message {
         let chat_id = original_message.chat().id;
-        match build_context(bot, ledger, chat_id, &state_holder).await {
+        match build_context(bot, ledger, chat_id, &state_holder, env).await {
             Ok(ctx) => ctx,
             Err((err, bot)) => {
                 error!("Failed to build context: {}", err);

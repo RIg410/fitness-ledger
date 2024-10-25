@@ -1,7 +1,8 @@
 use chrono::{Local, Utc};
 use eyre::{eyre, Context as _, Result};
-use log::{error, warn};
+use log::{error, info, warn};
 use model::decimal::Decimal;
+use model::invoice::PaymentPayload;
 use model::request::{RemindLater, Request, RequestHistoryRow};
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
@@ -85,6 +86,47 @@ impl Ledger {
         }
     }
 
+    #[tx]
+    pub async fn process_payment(
+        &self,
+        session: &mut Session,
+        payment: PaymentPayload,
+    ) -> Result<()> {
+        match payment {
+            PaymentPayload::Subscription {
+                user_id,
+                subscription_id,
+            } => {
+                let buyer = self
+                    .users
+                    .get(session, user_id)
+                    .await?
+                    .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
+
+                let subscription = self
+                    .subscriptions
+                    .get(session, subscription_id)
+                    .await?
+                    .ok_or_else(|| eyre!("User not found"))?;
+
+                info!("Subscription bought:{:?} by {:?}", subscription, buyer.id);
+
+                self.history
+                    .buy_subscription(session, subscription.clone())
+                    .await?;
+
+                self.users
+                    .add_subscription(session, buyer.id, subscription.clone())
+                    .await?;
+
+                self.treasury
+                    .sell(session, buyer.id, Sell::Sub(subscription))
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn get_user(&self, session: &mut Session, id: ObjectId) -> Result<User> {
         self.users
             .get(session, id)
@@ -125,7 +167,14 @@ impl Ledger {
             self.requests
                 .create(
                     session,
-                    Request::new(phone, comment, come_from, first_name, last_name, remember_later),
+                    Request::new(
+                        phone,
+                        comment,
+                        come_from,
+                        first_name,
+                        last_name,
+                        remember_later,
+                    ),
                 )
                 .await?;
         }

@@ -5,6 +5,7 @@ use bot_core::{
     state::StateHolder,
     widget::View,
 };
+use env::Env;
 use eyre::Result;
 use ledger::Ledger;
 use log::info;
@@ -12,7 +13,7 @@ use teloxide::{
     dispatching::UpdateFilterExt as _,
     dptree,
     prelude::{Dispatcher, Requester as _, ResponseResult},
-    types::{CallbackQuery, InlineQuery, Message, Update},
+    types::{CallbackQuery, InlineQuery, Message, PreCheckoutQuery, Update},
     Bot,
 };
 use view::menu::{MainMenuItem, MainMenuView};
@@ -20,14 +21,16 @@ use view::menu::{MainMenuItem, MainMenuView};
 #[derive(Clone)]
 pub struct BotApp {
     pub bot: Bot,
+    pub env: Env,
     pub state: StateHolder,
 }
 
 impl BotApp {
-    pub fn new(token: String) -> Self {
+    pub fn new(env: Env) -> Self {
         BotApp {
-            bot: Bot::new(token),
+            bot: Bot::new(env.tg_token()),
             state: StateHolder::default(),
+            env,
         }
     }
 
@@ -43,22 +46,34 @@ impl BotApp {
         .await?;
 
         let msg_ledger = ledger.clone();
+        let env_ledger = self.env.clone();
         let msg_state = state.clone();
+        let env_state = self.env.clone();
 
         let callback_ledger = ledger.clone();
         let callback_state = state.clone();
         let handler = dptree::entry()
             .branch(
                 Update::filter_message().endpoint(move |bot: Bot, msg: Message| {
-                    message_handler(bot, msg, msg_ledger.clone(), msg_state.clone(), || {
-                        MainMenuView.widget()
-                    })
+                    message_handler(
+                        bot,
+                        env_ledger.clone(),
+                        msg,
+                        msg_ledger.clone(),
+                        msg_state.clone(),
+                        || MainMenuView.widget(),
+                    )
                 }),
+            )
+            .branch(
+                Update::filter_pre_checkout_query()
+                    .endpoint(|bot: Bot, q: PreCheckoutQuery| pre_checkout_query_handler(bot, q)),
             )
             .branch(
                 Update::filter_callback_query().endpoint(move |bot: Bot, q: CallbackQuery| {
                     callback_handler(
                         bot,
+                        env_state.clone(),
                         q,
                         callback_ledger.clone(),
                         callback_state.clone(),
@@ -88,5 +103,10 @@ async fn inline_query_handler(
     _: StateHolder,
 ) -> ResponseResult<()> {
     info!("inline");
+    Ok(())
+}
+
+async fn pre_checkout_query_handler(bot: Bot, q: PreCheckoutQuery) -> ResponseResult<()> {
+    bot.answer_pre_checkout_query(q.id, true).await?;
     Ok(())
 }

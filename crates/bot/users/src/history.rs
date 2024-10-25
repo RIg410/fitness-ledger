@@ -278,7 +278,10 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                     escape(&amount.to_string())
                 )
             } else {
-                format!("Ваш баланс изменен на _{}_ занятий", escape(&amount.to_string()))
+                format!(
+                    "Ваш баланс изменен на _{}_ занятий",
+                    escape(&amount.to_string())
+                )
             }
         }
         model::history::Action::ChangeReservedBalance { amount } => {
@@ -298,7 +301,10 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                     escape(&amount.to_string())
                 )
             } else {
-                format!("Ваш резерв изменен на _{}_ занятий", escape(&amount.to_string()))
+                format!(
+                    "Ваш резерв изменен на _{}_ занятий",
+                    escape(&amount.to_string())
+                )
             }
         }
         model::history::Action::PayReward { amount } => {
@@ -329,6 +335,14 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 "Абонемент *{}* пользователя {} истек",
                 escape(&subscription.name),
                 escape(&actor.name.tg_user_name.unwrap_or_default())
+            )
+        }
+        model::history::Action::BuySub { subscription } => {
+            format!(
+                "Вы купили абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_",
+                escape(&subscription.name),
+                subscription.items,
+                escape(&subscription.price.to_string())
             )
         }
     };

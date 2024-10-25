@@ -31,6 +31,10 @@ impl Decimal {
     pub fn inner(&self) -> i64 {
         self.0
     }
+
+    pub fn to_price(&self) -> u32 {
+        self.0 as u32 * 10
+    }
 }
 
 impl Debug for Decimal {

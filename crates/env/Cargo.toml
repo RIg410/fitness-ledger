@@ -1,0 +1,11 @@
+[package]
+name = "env"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+version.workspace = true
+
+[dependencies]
+dotenv.workspace = true
+log.workspace = true
+eyre.workspace = true

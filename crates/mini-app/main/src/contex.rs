@@ -61,7 +61,12 @@ impl ContextBuilder {
             }
         };
 
-        let tg_bot = TgBot::new(self.bot.bot.clone(), self.bot.state.tokens(), origin);
+        let tg_bot = TgBot::new(
+            self.bot.bot.clone(),
+            self.bot.state.tokens(),
+            origin,
+            self.bot.env.clone(),
+        );
         Ok(Context::new(
             tg_bot,
             user,

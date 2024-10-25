@@ -22,6 +22,7 @@ pub async fn start(ledger: Ledger, bot: BotApp) -> Result<(), Error> {
             message_id: MessageId(0),
             tkn: ValidToken::new(),
         },
+        bot.env.clone(),
     ));
     let sched = JobScheduler::new().await?;
 

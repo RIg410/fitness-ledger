@@ -55,7 +55,7 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     let mut keymap = InlineKeyboardMarkup::default();
     let subscriptions = ctx.ledger.subscriptions.get_all(&mut ctx.session).await?;
 
-    let can_sell = ctx.has_right(Rule::SellSubscription);
+    let can_sell = ctx.has_right(Rule::SellSubscription) || ctx.has_right(Rule::BuySubscription);
 
     let delimiter = escape("-------------------------\n");
     msg.push_str(&delimiter);

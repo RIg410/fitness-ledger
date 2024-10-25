@@ -393,6 +393,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "chrono",
+ "env",
  "eyre",
  "hex",
  "itertools 0.2.9",
@@ -402,6 +403,7 @@ dependencies = [
  "mongodb",
  "parking_lot",
  "serde",
+ "serde_json",
  "storage",
  "strum",
  "teloxide",
@@ -468,6 +470,7 @@ dependencies = [
  "bot-users",
  "bot-viewer",
  "chrono",
+ "env",
  "eyre",
  "hex",
  "itertools 0.2.9",
@@ -1076,6 +1079,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.77",
+]
+
+[[package]]
+name = "env"
+version = "0.1.0"
+dependencies = [
+ "dotenv",
+ "eyre",
+ "log",
 ]
 
 [[package]]
@@ -1791,6 +1803,7 @@ dependencies = [
  "bot-main",
  "color-eyre",
  "dotenv",
+ "env",
  "eyre",
  "ledger",
  "log",
@@ -1918,6 +1931,7 @@ dependencies = [
  "axum-extra",
  "bot-core",
  "bot-main",
+ "env",
  "eyre",
  "ledger",
  "log",

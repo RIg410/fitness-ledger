@@ -79,6 +79,9 @@ impl View for SubscriptionsList {
                 self.index = index;
             }
             Calldata::ChangeBalance(delta) => {
+                if self.index >= user.subscriptions.len() {
+                    return Ok(Jmp::Stay);
+                }
                 let sub = &user.subscriptions[self.index];
                 ctx.ledger
                     .users
@@ -86,6 +89,9 @@ impl View for SubscriptionsList {
                     .await?;
             }
             Calldata::ChangeDays(delta) => {
+                if self.index >= user.subscriptions.len() {
+                    return Ok(Jmp::Stay);
+                }
                 let sub = &user.subscriptions[self.index];
                 ctx.ledger
                     .users

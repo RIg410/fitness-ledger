@@ -8,8 +8,8 @@ use super::{
 use async_trait::async_trait;
 use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
 use bot_viewer::subscription::fmt_subscription_type;
-use eyre::{Error, Result};
-use model::rights::Rule;
+use eyre::{Context as _, Error, Result};
+use model::{invoice::Invoice, rights::Rule};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
@@ -26,6 +26,23 @@ impl SubscriptionOption {
     async fn edit(&mut self, tp: EditType) -> Result<Jmp> {
         Ok(EditSubscription::new(self.id, tp).into())
     }
+
+    async fn buy(&mut self, ctx: &mut Context) -> Result<Jmp> {
+        let sub = ctx
+            .ledger
+            .subscriptions
+            .get(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Subscription not found"))?;
+        if !sub.user_can_buy {
+            ctx.send_msg("Покупка абонемента недоступна").await?;
+            return Ok(Jmp::Back);
+        }
+
+        let invoice = Invoice::from((sub, ctx.me.id));
+        ctx.bot.send_invoice(invoice).await?;
+        Ok(Jmp::Back)
+    }
 }
 
 #[async_trait]
@@ -35,7 +52,7 @@ impl View for SubscriptionOption {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let (txt, keymap) = render_sub(self.id, ctx).await?;
+        let (txt, keymap) = render_sub(self.id, ctx).await.context("render")?;
         ctx.edit_origin(&txt, keymap).await?;
         Ok(())
     }
@@ -49,6 +66,10 @@ impl View for SubscriptionOption {
                     .delete(&mut ctx.session, self.id)
                     .await?;
                 Ok(Jmp::Back)
+            }
+            Callback::Buy => {
+                ctx.ensure(Rule::BuySubscription)?;
+                self.buy(ctx).await
             }
             Callback::Sell => {
                 ctx.ensure(Rule::SellSubscription)?;
@@ -96,7 +117,6 @@ async fn render_sub(
         .get(&mut ctx.session, id)
         .await?
         .ok_or_else(|| eyre::eyre!("Subscription not found"))?;
-
     let msg = format!(
         "📌 Тариф: _{}_\nКоличество занятий:_{}_\nЦена:_{}_\nДни заморозки:_{}_\nДействует дней:_{}_\nТип:_{}_",
         escape(&sub.name),
@@ -106,8 +126,12 @@ async fn render_sub(
         sub.expiration_days,
         fmt_subscription_type(ctx, &sub.subscription_type).await?,
     );
+
     let mut keymap = InlineKeyboardMarkup::default();
 
+    if ctx.has_right(Rule::BuySubscription) {
+        keymap = keymap.append_row(Callback::Buy.btn_row("🛒 Купить"));
+    }
     if ctx.has_right(Rule::SellSubscription) {
         keymap = keymap.append_row(Callback::Sell.btn_row("🛒 Продать"));
     }
@@ -130,6 +154,7 @@ async fn render_sub(
 enum Callback {
     Delete,
     Sell,
+    Buy,
     EditPrice,
     EditItems,
     EditName,

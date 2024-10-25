@@ -124,8 +124,10 @@ pub enum Rule {
     RequestsHistory,
 
     ReceiveNotificationsAboutSubscriptions,
-    
+
+    // experimental
     MiniApp,
+    BuySubscription,
 }
 
 impl Rule {

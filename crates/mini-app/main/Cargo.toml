@@ -8,6 +8,7 @@ version.workspace = true
 
 [dependencies]
 askama.workspace = true
+env.workspace = true
 axum-extra.workspace = true
 axum.workspace = true
 bot-core.workspace = true

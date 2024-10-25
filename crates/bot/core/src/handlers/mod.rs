@@ -7,6 +7,7 @@ use crate::{
     state::StateHolder,
     widget::Widget,
 };
+use env::Env;
 use eyre::Error;
 use ledger::Ledger;
 use model::user::User;
@@ -17,6 +18,7 @@ async fn build_context(
     ledger: Ledger,
     tg_id: ChatId,
     state_holder: &StateHolder,
+    env: Env,
 ) -> Result<(Context, Option<Widget>), (Error, Bot)> {
     let mut session = ledger
         .db
@@ -51,7 +53,12 @@ async fn build_context(
         }
     };
 
-    let tg_bot = TgBot::new(bot, state_holder.tokens(), origin);
+    let tg_bot = TgBot::new(
+        bot,
+        state_holder.tokens(),
+        origin,
+        env
+    );
 
     Ok((
         Context::new(tg_bot, user, ledger, session, real),

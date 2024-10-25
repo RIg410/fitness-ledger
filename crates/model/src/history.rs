@@ -99,4 +99,7 @@ pub enum Action {
     ExpireSubscription {
         subscription: UserSubscription,
     },
+    BuySub {
+        subscription: Subscription,
+    },
 }

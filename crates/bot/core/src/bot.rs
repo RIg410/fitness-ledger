@@ -1,13 +1,19 @@
 use crate::{state::Tokens, sys_button};
+use env::Env;
 use eyre::{Context as _, Error};
+use model::invoice::Invoice;
 use std::{
     fmt::Debug,
     sync::{atomic::AtomicBool, Arc},
+    vec,
 };
 use teloxide::{
-    payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
+    payloads::{EditMessageTextSetters as _, SendInvoiceSetters as _, SendMessageSetters as _},
     prelude::Requester as _,
-    types::{ChatId, InlineKeyboardMarkup, InputFile, MessageId, ParseMode, ReplyMarkup, True},
+    types::{
+        ChatId, InlineKeyboardMarkup, InputFile, LabeledPrice, MessageId, ParseMode, ReplyMarkup,
+        True,
+    },
     ApiError, Bot, RequestError,
 };
 
@@ -16,16 +22,39 @@ pub struct TgBot {
     tokens: Tokens,
     origin: Origin,
     system_go_back: bool,
+    env: Env,
 }
 
 impl TgBot {
-    pub fn new(bot: Bot, tokens: Tokens, origin: Origin) -> Self {
+    pub fn new(bot: Bot, tokens: Tokens, origin: Origin, env: Env) -> Self {
         TgBot {
             bot,
             tokens,
             origin,
             system_go_back: false,
+            env,
         }
+    }
+
+    pub async fn send_invoice(&mut self, invoice: Invoice) -> Result<(), Error> {
+        let prices = vec![LabeledPrice::new(invoice.title.clone(), invoice.price())];
+        let receipt = invoice.make_receipt();
+        self.bot
+            .send_invoice(
+                self.chat_id(),
+                invoice.title,
+                invoice.description,
+                invoice.payload,
+                self.env.payment_provider_token(),
+                invoice.currency,
+                prices,
+            )
+            .need_phone_number(true)
+            .send_phone_number_to_provider(true)
+            .protect_content(true)
+            .provider_data(serde_json::to_string(&receipt)?)
+            .await?;
+        Ok(())
     }
 
     pub async fn send_document(&self, data: Vec<u8>, name: &'static str) -> Result<(), Error> {
@@ -38,6 +67,16 @@ impl TgBot {
 
     pub async fn send_notification(&mut self, err: &str) -> Result<(), Error> {
         self.send_msg(err).await?;
+        self.reset_origin().await?;
+        Ok(())
+    }
+
+    pub async fn remove_origin(&mut self) -> Result<(), Error> {
+        if self.origin.message_id.0 != 0 {
+            self.bot
+                .delete_message(self.chat_id(), self.origin.message_id)
+                .await?;
+        }
         self.reset_origin().await?;
         Ok(())
     }
@@ -173,6 +212,10 @@ impl TgBot {
         let tkn = self.tokens.get_token(chat_id);
         tkn.invalidate();
         Ok(id)
+    }
+
+    pub fn env(&self) -> &Env {
+        &self.env
     }
 }
 

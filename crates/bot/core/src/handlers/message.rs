@@ -5,8 +5,10 @@ use crate::{
     widget::Widget,
     BACK_NAME, ERROR,
 };
+use env::Env;
 use ledger::Ledger;
 use log::error;
+use model::invoice::PaymentPayload;
 use teloxide::{
     prelude::{Requester as _, ResponseResult},
     types::Message,
@@ -16,12 +18,14 @@ use teloxide::{
 
 pub async fn message_handler(
     bot: Bot,
+    env: Env,
     msg: Message,
     ledger: Ledger,
     state_holder: StateHolder,
     system_handler: impl Fn() -> Widget,
 ) -> ResponseResult<()> {
-    let (mut ctx, widget) = match build_context(bot, ledger, msg.chat.id, &state_holder).await {
+    let (mut ctx, widget) = match build_context(bot, ledger, msg.chat.id, &state_holder, env).await
+    {
         Ok(ctx) => ctx,
         Err((err, bot)) => {
             error!("Failed to build context: {:#}", err);
@@ -70,6 +74,23 @@ async fn inner_message_handler(
         ctx.send_msg("Ваш аккаунт заблокирован").await?;
         return Ok(());
     }
+
+    if let Some(payment) = msg.successful_payment() {
+        ctx.ledger
+            .process_payment(
+                &mut ctx.session,
+                PaymentPayload::decode(&payment.invoice_payload)?,
+            )
+            .await?;
+        ctx.bot
+            .send_notification("Платеж успешно обработан")
+            .await?;
+        ctx.bot.reset_origin().await?;
+       // widget = system_handler();
+        widget.show(ctx).await?;
+        return Ok(());
+    }
+
     ctx.set_system_go_back(!widget.is_back_main_view() && !widget.main_view());
 
     let widget = if let Some(msg) = msg.text() {

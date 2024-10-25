@@ -1,4 +1,4 @@
-use crate::decimal::Decimal;
+use crate::{decimal::Decimal, invoice::Sellable};
 use bson::oid::ObjectId;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
@@ -204,5 +204,26 @@ impl SubscriptionType {
 impl Default for SubscriptionType {
     fn default() -> Self {
         SubscriptionType::Group {}
+    }
+}
+
+impl Sellable for Subscription {
+    fn title(&self) -> String {
+        self.name.clone()
+    }
+
+    fn price(&self) -> Decimal {
+        self.price
+    }
+
+    fn description(&self) -> String {
+        format!(
+            "занятий: {}\nдней заморозки:{}\nсрок действия:{} (с первой записи)",
+            self.items, self.freeze_days, self.expiration_days
+        )
+    }
+
+    fn item_id(&self) -> ObjectId {
+        self.id
     }
 }
