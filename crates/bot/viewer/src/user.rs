@@ -11,6 +11,8 @@ use model::{
 use mongodb::bson::oid::ObjectId;
 use teloxide::utils::markdown::escape;
 
+use crate::fmt_phone;
+
 pub fn render_sub(sub: &UserSubscription) -> String {
     match sub.status {
         Status::NotActive => {
@@ -123,13 +125,13 @@ pub fn user_base_info(user: &User) -> String {
         "{} Пользователь : _@{}_
 Имя : _{}_
 Фамилия : _{}_
-Телефон : _\\+{}_
+Телефон : _{}_
 Дата рождения : _{}_\n",
         fmt_user_type(user),
         escape(user.name.tg_user_name.as_ref().unwrap_or(&empty)),
         escape(&user.name.first_name),
         escape(user.name.last_name.as_ref().unwrap_or(&empty)),
-        escape(&user.phone),
+        fmt_phone(&user.phone),
         escape(
             &user
                 .birthday
