@@ -125,7 +125,7 @@ pub fn user_base_info(user: &User) -> String {
         "{} Пользователь : _@{}_
 Имя : _{}_
 Фамилия : _{}_
-Телефон : _{}_
+Телефон : {} 
 Дата рождения : _{}_\n",
         fmt_user_type(user),
         escape(user.name.tg_user_name.as_ref().unwrap_or(&empty)),

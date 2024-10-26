@@ -1,9 +1,9 @@
 pub mod confirm;
 pub mod create;
 pub mod edit;
+pub mod edit_type;
 pub mod sell;
 pub mod view;
-pub mod edit_type;
 
 use async_trait::async_trait;
 use bot_core::{
@@ -55,7 +55,7 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     let mut keymap = InlineKeyboardMarkup::default();
     let subscriptions = ctx.ledger.subscriptions.get_all(&mut ctx.session).await?;
 
-    let can_sell = ctx.has_right(Rule::SellSubscription) || ctx.has_right(Rule::BuySubscription);
+    let can_sell = ctx.has_right(Rule::SellSubscription);
 
     let delimiter = escape("-------------------------\n");
     msg.push_str(&delimiter);
@@ -75,7 +75,7 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
             subscription.price.to_string().replace(".", ",")
         ));
 
-        if can_sell {
+        if can_sell || ctx.has_right(Rule::BuySubscription) {
             keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                 subscription.name.clone(),
                 Callback::Select(subscription.id.bytes()).to_data(),
@@ -99,7 +99,7 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
             subscription.price.to_string().replace(".", ",")
         ));
 
-        if can_sell {
+        if can_sell || ctx.has_right(Rule::BuySubscription) {
             keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
                 subscription.name.clone(),
                 Callback::Select(subscription.id.bytes()).to_data(),

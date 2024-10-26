@@ -7,6 +7,7 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::{day::fmt_dt, fmt_phone, user::fmt_come_from};
+use chrono::{Local, NaiveDateTime, TimeZone as _};
 use model::{
     request::RemindLater, rights::Rule, statistics::marketing::ComeFrom, user::sanitize_phone,
 };
@@ -248,7 +249,8 @@ impl View for SetRemindLater {
     }
 
     async fn show(&mut self, ctx: &mut bot_core::context::Context) -> Result<(), eyre::Error> {
-        let text = "Напомнить через:";
+        let text =
+            "Напомнить через:\nВыберите вариант или ввидите дату в формате *дд\\.мм\\.гггг чч\\:мм*";
         let markup = InlineKeyboardMarkup::default();
         let mut markup = markup
             .append_row(RememberLaterCalldata::new(chrono::Duration::hours(1)).btn_row("час"));
@@ -271,6 +273,43 @@ impl View for SetRemindLater {
             .append_row(RememberLaterCalldata::new(chrono::Duration::days(90)).btn_row("3 месяца"));
         ctx.bot.edit_origin(&text, markup).await?;
         Ok(())
+    }
+
+    async fn handle_message(
+        &mut self,
+        ctx: &mut Context,
+        message: &Message,
+    ) -> Result<Jmp, eyre::Error> {
+        ctx.bot.delete_msg(message.id).await?;
+
+        let text = if let Some(text) = message.text() {
+            text
+        } else {
+            return Ok(Jmp::Stay);
+        };
+
+        let dt = NaiveDateTime::parse_from_str(text, "%d.%m.%Y %H:%M")
+            .ok()
+            .and_then(|dt| Local.from_local_datetime(&dt).single());
+        if let Some(dt) = dt {
+            Ok(Jmp::Next(
+                Comfirm {
+                    phone: self.phone.clone(),
+                    come_from: self.come_from,
+                    comment: self.comment.clone(),
+                    first_name: self.first_name.clone(),
+                    last_name: self.last_name.clone(),
+                    remind_later: Some(RemindLater {
+                        date_time: dt.with_timezone(&chrono::Utc),
+                        user_id: ctx.me.id,
+                    }),
+                }
+                .into(),
+            ))
+        } else {
+            ctx.bot.send_notification("Введите корректную дату *дд\\.мм\\.гггг чч\\:мм*").await?;
+            Ok(Jmp::Stay)
+        }
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
