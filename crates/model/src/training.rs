@@ -4,7 +4,12 @@ use chrono::{DateTime, Datelike, Local, Timelike as _, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::{decimal::Decimal, ids::DayId, program::Program, slot::Slot};
+use crate::{
+    decimal::Decimal,
+    ids::DayId,
+    program::{Program, TrainingType},
+    slot::Slot,
+};
 
 pub const CLOSE_SING_UP: u32 = 3 * 60; // 3 hours
 
@@ -35,7 +40,7 @@ pub struct Training {
     #[serde(default)]
     pub keep_open: bool,
     #[serde(default)]
-    pub is_personal: bool,
+    pub tp: TrainingType,
 }
 
 impl Training {
@@ -48,7 +53,7 @@ impl Training {
         instructor: ObjectId,
         capacity: u32,
         is_one_time: bool,
-        is_personal: bool,
+        tp: TrainingType,
     ) -> Training {
         Training {
             id: ObjectId::new(),
@@ -66,7 +71,7 @@ impl Training {
             statistics: None,
             notified: Default::default(),
             keep_open: false,
-            is_personal,
+            tp,
         }
     }
 
@@ -92,7 +97,7 @@ impl Training {
             statistics: None,
             notified: Default::default(),
             keep_open: false,
-            is_personal: program.is_personal,
+            tp: program.tp,
         }
     }
 
@@ -121,7 +126,7 @@ impl Training {
             statistics: None,
             notified: Default::default(),
             keep_open: false,
-            is_personal: training.is_personal,
+            tp: training.tp,
         }
     }
 

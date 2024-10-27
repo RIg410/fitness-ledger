@@ -1,5 +1,8 @@
 use eyre::Error;
-use model::{program::Program, session::Session};
+use model::{
+    program::{Program, TrainingType},
+    session::Session,
+};
 use mongodb::bson::oid::ObjectId;
 use std::ops::Deref;
 use storage::program::ProgramStore;
@@ -26,7 +29,7 @@ impl Programs {
         description: String,
         duration_min: u32,
         capacity: u32,
-        is_personal: bool,
+        tp: TrainingType,
     ) -> Result<(), Error> {
         let proto = Program {
             id: ObjectId::new(),
@@ -35,7 +38,7 @@ impl Programs {
             duration_min,
             capacity,
             version: 0,
-            is_personal,
+            tp,
         };
         let training = self.get_by_name(session, &proto.name).await?;
         if training.is_some() {
@@ -43,7 +46,6 @@ impl Programs {
         }
 
         self.store.insert(session, &proto).await?;
-        // self.logs.create_program(session, proto).await;
         Ok(())
     }
 }

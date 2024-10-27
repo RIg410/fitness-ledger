@@ -97,9 +97,9 @@ impl User {
         self.subscriptions
             .iter_mut()
             .filter(|s| match s.tp {
-                subscription::SubscriptionType::Group {} => !training.is_personal,
+                subscription::SubscriptionType::Group {} => !training.tp.is_personal(),
                 subscription::SubscriptionType::Personal { couch_filter } => {
-                    if training.is_personal {
+                    if training.tp.is_personal() {
                         if let Some(couch) = couch_filter {
                             training.instructor == couch
                         } else {
@@ -167,9 +167,9 @@ impl User {
         self.subscriptions
             .iter()
             .filter(|s| match s.tp {
-                subscription::SubscriptionType::Group {} => !training.is_personal,
+                subscription::SubscriptionType::Group {} => !training.tp.is_personal(),
                 subscription::SubscriptionType::Personal { couch_filter } => {
-                    if training.is_personal {
+                    if training.tp.is_personal() {
                         if let Some(couch) = couch_filter {
                             training.instructor == couch
                         } else {

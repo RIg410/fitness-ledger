@@ -101,7 +101,7 @@ impl View for CreateProgram {
                             program.description,
                             program.duration_min,
                             program.capacity,
-                            program.is_personal,
+                            program.tp,
                         )
                         .await?;
                     ctx.send_msg("✅ Программа создана").await?;

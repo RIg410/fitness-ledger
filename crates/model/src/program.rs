@@ -12,7 +12,7 @@ pub struct Program {
     #[serde(default)]
     pub version: u64,
     #[serde(default)]
-    pub is_personal: bool,
+    pub tp: TrainingType,
 }
 
 impl Default for Program {
@@ -24,7 +24,39 @@ impl Default for Program {
             duration_min: 0,
             capacity: 0,
             version: 0,
-            is_personal: false,
+            tp: TrainingType::Group,
         }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub enum TrainingType {
+    Group,
+    Personal,
+    Event,
+    FreeEvent,
+}
+
+impl TrainingType {
+    pub fn is_group(&self) -> bool {
+        matches!(self, TrainingType::Group)
+    }
+
+    pub fn is_personal(&self) -> bool {
+        matches!(self, TrainingType::Personal)
+    }
+
+    pub fn is_event(&self) -> bool {
+        matches!(self, TrainingType::Event)
+    }
+
+    pub fn is_free_event(&self) -> bool {
+        matches!(self, TrainingType::FreeEvent)
+    }
+}
+
+impl Default for TrainingType {
+    fn default() -> Self {
+        TrainingType::Group
     }
 }
