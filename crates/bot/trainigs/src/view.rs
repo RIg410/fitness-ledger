@@ -7,7 +7,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::{day::fmt_dt, fmt_phone};
+use bot_viewer::{day::fmt_dt, fmt_phone, training::fmt_training_type};
 use chrono::{DateTime, Local};
 use eyre::{bail, Result};
 use model::{
@@ -201,6 +201,25 @@ impl TrainingView {
             .await?;
         Ok(Jmp::Stay)
     }
+
+    async fn set_free(&mut self, ctx: &mut Context, free: bool) -> Result<Jmp> {
+        ctx.ensure(Rule::SetFree)?;
+        let training = ctx
+            .ledger
+            .calendar
+            .get_training_by_start_at(&mut ctx.session, self.id)
+            .await?
+            .ok_or_else(|| eyre::eyre!("Training not found"))?;
+
+        let mut tp = training.tp;
+        tp.set_is_free(free);
+
+        ctx.ledger
+            .calendar
+            .set_training_type(&mut ctx.session, training.start_at, tp)
+            .await?;
+        Ok(Jmp::Stay)
+    }
 }
 
 #[async_trait]
@@ -233,6 +252,7 @@ impl View for TrainingView {
             Callback::ChangeCouchOne => self.change_couch(ctx, false).await,
             Callback::ChangeCouchAll => self.change_couch(ctx, true).await,
             Callback::KeepOpen(keep_open) => self.keep_open(ctx, keep_open).await,
+            Callback::SetFree(free) => self.set_free(ctx, free).await,
         }
     }
 }
@@ -270,7 +290,7 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
         })
         .unwrap_or_default();
 
-    let msg = format!(
+    let mut msg = format!(
         "
 💪 *Тренировка*: _{}_
 📅 *Дата*: _{}_
@@ -279,6 +299,7 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
 ⏱*Продолжительность*: _{}_мин
 _{}_                                                                 \n
 [Описание]({})
+{}
 ",
         escape(&training.name),
         fmt_dt(&slot.start_at()),
@@ -287,7 +308,9 @@ _{}_                                                                 \n
         training.duration_min,
         status(tr_status, training.is_full()),
         training.description,
+        fmt_training_type(training.tp),
     );
+
     let mut keymap = InlineKeyboardMarkup::default();
     keymap = keymap.append_row(vec![Callback::CouchInfo.button("🧘 Об инструкторе")]);
 
@@ -330,6 +353,14 @@ _{}_                                                                 \n
         ]);
     }
 
+    if ctx.has_right(Rule::SetFree) {
+        if training.tp.is_free() {
+            keymap = keymap.append_row(vec![Callback::SetFree(false).button("Сделать платной")]);
+        } else {
+            keymap = keymap.append_row(vec![Callback::SetFree(true).button("Сделать бесплатной")]);
+        }
+    }
+
     if is_client {
         if training.clients.contains(&ctx.me.id) {
             if tr_status.can_sign_out() {
@@ -354,6 +385,7 @@ enum Callback {
     SignUp,
     SignOut,
     KeepOpen(bool),
+    SetFree(bool),
 }
 
 fn status(status: TrainingStatus, is_full: bool) -> &'static str {
@@ -371,7 +403,6 @@ fn status(status: TrainingStatus, is_full: bool) -> &'static str {
         TrainingStatus::Finished => "✔️Завершена",
     }
 }
-
 pub struct ConfirmCancelTraining {
     id: DateTime<Local>,
 }

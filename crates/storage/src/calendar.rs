@@ -5,6 +5,7 @@ use log::info;
 use model::{
     day::Day,
     ids::DayId,
+    program::TrainingType,
     session::Session,
     training::{Filter, Notified, Statistics, Training},
 };
@@ -468,6 +469,30 @@ impl CalendarStore {
             days.push(day?);
         }
         Ok(days)
+    }
+
+    pub async fn set_training_type(
+        &self,
+        session: &mut Session,
+        start_at: DateTime<Utc>,
+        tp: TrainingType,
+    ) -> Result<(), eyre::Error> {
+        info!("Set type: {:?} -> {:?}", start_at, tp);
+        let filter = doc! { "training.start_at": start_at };
+        let update = doc! {
+            "$set": { "training.$.tp": to_document(&tp)? },
+            "$inc": { "version": 1 }
+        };
+        let result = self
+            .days
+            .update_one(filter, update)
+            .session(&mut *session)
+            .await?;
+
+        if result.modified_count != 1 {
+            return Err(eyre::eyre!("Training not found"));
+        }
+        Ok(())
     }
 
     pub async fn set_keep_open(

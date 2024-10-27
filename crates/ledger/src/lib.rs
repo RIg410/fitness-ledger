@@ -214,13 +214,15 @@ impl Ledger {
                     continue;
                 }
 
-                let sub = user
-                    .find_subscription(FindFor::Unlock, &training)
-                    .ok_or_else(|| eyre!("User not found"))?;
-                sub.unlock_balance();
-                self.calendar
-                    .sign_out(session, training.start_at, user.id)
-                    .await?;
+                if training.tp.is_not_free() {
+                    let sub = user
+                        .find_subscription(FindFor::Unlock, &training)
+                        .ok_or_else(|| eyre!("User not found"))?;
+                    sub.unlock_balance();
+                    self.calendar
+                        .sign_out(session, training.start_at, user.id)
+                        .await?;
+                }
             }
             self.users.update(session, user).await?;
         }
@@ -269,15 +271,16 @@ impl Ledger {
             return Err(SignUpError::UserIsCouch);
         }
 
-        let subscription = user
-            .find_subscription(FindFor::Lock, &training)
-            .ok_or_else(|| SignUpError::NotEnoughBalance)?;
+        if training.tp.is_not_free() {
+            let subscription = user
+                .find_subscription(FindFor::Lock, &training)
+                .ok_or_else(|| SignUpError::NotEnoughBalance)?;
 
-        if !subscription.lock_balance() {
-            return Err(SignUpError::NotEnoughBalance);
+            if !subscription.lock_balance() {
+                return Err(SignUpError::NotEnoughBalance);
+            }
+            self.users.update(session, user).await?;
         }
-
-        self.users.update(session, user).await?;
 
         self.calendar
             .sign_up(session, training.start_at, client)
@@ -336,14 +339,17 @@ impl Ledger {
             .await?
             .ok_or_else(|| SignOutError::UserNotFound)?;
         let user_id = user.id;
-        let sub = user
-            .find_subscription(FindFor::Unlock, training)
-            .ok_or_else(|| SignOutError::NotEnoughReservedBalance)?;
 
-        if !sub.unlock_balance() {
-            return Err(SignOutError::NotEnoughReservedBalance);
+        if training.tp.is_not_free() {
+            let sub = user
+                .find_subscription(FindFor::Unlock, training)
+                .ok_or_else(|| SignOutError::NotEnoughReservedBalance)?;
+
+            if !sub.unlock_balance() {
+                return Err(SignOutError::NotEnoughReservedBalance);
+            }
+            self.users.update(session, user).await?;
         }
-        self.users.update(session, user).await?;
 
         self.calendar
             .sign_out(session, training.start_at, client)

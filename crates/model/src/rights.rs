@@ -90,6 +90,7 @@ pub enum Rule {
     EditSchedule,
     EditTrainingClientsList,
     SetKeepOpen,
+    SetFree,
 
     // Subscription
     CreateSubscription,

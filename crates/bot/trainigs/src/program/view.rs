@@ -8,6 +8,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use bot_viewer::training::fmt_training_type;
 use eyre::Result;
 use model::{program::Program, rights::Rule};
 use mongodb::bson::oid::ObjectId;
@@ -93,11 +94,13 @@ async fn render(ctx: &Context, training: &Program) -> Result<(String, InlineKeyb
 *Продолжительность*: {}мин
 *Вместимость*: {}
 [Описание]({})
+{}
 ",
         escape(&training.name),
         training.duration_min,
         training.capacity,
         escape(&training.description),
+        fmt_training_type(training.tp),
     );
 
     let mut keymap = Vec::new();

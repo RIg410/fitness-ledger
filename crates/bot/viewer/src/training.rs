@@ -1,4 +1,4 @@
-use model::training::TrainingStatus;
+use model::{program::TrainingType, training::TrainingStatus};
 
 pub fn fmt_training_status(
     training: TrainingStatus,
@@ -40,5 +40,34 @@ pub fn fmt_training_status(
                 }
             }
         }
+    }
+}
+
+pub fn fmt_training_type(tp: TrainingType) -> String {
+    match tp {
+        TrainingType::Group { is_free } => format!(
+            "Групповая тренировка {}",
+            if is_free {
+                "\\(бесплатная\\)"
+            } else {
+                ""
+            }
+        ),
+        TrainingType::Personal { is_free } => format!(
+            "Персональная тренировка {}",
+            if is_free {
+                "\\(бесплатная\\)"
+            } else {
+                ""
+            }
+        ),
+        TrainingType::Event { is_free } => format!(
+            "Событие {}",
+            if is_free {
+                "\\(бесплатная\\)"
+            } else {
+                ""
+            }
+        ),
     }
 }

@@ -63,22 +63,24 @@ impl TriningBg {
 
         let mut statistic = Statistics::default();
 
-        for client in &training.clients {
-            let mut user = self
-                .ledger
-                .users
-                .get(session, *client)
-                .await?
-                .ok_or_else(|| eyre!("User not found"))?;
-            if let Some(sub) = user.find_subscription(model::user::FindFor::Charge, &training) {
-                if !sub.change_locked_balance() {
-                    return Err(eyre!("Not enough balance:{}", user.id));
+        if training.tp.is_not_free() {
+            for client in &training.clients {
+                let mut user = self
+                    .ledger
+                    .users
+                    .get(session, *client)
+                    .await?
+                    .ok_or_else(|| eyre!("User not found"))?;
+                if let Some(sub) = user.find_subscription(model::user::FindFor::Charge, &training) {
+                    if !sub.change_locked_balance() {
+                        return Err(eyre!("Not enough balance:{}", user.id));
+                    }
+                    statistic.earned += sub.item_price();
+                } else {
+                    return Err(eyre!("Subscription not found for user:{}", user.id));
                 }
-                statistic.earned += sub.item_price();
-            } else {
-                return Err(eyre!("Subscription not found for user:{}", user.id));
+                self.ledger.users.update(session, user).await?;
             }
-            self.ledger.users.update(session, user).await?;
         }
 
         let mut couch = self.ledger.get_user(session, training.instructor).await?;
@@ -107,23 +109,26 @@ impl TriningBg {
     #[tx]
     async fn process_canceled(&self, session: &mut Session, training: Training) -> Result<()> {
         info!("Finalize canceled training:{:?}", training);
-        for client in &training.clients {
-            let mut user = self
-                .ledger
-                .users
-                .get(session, *client)
-                .await?
-                .ok_or_else(|| eyre!("User not found"))?;
-            if let Some(sub) = user.find_subscription(model::user::FindFor::Unlock, &training) {
-                if !sub.change_locked_balance() {
-                    return Err(eyre!("Not enough locked balance:{}", user.id));
+        if training.tp.is_not_free() {
+            for client in &training.clients {
+                let mut user = self
+                    .ledger
+                    .users
+                    .get(session, *client)
+                    .await?
+                    .ok_or_else(|| eyre!("User not found"))?;
+                if let Some(sub) = user.find_subscription(model::user::FindFor::Unlock, &training) {
+                    if !sub.change_locked_balance() {
+                        return Err(eyre!("Not enough locked balance:{}", user.id));
+                    }
+                } else {
+                    return Err(eyre!("Subscription not found for user:{}", user.id));
                 }
-            } else {
-                return Err(eyre!("Subscription not found for user:{}", user.id));
-            }
 
-            self.ledger.users.update(session, user).await?;
+                self.ledger.users.update(session, user).await?;
+            }
         }
+
         self.ledger
             .calendar
             .finalized(session, training.start_at, Statistics::default())
