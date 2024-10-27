@@ -6,10 +6,7 @@ use model::{
     rights::Rule,
     statistics::marketing::ComeFrom,
     subscription::{Status, UserSubscription},
-    user::{
-        extension::{self, UserExtension},
-        User,
-    },
+    user::{extension::UserExtension, User},
 };
 use mongodb::bson::oid::ObjectId;
 use teloxide::utils::markdown::escape;
@@ -39,7 +36,10 @@ pub fn render_sub(sub: &UserSubscription) -> String {
     }
 }
 
-pub async fn render_profile_msg(ctx: &mut Context, id: ObjectId) -> Result<(String, User), Error> {
+pub async fn render_profile_msg(
+    ctx: &mut Context,
+    id: ObjectId,
+) -> Result<(String, User, UserExtension), Error> {
     let user = ctx.ledger.get_user(&mut ctx.session, id).await?;
     let extension = ctx.ledger.users.get_extension(&mut ctx.session, id).await?;
 
@@ -54,7 +54,7 @@ pub async fn render_profile_msg(ctx: &mut Context, id: ObjectId) -> Result<(Stri
         render_subscriptions(&mut msg, &user);
         render_trainings(ctx, &mut msg, &user).await?;
     }
-    Ok((msg, user))
+    Ok((msg, user, extension))
 }
 
 async fn render_trainings(ctx: &mut Context, msg: &mut String, user: &User) -> Result<(), Error> {

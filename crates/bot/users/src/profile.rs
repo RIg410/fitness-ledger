@@ -155,7 +155,7 @@ async fn render_user_profile(
     ctx: &mut Context,
     id: ObjectId,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
-    let (msg, user) = render_profile_msg(ctx, id).await?;
+    let (msg, user, extension) = render_profile_msg(ctx, id).await?;
 
     let mut keymap = InlineKeyboardMarkup::default();
     if (ctx.has_right(Rule::FreezeUsers)
@@ -180,7 +180,7 @@ async fn render_user_profile(
             "Разблокировать ✅"
         }));
     }
-    if ctx.has_right(Rule::EditUserInfo) || (ctx.me.id == user.id && user.birthday.is_none()) {
+    if ctx.has_right(Rule::EditUserInfo) || (ctx.me.id == user.id && extension.birthday.is_none()) {
         keymap = keymap.append_row(Callback::SetBirthday.btn_row("Установить дату рождения"));
     }
 

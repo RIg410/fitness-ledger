@@ -130,7 +130,7 @@ impl View for ClientView {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let (msg, _) = render_profile_msg(ctx, self.id).await?;
+        let (msg, _, _) = render_profile_msg(ctx, self.id).await?;
         let mut keymap = InlineKeyboardMarkup::default();
 
         match self.reason {
