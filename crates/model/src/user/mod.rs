@@ -16,6 +16,8 @@ use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
+pub mod extension;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     #[serde(rename = "_id")]
@@ -24,7 +26,6 @@ pub struct User {
     pub name: UserName,
     pub rights: Rights,
     pub phone: String,
-    pub birthday: Option<DateTime<Local>>,
     #[serde(default = "default_is_active")]
     pub is_active: bool,
     #[serde(default)]
@@ -64,7 +65,6 @@ impl User {
             },
             rights: Rights::customer(),
             phone: "".to_owned(),
-            birthday: None,
             is_active: true,
             version: 0,
             subscriptions: vec![],

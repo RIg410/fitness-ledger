@@ -6,7 +6,10 @@ use model::{
     rights::Rule,
     statistics::marketing::ComeFrom,
     subscription::{Status, UserSubscription},
-    user::User,
+    user::{
+        extension::{self, UserExtension},
+        User,
+    },
 };
 use mongodb::bson::oid::ObjectId;
 use teloxide::utils::markdown::escape;
@@ -38,8 +41,9 @@ pub fn render_sub(sub: &UserSubscription) -> String {
 
 pub async fn render_profile_msg(ctx: &mut Context, id: ObjectId) -> Result<(String, User), Error> {
     let user = ctx.ledger.get_user(&mut ctx.session, id).await?;
+    let extension = ctx.ledger.users.get_extension(&mut ctx.session, id).await?;
 
-    let mut msg = user_base_info(&user);
+    let mut msg = user_base_info(&user, &extension);
     if ctx.has_right(Rule::ViewMarketingInfo) {
         msg.push_str(&format!("Источник : _{}_\n", fmt_come_from(user.come_from)));
     }
@@ -119,7 +123,7 @@ fn render_subscriptions(msg: &mut String, user: &User) {
     msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
 }
 
-pub fn user_base_info(user: &User) -> String {
+pub fn user_base_info(user: &User, extension: &UserExtension) -> String {
     let empty = "?".to_string();
     format!(
         "{} Пользователь : _@{}_
@@ -133,10 +137,10 @@ pub fn user_base_info(user: &User) -> String {
         escape(user.name.last_name.as_ref().unwrap_or(&empty)),
         fmt_phone(&user.phone),
         escape(
-            &user
+            &extension
                 .birthday
                 .as_ref()
-                .map(|d| d.format("%d.%m.%Y").to_string())
+                .map(|d| d.dt.format("%d.%m.%Y").to_string())
                 .unwrap_or_else(|| empty.clone())
         ),
     )

@@ -8,8 +8,8 @@ use model::rights::{self, Rule};
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
 use model::subscription::{Status, Subscription, UserSubscription};
+use model::user::extension::UserExtension;
 use model::user::{Freeze, Notification, User, UserName};
-use mongodb::bson::to_bson;
 use mongodb::options::UpdateOptions;
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -23,6 +23,7 @@ const COLLECTION: &str = "users";
 #[derive(Clone)]
 pub struct UserStore {
     pub(crate) users: Arc<Collection<User>>,
+    pub(crate) extensions: Arc<Collection<UserExtension>>,
 }
 
 impl UserStore {
@@ -33,6 +34,7 @@ impl UserStore {
             .await?;
         Ok(UserStore {
             users: Arc::new(users),
+            extensions: Arc::new(db.collection("users_extension")),
         })
     }
 
@@ -323,24 +325,6 @@ impl UserStore {
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
-    pub async fn set_birthday(
-        &self,
-        session: &mut Session,
-        id: ObjectId,
-        birthday: DateTime<Local>,
-    ) -> Result<bool> {
-        info!("Setting birthday for user {}: {}", id, birthday);
-        let result = self
-            .users
-            .update_one(
-                doc! { "_id": id },
-                doc! { "$set": { "birthday": to_bson(&birthday)? }, "$inc": { "version": 1 } },
-            )
-            .session(&mut *session)
-            .await?;
-        Ok(result.modified_count > 0)
-    }
-
     pub async fn block_user(
         &self,
         session: &mut Session,
@@ -557,5 +541,33 @@ impl UserStore {
         };
 
         Ok(self.users.find(filter).session(&mut *session).await?)
+    }
+
+    pub async fn get_extension(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+    ) -> Result<UserExtension> {
+        Ok(self
+            .extensions
+            .find_one(doc! { "_id": id })
+            .session(&mut *session)
+            .await?
+            .unwrap_or_default())
+    }
+
+    pub async fn update_extension(
+        &self,
+        session: &mut Session,
+        extension: UserExtension,
+    ) -> Result<()> {
+        self.extensions
+            .update_one(
+                doc! { "_id": extension.id },
+                doc! { "$set": to_document(&extension)? },
+            )
+            .session(&mut *session)
+            .await?;
+        Ok(())
     }
 }

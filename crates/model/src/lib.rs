@@ -15,3 +15,4 @@ pub mod statistics;
 pub mod request;
 pub mod auth;
 pub mod invoice;
+pub mod abilities;

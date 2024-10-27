@@ -3,10 +3,14 @@ use chrono::{DateTime, Local, Utc};
 use eyre::{bail, eyre, Result};
 use log::info;
 use model::{
+    abilities::Abilities,
     rights::{Rights, Rule},
     session::Session,
     statistics::marketing::ComeFrom,
-    user::{sanitize_phone, User, UserName},
+    user::{
+        extension::{Birthday, UserExtension},
+        sanitize_phone, User, UserName,
+    },
 };
 use mongodb::bson::oid::ObjectId;
 use std::ops::Deref;
@@ -73,7 +77,6 @@ impl Users {
                 name: name.clone(),
                 rights,
                 phone: phone.clone(),
-                birthday: None,
                 is_active: true,
                 id: ObjectId::new(),
                 subscriptions,
@@ -88,6 +91,19 @@ impl Users {
             let id = user.id;
             self.store.insert(session, user).await?;
             self.logs.create_user(session, name, phone).await?;
+            self.store
+                .update_extension(
+                    session,
+                    UserExtension {
+                        id,
+                        birthday: None,
+                        abilities: vec![
+                            Abilities::FirstGroupSubscription {},
+                            Abilities::FirstPersonalSubscription {},
+                        ],
+                    },
+                )
+                .await?;
             Ok(id)
         }
     }
@@ -118,7 +134,6 @@ impl Users {
             name: user_name.clone(),
             rights: Rights::customer(),
             phone: phone.clone(),
-            birthday: None,
             is_active: true,
             id: ObjectId::new(),
             subscriptions: vec![],
@@ -132,6 +147,19 @@ impl Users {
         };
         self.store.insert(session, user.clone()).await?;
         self.logs.create_user(session, user_name, phone).await?;
+        self.store
+            .update_extension(
+                session,
+                UserExtension {
+                    birthday: None,
+                    abilities: vec![
+                        Abilities::FirstGroupSubscription {},
+                        Abilities::FirstPersonalSubscription {},
+                    ],
+                    id: user.id,
+                },
+            )
+            .await?;
         Ok(user)
     }
 
@@ -154,17 +182,19 @@ impl Users {
         date: DateTime<Local>,
         forced: bool,
     ) -> Result<(), SetDateError> {
-        let user = self
+        let mut user = self
             .store
-            .get(session, id)
+            .get_extension(session, id)
             .await
             .map_err(SetDateError::Common)?;
-        let user = user.ok_or(SetDateError::UserNotFound)?;
         if !forced && user.birthday.is_some() {
             return Err(SetDateError::AlreadySet);
         }
+        user.birthday = Some(Birthday {
+            dt: date.with_timezone(&Utc),
+        });
         self.store
-            .set_birthday(session, user.id, date)
+            .update_extension(session, user)
             .await
             .map_err(SetDateError::Common)?;
         Ok(())
