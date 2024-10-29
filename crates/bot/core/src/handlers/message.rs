@@ -86,7 +86,6 @@ async fn inner_message_handler(
             .send_notification("Платеж успешно обработан")
             .await?;
         ctx.bot.reset_origin().await?;
-       // widget = system_handler();
         widget.show(ctx).await?;
         return Ok(());
     }
@@ -104,6 +103,12 @@ async fn inner_message_handler(
                         system_handler()
                     }
                 }
+                "/start" => {
+                    let mut widget = system_handler();
+                    ctx.origin().invalidate();
+                    widget.show(ctx).await?;
+                    widget
+                },
                 _ => system_handler(),
             }
         } else {

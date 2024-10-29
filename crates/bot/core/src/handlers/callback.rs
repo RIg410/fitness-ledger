@@ -70,7 +70,7 @@ pub async fn callback_handler(
 
 async fn inner_callback_handler(
     ctx: &mut Context,
-    mut widget: Option<Widget>,
+    widget: Option<Widget>,
     data: String,
     state_holder: &StateHolder,
     system_handler: impl Fn() -> Widget,
@@ -84,7 +84,7 @@ async fn inner_callback_handler(
     let mut widget = widget.unwrap_or_else(|| system_handler());
 
     if !has_widget {
-        widget.force_show(ctx).await?;  
+        widget.show(ctx).await?;  
     }
 
     ctx.set_system_go_back(!widget.is_back_main_view() && !widget.main_view());

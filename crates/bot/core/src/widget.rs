@@ -10,10 +10,6 @@ use teloxide::types::Message;
 
 #[async_trait]
 pub trait View {
-    async fn force_show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        self.show(ctx).await
-    }
-
     fn name(&self) -> &'static str;
 
     fn main_view(&self) -> bool {

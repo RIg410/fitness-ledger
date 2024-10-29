@@ -124,11 +124,11 @@ impl View for MainMenuView {
         true
     }
 
-    async fn force_show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        self.send_self(ctx).await
-    }
-
-    async fn show(&mut self, _: &mut Context) -> Result<(), eyre::Error> {
+    async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
+        if !ctx.origin().is_valid() {
+            ctx.reset_origin().await?;
+            self.send_self(ctx).await?;
+        }
         Ok(())
     }
 
