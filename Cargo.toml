@@ -15,6 +15,7 @@ members = [
   "crates/tx_macro",
   "bins",
   "crates/env",
+  "crates/payment/yookassa",
 ]
 resolver = "2"
 
@@ -64,6 +65,7 @@ pretty_env_logger = "0.5"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8.4"
+reqwest = {version = "0.12.9", features = ["json"]}
 serde = "1"
 serde_json = "1"
 serde_with = "3.9.0"
@@ -74,4 +76,5 @@ thiserror = "1"
 tokio = {version = "1", features = ["full"]}
 tokio-cron-scheduler = {version = "0.13.0", features = ["english"]}
 url = "2"
+uuid = "1.11.0"
 zip = "2.2.0"

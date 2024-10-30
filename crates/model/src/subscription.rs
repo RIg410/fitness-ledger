@@ -1,4 +1,4 @@
-use crate::{decimal::Decimal, invoice::Sellable};
+use crate::{decimal::Decimal, invoice::Sellable, training::Training};
 use bson::oid::ObjectId;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
@@ -56,13 +56,13 @@ pub struct UserSubscription {
     pub id: ObjectId,
     pub subscription_id: ObjectId,
     pub name: String,
-    items: u32,
+    pub(crate) items: u32,
     #[serde(default = "default_days")]
     pub days: u32,
     #[serde(default)]
     pub status: Status,
     #[serde(default)]
-    price: Decimal,
+    pub(crate) price: Decimal,
     #[serde(default)]
     pub tp: SubscriptionType,
     #[serde(default)]
@@ -74,10 +74,10 @@ pub struct UserSubscription {
 impl UserSubscription {
     pub fn is_expired(&self, current_date: DateTime<Utc>) -> bool {
         match self.status {
-            Status::Active { start_date } => {
-                let expiration_date = start_date + chrono::Duration::days(i64::from(self.days));
-                current_date > expiration_date
-            }
+            Status::Active {
+                start_date: _,
+                end_date,
+            } => current_date > end_date,
             Status::NotActive => false,
         }
     }
@@ -86,17 +86,8 @@ impl UserSubscription {
         matches!(self.status, Status::Active { .. })
     }
 
-    pub fn activate(&mut self) {
-        let sign_up_date = Local::now()
-            .date_naive()
-            .and_hms_opt(23, 59, 59)
-            .and_then(|dt| Utc.from_local_datetime(&dt).single());
-
-        if let Some(start_date) = sign_up_date {
-            self.status = Status::Active { start_date };
-        } else {
-            log::error!("Failed to get current date");
-        }
+    pub fn activate(&mut self, training: &Training) {
+        self.status.activate(training, self.days);
     }
 
     pub fn is_empty(&self) -> bool {
@@ -111,13 +102,13 @@ impl UserSubscription {
         }
     }
 
-    pub fn lock_balance(&mut self) -> bool {
+    pub fn lock_balance(&mut self, training: &Training) -> bool {
         if self.balance == 0 {
             return false;
         }
 
         if !self.is_active() {
-            self.activate();
+            self.activate(training);
         }
 
         self.balance -= 1;
@@ -172,6 +163,9 @@ pub enum Status {
     Active {
         #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
         start_date: DateTime<Utc>,
+        #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+        #[serde(default)]
+        end_date: DateTime<Utc>,
     },
     #[default]
     NotActive,
@@ -182,9 +176,19 @@ impl Status {
         matches!(self, Status::Active { .. })
     }
 
-    pub fn activate(&mut self, sign_up_date: DateTime<Utc>) {
+    pub fn activate(&mut self, training: &Training, expiration_days: u32) {
+        let end_date =
+            training.get_slot().start_at() + chrono::Duration::days(i64::from(expiration_days));
+
+        let end_date = end_date
+            .with_timezone(&Local)
+            .date_naive()
+            .and_hms_opt(23, 59, 59)
+            .and_then(|dt| Local.from_local_datetime(&dt).single())
+            .unwrap_or(end_date);
         *self = Status::Active {
-            start_date: sign_up_date,
+            start_date: training.get_slot().start_at().with_timezone(&Utc),
+            end_date: end_date.with_timezone(&Utc),
         };
     }
 }

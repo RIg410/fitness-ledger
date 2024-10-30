@@ -1,5 +1,5 @@
 use bson::to_document;
-use chrono::{DateTime, Duration, Local, Utc};
+use chrono::{DateTime, Local, Utc};
 use eyre::{bail, eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
 use log::info;
@@ -246,9 +246,13 @@ impl UserStore {
                 Status::NotActive => {
                     //no-op
                 }
-                Status::Active { start_date } => {
+                Status::Active {
+                    start_date,
+                    end_date,
+                } => {
                     sub.status = Status::Active {
-                        start_date: start_date + Duration::days(days as i64),
+                        start_date,
+                        end_date,
                     }
                 }
             }
@@ -503,7 +507,7 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn update(&self, session: &mut Session, mut user: User) -> Result<()> {
+    pub async fn update(&self, session: &mut Session, user: &mut User) -> Result<()> {
         user.gc();
 
         self.users
@@ -518,7 +522,13 @@ impl UserStore {
 
     pub async fn dump(&self, session: &mut Session) -> Result<Vec<User>> {
         let mut cursor = self.users.find(doc! {}).session(&mut *session).await?;
-        Ok(cursor.stream(&mut *session).try_collect().await?)
+        let mut users: Vec<User> = cursor.stream(&mut *session).try_collect().await?;
+        for user in users.as_mut_slice() {
+            user.gc();
+            self.update(session, user).await?;
+        }
+
+        Ok(users)
     }
 
     pub async fn find_all(

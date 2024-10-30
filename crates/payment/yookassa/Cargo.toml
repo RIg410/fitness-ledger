@@ -1,0 +1,18 @@
+[package]
+name = "yookassa"
+
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+version.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+model.workspace = true
+storage.workspace = true
+eyre.workspace = true
+reqwest.workspace = true
+env.workspace = true
+serde.workspace = true
+uuid.workspace = true
+serde_json.workspace = true

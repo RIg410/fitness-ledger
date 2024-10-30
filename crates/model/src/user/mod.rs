@@ -89,9 +89,18 @@ impl User {
         let start_at = training.get_slot().start_at();
         self.subscriptions
             .sort_by(|a, b| match (&a.status, &b.status) {
-                (Status::Active { start_date: a }, Status::Active { start_date: b }) => a.cmp(b),
-                (Status::Active { .. }, Status::NotActive) => Ordering::Greater,
-                (Status::NotActive, Status::Active { .. }) => Ordering::Less,
+                (
+                    Status::Active {
+                        start_date: _,
+                        end_date: a_end_date,
+                    },
+                    Status::Active {
+                        start_date: _,
+                        end_date: b_end_date,
+                    },
+                ) => a_end_date.cmp(b_end_date),
+                (Status::Active { .. }, Status::NotActive) => Ordering::Less,
+                (Status::NotActive, Status::Active { .. }) => Ordering::Greater,
                 (Status::NotActive, Status::NotActive) => Ordering::Equal,
             });
         self.subscriptions
@@ -112,10 +121,12 @@ impl User {
             })
             .find(|s| match reason {
                 FindFor::Lock => {
-                    if let Status::Active { start_date } = s.status {
-                        let expiration_date = start_date.with_timezone(&Local)
-                            + chrono::Duration::days(i64::from(s.days));
-                        expiration_date > start_at && s.balance > 0
+                    if let Status::Active {
+                        start_date: _,
+                        end_date,
+                    } = s.status
+                    {
+                        end_date > start_at && s.balance > 0
                     } else {
                         s.balance > 0
                     }
@@ -284,7 +295,20 @@ impl Balance {
 
 #[cfg(test)]
 mod tests {
-    use crate::user::sanitize_phone;
+    use bson::oid::ObjectId;
+    use chrono::{DateTime, Utc};
+
+    use crate::{
+        decimal::Decimal,
+        program::TrainingType,
+        rights::Rights,
+        statistics::marketing::ComeFrom,
+        subscription::{Status, SubscriptionType, UserSubscription},
+        training::Training,
+        user::sanitize_phone,
+    };
+
+    use super::User;
 
     #[test]
     fn test_sanitize_phone_with_special_characters() {
@@ -333,5 +357,119 @@ mod tests {
         let phone = "+-()";
         let sanitized = sanitize_phone(phone);
         assert_eq!(sanitized, "");
+    }
+
+    fn user(subs: Vec<UserSubscription>) -> User {
+        User {
+            id: ObjectId::new(),
+            tg_id: 0,
+            name: super::UserName {
+                tg_user_name: None,
+                first_name: "".to_owned(),
+                last_name: None,
+            },
+            rights: Rights::customer(),
+            phone: "".to_owned(),
+            is_active: true,
+            freeze: None,
+            subscriptions: subs,
+            freeze_days: 1,
+            version: 0,
+            created_at: Default::default(),
+            couch: None,
+            settings: Default::default(),
+            come_from: ComeFrom::default(),
+        }
+    }
+
+    fn sub(
+        items: u32,
+        tp: SubscriptionType,
+        days: u32,
+        start_date: Option<&str>,
+    ) -> UserSubscription {
+        let status = if let Some(start_date) = start_date {
+            let start_date: DateTime<Utc> = start_date.parse().unwrap();
+            Status::Active {
+                start_date,
+                end_date: start_date + chrono::Duration::days(i64::from(days)),
+            }
+        } else {
+            Status::NotActive
+        };
+
+        UserSubscription {
+            id: ObjectId::new(),
+            subscription_id: ObjectId::new(),
+            name: "".to_owned(),
+            items: 0,
+            days,
+            status: status,
+            price: Decimal::zero(),
+            tp,
+            balance: items,
+            locked_balance: 0,
+        }
+    }
+
+    fn training(start_at: &str, group: bool) -> Training {
+        Training {
+            id: ObjectId::new(),
+            proto_id: ObjectId::new(),
+            name: "".to_owned(),
+            description: "".to_owned(),
+            start_at: start_at.parse::<DateTime<Utc>>().unwrap(),
+            duration_min: 1,
+            instructor: ObjectId::new(),
+            clients: vec![],
+            capacity: 1,
+            is_one_time: false,
+            is_canceled: false,
+            is_processed: false,
+            statistics: Default::default(),
+            notified: Default::default(),
+            keep_open: false,
+            tp: if group {
+                TrainingType::Group { is_free: false }
+            } else {
+                TrainingType::Personal { is_free: false }
+            },
+        }
+    }
+
+    #[test]
+    fn test_users_find_subscription() {
+        let mut alice = user(vec![]);
+        let tr = training("2012-12-12T12:12:12Z", true);
+        assert!(alice.find_subscription(super::FindFor::Lock, &tr).is_none());
+
+        let mut alice = user(vec![sub(0, SubscriptionType::Group {}, 1, None)]);
+        assert!(dbg!(alice.find_subscription(super::FindFor::Lock, &tr)).is_none());
+
+        let mut alice = user(vec![sub(1, SubscriptionType::Group {}, 1, None)]);
+        assert!(alice.find_subscription(super::FindFor::Lock, &tr).is_some());
+
+        let mut alice = user(vec![
+            sub(1, SubscriptionType::Group {}, 1, None),
+            sub(
+                1,
+                SubscriptionType::Group {},
+                30,
+                Some("2012-12-11T12:12:12Z"),
+            ),
+        ]);
+        assert!(alice
+            .find_subscription(super::FindFor::Lock, &tr)
+            .unwrap()
+            .status
+            .is_active());
+        assert!(!alice
+            .find_subscription(
+                super::FindFor::Lock,
+                &training("2014-12-12T12:12:12Z", true)
+            )
+            .unwrap()
+            .status
+            .is_active());
     }
 }

@@ -32,7 +32,7 @@ impl Users {
                     sub.balance = sub.balance.saturating_sub(delta.abs() as u32);
                 }
             });
-        self.store.update(session, user).await?;
+        self.store.update(session, &mut user).await?;
         Ok(())
     }
 
@@ -55,16 +55,19 @@ impl Users {
             .iter_mut()
             .find(|sub| sub.id == id)
             .map(|sub| {
-                if delta > 0 {
-                    sub.days += delta as u32;
-                } else {
-                    sub.days = sub.days.saturating_sub(delta.abs() as u32);
-                }
-                if !sub.status.is_active() {
-                    sub.status.activate(Utc::now());
+                if let model::subscription::Status::Active {
+                    start_date: _,
+                    end_date,
+                } = &mut sub.status
+                {
+                    if delta > 0 {
+                        *end_date = *end_date + chrono::Duration::days(delta);
+                    } else {
+                        *end_date = *end_date - chrono::Duration::days(delta.abs());
+                    }
                 }
             });
-        self.store.update(session, user).await?;
+        self.store.update(session, &mut user).await?;
         Ok(())
     }
 
@@ -100,7 +103,7 @@ impl Users {
                 .await?;
         }
         user.subscriptions = actual;
-        self.store.update(session, user).await?;
+        self.store.update(session, &mut user).await?;
         Ok(expired_sub)
     }
 }

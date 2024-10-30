@@ -290,7 +290,7 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
         })
         .unwrap_or_default();
 
-    let mut msg = format!(
+    let msg = format!(
         "
 💪 *Тренировка*: _{}_
 📅 *Дата*: _{}_

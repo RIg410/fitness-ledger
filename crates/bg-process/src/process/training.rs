@@ -79,7 +79,7 @@ impl TriningBg {
                 } else {
                     return Err(eyre!("Subscription not found for user:{}", user.id));
                 }
-                self.ledger.users.update(session, user).await?;
+                self.ledger.users.update(session, &mut user).await?;
             }
         }
 
@@ -125,7 +125,7 @@ impl TriningBg {
                     return Err(eyre!("Subscription not found for user:{}", user.id));
                 }
 
-                self.ledger.users.update(session, user).await?;
+                self.ledger.users.update(session, &mut user).await?;
             }
         }
 

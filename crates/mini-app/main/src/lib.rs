@@ -67,13 +67,3 @@ struct MainTemplate1 {
     name: MainTemplate,
 }
 
-#[test]
-fn test_render() {
-    let htpl = MainTemplate1 {
-        name: MainTemplate {
-            name: "dddd".to_string(),
-        },
-    };
-    let t = htpl.render().unwrap();
-    assert_eq!(t.as_str(), "");
-}

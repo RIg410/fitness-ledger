@@ -224,7 +224,7 @@ impl Ledger {
                         .await?;
                 }
             }
-            self.users.update(session, user).await?;
+            self.users.update(session, &mut user).await?;
         }
         self.history.block_user(session, user_id, is_active).await?;
         self.users.block_user(session, user_id, is_active).await?;
@@ -276,10 +276,10 @@ impl Ledger {
                 .find_subscription(FindFor::Lock, &training)
                 .ok_or_else(|| SignUpError::NotEnoughBalance)?;
 
-            if !subscription.lock_balance() {
+            if !subscription.lock_balance(&training) {
                 return Err(SignUpError::NotEnoughBalance);
             }
-            self.users.update(session, user).await?;
+            self.users.update(session, &mut user).await?;
         }
 
         self.calendar
@@ -348,7 +348,7 @@ impl Ledger {
             if !sub.unlock_balance() {
                 return Err(SignOutError::NotEnoughReservedBalance);
             }
-            self.users.update(session, user).await?;
+            self.users.update(session, &mut user).await?;
         }
 
         self.calendar

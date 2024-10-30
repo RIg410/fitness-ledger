@@ -13,7 +13,9 @@ pub struct EnvInner {
     rust_log: String,
     mini_app_key: String,
     app_url: String,
-    payment_provider_token: String,
+    yookassa_token: String,
+    yookassa_shop_id: String,
+    bot_url: String,
 }
 
 impl Env {
@@ -37,8 +39,16 @@ impl Env {
         &self.0.app_url
     }
 
-    pub fn payment_provider_token(&self) -> &str {
-        &self.0.payment_provider_token
+    pub fn yookassa_token(&self) -> &str {
+        &self.0.yookassa_token
+    }
+
+    pub fn yookassa_shop_id(&self) -> &str {
+        &self.0.yookassa_shop_id
+    }
+
+    pub fn bot_url(&self) -> &str {
+        &self.0.bot_url
     }
 
     pub fn load() -> Result<Env, Error> {
@@ -52,8 +62,9 @@ impl Env {
             rust_log: var("RUST_LOG").context("RUST_LOG is not set")?,
             mini_app_key: var("MINI_APP_KEY").context("MINI_APP_KEY is not set")?,
             app_url: var("APP_URL").context("APP_URL is not set")?,
-            payment_provider_token: var("PAYMENT_PROVIDER_TOKEN")
-                .context("PAYMENT_PROVIDER_TOKEN is not set")?,
+            yookassa_token: var("YOOKASSA_TOKEN").context("YOOKASSA_TOKEN is not set")?,
+            yookassa_shop_id: var("YOOKASSA_SHOP_ID").context("YOOKASSA_TOKEN is not set")?,
+            bot_url: var("BOT_URL").context("BOT_URL is not set")?,
         })))
     }
 }

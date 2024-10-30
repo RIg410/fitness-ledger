@@ -23,13 +23,16 @@ pub fn render_sub(sub: &UserSubscription) -> String {
                 sub.locked_balance,
             )
         }
-        Status::Active { start_date } => {
-            let end_date = start_date + chrono::Duration::days(i64::from(sub.days));
+        Status::Active {
+            start_date,
+            end_date,
+        } => {
             format!(
-                "🎟_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nДействует до:_{}_\n",
+                "🎟_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nДействует c _{}_ по _{}_\n",
                 escape(&sub.name),
                 sub.balance,
                 sub.locked_balance,
+                start_date.with_timezone(&Local).format("%d\\.%m\\.%Y"),
                 end_date.with_timezone(&Local).format("%d\\.%m\\.%Y")
             )
         }

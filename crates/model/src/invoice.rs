@@ -3,22 +3,6 @@ use bson::oid::ObjectId;
 use eyre::Error;
 use serde::{Deserialize, Serialize};
 
-// Without nds.
-const VAT: u8 = 1;
-
-#[derive(Serialize, Deserialize)]
-pub struct Receipt {
-    items: Vec<Item>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Item {
-    description: String,
-    quantity: String,
-    amount: Amount,
-    vat_code: u8,
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct Amount {
     value: String,
@@ -27,31 +11,12 @@ pub struct Amount {
 
 pub struct Invoice {
     pub title: String,
-    price: Decimal,
+    pub price: Decimal,
     pub payload: String,
     pub description: String,
     pub currency: String,
 }
 
-impl Invoice {
-    pub fn price(&self) -> u32 {
-        self.price.inner() as u32
-    }
-
-    pub fn make_receipt(&self) -> Receipt {
-        Receipt {
-            items: vec![Item {
-                description: self.title.clone(),
-                quantity: "1".to_string(),
-                amount: Amount {
-                    value: self.price.inner().to_string(),
-                    currency: self.currency.clone(),
-                },
-                vat_code: VAT,
-            }],
-        }
-    }
-}
 
 impl<S: Sellable> From<(S, ObjectId)> for Invoice {
     fn from((sellable, user_id): (S, ObjectId)) -> Self {
