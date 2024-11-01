@@ -3,6 +3,7 @@ use env::Env;
 use eyre::{Context as _, Error};
 use std::{
     fmt::Debug,
+    ops::Deref,
     sync::{atomic::AtomicBool, Arc},
 };
 use teloxide::{
@@ -187,9 +188,16 @@ impl TgBot {
         tkn.invalidate();
         Ok(id)
     }
-
     pub fn env(&self) -> &Env {
         &self.env
+    }
+}
+
+impl Deref for TgBot {
+    type Target = Bot;
+
+    fn deref(&self) -> &Self::Target {
+        &self.bot
     }
 }
 

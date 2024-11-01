@@ -4,3 +4,4 @@ pub mod rewards;
 pub mod subscription;
 pub mod training;
 pub mod requests;
+pub mod user_sync;
