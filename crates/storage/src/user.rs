@@ -252,7 +252,7 @@ impl UserStore {
                 } => {
                     sub.status = Status::Active {
                         start_date,
-                        end_date,
+                        end_date: end_date + chrono::Duration::days(days as i64),
                     }
                 }
             }

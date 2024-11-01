@@ -11,7 +11,7 @@ use model::{
 use mongodb::bson::oid::ObjectId;
 use teloxide::utils::markdown::escape;
 
-use crate::fmt_phone;
+use crate::{day::fmt_date, fmt_phone};
 
 pub fn render_sub(sub: &UserSubscription) -> String {
     match sub.status {
@@ -128,12 +128,23 @@ fn render_subscriptions(msg: &mut String, user: &User) {
 
 pub fn user_base_info(user: &User, extension: &UserExtension) -> String {
     let empty = "?".to_string();
+
+    let freeze = if let Some(freeze) = user.freeze.as_ref() {
+        format!(
+            "❄️ Заморожен c _{}_  по _{}_",
+            fmt_date(&freeze.freeze_start.with_timezone(&Local)),
+            fmt_date(&freeze.freeze_end.with_timezone(&Local))
+        )
+    } else {
+        "".to_owned()
+    };
+
     format!(
         "{} Пользователь : _@{}_
-Имя : _{}_
-Фамилия : _{}_
+_{}_ _{}_
 Телефон : {} 
-Дата рождения : _{}_\n",
+Дата рождения : _{}_\n
+{}\n",
         fmt_user_type(user),
         escape(user.name.tg_user_name.as_ref().unwrap_or(&empty)),
         escape(&user.name.first_name),
@@ -146,6 +157,7 @@ pub fn user_base_info(user: &User, extension: &UserExtension) -> String {
                 .map(|d| d.dt.format("%d.%m.%Y").to_string())
                 .unwrap_or_else(|| empty.clone())
         ),
+        freeze
     )
 }
 

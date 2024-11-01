@@ -12,7 +12,7 @@ pub struct FreezeBg {
 #[async_trait]
 impl Task for FreezeBg {
     const NAME: &'static str = "freeze";
-    const CRON: &'static str = "every day at 00:00";
+    const CRON: &'static str = "every 1 hour";
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;

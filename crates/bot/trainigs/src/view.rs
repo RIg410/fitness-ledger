@@ -95,21 +95,27 @@ impl TrainingView {
             return Ok(Jmp::Stay);
         }
 
-        if let Some(sub) = ctx
-            .me
-            .find_subscription(model::user::FindFor::Lock, &training)
-        {
-            if sub.balance < 1 {
-                ctx.send_msg("В абонементе нет занятий🥺").await?;
+        if training.tp.is_not_free() {
+            if let Some(sub) = ctx
+                .me
+                .find_subscription(model::user::FindFor::Lock, &training)
+            {
+                if sub.balance < 1 {
+                    ctx.send_msg("В абонементе нет занятий🥺").await?;
+                    return Ok(Jmp::Stay);
+                }
+            } else {
+                ctx.send_msg("Нет подходящего абонемента🥺").await?;
+                return Ok(Jmp::Stay);
+            };
+        }
+
+        if let Some(freeze) = ctx.me.freeze.as_ref() {
+            let slot = training.get_slot();
+            if freeze.freeze_start <= slot.start_at() && freeze.freeze_end >= slot.end_at() {
+                ctx.send_msg("Ваш абонемент заморожен🥶").await?;
                 return Ok(Jmp::Stay);
             }
-        } else {
-            ctx.send_msg("Нет подходящего абонемента🥺").await?;
-            return Ok(Jmp::Stay);
-        };
-
-        if ctx.me.freeze.is_some() {
-            ctx.send_msg("Ваш абонемент заморожен🥶").await?;
             return Ok(Jmp::Stay);
         }
 
@@ -123,37 +129,39 @@ impl TrainingView {
             fmt_dt(&training.get_slot().start_at())
         );
 
-        let balance = ctx.me.available_balance_for_training(&training);
-        if balance <= 1 {
-            msg.push_str("Ваш абонемент заканчивается🥺");
-            if let Ok(users) = ctx
-                .ledger
-                .users
-                .find_users_with_right(
-                    &mut ctx.session,
-                    Rule::ReceiveNotificationsAboutSubscriptions,
-                )
-                .await
-            {
-                for user in users {
-                    let res = ctx
-                        .bot
-                        .send_notification_to(
-                            ChatId(user.tg_id),
-                            &format!(
-                                "У {} {} заканчивается абонемент\\.",
-                                escape(&ctx.me.name.to_string()),
-                                fmt_phone(&ctx.me.phone)
-                            ),
-                        )
-                        .await;
-                    if let Err(e) = res {
-                        log::error!("Failed to send notification to {}: {}", user.tg_id, e);
+        if training.tp.is_not_free() {
+            let balance = ctx.me.available_balance_for_training(&training);
+            if balance <= 1 {
+                msg.push_str("Ваш абонемент заканчивается🥺");
+                if let Ok(users) = ctx
+                    .ledger
+                    .users
+                    .find_users_with_right(
+                        &mut ctx.session,
+                        Rule::ReceiveNotificationsAboutSubscriptions,
+                    )
+                    .await
+                {
+                    for user in users {
+                        let res = ctx
+                            .bot
+                            .send_notification_to(
+                                ChatId(user.tg_id),
+                                &format!(
+                                    "У {} {} заканчивается абонемент\\.",
+                                    escape(&ctx.me.name.to_string()),
+                                    fmt_phone(&ctx.me.phone)
+                                ),
+                            )
+                            .await;
+                        if let Err(e) = res {
+                            log::error!("Failed to send notification to {}: {}", user.tg_id, e);
+                        }
                     }
                 }
             }
+            ctx.send_notification(&msg).await?;
         }
-        ctx.send_notification(&msg).await?;
 
         Ok(Jmp::Stay)
     }
