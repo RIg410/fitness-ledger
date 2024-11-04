@@ -41,6 +41,7 @@ ledger = {path = "crates/ledger"}
 model = {path = "crates/model"}
 storage = {path = "crates/storage"}
 tx_macro = {path = "crates/tx_macro"}
+yookassa = {path = "crates/payment/yookassa"}
 
 #libs 
 askama = "0.12.1"

@@ -5,7 +5,6 @@ use eyre::{Context as _, Error};
 use model::session::Session;
 use mongodb::{Client, Database};
 
-#[derive(Clone)]
 pub struct Db {
     client: Client,
     db: Database,

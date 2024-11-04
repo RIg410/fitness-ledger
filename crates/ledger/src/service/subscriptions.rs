@@ -4,18 +4,17 @@ use storage::subscription::SubscriptionsStore;
 use thiserror::Error;
 use tx_macro::tx;
 
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
 use super::history::History;
 
-#[derive(Clone)]
 pub struct Subscriptions {
-    pub store: SubscriptionsStore,
+    pub store: Arc<SubscriptionsStore>,
     pub logs: History,
 }
 
 impl Subscriptions {
-    pub fn new(store: SubscriptionsStore, logs: History) -> Self {
+    pub fn new(store: Arc<SubscriptionsStore>, logs: History) -> Self {
         Subscriptions { store, logs }
     }
 

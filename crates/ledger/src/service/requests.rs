@@ -1,16 +1,15 @@
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
 use eyre::Error;
 use model::{session::Session, statistics::marketing::ComeFrom};
 use storage::requests::RequestStore;
 
-#[derive(Clone)]
 pub struct Requests {
-    store: RequestStore,
+    store: Arc<RequestStore>,
 }
 
 impl Requests {
-    pub fn new(store: RequestStore) -> Self {
+    pub fn new(store: Arc<RequestStore>) -> Self {
         Requests { store }
     }
 

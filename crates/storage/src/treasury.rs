@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bson::doc;
 use chrono::{DateTime, Local, Utc};
 use eyre::Error;
@@ -8,9 +6,8 @@ use mongodb::{options::IndexOptions, Collection, IndexModel, SessionCursor};
 
 const COLLECTION: &str = "treasury";
 
-#[derive(Clone)]
 pub struct TreasuryStore {
-    store: Arc<Collection<TreasuryEvent>>,
+    store: Collection<TreasuryEvent>,
 }
 
 impl TreasuryStore {
@@ -21,9 +18,7 @@ impl TreasuryStore {
             .options(IndexOptions::builder().unique(true).build())
             .build();
         store.create_index(index).await?;
-        Ok(TreasuryStore {
-            store: Arc::new(store),
-        })
+        Ok(TreasuryStore { store })
     }
 
     pub async fn insert(&self, session: &mut Session, event: TreasuryEvent) -> Result<(), Error> {

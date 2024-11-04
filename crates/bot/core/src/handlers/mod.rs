@@ -1,6 +1,8 @@
 pub mod callback;
 pub mod message;
 
+use std::sync::Arc;
+
 use crate::{
     bot::{Origin, TgBot},
     context::Context,
@@ -15,7 +17,7 @@ use teloxide::{prelude::Requester as _, types::ChatId, Bot};
 
 async fn build_context(
     bot: Bot,
-    ledger: Ledger,
+    ledger: Arc<Ledger>,
     tg_id: ChatId,
     state_holder: &StateHolder,
     env: Env,

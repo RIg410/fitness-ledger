@@ -139,14 +139,28 @@ pub fn user_base_info(user: &User, extension: &UserExtension) -> String {
         "".to_owned()
     };
 
+    let link = if user.tg_id > 0 {
+        format!("[🔗Профиль](tg://user?id={})", user.tg_id)
+    } else {
+        "Профиль не привязан".to_string()
+    };
+
     format!(
-        "{} Пользователь : _@{}_
-_{}_ _{}_
+        "{} Пользователь : _{}_
+*{}* _{}_
 Телефон : {} 
 Дата рождения : _{}_\n
+{}\n
 {}\n",
         fmt_user_type(user),
-        escape(user.name.tg_user_name.as_ref().unwrap_or(&empty)),
+        escape(
+            &user
+                .name
+                .tg_user_name
+                .as_ref()
+                .map(|n| format!("@{n}"))
+                .unwrap_or_else(|| empty.to_owned())
+        ),
         escape(&user.name.first_name),
         escape(user.name.last_name.as_ref().unwrap_or(&empty)),
         fmt_phone(&user.phone),
@@ -157,6 +171,7 @@ _{}_ _{}_
                 .map(|d| d.dt.format("%d.%m.%Y").to_string())
                 .unwrap_or_else(|| empty.clone())
         ),
+        link,
         freeze
     )
 }

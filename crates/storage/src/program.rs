@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bson::to_document;
 use eyre::Error;
 use futures_util::TryStreamExt as _;
@@ -12,18 +10,15 @@ use mongodb::{
 
 const COLLECTION: &str = "training";
 
-#[derive(Clone)]
 pub struct ProgramStore {
-    pub(crate) store: Arc<Collection<Program>>,
+    pub(crate) store: Collection<Program>,
 }
 
 impl ProgramStore {
     pub(crate) fn new(db: &mongodb::Database) -> Self {
         let store = db.collection(COLLECTION);
 
-        ProgramStore {
-            store: Arc::new(store),
-        }
+        ProgramStore { store }
     }
 
     pub async fn get_by_id(

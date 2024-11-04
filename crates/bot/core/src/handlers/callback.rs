@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::build_context;
 use crate::{
     context::Context,
@@ -19,7 +21,7 @@ pub async fn callback_handler(
     bot: Bot,
     env: Env,
     q: CallbackQuery,
-    ledger: Ledger,
+    ledger: Arc<Ledger>,
     state_holder: StateHolder,
     system_handler: impl Fn() -> Widget,
 ) -> ResponseResult<()> {

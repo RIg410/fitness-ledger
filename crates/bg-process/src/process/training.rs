@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{Ledger, Task};
 use async_trait::async_trait;
 use eyre::{eyre, Error, Result};
@@ -10,7 +12,7 @@ use tx_macro::tx;
 
 #[derive(Clone)]
 pub struct TriningBg {
-    ledger: Ledger,
+    ledger: Arc<Ledger>,
 }
 
 #[async_trait]
@@ -53,7 +55,7 @@ impl Task for TriningBg {
 }
 
 impl TriningBg {
-    pub fn new(ledger: Ledger) -> TriningBg {
+    pub fn new(ledger: Arc<Ledger>) -> TriningBg {
         TriningBg { ledger }
     }
 

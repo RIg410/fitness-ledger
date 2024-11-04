@@ -12,7 +12,7 @@ use teloxide::{types::ChatId, utils::markdown::escape};
 
 #[derive(Clone)]
 pub struct TrainingNotifier {
-    pub ledger: Ledger,
+    pub ledger: Arc<Ledger>,
     pub bot: Arc<TgBot>,
 }
 
@@ -30,7 +30,7 @@ impl Task for TrainingNotifier {
 }
 
 impl TrainingNotifier {
-    pub fn new(ledger: Ledger, bot: Arc<TgBot>) -> TrainingNotifier {
+    pub fn new(ledger: Arc<Ledger>, bot: Arc<TgBot>) -> TrainingNotifier {
         TrainingNotifier { ledger, bot }
     }
 

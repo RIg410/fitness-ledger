@@ -3,19 +3,17 @@ use eyre::Result;
 use futures_util::TryStreamExt as _;
 use model::{session::Session, user::UserPreSell};
 use mongodb::{Collection, Database};
-use std::sync::Arc;
 
 const PRESELL_COLLECTION: &str = "users_presell";
 
-#[derive(Clone)]
 pub struct PreSellStore {
-    pub(crate) pre_cell: Arc<Collection<UserPreSell>>,
+    pub(crate) pre_cell: Collection<UserPreSell>,
 }
 
 impl PreSellStore {
     pub(crate) async fn new(db: &Database) -> Result<Self> {
         Ok(PreSellStore {
-            pre_cell: Arc::new(db.collection(PRESELL_COLLECTION)),
+            pre_cell: db.collection(PRESELL_COLLECTION),
         })
     }
 

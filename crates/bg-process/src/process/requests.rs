@@ -12,7 +12,7 @@ use tx_macro::tx;
 
 #[derive(Clone)]
 pub struct RequestNotifier {
-    pub ledger: Ledger,
+    pub ledger: Arc<Ledger>,
     pub bot: Arc<TgBot>,
 }
 
@@ -42,7 +42,7 @@ impl Task for RequestNotifier {
 }
 
 impl RequestNotifier {
-    pub fn new(ledger: Ledger, bot: Arc<TgBot>) -> RequestNotifier {
+    pub fn new(ledger: Arc<Ledger>, bot: Arc<TgBot>) -> RequestNotifier {
         RequestNotifier { ledger, bot }
     }
 

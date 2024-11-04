@@ -13,7 +13,7 @@ use teloxide::{prelude::Requester, types::{ChatId, MessageId}};
 use tokio_cron_scheduler::{Job, JobScheduler};
 mod process;
 
-pub async fn start(ledger: Ledger, bot: BotApp) -> Result<(), Error> {
+pub async fn start(ledger: Arc<Ledger>, bot: BotApp) -> Result<(), Error> {
     let bot = Arc::new(TgBot::new(
         bot.bot,
         bot.state.tokens(),

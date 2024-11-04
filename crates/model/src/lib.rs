@@ -14,5 +14,5 @@ pub mod user;
 pub mod statistics;
 pub mod request;
 pub mod auth;
-pub mod invoice;
+pub mod payment;
 pub mod abilities;

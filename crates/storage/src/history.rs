@@ -4,13 +4,11 @@ use eyre::Error;
 use futures_util::TryStreamExt as _;
 use model::{history::HistoryRow, session::Session};
 use mongodb::{Collection, IndexModel, SessionCursor};
-use std::sync::Arc;
 
 const COLLECTION: &str = "history";
 
-#[derive(Clone)]
 pub struct HistoryStore {
-    store: Arc<Collection<HistoryRow>>,
+    store: Collection<HistoryRow>,
 }
 
 impl HistoryStore {
@@ -29,9 +27,7 @@ impl HistoryStore {
                     .build(),
             )
             .await?;
-        Ok(HistoryStore {
-            store: Arc::new(store),
-        })
+        Ok(HistoryStore { store })
     }
 
     pub async fn find_range(

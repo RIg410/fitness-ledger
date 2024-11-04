@@ -11,7 +11,7 @@ use teloxide::types::ChatId;
 
 #[derive(Clone)]
 pub struct SubscriptionBg {
-    ledger: Ledger,
+    ledger: Arc<Ledger>,
     bot: Arc<TgBot>,
 }
 
@@ -78,7 +78,7 @@ impl Task for SubscriptionBg {
 }
 
 impl SubscriptionBg {
-    pub fn new(ledger: Ledger, bot: Arc<TgBot>) -> SubscriptionBg {
+    pub fn new(ledger: Arc<Ledger>, bot: Arc<TgBot>) -> SubscriptionBg {
         SubscriptionBg { ledger, bot }
     }
 }

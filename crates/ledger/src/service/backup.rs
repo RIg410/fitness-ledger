@@ -1,4 +1,4 @@
-use std::io::{Cursor, Write as _};
+use std::{io::{Cursor, Write as _}, sync::Arc};
 
 use eyre::{Context, Error};
 use model::session::Session;
@@ -10,16 +10,15 @@ use storage::{
 use tx_macro::tx;
 use zip::write::SimpleFileOptions;
 
-#[derive(Clone)]
 pub struct Backup {
-    users: UserStore,
-    history: HistoryStore,
-    programs: ProgramStore,
-    calendar: CalendarStore,
-    pre_sell: PreSellStore,
-    rewards: RewardsStore,
-    subscriptions: SubscriptionsStore,
-    treasury: TreasuryStore,
+    users: Arc<UserStore>,
+    history: Arc<HistoryStore>,
+    programs: Arc<ProgramStore>,
+    calendar: Arc<CalendarStore>,
+    pre_sell: Arc<PreSellStore>,
+    rewards: Arc<RewardsStore>,
+    subscriptions: Arc<SubscriptionsStore>,
+    treasury: Arc<TreasuryStore>,
 }
 
 impl Backup {

@@ -1,6 +1,7 @@
 pub mod auth_key;
 pub mod calendar;
 pub mod history;
+pub mod payment;
 pub mod pre_sell;
 pub mod program;
 pub mod requests;
@@ -15,23 +16,24 @@ use history::HistoryStore;
 use requests::RequestStore;
 use rewards::RewardsStore;
 use session::Db;
+use std::sync::Arc;
 use user::UserStore;
 
 const DB_NAME: &str = "ledger_db";
 
 #[derive(Clone)]
 pub struct Storage {
-    pub db: Db,
-    pub users: UserStore,
-    pub calendar: calendar::CalendarStore,
-    pub programs: program::ProgramStore,
-    pub treasury: treasury::TreasuryStore,
-    pub subscriptions: subscription::SubscriptionsStore,
-    pub history: HistoryStore,
-    pub presell: pre_sell::PreSellStore,
-    pub rewards: RewardsStore,
-    pub requests: RequestStore,
-    pub auth_keys: auth_key::AuthKeys,
+    pub db: Arc<Db>,
+    pub users: Arc<UserStore>,
+    pub calendar: Arc<calendar::CalendarStore>,
+    pub programs: Arc<program::ProgramStore>,
+    pub treasury: Arc<treasury::TreasuryStore>,
+    pub subscriptions: Arc<subscription::SubscriptionsStore>,
+    pub history: Arc<HistoryStore>,
+    pub presell: Arc<pre_sell::PreSellStore>,
+    pub rewards: Arc<RewardsStore>,
+    pub requests: Arc<RequestStore>,
+    pub auth_keys: Arc<auth_key::AuthKeys>,
 }
 
 impl Storage {
@@ -49,17 +51,17 @@ impl Storage {
         let auth_keys = auth_key::AuthKeys::new(&db).await?;
 
         Ok(Storage {
-            db,
-            users,
-            calendar,
-            programs,
-            treasury,
-            subscriptions,
-            history,
-            presell,
-            rewards,
-            requests,
-            auth_keys,
+            db: Arc::new(db),
+            users: Arc::new(users),
+            calendar: Arc::new(calendar),
+            programs: Arc::new(programs),
+            treasury: Arc::new(treasury),
+            subscriptions: Arc::new(subscriptions),
+            history: Arc::new(history),
+            presell: Arc::new(presell),
+            rewards: Arc::new(rewards),
+            requests: Arc::new(requests),
+            auth_keys: Arc::new(auth_keys),
         })
     }
 }

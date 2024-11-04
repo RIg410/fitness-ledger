@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::session::Db;
 use bson::doc;
 use eyre::Error;
@@ -8,9 +6,8 @@ use mongodb::{Collection, IndexModel};
 
 const COLLECTION: &str = "auth_keys";
 
-#[derive(Clone)]
 pub struct AuthKeys {
-    pub(crate) days: Arc<Collection<AuthKey>>,
+    pub(crate) days: Collection<AuthKey>,
 }
 
 impl AuthKeys {
@@ -19,9 +16,7 @@ impl AuthKeys {
         store
             .create_index(IndexModel::builder().keys(doc! { "key": -1 }).build())
             .await?;
-        Ok(AuthKeys {
-            days: Arc::new(store),
-        })
+        Ok(AuthKeys { days: store })
     }
 
     pub async fn insert(&self, session: &mut Session, key: &AuthKey) -> Result<(), Error> {
@@ -29,7 +24,11 @@ impl AuthKeys {
         Ok(())
     }
 
-    pub async fn get_by_key(&self, session: &mut Session, key: &str) -> Result<Option<AuthKey>, Error> {
+    pub async fn get_by_key(
+        &self,
+        session: &mut Session,
+        key: &str,
+    ) -> Result<Option<AuthKey>, Error> {
         Ok(self
             .days
             .find_one(doc! { "key": key })
@@ -37,7 +36,15 @@ impl AuthKeys {
             .await?)
     }
 
-    pub async fn get(&self, session: &mut Session, id: bson::oid::ObjectId) -> Result<Option<AuthKey>, Error> {
-        Ok(self.days.find_one(doc! { "_id": id }).session(session).await?)
+    pub async fn get(
+        &self,
+        session: &mut Session,
+        id: bson::oid::ObjectId,
+    ) -> Result<Option<AuthKey>, Error> {
+        Ok(self
+            .days
+            .find_one(doc! { "_id": id })
+            .session(session)
+            .await?)
     }
 }

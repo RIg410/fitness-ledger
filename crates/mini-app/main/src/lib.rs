@@ -15,7 +15,7 @@ use eyre::Result;
 use ledger::Ledger;
 pub mod contex;
 
-pub fn spawn(ledger: Ledger, bot: BotApp) -> Result<()> {
+pub fn spawn(ledger: Arc<Ledger>, bot: BotApp) -> Result<()> {
     let ctx_builder = contex::ContextBuilder::new(ledger, bot);
     tokio::spawn(async move {
         let app = Router::new()

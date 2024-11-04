@@ -28,11 +28,26 @@ pub fn fmt_request(request: &Request) -> String {
     format!(
         "Заявка от {} \n*{}*\n\
         Комментарий: _{}_\n\
+        Имя:  {} {}\n\
         Дата: _{}_\n{}\
         История: {}",
         fmt_phone(&request.phone),
         fmt_come_from(request.come_from),
         escape(&request.comment),
+        escape(
+            &request
+                .first_name
+                .as_ref()
+                .map(|n| n.as_str())
+                .unwrap_or("?")
+        ),
+        escape(
+            &request
+                .last_name
+                .as_ref()
+                .map(|n| n.as_str())
+                .unwrap_or("?")
+        ),
         fmt_dt(&request.created_at.with_timezone(&Local)),
         remind_me,
         history

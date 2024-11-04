@@ -118,6 +118,18 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     Ok((msg.to_string(), keymap))
 }
 
+fn can_show_subscription(
+    subscription: &model::subscription::Subscription,
+    ctx: &Context,
+    seller: bool,
+) -> bool {
+    if seller {
+        return true;
+    }
+
+    true
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 enum Callback {
     Select([u8; 12]),

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bson::{doc, oid::ObjectId};
 use eyre::Error;
 use model::{couch::Reward, session::Session};
@@ -7,17 +5,14 @@ use mongodb::Collection;
 
 const REWARD_COLLECTION: &str = "reward";
 
-#[derive(Clone)]
 pub struct RewardsStore {
-    rewards: Arc<Collection<Reward>>,
+    rewards: Collection<Reward>,
 }
 
 impl RewardsStore {
     pub async fn new(db: &mongodb::Database) -> Result<Self, Error> {
-        let reward = db.collection(REWARD_COLLECTION);
-        Ok(RewardsStore {
-            rewards: Arc::new(reward),
-        })
+        let rewards = db.collection(REWARD_COLLECTION);
+        Ok(RewardsStore { rewards })
     }
 
     pub async fn add_reward(&self, session: &mut Session, reward: Reward) -> Result<(), Error> {

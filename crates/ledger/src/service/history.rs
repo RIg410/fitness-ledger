@@ -19,10 +19,8 @@ pub struct History {
 }
 
 impl History {
-    pub fn new(store: HistoryStore) -> Self {
-        History {
-            store: Arc::new(store),
-        }
+    pub fn new(store: Arc<HistoryStore>) -> Self {
+        History { store }
     }
 
     pub async fn expire_subscription(

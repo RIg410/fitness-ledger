@@ -23,12 +23,12 @@ use tokio::time::sleep;
 
 #[derive(Clone)]
 pub struct ContextBuilder {
-    ledger: Ledger,
+    ledger: Arc<Ledger>,
     bot: BotApp,
 }
 
 impl ContextBuilder {
-    pub fn new(ledger: Ledger, bot: BotApp) -> Self {
+    pub fn new(ledger: Arc<Ledger>, bot: BotApp) -> Self {
         ContextBuilder { ledger, bot }
     }
 

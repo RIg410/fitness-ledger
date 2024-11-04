@@ -19,3 +19,6 @@ thiserror.workspace = true
 tokio.workspace = true
 tx_macro.workspace = true
 zip.workspace = true
+yookassa.workspace = true
+env.workspace = true
+

@@ -8,19 +8,17 @@ use model::{
     subscription::{Subscription, SubscriptionType},
 };
 use mongodb::Collection;
-use std::sync::Arc;
 
 const TABLE_NAME: &str = "subscriptions";
 
-#[derive(Clone)]
 pub struct SubscriptionsStore {
-    collection: Arc<Collection<Subscription>>,
+    collection: Collection<Subscription>,
 }
 
 impl SubscriptionsStore {
     pub fn new(db: &Db) -> Self {
         SubscriptionsStore {
-            collection: Arc::new(db.collection(TABLE_NAME)),
+            collection: db.collection(TABLE_NAME),
         }
     }
 

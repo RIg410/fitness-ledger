@@ -1,13 +1,12 @@
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 use storage::rewards::RewardsStore;
 
-#[derive(Clone)]
 pub struct Rewards {
-    store: RewardsStore,
+    store: Arc<RewardsStore>,
 }
 
 impl Rewards {
-    pub(crate) fn new(store: RewardsStore) -> Self {
+    pub(crate) fn new(store: Arc<RewardsStore>) -> Self {
         Rewards { store }
     }
 }

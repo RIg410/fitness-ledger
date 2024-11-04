@@ -1,34 +1,37 @@
-pub mod payment;
-pub mod payment_request;
+pub mod intent;
+pub mod prepare_payment;
 
-use ::model::invoice::Invoice;
 use env::Env;
 use eyre::Error;
-use payment_request::{Amount, Confirmation, PaymentRequest};
+use intent::Intent;
+use model::decimal::Decimal;
+use prepare_payment::{Amount, Confirmation, PaymentRequest, PaymentResponse};
 use uuid::Uuid;
 
 const BASE_URL: &str = "https://api.yookassa.ru/v3/payments";
 
-pub struct YooKassa {
-    check_store: (),
+pub struct Yookassa {
     api_key: String,
     shop_id: String,
     bot_url: String,
 }
 
-impl YooKassa {
-    pub fn new(check_store: (), env: &Env) -> Self {
+impl Yookassa {
+    pub fn new(env: &Env) -> Self {
         Self {
-            check_store,
             api_key: env.yookassa_token().to_owned(),
             shop_id: env.yookassa_shop_id().to_owned(),
             bot_url: env.bot_url().to_owned(),
         }
     }
 
-    pub async fn prepare_payment(&self, invoice: &Invoice) -> Result<(), Error> {
+    pub async fn prepare_payment(
+        &self,
+        price: Decimal,
+        description: &str,
+    ) -> Result<Intent, Error> {
         let amount = Amount {
-            value: invoice.price.to_string(),
+            value: price.to_string(),
             currency: "RUB".to_owned(),
         };
         let confirmation = Confirmation {
@@ -39,10 +42,12 @@ impl YooKassa {
             amount,
             capture: true,
             confirmation,
-            description: invoice.description.to_owned(),
+            description: description.to_owned(),
         };
-        let id = Uuid::new_v4();
+        let id: Uuid = Uuid::new_v4();
         let id_key = id.to_string();
+
+        let request = serde_json::to_value(&payment)?;
         let response = reqwest::Client::new()
             .post(BASE_URL)
             .header(self.shop_id.clone(), self.api_key.clone())
@@ -51,6 +56,16 @@ impl YooKassa {
             .send()
             .await?;
         let response = response.json::<serde_json::Value>().await?;
-        todo!()
+        let payment_resp = serde_json::from_value::<PaymentResponse>(response.clone())?;
+
+        Ok(Intent {
+            ident: id_key,
+            request,
+            response,
+            redirect_url: payment_resp.confirmation.return_url,
+            price,
+            description: description.to_owned(),
+            payment_id: payment_resp.id,
+        })
     }
 }

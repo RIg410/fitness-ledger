@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{Ledger, Task};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
@@ -8,7 +10,7 @@ use tx_macro::tx;
 
 #[derive(Clone)]
 pub struct RewardsBg {
-    ledger: Ledger,
+    ledger: Arc<Ledger>,
 }
 
 #[async_trait]
@@ -35,7 +37,7 @@ impl Task for RewardsBg {
 }
 
 impl RewardsBg {
-    pub fn new(ledger: Ledger) -> RewardsBg {
+    pub fn new(ledger: Arc<Ledger>) -> RewardsBg {
         RewardsBg { ledger }
     }
 

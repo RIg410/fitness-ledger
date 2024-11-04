@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use chrono::{Local, Utc};
+use env::Env;
 use eyre::{eyre, Context as _, Result};
-use log::{error, info, warn};
+use log::{error, warn};
 use model::decimal::Decimal;
-use model::invoice::PaymentPayload;
 use model::request::{RemindLater, Request, RequestHistoryRow};
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
@@ -22,7 +24,6 @@ use service::subscriptions::Subscriptions;
 use service::treasury::Treasury;
 use service::users::Users;
 use service::{backup, statistics};
-use storage::pre_sell::PreSellStore;
 use storage::session::Db;
 use storage::Storage;
 use thiserror::Error;
@@ -31,38 +32,34 @@ use tx_macro::tx;
 pub mod service;
 pub mod training;
 
-#[derive(Clone)]
 pub struct Ledger {
-    pub db: Db,
+    pub db: Arc<Db>,
     pub users: Users,
     pub calendar: Calendar,
     pub programs: Programs,
     pub treasury: Treasury,
     pub subscriptions: Subscriptions,
-    pub presell: PreSellStore,
     pub history: History,
     pub rewards: Rewards,
     pub statistics: statistics::Statistics,
     pub backup: backup::Backup,
     pub requests: Requests,
     pub auth: AuthService,
+    pub yookassa: yookassa::Yookassa,
 }
 
 impl Ledger {
-    pub fn new(storage: Storage) -> Self {
+    pub fn new(storage: Storage, env: Env) -> Self {
         let backup = Backup::new(storage.clone());
-        let history = history::History::new(storage.history);
-        let programs = Programs::new(storage.programs, history.clone());
-        let calendar = Calendar::new(
-            storage.calendar,
-            storage.users.clone(),
-            programs.clone(),
-            history.clone(),
-        );
+
+        let history = history::History::new(storage.history.clone());
+        let programs = Programs::new(storage.programs.clone());
+
         let users = Users::new(storage.users, storage.presell.clone(), history.clone());
+        let calendar = Calendar::new(storage.calendar, users.clone(), programs.clone());
+
         let treasury = Treasury::new(storage.treasury, history.clone());
         let subscriptions = Subscriptions::new(storage.subscriptions, history.clone());
-        let presell = storage.presell.clone();
         let rewards = Rewards::new(storage.rewards);
         let statistics =
             statistics::Statistics::new(calendar.clone(), history.clone(), users.clone());
@@ -77,54 +74,13 @@ impl Ledger {
             treasury,
             subscriptions,
             history,
-            presell,
             rewards,
             statistics,
             backup,
             requests,
             auth,
+            yookassa: yookassa::Yookassa::new(&env),
         }
-    }
-
-    #[tx]
-    pub async fn process_payment(
-        &self,
-        session: &mut Session,
-        payment: PaymentPayload,
-    ) -> Result<()> {
-        match payment {
-            PaymentPayload::Subscription {
-                user_id,
-                subscription_id,
-            } => {
-                let buyer = self
-                    .users
-                    .get(session, user_id)
-                    .await?
-                    .ok_or_else(|| SellSubscriptionError::UserNotFound)?;
-
-                let subscription = self
-                    .subscriptions
-                    .get(session, subscription_id)
-                    .await?
-                    .ok_or_else(|| eyre!("User not found"))?;
-
-                info!("Subscription bought:{:?} by {:?}", subscription, buyer.id);
-
-                self.history
-                    .buy_subscription(session, subscription.clone())
-                    .await?;
-
-                self.users
-                    .add_subscription(session, buyer.id, subscription.clone())
-                    .await?;
-
-                self.treasury
-                    .sell(session, buyer.id, Sell::Sub(subscription))
-                    .await?;
-            }
-        }
-        Ok(())
     }
 
     pub async fn get_user(&self, session: &mut Session, id: ObjectId) -> Result<User> {

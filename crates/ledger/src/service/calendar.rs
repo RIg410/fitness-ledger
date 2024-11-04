@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
 use chrono::{DateTime, Local, Utc};
 use eyre::{Error, Result};
@@ -9,32 +9,25 @@ use model::{
     training::{Training, TrainingStatus},
 };
 use mongodb::bson::oid::ObjectId;
-use storage::{calendar::CalendarStore, user::UserStore};
+use storage::calendar::CalendarStore;
 use thiserror::Error;
 use tx_macro::tx;
 
-use super::{history::History, programs::Programs};
+use super::{programs::Programs, users::Users};
 
 #[derive(Clone)]
 pub struct Calendar {
-    calendar: CalendarStore,
-    users: UserStore,
+    calendar: Arc<CalendarStore>,
+    users: Users,
     programs: Programs,
-    _logs: History,
 }
 
 impl Calendar {
-    pub(crate) fn new(
-        calendar: CalendarStore,
-        users: UserStore,
-        programs: Programs,
-        logs: History,
-    ) -> Self {
+    pub(crate) fn new(calendar: Arc<CalendarStore>, users: Users, programs: Programs) -> Self {
         Calendar {
             calendar,
             users,
             programs,
-            _logs: logs,
         }
     }
 

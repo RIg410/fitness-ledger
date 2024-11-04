@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bson::doc;
 use chrono::{DateTime, Local, Utc};
 use eyre::Error;
@@ -8,9 +6,8 @@ use mongodb::{Collection, IndexModel, SessionCursor};
 
 const COLLECTION: &str = "requests";
 
-#[derive(Clone)]
 pub struct RequestStore {
-    requests: Arc<Collection<Request>>,
+    reward: Collection<Request>,
 }
 
 impl RequestStore {
@@ -27,12 +24,12 @@ impl RequestStore {
             )
             .await?;
         Ok(RequestStore {
-            requests: Arc::new(reward),
+            reward,
         })
     }
 
     pub async fn update(&self, session: &mut Session, request: &Request) -> Result<(), Error> {
-        self.requests
+        self.reward
             .replace_one(doc! { "_id": request.id }, request)
             .session(&mut *session)
             .await?;
@@ -40,7 +37,7 @@ impl RequestStore {
     }
 
     pub async fn create(&self, session: &mut Session, request: Request) -> Result<(), Error> {
-        self.requests
+        self.reward
             .insert_one(request)
             .session(&mut *session)
             .await?;
@@ -53,7 +50,7 @@ impl RequestStore {
         phone: &str,
     ) -> Result<Option<Request>, Error> {
         let request = self
-            .requests
+            .reward
             .find_one(doc! { "phone": phone })
             .session(&mut *session)
             .await?;
@@ -73,14 +70,14 @@ impl RequestStore {
         if let Some(to) = to {
             query.insert("created_at", doc! { "$lt": to });
         }
-        let cursor = self.requests.find(query).session(&mut *session).await?;
+        let cursor = self.reward.find(query).session(&mut *session).await?;
         Ok(cursor)
     }
 
     pub async fn to_notify(&self, session: &mut Session) -> Result<Vec<Request>, Error> {
         let now = Utc::now();
         let mut cursor = self
-            .requests
+            .reward
             .find(doc! {
                 "remind_later.date_time": {
                     "$lt": now,
@@ -103,7 +100,7 @@ impl RequestStore {
         offset: u64,
     ) -> Result<Vec<Request>, Error> {
         let mut cursor = self
-            .requests
+            .reward
             .find(doc! {})
             .session(&mut *session)
             .skip(offset)
@@ -119,7 +116,7 @@ impl RequestStore {
     }
 
     pub async fn dump(&self, session: &mut Session) -> Result<Vec<Request>, Error> {
-        let mut cursor = self.requests.find(doc! {}).session(&mut *session).await?;
+        let mut cursor = self.reward.find(doc! {}).session(&mut *session).await?;
         let mut rewards = Vec::new();
         while let Some(reward) = cursor.next(&mut *session).await {
             rewards.push(reward?);

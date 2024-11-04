@@ -14,13 +14,11 @@ use mongodb::{
     options::{FindOneOptions, IndexOptions, UpdateOptions},
     Collection, Database, IndexModel, SessionCursor,
 };
-use std::sync::Arc;
 
 const COLLECTION: &str = "days";
 
-#[derive(Clone)]
 pub struct CalendarStore {
-    pub(crate) days: Arc<Collection<Day>>,
+    pub(crate) days: Collection<Day>,
 }
 
 impl CalendarStore {
@@ -31,9 +29,7 @@ impl CalendarStore {
             .options(IndexOptions::builder().unique(true).build())
             .build();
         days.create_index(index).await?;
-        Ok(CalendarStore {
-            days: Arc::new(days),
-        })
+        Ok(CalendarStore { days })
     }
 
     pub async fn find_range(

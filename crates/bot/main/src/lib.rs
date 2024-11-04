@@ -1,5 +1,7 @@
 mod system;
 mod view;
+use std::sync::Arc;
+
 use bot_core::{
     handlers::{callback::callback_handler, message::message_handler},
     state::StateHolder,
@@ -34,7 +36,7 @@ impl BotApp {
         }
     }
 
-    pub async fn start(self, ledger: Ledger) -> Result<()> {
+    pub async fn start(self, ledger: Arc<Ledger>) -> Result<()> {
         let state = self.state;
         let bot = self.bot;
         bot.set_my_commands(vec![
@@ -99,7 +101,7 @@ impl BotApp {
 async fn inline_query_handler(
     _: Bot,
     _: InlineQuery,
-    _: Ledger,
+    _: Arc<Ledger>,
     _: StateHolder,
 ) -> ResponseResult<()> {
     info!("inline");

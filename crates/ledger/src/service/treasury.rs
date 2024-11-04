@@ -16,18 +16,17 @@ use mongodb::bson::oid::ObjectId;
 use storage::treasury::TreasuryStore;
 use tx_macro::tx;
 
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
 use super::history::History;
 
-#[derive(Clone)]
 pub struct Treasury {
-    store: TreasuryStore,
+    store: Arc<TreasuryStore>,
     logs: History,
 }
 
 impl Treasury {
-    pub fn new(store: TreasuryStore, logs: History) -> Self {
+    pub fn new(store: Arc<TreasuryStore>, logs: History) -> Self {
         Treasury { store, logs }
     }
 

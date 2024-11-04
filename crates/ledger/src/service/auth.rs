@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::users::Users;
 use eyre::eyre;
 use eyre::Result;
@@ -6,14 +8,13 @@ use mongodb::bson::oid::ObjectId;
 use storage::auth_key::AuthKeys;
 use tx_macro::tx;
 
-#[derive(Clone)]
 pub struct AuthService {
-    auth: AuthKeys,
+    auth: Arc<AuthKeys>,
     users: Users,
 }
 
 impl AuthService {
-    pub fn new(auth: AuthKeys, users: Users) -> Self {
+    pub fn new(auth: Arc<AuthKeys>, users: Users) -> Self {
         Self { auth, users }
     }
 

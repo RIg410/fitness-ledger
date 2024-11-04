@@ -12,6 +12,13 @@ pub struct UserExtension {
     pub abilities: Vec<Abilities>,
 }
 
+impl UserExtension {
+    pub fn has_ability(&self, ability: Abilities) -> bool {
+        // self.abilities.first()
+        false
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Birthday {
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]

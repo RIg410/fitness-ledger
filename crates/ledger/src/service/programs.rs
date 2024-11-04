@@ -4,21 +4,18 @@ use model::{
     session::Session,
 };
 use mongodb::bson::oid::ObjectId;
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 use storage::program::ProgramStore;
 use tx_macro::tx;
 
-use super::history::History;
-
 #[derive(Clone)]
 pub struct Programs {
-    store: ProgramStore,
-    _logs: History,
+    store: Arc<ProgramStore>,
 }
 
 impl Programs {
-    pub fn new(store: ProgramStore, logs: History) -> Self {
-        Programs { store, _logs: logs }
+    pub fn new(store: Arc<ProgramStore>) -> Self {
+        Programs { store }
     }
 
     #[tx]

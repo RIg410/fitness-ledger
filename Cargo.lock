@@ -1845,6 +1845,7 @@ name = "ledger"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "env",
  "eyre",
  "futures-util",
  "log",
@@ -1855,6 +1856,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tx_macro",
+ "yookassa",
  "zip",
 ]
 

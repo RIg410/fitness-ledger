@@ -13,7 +13,7 @@ use model::{
     },
 };
 use mongodb::bson::oid::ObjectId;
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 use storage::{pre_sell::PreSellStore, user::UserStore};
 use thiserror::Error;
 use tx_macro::tx;
@@ -23,13 +23,13 @@ pub mod subscription;
 
 #[derive(Clone)]
 pub struct Users {
-    pub(super) store: UserStore,
-    pub(super) presell: PreSellStore,
+    pub(super) store: Arc<UserStore>,
+    pub(super) presell: Arc<PreSellStore>,
     pub(super) logs: History,
 }
 
 impl Users {
-    pub(crate) fn new(store: UserStore, presell: PreSellStore, logs: History) -> Self {
+    pub(crate) fn new(store: Arc<UserStore>, presell: Arc<PreSellStore>, logs: History) -> Self {
         Users {
             store,
             logs,
@@ -98,8 +98,8 @@ impl Users {
                         id,
                         birthday: None,
                         abilities: vec![
-                            Abilities::FirstGroupSubscription {},
-                            Abilities::FirstPersonalSubscription {},
+                            // Abilities::TestGroupSubscription {},
+                            // Abilities::TestPersonalSubscription {},
                         ],
                     },
                 )
@@ -153,8 +153,8 @@ impl Users {
                 UserExtension {
                     birthday: None,
                     abilities: vec![
-                        Abilities::FirstGroupSubscription {},
-                        Abilities::FirstPersonalSubscription {},
+                        Abilities::TestGroupSubscription {},
+                        Abilities::TestPersonalSubscription {},
                     ],
                     id: user.id,
                 },

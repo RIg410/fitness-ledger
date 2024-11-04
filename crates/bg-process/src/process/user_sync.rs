@@ -7,12 +7,12 @@ use teloxide::{prelude::Requester as _, types::ChatId};
 
 #[derive(Clone)]
 pub struct UserNameSync {
-    ledger: Ledger,
+    ledger: Arc<Ledger>,
     bot: Arc<TgBot>,
 }
 
 impl UserNameSync {
-    pub fn new(ledger: Ledger, bot: Arc<TgBot>) -> UserNameSync {
+    pub fn new(ledger: Arc<Ledger>, bot: Arc<TgBot>) -> UserNameSync {
         UserNameSync { ledger, bot }
     }
 }
@@ -31,7 +31,10 @@ impl Task for UserNameSync {
             if user.tg_id > 0 {
                 if let Some(username) = self.bot.get_chat(ChatId(user.tg_id)).await?.username() {
                     if user.name.tg_user_name.as_ref().map(|f| f.as_str()) != Some(username) {
-                        self.ledger.users.set_tg_user_name(&mut session, user.id, username).await?;
+                        self.ledger
+                            .users
+                            .set_tg_user_name(&mut session, user.id, username)
+                            .await?;
                         log::info!("update tg user_name:{} {}", user.id, username);
                     }
                 }

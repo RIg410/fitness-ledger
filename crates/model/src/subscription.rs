@@ -1,4 +1,6 @@
-use crate::{decimal::Decimal, invoice::Sellable, training::Training};
+use crate::{
+    abilities::Abilities, decimal::Decimal, training::Training, user::extension::UserExtension,
+};
 use bson::oid::ObjectId;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
@@ -22,7 +24,7 @@ pub struct Subscription {
 }
 
 fn default_user_can_buy() -> bool {
-    true
+    false
 }
 
 impl Subscription {
@@ -47,6 +49,18 @@ impl Subscription {
             subscription_type,
         }
     }
+
+    // pub fn is_available_for_user(&self, user: &UserExtension) -> bool {
+    //     if !self.user_can_buy {
+    //         return false;
+    //     }
+
+    //     if let Some(sub_req) = &self.required_abilities {
+    //         user.has_ability(*sub_req)
+    //     } else {
+    //         true
+    //     }
+    // }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Hash)]
@@ -208,26 +222,5 @@ impl SubscriptionType {
 impl Default for SubscriptionType {
     fn default() -> Self {
         SubscriptionType::Group {}
-    }
-}
-
-impl Sellable for Subscription {
-    fn title(&self) -> String {
-        self.name.clone()
-    }
-
-    fn price(&self) -> Decimal {
-        self.price
-    }
-
-    fn description(&self) -> String {
-        format!(
-            "занятий: {}\nдней заморозки:{}\nсрок действия:{} (с первой записи)",
-            self.items, self.freeze_days, self.expiration_days
-        )
-    }
-
-    fn item_id(&self) -> ObjectId {
-        self.id
     }
 }

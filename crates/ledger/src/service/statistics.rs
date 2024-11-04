@@ -11,7 +11,6 @@ use model::{
 };
 use mongodb::bson::oid::ObjectId;
 
-#[derive(Clone)]
 pub struct Statistics {
     calendar: Calendar,
     history: History,

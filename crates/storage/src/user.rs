@@ -16,14 +16,12 @@ use mongodb::{
     Collection, Database,
 };
 use mongodb::{IndexModel, SessionCursor};
-use std::sync::Arc;
 
 const COLLECTION: &str = "users";
 
-#[derive(Clone)]
 pub struct UserStore {
-    pub(crate) users: Arc<Collection<User>>,
-    pub(crate) extensions: Arc<Collection<UserExtension>>,
+    pub(crate) users: Collection<User>,
+    pub(crate) extensions: Collection<UserExtension>,
 }
 
 impl UserStore {
@@ -33,8 +31,8 @@ impl UserStore {
             .create_index(IndexModel::builder().keys(doc! { "tg_id": 1 }).build())
             .await?;
         Ok(UserStore {
-            users: Arc::new(users),
-            extensions: Arc::new(db.collection("users_extension")),
+            users: users,
+            extensions: db.collection("users_extension"),
         })
     }
 
