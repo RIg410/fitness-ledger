@@ -2,21 +2,23 @@ use bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::abilities::Abilities;
-
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct UserExtension {
     #[serde(rename = "_id")]
     pub id: ObjectId,
     pub birthday: Option<Birthday>,
-    pub abilities: Vec<Abilities>,
+    #[serde(default = "default_buy_flag")]
+    pub bought_test_group: bool,
+    #[serde(default = "default_buy_flag")]
+    pub bought_test_personal: bool,
+    #[serde(default = "default_buy_flag")]
+    pub bought_first_group: bool,
+    #[serde(default = "default_buy_flag")]
+    pub bought_first_personal: bool,
 }
 
-impl UserExtension {
-    pub fn has_ability(&self, ability: Abilities) -> bool {
-        // self.abilities.first()
-        false
-    }
+fn default_buy_flag() -> bool {
+    true
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -1,4 +1,4 @@
-use crate::{decimal::Decimal, training::Training};
+use crate::{decimal::Decimal, training::Training, user::extension::UserExtension};
 use bson::oid::ObjectId;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
@@ -80,6 +80,39 @@ impl Subscription {
             subscription_type,
             requirements,
         }
+    }
+
+    pub fn can_user_buy(&self, user_extension: &UserExtension) -> bool {
+        if !self.user_can_buy {
+            return false;
+        }
+
+        if let Some(requirements) = &self.requirements {
+            match requirements {
+                SubRequirements::TestGroupBuy => {
+                    if user_extension.bought_test_group {
+                        return false;
+                    }
+                }
+                SubRequirements::TestPersonalBuy => {
+                    if user_extension.bought_test_personal {
+                        return false;
+                    }
+                }
+                SubRequirements::BuyOnFirstDayGroup => {
+                    if user_extension.bought_first_group {
+                        return false;
+                    }
+                }
+                SubRequirements::BuyOnFirstDayPersonal => {
+                    if user_extension.bought_first_personal {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
     }
 }
 

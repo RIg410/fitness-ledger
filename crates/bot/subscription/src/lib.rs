@@ -62,14 +62,19 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     msg.push_str(&delimiter);
     msg.push_str("_Групповые абонементы:_\n");
 
-    for subscription in &subscriptions {
-        if !can_sell && !subscription.user_can_buy {
-            continue;
-        }
-        if subscription.subscription_type.is_personal() {
-            continue;
-        }
+    let user_extension = ctx
+        .ledger
+        .users
+        .get_extension(&mut ctx.session, ctx.me.id)
+        .await?;
 
+    for subscription in subscriptions
+        .iter()
+        .filter(|s| !s.subscription_type.is_personal())
+    {
+        if !can_sell && !subscription.can_user_buy(&user_extension) {
+            continue;
+        }
         msg.push_str(&format!(
             "*{}* \\- _{}_р\n",
             escape(&subscription.name),
@@ -86,11 +91,11 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     msg.push_str(&delimiter);
     msg.push_str("_Индивидуальные абонементы:_\n");
 
-    for subscription in &subscriptions {
-        if !can_sell && !subscription.user_can_buy {
-            continue;
-        }
-        if !subscription.subscription_type.is_personal() {
+    for subscription in subscriptions
+        .iter()
+        .filter(|s| s.subscription_type.is_personal())
+    {
+        if !can_sell && !subscription.can_user_buy(&user_extension) {
             continue;
         }
 
@@ -117,18 +122,6 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     }
 
     Ok((msg.to_string(), keymap))
-}
-
-fn can_show_subscription(
-    subscription: &model::subscription::Subscription,
-    ctx: &Context,
-    seller: bool,
-) -> bool {
-    if seller {
-        return true;
-    }
-
-    true
 }
 
 #[derive(Debug, Serialize, Deserialize)]

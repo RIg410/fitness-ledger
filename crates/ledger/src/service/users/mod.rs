@@ -3,7 +3,6 @@ use chrono::{DateTime, Local, Utc};
 use eyre::{bail, eyre, Result};
 use log::info;
 use model::{
-    abilities::Abilities,
     rights::{Rights, Rule},
     session::Session,
     statistics::marketing::ComeFrom,
@@ -97,10 +96,10 @@ impl Users {
                     UserExtension {
                         id,
                         birthday: None,
-                        abilities: vec![
-                            // Abilities::TestGroupSubscription {},
-                            // Abilities::TestPersonalSubscription {},
-                        ],
+                        bought_test_group: false,
+                        bought_test_personal: false,
+                        bought_first_group: false,
+                        bought_first_personal: false,
                     },
                 )
                 .await?;
@@ -152,11 +151,11 @@ impl Users {
                 session,
                 UserExtension {
                     birthday: None,
-                    abilities: vec![
-                        Abilities::TestGroupSubscription {},
-                        Abilities::TestPersonalSubscription {},
-                    ],
                     id: user.id,
+                    bought_test_group: false,
+                    bought_test_personal: false,
+                    bought_first_group: false,
+                    bought_first_personal: false,
                 },
             )
             .await?;

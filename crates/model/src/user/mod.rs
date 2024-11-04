@@ -11,7 +11,7 @@ use crate::{
     subscription::{self, Status, UserSubscription},
     training::Training,
 };
-use chrono::{DateTime, Local, TimeZone as _, Utc};
+use chrono::{DateTime, TimeZone as _, Utc};
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
