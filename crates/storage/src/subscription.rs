@@ -5,7 +5,7 @@ use log::info;
 use model::{
     decimal::Decimal,
     session::Session,
-    subscription::{Subscription, SubscriptionType},
+    subscription::{SubRequirements, Subscription, SubscriptionType},
 };
 use mongodb::Collection;
 
@@ -89,6 +89,33 @@ impl SubscriptionsStore {
             )
             .session(session)
             .await?;
+        Ok(())
+    }
+
+    pub async fn update_requirements(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        requirements: Option<SubRequirements>,
+    ) -> Result<(), Error> {
+        if let Some(req) = requirements.map(|r| format!("{:?}", r)) {
+            self.collection
+                .update_one(
+                    doc! { "_id": id },
+                    doc! {
+                        "$set": {"requirements": req}
+                    },
+                )
+                .session(session)
+                .await?;
+        } else {
+            self.collection
+                .update_one(doc! { "_id": id }, doc! {
+                    "$unset": {"requirements": ""}
+                })
+                .session(session)
+                .await?;
+        }
         Ok(())
     }
 

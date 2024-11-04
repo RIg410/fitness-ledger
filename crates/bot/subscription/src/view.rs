@@ -1,4 +1,4 @@
-use crate::edit_type::EditSubscriptionType;
+use crate::{edit_requirement::EditRequirement, edit_type::EditSubscriptionType};
 
 use super::{
     edit::{EditSubscription, EditType},
@@ -25,6 +25,11 @@ impl SubscriptionOption {
 
     async fn edit(&mut self, tp: EditType) -> Result<Jmp> {
         Ok(EditSubscription::new(self.id, tp).into())
+    }
+
+    async fn edit_requirement(&mut self, ctx: &mut Context) -> Result<Jmp> {
+        ctx.ensure(Rule::EditSubscription)?;
+        Ok(EditRequirement::new(self.id).into())
     }
 
     async fn buy(&mut self, ctx: &mut Context) -> Result<Jmp> {
@@ -77,6 +82,10 @@ impl View for SubscriptionOption {
                 ctx.ensure(Rule::EditSubscription)?;
                 self.edit(EditType::Price).await
             }
+            Callback::EditRequirement => {
+                ctx.ensure(Rule::EditSubscription)?;
+                self.edit_requirement(ctx).await
+            }
             Callback::EditItems => {
                 ctx.ensure(Rule::EditSubscription)?;
                 self.edit(EditType::Items).await
@@ -115,14 +124,39 @@ async fn render_sub(
         .get(&mut ctx.session, id)
         .await?
         .ok_or_else(|| eyre::eyre!("Subscription not found"))?;
+
+    let req = if ctx.has_right(Rule::EditSubscription) {
+        if let Some(req) = sub.requirements {
+            match req {
+                model::subscription::SubRequirements::TestGroupBuy => {
+                    "Требования: Тестовой групповой"
+                }
+                model::subscription::SubRequirements::TestPersonalBuy => {
+                    "Требования: Тестовой персональный"
+                }
+                model::subscription::SubRequirements::BuyOnFirstDayGroup => {
+                    "Требования: Покупка в первый день группового"
+                }
+                model::subscription::SubRequirements::BuyOnFirstDayPersonal => {
+                    "Требования: Покупка в первый день персонального"
+                }
+            }
+        } else {
+            "Требования: Нет"
+        }
+    } else {
+        ""
+    };
+
     let msg = format!(
-        "📌 Тариф: _{}_\nКоличество занятий:_{}_\nЦена:_{}_\nДни заморозки:_{}_\nДействует дней:_{}_\nТип:_{}_",
+        "📌 Тариф: _{}_\nКоличество занятий:_{}_\nЦена:_{}_\nДни заморозки:_{}_\nДействует дней:_{}_\nТип:_{}_\n{}",
         escape(&sub.name),
         sub.items,
         sub.price.to_string().replace(".", ","),
         sub.freeze_days,
         sub.expiration_days,
         fmt_subscription_type(ctx, &sub.subscription_type).await?,
+        req
     );
 
     let mut keymap = InlineKeyboardMarkup::default();
@@ -143,6 +177,7 @@ async fn render_sub(
             .append_row(Callback::EditCanBuyByUser.btn_row("Изменить доступность для покупки"));
         keymap = keymap.append_row(Callback::EditSubscriptionType.btn_row("Изменить тип"));
         keymap = keymap.append_row(Callback::EditExpirationDays.btn_row("Изменить время действия"));
+        keymap = keymap.append_row(Callback::EditRequirement.btn_row("Изменить требования"));
     }
 
     Ok((msg, keymap))
@@ -155,6 +190,7 @@ enum Callback {
     Buy,
     EditPrice,
     EditItems,
+    EditRequirement,
     EditName,
     EditFreezeDays,
     EditCanBuyByUser,

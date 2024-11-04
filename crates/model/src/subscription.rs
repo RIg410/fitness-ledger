@@ -1,9 +1,8 @@
-use crate::{
-    abilities::Abilities, decimal::Decimal, training::Training, user::extension::UserExtension,
-};
+use crate::{decimal::Decimal, training::Training};
 use bson::oid::ObjectId;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Subscription {
@@ -21,6 +20,37 @@ pub struct Subscription {
     pub user_can_buy: bool,
     #[serde(default)]
     pub subscription_type: SubscriptionType,
+    #[serde(default)]
+    pub requirements: Option<SubRequirements>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, EnumIter)]
+pub enum SubRequirements {
+    TestGroupBuy,
+    TestPersonalBuy,
+    BuyOnFirstDayGroup,
+    BuyOnFirstDayPersonal,
+}
+
+impl SubRequirements {
+    pub fn into_value(&self) -> u8 {
+        match self {
+            SubRequirements::TestGroupBuy => 0,
+            SubRequirements::TestPersonalBuy => 1,
+            SubRequirements::BuyOnFirstDayGroup => 2,
+            SubRequirements::BuyOnFirstDayPersonal => 3,
+        }
+    }
+
+    pub fn from_value(value: u8) -> Option<Self> {
+        match value {
+            0 => Some(SubRequirements::TestGroupBuy),
+            1 => Some(SubRequirements::TestPersonalBuy),
+            2 => Some(SubRequirements::BuyOnFirstDayGroup),
+            3 => Some(SubRequirements::BuyOnFirstDayPersonal),
+            _ => None,
+        }
+    }
 }
 
 fn default_user_can_buy() -> bool {
@@ -36,6 +66,7 @@ impl Subscription {
         expiration_days: u32,
         user_can_buy: bool,
         subscription_type: SubscriptionType,
+        requirements: Option<SubRequirements>,
     ) -> Self {
         Subscription {
             id: ObjectId::new(),
@@ -47,20 +78,9 @@ impl Subscription {
             expiration_days,
             user_can_buy,
             subscription_type,
+            requirements,
         }
     }
-
-    // pub fn is_available_for_user(&self, user: &UserExtension) -> bool {
-    //     if !self.user_can_buy {
-    //         return false;
-    //     }
-
-    //     if let Some(sub_req) = &self.required_abilities {
-    //         user.has_ability(*sub_req)
-    //     } else {
-    //         true
-    //     }
-    // }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Hash)]

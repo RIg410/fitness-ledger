@@ -1,6 +1,7 @@
 pub mod confirm;
 pub mod create;
 pub mod edit;
+pub mod edit_requirement;
 pub mod edit_type;
 pub mod sell;
 pub mod view;
