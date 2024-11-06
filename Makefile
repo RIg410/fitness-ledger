@@ -17,22 +17,20 @@ clippy:
 test:
 	cargo test
 
-build:
+restart-nginx: 
+	sudo docker image prune -a -f
+	sudo docker compose build nginx
+	sudo docker compose up -d --build nginx
+
+restart-back: 
 	cargo build --release	
 	sudo docker image prune -a -f
 	sudo docker compose build backend
-	sudo docker compose build nginx
-
-restart-nginx: build
-	sudo docker compose up -d --build nginx
-
-restart-back: build
 	sudo docker compose up -d --build backend
 
-restart: build
-	sudo docker compose up -d --build nginx
-	sudo docker compose up -d --build backend
+restart: restart-nginx restart-back
 
 logs:
 	sudo docker container logs ledger-backend-1	
+
 
