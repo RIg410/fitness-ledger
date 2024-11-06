@@ -4,200 +4,136 @@
 <head>
     <meta charset="utf-8">
     <title>SoulFamily</title>
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no, viewport-fit=cover" />
-    <meta name="format-detection" content="telephone=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="MobileOptimized" content="176" />
-    <meta name="HandheldFriendly" content="True" />
-    <meta name="robots" content="noindex, nofollow" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="static/css/style.css">
     <script src="static/js/main.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            color: var(--tg-theme-text-color);
-            background: var(--tg-theme-bg-color);
-        }
-
-        .Main {
-            width: 100%;
-            padding: 25px;
-            text-align: center;
-
-        }
-
-        h1 {
-            margin-top: 40px;
-            margin-bottom: 10px;
-        }
-
-        img {
-            width: 70px;
-            margin: 30px auto;
-        }
-
-        .btn {
-            border: 0;
-            border-radius: 5px;
-            margin-top: 50px;
-            height: 60px;
-            width: 200px;
-            font-style: 20px;
-            font-weight: 500;
-            cursor: pointer;
-            color: var(--tg-theme-button-text-color);
-            background: var(--tg-theme-button-color);
-        }
-
-        form {
-            display: none;
-            text-align: center;
-        }
-
-        input {
-            outline: none;
-            border-radius: 5px;
-            border: 2px solid #535353;
-            padding: 15px 10px;
-            margin: 10px 0 0;
-            background: var(--tg-theme-section-separator-color);
-            color: var(--tg-theme-text-color);
-            transition: all .2s;
-        }
-
-        input:focus {
-            border-color: var(--tg-theme-secondary-bg-color)
-        }
-    </style>
 </head>
 
 <body>
-    <div class="v1_6">
-        <div class="name"></div>
-        <div class="v23_178"></div>
-        <div class="name"></div><span class="v23_213">Интенсивный Стретчинг
-            Продолжительность: 55 минут
-            Вместимость: 12 человек</span><span class="v23_229">Стретчинг PR0
-            Продолжительность: 55 минут
-            Вместимость: 12 человек</span><span class="v23_239">3-D ягодицы
-            Продолжительность: 55 минут
-            Вместимость: 12 человек</span><span class="v23_237">Stretching Meditate
-            Продолжительность: 55 минут
-            Вместимость: 12 человек</span><span class="v23_235">Стретчинг база
-            Продолжительность: 55 минут
-            Вместимость: 12 человек</span><span class="v23_233">Core. Женский тренинг
-            Продолжительность: 55 минут
-            Вместимость: 12 человек</span><span class="v23_231">Аэростретчинг
-            Продолжительность: 55 минут
-            Вместимость: 12 человек</span><span class="v23_227">Хатха йога
-            Продолжительность: 55 минут
-            Вместимость: 12 человек</span><span class="v23_225">Спокойный стретчинг
-            Продолжительность: 55 минут
-            Вместимость: 12 человек</span><span class="v23_223">Здоровая спина + Стретчинг
-            Продолжительность: 55 минут
-            Вместимость: 12 человек</span>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div><span class="v23_246">Программы</span><span class="v23_247">Инструкторы</span><span
-            class="v23_248">Расписание</span><span class="v23_250">Профиль</span><span class="v23_251">Еще</span>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="name"></div>
-        <div class="v57_69">
-            <div class="v57_70"></div>
+<div class=".Main">
+    <div class="Main">
+        <div class="navbar">
+            <button class="nav-btn" onclick="showView('profile')">Профиль</button>
+            <button class="nav-btn" onclick="showView('schedule')">Расписание</button>
+            <button class="nav-btn" onclick="showView('programs')">Программы</button>
+            <button class="nav-btn" onclick="showView('instructors')">Инструкторы</button>
+            <button class="nav-btn" onclick="showView('more')">Еще</button>
         </div>
-        <div class="v57_91">
-            <div class="v57_92">
-                <div class="v57_93">
-                    <div class="v57_94"></div>
-                </div>
-            </div>
-            <div class="v57_95">
-                <div class="v57_96">
-                    <div class="v57_97"></div>
-                </div>
-            </div>
-            <div class="v57_98">
-                <div class="v57_99">
-                    <div class="v57_100"></div>
-                </div>
-            </div>
-            <div class="v57_101">
-                <div class="v57_102">
-                    <div class="v57_103"></div>
-                </div>
-            </div>
-            <div class="v57_104">
-                <div class="v57_105">
-                    <div class="v57_106"></div>
-                </div>
-            </div>
-            <div class="v57_107">
-                <div class="v57_108">
-                    <div class="v57_109"></div>
-                </div>
-            </div>
+        <div id="profile" class="view">
+            <h1>Профиль</h1>
         </div>
-        <div class="v57_115">
-            <div class="v57_116">
-                <div class="v57_117">
-                    <div class="v57_118"></div>
-                </div>
-            </div>
+        <div id="schedule" class="view" style="display:none;">
+            <h1>Расписание</h1>
         </div>
-        <div class="v57_129">
-            <div class="v57_130">
-                <div class="v57_131"></div>
-                <div class="v57_132"></div>
-                <div class="v57_133"></div>
-                <div class="v57_134"></div>
-                <div class="v57_135"></div>
-                <div class="v57_136"></div>
-                <div class="v57_137"></div>
-            </div>
+        <div id="programs" class="view" style="display:none;">
+            <h1>Программы</h1>
         </div>
-        <div class="v57_148">
-            <div class="v57_149">
-                <div class="v57_150"></div>
-                <div class="v57_151"></div>
-                <div class="v57_152"></div>
-                <div class="v57_153"></div>
-                <div class="v57_154"></div>
-                <div class="v57_155"></div>
-                <div class="v57_156"></div>
-            </div>
+        <div id="instructors" class="view" style="display:none;">
+            <h1>Инструкторы</h1>
+        </div>
+        <div id="more" class="view" style="display:none;">
+            <h1>Еще</h1>
         </div>
     </div>
+
+    <script>
+        function showView(viewId) {
+            const views = document.querySelectorAll('.view');
+            views.forEach(view => {
+                view.style.display = 'none';
+            });
+            document.getElementById(viewId).style.display = 'block';
+        }
+    </script>
+</div>
 </body>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        color: var(--tg-theme-text-color);
+        background: var(--tg-theme-bg-color);
+    }
+
+    .Main {
+        width: 100%;
+        padding: 25px;
+        text-align: center;
+        font-family: 'semibold';
+        font-weight: 600;
+    }
+
+    h1 {
+        margin-top: 40px;
+        margin-bottom: 10px;
+    }
+
+    img {
+        width: 70px;
+        margin: 30px auto;
+    }
+
+    .btn {
+        border: 0;
+        border-radius: 5px;
+        margin-top: 50px;
+        height: 60px;
+        width: 200px;
+        font-style: 20px;
+        font-weight: 500;
+        cursor: pointer;
+        color: var(--tg-theme-button-text-color);
+        background: var(--tg-theme-button-color);
+    }
+
+    form {
+        display: none;
+        text-align: center;
+    }
+
+    input {
+        outline: none;
+        border-radius: 5px;
+        border: 2px solid #535353;
+        padding: 15px 10px;
+        margin: 10px 0 0;
+        background: var(--tg-theme-section-separator-color);
+        color: var(--tg-theme-text-color);
+        transition: all .2s;
+    }
+
+    input:focus {
+        border-color: var(--tg-theme-secondary-bg-color)
+    }
+
+    .navbar {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        display: flex;
+        justify-content: space-around;
+        background: var(--tg-theme-bg-color);
+        border-top: 1px solid var(--tg-theme-hint-color);
+    }
+
+    .nav-btn {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        background:  var(--tg-theme-bg-color);
+        color: var(--tg-theme-button-text-color);
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    .view {
+        padding: 20px;
+    }
+</style>
 
 </html>
