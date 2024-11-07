@@ -8,8 +8,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>SoulFamily</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script type="text/javascript" src="js/tg.js"></script>
-    <script type="text/javascript" src="js/auth.js"></script>
+    <script type="module" src="js/main.js"></script>
 </head>
 
 <body>
@@ -17,7 +16,7 @@
         <div class=".Main">
             <div class="Main">
                 <div class="navbar">
-                    <button class="nav-btn" onclick="showView('home')">
+                    <button class="nav-btn" id="main-home-btn">
                         <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path
                                 d="M14.4654 0.87982L21.1257 7.07806L27.786 13.2763C28.0552 13.5364 28.0746 13.9597 27.8242 14.2386C27.6895 14.3829 27.5064 14.4502 27.3239 14.4502V14.4599H23.9556V26.6254C23.9556 27.0007 23.6475 27.3087 23.2722 27.3087H17.9689C17.5936 27.3087 17.2953 27.0007 17.2953 26.6254V17.2704H10.712V26.6254C10.712 27.0007 10.404 27.3087 10.0286 27.3087H4.72538C4.35004 27.3087 4.05171 27.0007 4.05171 26.6254V14.4599H0.673669C0.29833 14.4599 0 14.1525 0 13.7772C0 13.5655 0.0964116 13.3727 0.250428 13.2478L6.88161 7.07866L13.5413 0.870118C13.8014 0.629999 14.2053 0.629999 14.4654 0.87982ZM20.2016 8.06946L14.0033 2.29507L7.8051 8.07007L2.40605 13.0944H4.72538C5.10072 13.0944 5.40875 13.4024 5.40875 13.7778V25.9432H9.35496V16.5967C9.35496 16.2214 9.65329 15.9134 10.0286 15.9134H17.9689C18.3443 15.9134 18.6523 16.2214 18.6523 16.5967V25.942H22.5985V13.7772C22.5985 13.4018 22.8969 13.0938 23.2722 13.0938H25.6012L20.2016 8.06946Z"
@@ -26,7 +25,7 @@
                         Главная
                     </button>
 
-                    <button class="nav-btn" onclick="showView('schedule')">
+                    <button class="nav-btn" id="main-schedule-btn">
                         <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path
                                 d="M23.8359 2.1875H22.5703V0H20.4609V2.1875H6.53906V0H4.42969V2.1875H3.16406C1.4194 2.1875 0 3.65947 0 5.46875V24.7188C0 26.528 1.4194 28 3.16406 28H23.8359C25.5806 28 27 26.528 27 24.7188V5.46875C27 3.65947 25.5806 2.1875 23.8359 2.1875ZM8.22656 25.8125H3.16406C2.58251 25.8125 2.10938 25.3218 2.10938 24.7188V19.25H8.22656V25.8125ZM8.22656 17.0625H2.10938V10.5H8.22656V17.0625ZM16.6641 25.8125H10.3359V19.25H16.6641V25.8125ZM16.6641 17.0625H10.3359V10.5H16.6641V17.0625ZM24.8906 24.7188C24.8906 25.3218 24.4175 25.8125 23.8359 25.8125H18.7734V19.25H24.8906V24.7188ZM24.8906 17.0625H18.7734V10.5H24.8906V17.0625ZM24.8906 8.3125H2.10938V5.46875C2.10938 4.86566 2.58251 4.375 3.16406 4.375H4.42969V6.5625H6.53906V4.375H20.4609V6.5625H22.5703V4.375H23.8359C24.4175 4.375 24.8906 4.86566 24.8906 5.46875V8.3125Z"
@@ -35,7 +34,7 @@
                         Расписание
                     </button>
 
-                    <button class="nav-btn" onclick="showView('programs')">
+                    <button class="nav-btn" id="main-programs-btn">
                         <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path
                                 d="M23.2953 17.5614L20.6446 21.2288L18.774 19.7504C18.5722 19.5903 18.2733 19.6191 18.1075 19.8134C17.9413 20.0081 17.9706 20.296 18.1734 20.4552L20.4404 22.2473C20.5252 22.3148 20.6318 22.3509 20.7407 22.3509C20.7621 22.3509 20.7838 22.3495 20.8056 22.3463C20.9364 22.329 21.0538 22.2597 21.1296 22.1552L24.0731 18.0823C24.2223 17.8757 24.1697 17.5915 23.9547 17.4474C23.7396 17.3028 23.445 17.3543 23.2953 17.5614Z"
@@ -61,7 +60,7 @@
                         </svg>
                         Программы
                     </button>
-                    <button class="nav-btn" onclick="showView('instructors')">
+                    <button class="nav-btn" id="main-instructors-btn">
                         <svg width="28" height="28" xmlns="http://www.w3.org/2000/svg" fill="none">
                             <defs>
                                 <clipPath id="clip0_57_91">
@@ -88,7 +87,7 @@
                         </svg>
                         Инструкторы
                     </button>
-                    <button class="nav-btn" onclick="showView('more')">
+                    <button class="nav-btn" id="main-more-btn">
                         <svg width="28" height="28" viewBox="0 0 23 25" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path
                                 d="M19.56 0.899994H3.44C1.73128 0.899994 0.339996 2.20035 0.339996 3.79999V21.2C0.339996 22.7996 1.73128 24.1 3.44 24.1H19.56C21.2687 24.1 22.66 22.7996 22.66 21.2V3.79999C22.66 2.20035 21.2687 0.899994 19.56 0.899994ZM21.42 21.2C21.42 22.1593 20.5855 22.94 19.56 22.94H3.44C2.41452 22.94 1.58 22.1593 1.58 21.2V3.79999C1.58 2.84067 2.41452 2.05999 3.44 2.05999H19.56C20.5855 2.05999 21.42 2.84067 21.42 3.79999V21.2Z"
@@ -115,69 +114,20 @@
                         Еще
                     </button>
                 </div>
-                <div id="home" class="view">
+                <div id="main-home-frame" class="navi-view">
                 </div>
-                <div id="schedule" class="view" style="display:none;">
+                <div id="main-schedule-frame" class="navi-view" style="display:none;">
                 </div>
-                <div id="programs" class="view" style="display:none;">
+                <div id="main-programs-frame" class="navi-view" style="display:none;">
                 </div>
-                <div id="instructors" class="view" style="display:none;">
+                <div id="main-instructors-frame" class="navi-view" style="display:none;">
                 </div>
-                <div id="more" class="view" style="display:none;">
+                <div id="main-more-frame" class="navi-view" style="display:none;">
                 </div>
             </div>
-
-            <script>
-                await auth();
-                function load_page_and_inline(url, viewId) {
-                    fetch(url)
-                        .then(response => response.text())
-                        .then(html => {
-                            document.getElementById(viewId).innerHTML = html;
-                        });
-                }
-
-                function home_init() {
-                    fetch('/profile')
-                        .then(response => response.json())
-                        .then(data => {
-                            const profile = document.createElement('div');
-                            profile.innerHTML = `
-                            <p>ID: ${data.id}</p>
-                            <p>Telegram ID: ${data.tg_id}</p>
-                            <p>Name: ${data.name}</p>
-                            <p>Phone: ${data.phone}</p>
-                            <p>Freeze: ${data.freeze ? data.freeze : 'None'}</p>
-                            <p>Subscriptions: ${data.subscriptions.map(sub => sub).join(', ')}</p>
-                            <p>Freeze Days: ${data.freeze_days}</p>
-                            <p>Coach: ${data.couch ? data.couch : 'None'}</p>
-                            <p>Come From: ${data.come_from ? data.come_from : 'None'}</p>`;
-                           document.getElementById("profile").appendChild(profile);
-                        })
-                        .catch(error => console.error('Error fetching profile:', error));
-                }
-
-                function showView(viewId) {
-                    const views = document.querySelectorAll('.view');
-                    views.forEach(view => {
-                        view.style.display = 'none';
-                    });
-                    document.getElementById(viewId).style.display = 'block';
-                }
-
-                load_page_and_inline('pages/home.html', 'home');
-                load_page_and_inline('pages/schedule.html', 'schedule');
-                load_page_and_inline('pages/programs.html', 'programs');
-                load_page_and_inline('pages/instructors.html', 'instructors');
-                load_page_and_inline('pages/more.html', 'more');
-                home_init();
-            </script>
         </div>
     </main>
 </body>
-<script>
-    app_init();
-</script>
 <style>
     body {
         --bg-color: var(--tg-theme-bg-color);

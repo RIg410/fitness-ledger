@@ -157,7 +157,7 @@ impl Claims {
     fn new(id: i64) -> Self {
         Claims {
             id,
-            exp: (Utc::now() + Duration::hours(1)).timestamp() as u64,
+            exp: (Utc::now() + Duration::days(7)).timestamp() as u64,
         }
     }
 }

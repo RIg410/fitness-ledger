@@ -44,14 +44,14 @@ impl TgAuth {
             return Err(eyre::eyre!("Invalid auth date"));
         }
 
-        let mut data_check_string = String::new();
-        for (key, value) in query {
-            data_check_string.push_str(&key);
-            data_check_string.push_str("=");
-            data_check_string.push_str(&value);
-            data_check_string.push_str("\n");
-        }
+        let mut items = query
+            .iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>();
+        items.sort();
 
+        let data_check_string = items.join("\n");
+        info!("data_check_string:{}", data_check_string);
         let mut secret = HmacSha256::new_from_slice(&self.secret)?;
         secret.update(data_check_string.as_bytes());
         let hash = hex::encode(secret.finalize().into_bytes());
