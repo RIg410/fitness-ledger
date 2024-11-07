@@ -9,6 +9,7 @@
     <title>SoulFamily</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="text/javascript" src="js/tg.js"></script>
+    <script type="text/javascript" src="js/auth.js"></script>
 </head>
 
 <body>
@@ -115,23 +116,47 @@
                     </button>
                 </div>
                 <div id="home" class="view">
-                    <h1>Главная</h1>
                 </div>
                 <div id="schedule" class="view" style="display:none;">
-                    <h1>Расписание</h1>
                 </div>
                 <div id="programs" class="view" style="display:none;">
-                    <h1>Программы</h1>
                 </div>
                 <div id="instructors" class="view" style="display:none;">
-                    <h1>Инструкторы</h1>
                 </div>
                 <div id="more" class="view" style="display:none;">
-                    <h1>Еще</h1>
                 </div>
             </div>
 
             <script>
+                await auth();
+                function load_page_and_inline(url, viewId) {
+                    fetch(url)
+                        .then(response => response.text())
+                        .then(html => {
+                            document.getElementById(viewId).innerHTML = html;
+                        });
+                }
+
+                function home_init() {
+                    fetch('/profile')
+                        .then(response => response.json())
+                        .then(data => {
+                            const profile = document.createElement('div');
+                            profile.innerHTML = `
+                            <p>ID: ${data.id}</p>
+                            <p>Telegram ID: ${data.tg_id}</p>
+                            <p>Name: ${data.name}</p>
+                            <p>Phone: ${data.phone}</p>
+                            <p>Freeze: ${data.freeze ? data.freeze : 'None'}</p>
+                            <p>Subscriptions: ${data.subscriptions.map(sub => sub).join(', ')}</p>
+                            <p>Freeze Days: ${data.freeze_days}</p>
+                            <p>Coach: ${data.couch ? data.couch : 'None'}</p>
+                            <p>Come From: ${data.come_from ? data.come_from : 'None'}</p>`;
+                           document.getElementById("profile").appendChild(profile);
+                        })
+                        .catch(error => console.error('Error fetching profile:', error));
+                }
+
                 function showView(viewId) {
                     const views = document.querySelectorAll('.view');
                     views.forEach(view => {
@@ -139,6 +164,13 @@
                     });
                     document.getElementById(viewId).style.display = 'block';
                 }
+
+                load_page_and_inline('pages/home.html', 'home');
+                load_page_and_inline('pages/schedule.html', 'schedule');
+                load_page_and_inline('pages/programs.html', 'programs');
+                load_page_and_inline('pages/instructors.html', 'instructors');
+                load_page_and_inline('pages/more.html', 'more');
+                home_init();
             </script>
         </div>
     </main>

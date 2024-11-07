@@ -4,39 +4,48 @@ use axum::{
     middleware::Next,
     response::{IntoResponse as _, Response},
 };
-use axum_extra::extract::{
-    cookie::{self, Cookie},
-    CookieJar,
-};
+
 use bot_core::{
     bot::{Origin, TgBot, ValidToken},
     context::Context,
 };
 use bot_main::BotApp;
+use chrono::{Duration, Utc};
 use eyre::Error;
 use ledger::Ledger;
 use log::warn;
-use serde::Deserialize;
-use std::{env, sync::Arc};
+use serde::{Deserialize, Serialize};
+use std::{collections::BTreeMap, sync::Arc, u64};
 use teloxide::types::{ChatId, MessageId};
 use tokio::time::sleep;
+
+use crate::{auth::TgAuth, jwt::Jwt};
 
 #[derive(Clone)]
 pub struct ContextBuilder {
     ledger: Arc<Ledger>,
     bot: BotApp,
+    jwt: Arc<Jwt>,
+    auth: TgAuth,
 }
 
 impl ContextBuilder {
     pub fn new(ledger: Arc<Ledger>, bot: BotApp) -> Self {
-        ContextBuilder { ledger, bot }
+        let jwt = Arc::new(Jwt::new(bot.env.jwt_secret()));
+        let auth = TgAuth::new(bot.env.tg_token());
+        ContextBuilder {
+            ledger,
+            bot,
+            jwt,
+            auth,
+        }
     }
 
-    pub async fn build(&self, auth_key: &str) -> Result<Context, Error> {
+    pub async fn build(&self, tg_id: i64) -> Result<Context, Error> {
         let mut session = self.ledger.db.start_session().await?;
 
-        let user = self.ledger.auth.auth(&mut session, auth_key).await;
-        let user = if let Ok(user) = user {
+        let user = self.ledger.users.get_by_tg_id(&mut session, tg_id).await?;
+        let user = if let Some(user) = user {
             user
         } else {
             sleep(std::time::Duration::from_secs(1)).await;
@@ -82,67 +91,73 @@ pub async fn middleware(
     mut request: Request,
     next: Next,
 ) -> Response {
-    let mut set_cookie = None;
-    CookieJar::from_headers(request.headers()).get("auth");
-    let ctx = if let Some(key) = CookieJar::from_headers(request.headers()).get("auth") {
-        let auth_key = key.value();
-        state.build(auth_key).await
-    } else {
-        match Query::<Key>::try_from_uri(request.uri()) {
-            Ok(key) => {
-                let key = key.0;
-                if let Ok(app_key) = env::var("MINI_APP_KEY") {
-                    if key.app_key != app_key {
-                        warn!("Unauthorized access attempt with key: {}", app_key);
-                        sleep(std::time::Duration::from_secs(1)).await;
-                        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
-                    }
-                } else {
-                    warn!("MINI_APP_KEY not set");
+    if let Some(auth_header) = request.headers().get("Authorization") {
+        if let Ok(auth_key) = state.jwt.claims::<Claims>(auth_header) {
+            match state.build(auth_key.id).await {
+                Ok(ctx) => {
+                    request.extensions_mut().insert(Arc::new(ctx));
+                }
+                Err(err) => {
+                    warn!("Failed to build context: {}", err);
                     sleep(std::time::Duration::from_secs(1)).await;
                     return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
-                };
-                let ctx = state.build(&key.user_key).await;
-                set_cookie = Some(key.user_key);
-                ctx
+                }
             }
-            Err(err) => {
-                warn!("Failed to parse key: {}", err);
-                sleep(std::time::Duration::from_secs(1)).await;
-                return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
-            }
-        }
-    };
-
-    let ctx = match ctx {
-        Ok(ctx) => ctx,
-        Err(err) => {
-            warn!("Failed to build context: {}", err);
+        } else {
+            warn!("Invalid Authorization header:{:?}", request);
             sleep(std::time::Duration::from_secs(1)).await;
             return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
         }
-    };
-
-    request.extensions_mut().insert(Arc::new(ctx));
-    let mut response = next.run(request).await;
-    if let Some(auth_key) = set_cookie {
-        let cookie = Cookie::build(("auth", auth_key))
-            .http_only(true)
-            .secure(true)
-            .path("/")
-            .domain(std::env::var("COOKIE_DOMAIN").unwrap_or_default())
-            .same_site(cookie::SameSite::Strict)
-            .build();
-        response
-            .headers_mut()
-            .insert("Set-Cookie", cookie.to_string().parse().unwrap());
+    } else {
+        if let Ok(Query(params)) = Query::<BTreeMap<String, String>>::try_from_uri(request.uri()) {
+            match state.auth.validate(params) {
+                Ok(user_id) => match state.build(user_id).await {
+                    Ok(ctx) => {
+                        request.extensions_mut().insert(Arc::new(ctx));
+                        match state.jwt.make_jwt(Claims::new(user_id)) {
+                            Ok(jwt) => {
+                                request.extensions_mut().insert(jwt);
+                            }
+                            Err(err) => {
+                                warn!("Failed to make jwt: {}", err);
+                                sleep(std::time::Duration::from_secs(1)).await;
+                                return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        warn!("Failed to build context: {}", err);
+                        sleep(std::time::Duration::from_secs(1)).await;
+                        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+                    }
+                },
+                Err(err) => {
+                    warn!("Failed to validate tg auth: {}", err);
+                    sleep(std::time::Duration::from_secs(1)).await;
+                    return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+                }
+            }
+        } else {
+            warn!("No Authorization header:{:?}", request);
+            sleep(std::time::Duration::from_secs(1)).await;
+            return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+        }
     }
 
-    response
+    next.run(request).await
 }
 
-#[derive(Deserialize)]
-pub struct Key {
-    user_key: String,
-    app_key: String,
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    id: i64,
+    exp: u64,
+}
+
+impl Claims {
+    fn new(id: i64) -> Self {
+        Claims {
+            id,
+            exp: (Utc::now() + Duration::hours(1)).timestamp() as u64,
+        }
+    }
 }

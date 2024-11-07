@@ -13,7 +13,6 @@ use model::treasury::subs::UserId;
 use model::treasury::Sell;
 use model::user::{sanitize_phone, FindFor, User};
 use mongodb::bson::oid::ObjectId;
-use service::auth::AuthService;
 use service::backup::Backup;
 use service::calendar::{Calendar, SignOutError};
 use service::history::{self, History};
@@ -44,7 +43,6 @@ pub struct Ledger {
     pub statistics: statistics::Statistics,
     pub backup: backup::Backup,
     pub requests: Requests,
-    pub auth: AuthService,
     pub yookassa: yookassa::Yookassa,
 }
 
@@ -64,7 +62,6 @@ impl Ledger {
         let statistics =
             statistics::Statistics::new(calendar.clone(), history.clone(), users.clone());
         let requests = Requests::new(storage.requests);
-        let auth = AuthService::new(storage.auth_keys, users.clone());
 
         Ledger {
             users,
@@ -78,7 +75,6 @@ impl Ledger {
             statistics,
             backup,
             requests,
-            auth,
             yookassa: yookassa::Yookassa::new(&env),
         }
     }

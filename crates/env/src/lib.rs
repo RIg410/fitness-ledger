@@ -2,6 +2,7 @@ use std::{env::var, sync::Arc};
 
 use dotenv::dotenv;
 use eyre::{Context, Error};
+use rand::prelude::Distribution as _;
 
 #[derive(Clone)]
 pub struct Env(Arc<EnvInner>);
@@ -16,6 +17,7 @@ pub struct EnvInner {
     yookassa_token: String,
     yookassa_shop_id: String,
     bot_url: String,
+    jwt_secret: String,
 }
 
 impl Env {
@@ -51,6 +53,10 @@ impl Env {
         &self.0.bot_url
     }
 
+    pub fn jwt_secret(&self) -> &str {
+        &self.0.jwt_secret
+    }
+
     pub fn load() -> Result<Env, Error> {
         if dotenv().ok().is_none() {
             log::info!("dotenv not found");
@@ -65,6 +71,14 @@ impl Env {
             yookassa_token: var("YOOKASSA_TOKEN").context("YOOKASSA_TOKEN is not set")?,
             yookassa_shop_id: var("YOOKASSA_SHOP_ID").context("YOOKASSA_TOKEN is not set")?,
             bot_url: var("BOT_URL").context("BOT_URL is not set")?,
+            jwt_secret: var("JWT_SECRET").unwrap_or_else(|_| {
+                let mut rng = rand::thread_rng();
+                rand::distributions::Alphanumeric
+                    .sample_iter(&mut rng)
+                    .take(64)
+                    .map(char::from)
+                    .collect()
+            }),
         })))
     }
 }

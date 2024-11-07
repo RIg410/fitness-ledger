@@ -1,6 +1,7 @@
 function app_init() {
-  console.log('app_init');
   Telegram.WebApp.ready();
+  let data = Telegram.WebApp.initData();
+  console.log(data);
 
   Telegram.WebApp.onEvent('themeChanged', function () {
     document.documentElement.className = Telegram.WebApp.colorScheme;

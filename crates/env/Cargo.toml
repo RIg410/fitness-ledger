@@ -9,3 +9,4 @@ version.workspace = true
 dotenv.workspace = true
 log.workspace = true
 eyre.workspace = true
+rand.workspace = true

@@ -1,25 +1,22 @@
-use std::sync::Arc;
-
-use askama::Template;
-use axum::{
-    http::StatusCode,
-    middleware,
-    response::{Html, IntoResponse, Response},
-    routing::get,
-    Extension, Router,
-};
-use bot_core::context::Context;
+use axum::{middleware, response::IntoResponse, routing::post, Extension, Router};
 use bot_main::BotApp;
 use contex::middleware as build_ctx;
 use eyre::Result;
+use jwt::JwtToken;
 use ledger::Ledger;
+use std::sync::Arc;
+
+pub mod auth;
 pub mod contex;
+pub mod jwt;
+pub mod profile;
 
 pub fn spawn(ledger: Arc<Ledger>, bot: BotApp) -> Result<()> {
     let ctx_builder = contex::ContextBuilder::new(ledger, bot);
     tokio::spawn(async move {
         let app = Router::new()
-            .route("/main", get(main))
+            .merge(profile::routes())
+            .route("/auth", post(auth))
             .layer(middleware::from_fn_with_state(
                 ctx_builder.clone(),
                 build_ctx,
@@ -31,39 +28,6 @@ pub fn spawn(ledger: Arc<Ledger>, bot: BotApp) -> Result<()> {
     Ok(())
 }
 
-async fn main(Extension(ctx): Extension<Arc<Context>>) -> impl IntoResponse {
-    HtmlTemplate(MainTemplate {
-        name: ctx.me.name.first_name.clone(),
-    })
+pub async fn auth(Extension(jwt): Extension<JwtToken>) -> impl IntoResponse {
+    axum::Json(jwt)
 }
-
-#[derive(Template)]
-#[template(path = "main.html", ext = "html")]
-struct MainTemplate {
-    name: String,
-}
-
-struct HtmlTemplate<T>(T);
-
-impl<T> IntoResponse for HtmlTemplate<T>
-where
-    T: Template,
-{
-    fn into_response(self) -> Response {
-        match self.0.render() {
-            Ok(html) => Html(html).into_response(),
-            Err(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to render template. Error: {err}"),
-            )
-                .into_response(),
-        }
-    }
-}
-
-#[derive(Template)]
-#[template(path = "main.html", ext = "html")]
-struct MainTemplate1 {
-    name: MainTemplate,
-}
-

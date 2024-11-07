@@ -50,22 +50,10 @@ impl MainMenuView {
         }
 
         if ctx.has_right(Rule::MiniApp) {
-            let key = ctx
-                .ledger
-                .auth
-                .gen_key(&mut ctx.session, ctx.me.id)
-                .await?
-                .key;
             let env = ctx.bot.env();
-            let url = format!(
-                "{}?user_key={}&app_key={}",
-                env.app_url(),
-                key,
-                env.mini_app_key()
-            );
             keymap = keymap.append_row(vec![InlineKeyboardButton::web_app(
                 "App",
-                WebAppInfo { url: url.parse()? },
+                WebAppInfo { url: env.app_url().parse()? },
             )]);
         }
 

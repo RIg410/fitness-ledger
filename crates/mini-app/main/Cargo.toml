@@ -7,15 +7,23 @@ publish.workspace = true
 version.workspace = true
 
 [dependencies]
-askama.workspace = true
-env.workspace = true
+model.workspace = true
+
 axum-extra.workspace = true
 axum.workspace = true
 bot-core.workspace = true
 bot-main.workspace = true
+chrono.workspace = true
+env.workspace = true
 eyre.workspace = true
+hmac.workspace = true
+jsonwebtoken.workspace = true
 ledger.workspace = true
 log.workspace = true
+mongodb.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 teloxide.workspace = true
 tokio.workspace = true
+sha2.workspace = true
+hex.workspace = true

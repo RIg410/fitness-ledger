@@ -1,4 +1,3 @@
-pub mod auth_key;
 pub mod calendar;
 pub mod history;
 pub mod payment;
@@ -33,7 +32,6 @@ pub struct Storage {
     pub presell: Arc<pre_sell::PreSellStore>,
     pub rewards: Arc<RewardsStore>,
     pub requests: Arc<RequestStore>,
-    pub auth_keys: Arc<auth_key::AuthKeys>,
 }
 
 impl Storage {
@@ -48,7 +46,6 @@ impl Storage {
         let history = history::HistoryStore::new(&db).await?;
         let rewards = RewardsStore::new(&db).await?;
         let requests = RequestStore::new(&db).await?;
-        let auth_keys = auth_key::AuthKeys::new(&db).await?;
 
         Ok(Storage {
             db: Arc::new(db),
@@ -61,7 +58,6 @@ impl Storage {
             presell: Arc::new(presell),
             rewards: Arc::new(rewards),
             requests: Arc::new(requests),
-            auth_keys: Arc::new(auth_keys),
         })
     }
 }

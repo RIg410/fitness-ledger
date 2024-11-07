@@ -44,7 +44,6 @@ tx_macro = {path = "crates/tx_macro"}
 yookassa = {path = "crates/payment/yookassa"}
 
 #libs 
-askama = "0.12.1"
 async-trait = "0.1.81"
 axum = "0.7.7"
 axum-extra = {version = "0.9.4", features = ["cookie-private"]}
@@ -58,7 +57,9 @@ eyre = "0.6"
 futures = "0.3"
 futures-util = "0.3.30"
 hex = "0.4.3"
+hmac = "0.12.1"
 itertools = "0.2.2"
+jsonwebtoken = "9.3.0"
 log = "0.4"
 mongodb = {version = "3.0"}
 parking_lot = "0.12.3"
@@ -70,6 +71,7 @@ reqwest = {version = "0.12.9", features = ["json"]}
 serde = "1"
 serde_json = "1"
 serde_with = "3.9.0"
+sha2 = "0.10"
 strum = {version = "0.26", features = ["derive"]}
 syn = "1.0"
 teloxide = {version = "0.13", features = ["macros"]}
