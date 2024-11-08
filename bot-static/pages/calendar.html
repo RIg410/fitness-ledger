@@ -1,90 +1,162 @@
 <div>
-    <div class="calendar">
-        <div id="calendar-month">ноябрь 2024</div>
-        <div>
-            <button id="prev">←</button>
-            <div>
-                <div class="day">
-                    <div>
-                        28
+    <div id="calendar">
+        <div class="calendar-holder">
+            <button class="calendar-navi-btn" id="prev">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="feather feather-chevron-left">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <div class="calendar-days-date-container">
+                <!-- actual -->
+                <div>
+                    <div class="calendar-month">
+                        <p id="calendar-month-val">ноябрь 2024</p>
                     </div>
-                    <div>
-                        ПН
+                    <div class="days">
+                        <div class="day">
+                            <div>
+                                28
+                            </div>
+                            <div>
+                                ПН
+                            </div>
+                        </div>
+                        <div class="day">
+                            <div>
+                                29
+                            </div>
+                            <div>
+                                ВТ
+                            </div>
+                        </div>
+                        <div class="day">
+                            <div>
+                                30
+                            </div>
+                            <div>
+                                СР
+                            </div>
+                        </div>
+                        <div class="day">
+                            <div>
+                                31
+                            </div>
+                            <div>
+                                ЧТ
+                            </div>
+                        </div>
+                        <div class="day">
+                            <div>
+                                1
+                            </div>
+                            <div>
+                                ПТ
+                            </div>
+                        </div>
+                        <div class="day">
+                            <div>
+                                2
+                            </div>
+                            <div>
+                                СБ
+                            </div>
+                        </div>
+                        <div class="day">
+                            <div>
+                                3
+                            </div>
+                            <div>
+                                ВС
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="day">
-                    <div>
-                        29
-                    </div>
-                    <div>
-                        ВТ
-                    </div>
-                </div>
-                <div class="day">
-                    <div>
-                        30
-                    </div>
-                    <div>
-                        СР
-                    </div>
-                </div>
-                <div class="day">
-                    <div>
-                        31
-                    </div>
-                    <div>
-                        ЧТ
-                    </div>
-                </div>
-                <div class="day">
-                    <div>
-                        1
-                    </div>
-                    <div>
-                        ПТ
-                    </div>
-                </div>
-                <div class="day">
-                    <div>
-                        2
-                    </div>
-                    <div>
-                        СБ
-                    </div>
-                </div>
-                <div class="day">
-                    <div>
-                        3
-                    </div>
-                    <div>
-                        ВС
-                    </div>
-                </div>
-
+                <!-- !actual -->
             </div>
-            <button id="next">→</button>
+            <button class="calendar-navi-btn" id="next">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="feather feather-chevron-right">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
         </div>
     </div>
     <style>
-        .calendar {
-            position: fixed;
+        .calendar-days-date-container {
+            overflow: auto;
+            overflow-x: scroll;
+            scroll-snap-type: x mandatory;
+        }
+
+        .calendar-navi-btn {
+            background: var(--tg-theme-bg-color);
+            /* color: var(--tg-theme-text-color); */
+            border: none;
+            cursor: pointer;
+        }
+
+        #calendar {
             top: 10px;
             width: 100%;
-            display: flex;
+            display: block;
+            position: center;
             justify-content: space-around;
             background: var(--tg-theme-bg-color);
             border-bottom: 1px solid var(--tg-theme-hint-color);
         }
 
+        #calendar-month-val {
+            font-size: 0.7em;
+            margin: 0px;
+            padding: 0%;
+            font: 12px/18px "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, Verdana, sans-serif;
+        }
+
         .calendar-month {
-            position: fixed;
             top: 0px;
-            left: 10px;
+            align-items: center;
             font-size: 1.5em;
             font-weight: bold;
             color: var(--tg-theme-text-color);
+            text-align: center;
+        }
+
+        .calendar-holder {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            padding: 0px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+
+        .days {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            padding: 0px;
+            margin: 0;
+            overflow-x: scroll;
+            scroll-snap-type: x mandatory;
+        }
+
+        .day {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 50px;
+            height: 50px;
+            font-size: 1.2em;
+            background: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            /* border-radius: 20%;
+            border: 1px solid var(--tg-theme-hint-color); */
         }
     </style>
-    >
 </div>
