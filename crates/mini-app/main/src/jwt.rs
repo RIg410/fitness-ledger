@@ -24,13 +24,21 @@ impl Jwt {
         }
     }
 
-    pub fn claims<C: DeserializeOwned>(&self, header: &HeaderValue) -> Result<C, Error> {
+    pub fn claims<C: DeserializeOwned>(
+        &self,
+        header: &HeaderValue,
+    ) -> Result<(C, JwtToken), Error> {
         let auth_key = header.to_str()?;
-        let token = auth_key
+        let jwt = auth_key
             .strip_prefix("Bearer ")
             .ok_or_else(|| eyre!("No Bearer"))?;
-        let token = jsonwebtoken::decode::<C>(token, &self.jwt_decode, &self.validation)?;
-        Ok(token.claims)
+        let token = jsonwebtoken::decode::<C>(jwt, &self.jwt_decode, &self.validation)?;
+        Ok((
+            token.claims,
+            JwtToken {
+                key: jwt.to_string(),
+            },
+        ))
     }
 
     pub fn make_jwt<C: Serialize>(&self, claims: C) -> Result<JwtToken, Error> {

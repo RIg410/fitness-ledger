@@ -9,7 +9,6 @@ async function run() {
         await auth();
     } catch (e) {
         console.error("Failed to auth", e);
-        Telegram.WebApp.sendData("Произошла ошибка при авторизаци. Попробуйте перезагрузить страницу.");
         Telegram.WebApp.showPopup({
             title: 'SoulFamily',
             message: 'Произошла ошибка при авторизаци. Попробуйте перезагрузить страницу.',

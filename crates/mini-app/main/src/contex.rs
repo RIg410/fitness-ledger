@@ -92,10 +92,11 @@ pub async fn middleware(
     next: Next,
 ) -> Response {
     if let Some(auth_header) = request.headers().get("Authorization") {
-        if let Ok(auth_key) = state.jwt.claims::<Claims>(auth_header) {
+        if let Ok((auth_key, jwt)) = state.jwt.claims::<Claims>(auth_header) {
             match state.build(auth_key.id).await {
                 Ok(ctx) => {
                     request.extensions_mut().insert(Arc::new(ctx));
+                    request.extensions_mut().insert(jwt);
                 }
                 Err(err) => {
                     warn!("Failed to build context: {}", err);
