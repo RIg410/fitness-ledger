@@ -17,6 +17,13 @@ clippy:
 test:
 	cargo test
 
+build-front:
+	rm -rf bot-static/js
+	cd crates/mini-app/front/ts; tsc
+
+deploy-front: build-front
+	sh ./scripts/sync.sh
+
 restart-nginx: 
 	sudo docker image prune -a -f
 	sudo docker compose build nginx
