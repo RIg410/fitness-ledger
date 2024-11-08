@@ -48,9 +48,26 @@ function getFromCache(date: Date): Day | null {
     }
 }
 
-function makeWeekId(date: Date): Date {
+export function makeWeekId(date: Date): Date {
     let day = date.getDay();
     let diff = date.getDate() - day + (day == 0 ? -6 : 1);
     date.setHours(0, 0, 0, 0);
     return new Date(date.setDate(diff));
+}
+
+export function nextWeek(date: Date): Date {
+    let next = new Date(date);
+    next.setDate(next.getDate() + 7);
+    return next;
+}
+
+export function prevWeek(date: Date): Date {
+    let prev = new Date(date);
+    prev.setDate(prev.getDate() - 7);
+    return prev;
+}
+
+function currentWeek(): Date {
+    let date = new Date();
+    return makeWeekId(date);
 }

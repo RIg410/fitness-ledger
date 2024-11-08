@@ -1,4 +1,5 @@
 import { prepareCalendarView } from './pages/calendar.js';
+import { selectionChanged } from './tg.js';
 
 export function init() {
     document.getElementById('main-home-btn').addEventListener('click', () => showView('main-home-frame'));
@@ -10,6 +11,7 @@ export function init() {
 
 
 export async function showView(viewId: string) {
+    selectionChanged();
     switch (viewId) {
         case "main-schedule-frame":
             await prepareCalendarView();

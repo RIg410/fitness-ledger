@@ -43,3 +43,11 @@ export function showPopup(message, buttons, callback) {
 export function close() {
   Telegram.WebApp.close();
 }
+
+export function selectionChanged() {
+  Telegram.WebApp.HapticFeedback.selectionChanged();
+}
+
+export function impactOccurred(type) {
+  Telegram.WebApp.HapticFeedback.impactOccurred(type);
+}
