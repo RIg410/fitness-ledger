@@ -7,4 +7,5 @@ pkg
 scripts
 replica.key
 certs
-/bot-static/js/*
+/bot-static/js
+

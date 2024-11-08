@@ -1,3 +1,5 @@
+import { prepareCalendarView } from './pages/calendar.js';
+
 export function init() {
     document.getElementById('main-home-btn').addEventListener('click', () => showView('main-home-frame'));
     document.getElementById('main-schedule-btn').addEventListener('click', () => showView('main-schedule-frame'));
@@ -7,10 +9,20 @@ export function init() {
 }
 
 
-export function showView(viewId) {
+export async function showView(viewId: string) {
+    switch (viewId) {
+        case "main-schedule-frame":
+            await prepareCalendarView();
+            break;
+        default:
+            console.log("Unknown view", viewId);
+    }
+
+
     const views = document.querySelectorAll('.navi-view');
     views.forEach(view => {
-        view.style.display = 'none';
+        let elm = view as HTMLElement;
+        elm.style.display = 'none';
     });
     document.getElementById(viewId).style.display = 'block';
 }

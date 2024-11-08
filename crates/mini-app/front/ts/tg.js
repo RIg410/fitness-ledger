@@ -21,3 +21,25 @@ export function tg_init() {
     document.body.setAttribute('style', '--bg-color:' + Telegram.WebApp.backgroundColor);
   });
 }
+
+export function initData() {
+  let data = Telegram.WebApp.initData;
+  console.log("initData", data);
+  return data;
+}
+
+export function alert(message) {
+  Telegram.WebApp.showAlert(message);
+}
+
+export function showPopup(message, buttons, callback) {
+  Telegram.WebApp.showPopup({
+    title: 'SoulFamily',
+    message: message,
+    buttons: buttons
+  }, callback);
+}
+
+export function close() {
+  Telegram.WebApp.close();
+}

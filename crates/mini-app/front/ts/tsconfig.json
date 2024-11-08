@@ -1,8 +1,14 @@
 {
     "compilerOptions": {
-        "target": "ES5",
-        "module": "CommonJS",
         "sourceMap": false,
         "outDir": "../../../../bot-static/js",
+        "allowJs": true,
+        "checkJs": false,
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "lib": [
+            "DOM",
+            "ES2015"
+        ]
     }
 }

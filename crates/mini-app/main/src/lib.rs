@@ -10,6 +10,7 @@ pub mod auth;
 pub mod contex;
 pub mod jwt;
 pub mod profile;
+pub mod schedule;
 
 pub fn spawn(ledger: Arc<Ledger>, bot: BotApp) -> Result<()> {
     let ctx_builder = contex::ContextBuilder::new(ledger, bot);

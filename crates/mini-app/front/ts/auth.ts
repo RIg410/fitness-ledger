@@ -1,3 +1,5 @@
+import { initData, alert } from "./tg.js";
+
 export async function auth() {
     let jwt = get_token();
     if (jwt) {
@@ -16,7 +18,7 @@ export async function auth() {
         }
     }
 
-    let tg_data = Telegram.WebApp.initData;
+    let tg_data = initData();
     console.log(tg_data);
     const settings = {
         method: 'POST',
@@ -26,11 +28,16 @@ export async function auth() {
         }
     };
     const response = await fetch('/auth?' + tg_data, settings);
+    if (response.status !== 200) {
+        console.log(response);
+        throw new Error(response.statusText);
+    }
+
     const data = await response.json();
     localStorage.setItem("jwt", data.key);
 }
 
-export function get_token() {
+export function get_token(): string | null {
     try {
         return localStorage.getItem("jwt");
     } catch (e) {

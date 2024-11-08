@@ -5,6 +5,9 @@ publish = false
 version = "0.1.0"
 
 [workspace]
+exclude = [
+  "crates/mini-app/front",
+]
 members = [
   "crates/bg-process",
   "crates/bot/*",
@@ -17,6 +20,7 @@ members = [
   "crates/env",
   "crates/payment/yookassa",
 ]
+
 resolver = "2"
 
 [workspace.dependencies]
