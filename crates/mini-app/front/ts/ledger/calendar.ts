@@ -17,6 +17,13 @@ class Day {
     dateTime: Date;
     weekday: Weekday;
     training: TrainingInfo[];
+
+    constructor(id: string, date: Date, weekday: Weekday, training: TrainingInfo[]) {
+        this.id = id;
+        this.dateTime = date;
+        this.weekday = weekday;
+        this.training = training;
+    }
 }
 
 class TrainingInfo {
@@ -27,12 +34,22 @@ class TrainingInfo {
     couch: string;
     free_places: number;
     total_places: number;
+
+    constructor(id: string, name: string, start_at: Date, duration_nim: number, couch: string, free_places: number, total_places: number) {
+        this.id = id;
+        this.name = name;
+        this.start_at = start_at;
+        this.duration_nim = duration_nim;
+        this.couch = couch;
+        this.free_places = free_places;
+        this.total_places = total_places;
+    }
 }
 
-export async function loadWeek(date: Date, force: boolean): Promise<Day | null> {
+export async function loadDate(date: Date, force: boolean): Promise<Day | null> {
     let week = getFromCache(date);
 
-    return null
+    return 
 }
 
 function getFromCache(date: Date): Day | null {
@@ -67,7 +84,7 @@ export function prevWeek(date: Date): Date {
     return prev;
 }
 
-function currentWeek(): Date {
+export function currentWeek(): Date {
     let date = new Date();
     return makeWeekId(date);
 }

@@ -1,7 +1,7 @@
-import { makeWeekId, nextWeek, prevWeek } from "../ledger/calendar.js";
+import { currentWeek, nextWeek, prevWeek } from "../ledger/calendar.js";
 import { selectionChanged } from "../tg.js";
 
-var selectedWeek: Date = makeWeekId(new Date());
+var selectedWeek: Date = currentWeek();
 var selectedDay: Date = new Date();
 var millesInDay: number = 24 * 60 * 60 * 1000;
 
