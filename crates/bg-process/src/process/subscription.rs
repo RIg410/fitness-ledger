@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{Ledger, Task};
 use async_trait::async_trait;
 use bot_core::bot::TgBot;
-use bot_viewer::fmt_phone;
+use bot_viewer::{fmt_phone, user::tg_link};
 use chrono::Utc;
 use eyre::{Error, Result};
 use model::rights::Rule;
@@ -44,7 +44,7 @@ impl Task for SubscriptionBg {
                     .await?;
                 if expired {
                     log::info!("User {:?} has expired subscription", user);
-                    to_notify.push((user.name.first_name, user.phone));
+                    to_notify.push((user.tg_id, user.phone));
                 }
             }
         }
@@ -58,14 +58,14 @@ impl Task for SubscriptionBg {
             .users
             .find_users_with_right(&mut session, Rule::ReceiveNotificationsAboutSubscriptions)
             .await?;
-        for (name, phone) in to_notify {
+        for (id, phone) in to_notify {
             for user in notification_listener.iter() {
                 self.bot
                     .send_notification_to(
                         ChatId(user.tg_id),
                         &format!(
                             "У пользователя {}\\({}\\) сгорел абонемент",
-                            name,
+                            tg_link(id),
                             fmt_phone(&phone)
                         ),
                     )

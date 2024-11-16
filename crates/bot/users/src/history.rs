@@ -332,9 +332,10 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
         }
         model::history::Action::ExpireSubscription { subscription } => {
             format!(
-                "Абонемент *{}* пользователя {} истек",
+                "Абонемент *{}* пользователя {} истек\\. Сгорело занятий: _{}_",
                 escape(&subscription.name),
-                escape(&actor.name.tg_user_name.unwrap_or_default())
+                escape(&actor.name.tg_user_name.unwrap_or_default()),
+                subscription.balance
             )
         }
         model::history::Action::BuySub { subscription } => {

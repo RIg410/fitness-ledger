@@ -146,8 +146,8 @@ impl View for EditSubscription {
                     }
                     EditType::Name => format!("название на {}", text),
                     EditType::FreezeDays => {
-                        if let Err(err) = text.parse::<NonZero<u32>>() {
-                            ctx.send_msg(&format!("Неверный формат: {}", err)).await?;
+                        if text.parse::<u32>().is_err() {
+                            ctx.send_msg("Неверный формат").await?;
                             return Ok(Jmp::Stay);
                         }
                         format!("количество дней заморозки на {}", text)

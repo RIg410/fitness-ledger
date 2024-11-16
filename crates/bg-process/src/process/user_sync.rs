@@ -21,7 +21,7 @@ impl UserNameSync {
 #[async_trait]
 impl Task for UserNameSync {
     const NAME: &'static str = "user name sync";
-    const CRON: &'static str = "every 1 minute";
+    const CRON: &'static str = "every day at 03:00";
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;

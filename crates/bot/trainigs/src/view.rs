@@ -7,7 +7,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::{day::fmt_dt, fmt_phone, training::fmt_training_type};
+use bot_viewer::{day::fmt_dt, fmt_phone, training::fmt_training_type, user::link_to_user};
 use chrono::{DateTime, Local};
 use eyre::{bail, Result};
 use model::{
@@ -149,7 +149,7 @@ impl TrainingView {
                                 ChatId(user.tg_id),
                                 &format!(
                                     "У {} {} заканчивается абонемент\\.",
-                                    escape(&ctx.me.name.to_string()),
+                                    link_to_user(&ctx.me),
                                     fmt_phone(&ctx.me.phone)
                                 ),
                             )

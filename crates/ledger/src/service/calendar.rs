@@ -93,9 +93,6 @@ impl Calendar {
             self.calendar
                 .change_couch(session, start_at, new_couch)
                 .await?;
-            // self.logs
-            //     .change_couch(session, start_at, all, new_couch)
-            //     .await;
 
             let day_id = DayId::from(training.get_slot().start_at());
             if all {

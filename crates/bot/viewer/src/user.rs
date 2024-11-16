@@ -139,11 +139,7 @@ pub fn user_base_info(user: &User, extension: &UserExtension) -> String {
         "".to_owned()
     };
 
-    let link = if user.tg_id > 0 {
-        format!("[🔗Профиль](tg://user?id={})", user.tg_id)
-    } else {
-        "Профиль не привязан".to_string()
-    };
+    let link = link_to_user(user);
 
     format!(
         "{} Пользователь : _{}_
@@ -228,6 +224,22 @@ pub fn fmt_user_type(user: &User) -> &str {
     } else {
         "🟢"
     }
+}
+
+pub fn link_to_user(user: &User) -> String {
+    if user.tg_id > 0 {
+        tg_link(user.tg_id)
+    } else {
+        user.name
+            .tg_user_name
+            .as_ref()
+            .map(|n| format!("@{}", n))
+            .unwrap_or_else(|| "?".to_string())
+    }
+}
+
+pub fn tg_link(tg: i64) -> String {
+    format!("[🔗Профиль](tg://user?id={})", tg)
 }
 
 pub fn fmt_come_from(from: ComeFrom) -> &'static str {
