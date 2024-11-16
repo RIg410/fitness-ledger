@@ -31,7 +31,6 @@ impl Task for UserNameSync {
             let user = user?;
             if user.tg_id > 0 {
                 if let Some(username) = self.bot.get_chat(ChatId(user.tg_id)).await?.username() {
-                    println!("new username: {}", username);
                     match user.name.tg_user_name {
                         Some(current_name) => {
                             if current_name != username {
