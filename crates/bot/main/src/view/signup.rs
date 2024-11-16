@@ -4,7 +4,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use eyre::{bail, Context as _};
+use eyre::{Context as _, Ok};
 use ledger::Ledger;
 use log::info;
 use model::{session::Session, user::UserName};
@@ -14,7 +14,7 @@ use teloxide::types::{
 };
 
 const GREET_START: &str =
-    "Добрый день\\. Приветствуем вас в нашей семье\\.\nПожалуйста, оставьте ваш номер телефона\\.";
+    "\nПожалуйста, оставьте ваш номер телефона\\. Для этого нажмите на кнопку ниже\\.";
 
 #[derive(Default)]
 pub struct SignUpView;
@@ -25,14 +25,7 @@ impl View for SignUpView {
         "SignUpView"
     }
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let keymap = KeyboardMarkup::new(vec![vec![
-            KeyboardButton::new("📱 Отправить номер").request(ButtonRequest::Contact)
-        ]]);
-        ctx.send_replay_markup(
-            GREET_START,
-            ReplyMarkup::Keyboard(keymap.one_time_keyboard()),
-        )
-        .await?;
+        ctx.send_replay_markup(GREET_START, relay()).await?;
         Ok(())
     }
 
@@ -44,7 +37,8 @@ impl View for SignUpView {
         let from = if let Some(from) = &msg.from {
             from
         } else {
-            bail!("No user info");
+            ctx.bot.delete_msg(msg.id).await?;
+            return Ok(Jmp::Stay);
         };
 
         if from.is_bot {
@@ -67,14 +61,6 @@ impl View for SignUpView {
             view.send_self(ctx).await?;
             return Ok(view.into());
         } else {
-            let keymap = KeyboardMarkup::new(vec![vec![
-                KeyboardButton::new("📱 Отправить номер").request(ButtonRequest::Contact)
-            ]]);
-            ctx.send_replay_markup(
-                "Нажмите на кнопку, чтобы отправить номер телефона\\.",
-                ReplyMarkup::Keyboard(keymap.one_time_keyboard()),
-            )
-            .await?;
             Ok(Jmp::Stay)
         }
     }
@@ -122,4 +108,11 @@ pub async fn create_user(
         .await
         .context("Failed to create user")?;
     Ok(id)
+}
+
+fn relay() -> ReplyMarkup {
+    let keymap = KeyboardMarkup::new(vec![vec![
+        KeyboardButton::new("📱 Отправить номер").request(ButtonRequest::Contact)
+    ]]);
+    ReplyMarkup::Keyboard(keymap.one_time_keyboard())
 }

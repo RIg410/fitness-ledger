@@ -12,7 +12,6 @@ pub struct EnvInner {
     tg_token: String,
     mongo_url: String,
     rust_log: String,
-    mini_app_key: String,
     app_url: String,
     yookassa_token: String,
     yookassa_shop_id: String,
@@ -31,10 +30,6 @@ impl Env {
 
     pub fn rust_log(&self) -> &str {
         &self.0.rust_log
-    }
-
-    pub fn mini_app_key(&self) -> &str {
-        &self.0.mini_app_key
     }
 
     pub fn app_url(&self) -> &str {
@@ -66,7 +61,6 @@ impl Env {
             tg_token: var("TG_TOKEN").context("TG_TOKEN is not set")?,
             mongo_url: var("MONGO_URL").context("MONGO_URL is not set")?,
             rust_log: var("RUST_LOG").context("RUST_LOG is not set")?,
-            mini_app_key: var("MINI_APP_KEY").context("MINI_APP_KEY is not set")?,
             app_url: var("APP_URL").context("APP_URL is not set")?,
             yookassa_token: var("YOOKASSA_TOKEN").context("YOOKASSA_TOKEN is not set")?,
             yookassa_shop_id: var("YOOKASSA_SHOP_ID").context("YOOKASSA_TOKEN is not set")?,
