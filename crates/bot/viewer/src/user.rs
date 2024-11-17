@@ -239,7 +239,7 @@ pub fn link_to_user(user: &User) -> String {
 }
 
 pub fn tg_link(tg: i64) -> String {
-    format!("[🔗Профиль](tg://user?id={})", tg)
+    format!(" [🔗Профиль](tg://user?id={}) ", tg)
 }
 
 pub fn fmt_come_from(from: ComeFrom) -> &'static str {
