@@ -5,6 +5,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use bot_viewer::user::fmt_come_from;
 use chrono::Local;
 use eyre::Result;
 use model::rights::Rule;
@@ -74,6 +75,19 @@ impl View for Stat {
             "Другие расходы:_{}_",
             escape(&stat.outcome.other.sum.to_string())
         )?;
+
+        writeln!(&mut text, "*Маркетинг*:")?;
+        stat.outcome
+            .marketing
+            .iter()
+            .try_for_each(|(come_from, sum)| {
+                writeln!(
+                    &mut text,
+                    "_{}_: _{}_",
+                    fmt_come_from(*come_from),
+                    escape(&sum.sum.to_string())
+                )
+            })?;
 
         let mut keymap = InlineKeyboardMarkup::default();
 

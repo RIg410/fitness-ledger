@@ -27,7 +27,7 @@ pub struct AggOutcome {
     pub rewards: Agg,
     pub marketing: HashMap<ComeFrom, Agg>,
     pub sub_rent: Agg,
-    
+
     pub other: Agg,
 }
 

@@ -73,8 +73,11 @@ impl View for StatisticsView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), Error> {
         ctx.ensure(Rule::ViewStatistics)?;
         let keymap = InlineKeyboardMarkup::default()
-            .append_row(Calldata::PrevMonth.btn_row("⬅️"))
-            .append_row(Calldata::NextMonth.btn_row("➡️"))
+            .append_row(vec![
+                Calldata::PrevMonth.button("⬅️"),
+                Calldata::NextMonth.button("➡️"),
+            ])
+            .append_row(Calldata::Full.btn_row("За все время"))
             .append_row(Calldata::Request.btn_row("Получить статистику📊"));
 
         let (from, to) = self.range.range();
