@@ -44,7 +44,7 @@ impl Task for SubscriptionBg {
                     .await?;
                 if expired {
                     log::info!("User {:?} has expired subscription", user);
-                    to_notify.push((user.tg_id, user.phone));
+                    to_notify.push((user.tg_id, user.name.first_name, user.phone));
                 }
             }
         }
@@ -58,14 +58,14 @@ impl Task for SubscriptionBg {
             .users
             .find_users_with_right(&mut session, Rule::ReceiveNotificationsAboutSubscriptions)
             .await?;
-        for (id, phone) in to_notify {
+        for (id, name, phone) in to_notify {
             for user in notification_listener.iter() {
                 self.bot
                     .send_notification_to(
                         ChatId(user.tg_id),
                         &format!(
                             "У пользователя {}\\({}\\) сгорел абонемент",
-                            tg_link(id),
+                            tg_link(id, Some(name.as_str())),
                             fmt_phone(&phone)
                         ),
                     )

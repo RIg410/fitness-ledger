@@ -228,7 +228,7 @@ pub fn fmt_user_type(user: &User) -> &str {
 
 pub fn link_to_user(user: &User) -> String {
     if user.tg_id > 0 {
-        tg_link(user.tg_id)
+        tg_link(user.tg_id, Some(&user.name.first_name))
     } else {
         user.name
             .tg_user_name
@@ -238,8 +238,8 @@ pub fn link_to_user(user: &User) -> String {
     }
 }
 
-pub fn tg_link(tg: i64) -> String {
-    format!(" [🔗Профиль](tg://user?id={}) ", tg)
+pub fn tg_link(tg: i64, name: Option<&str>) -> String {
+    format!(" [{}](tg://user?id={}) ", name.unwrap_or("профиль"), tg)
 }
 
 pub fn fmt_come_from(from: ComeFrom) -> &'static str {
