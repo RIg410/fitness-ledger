@@ -21,8 +21,9 @@ use in_out::{Op, TreasuryOp};
 use model::rights::Rule;
 use reward::SelectCouch;
 use serde::{Deserialize, Serialize};
-use stat::{Stat, StatRange};
+use stat::Stat;
 use teloxide::types::InlineKeyboardMarkup;
+use time::range::Range;
 
 #[derive(Default)]
 pub struct FinanceView;
@@ -77,11 +78,11 @@ impl View for FinanceView {
             }
             Callback::StatAll => {
                 ctx.ensure(Rule::ViewFinance)?;
-                Ok(Stat::new(StatRange::Full).into())
+                Ok(Stat::new(Range::Full).into())
             }
             Callback::StatByMonth => {
                 ctx.ensure(Rule::ViewFinance)?;
-                Ok(Stat::new(StatRange::Month(
+                Ok(Stat::new(Range::Month(
                     Local::now().with_day(1).unwrap_or_default(),
                 ))
                 .into())

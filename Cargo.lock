@@ -405,6 +405,7 @@ dependencies = [
  "storage",
  "strum",
  "teloxide",
+ "time 0.1.0",
 ]
 
 [[package]]
@@ -458,28 +459,7 @@ dependencies = [
  "storage",
  "strum",
  "teloxide",
-]
-
-[[package]]
-name = "bot-statistic"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bincode",
- "bot-core",
- "bot-viewer",
- "chrono",
- "eyre",
- "hex",
- "itertools 0.2.9",
- "ledger",
- "log",
- "model",
- "mongodb",
- "serde",
- "storage",
- "strum",
- "teloxide",
+ "time 0.1.0",
 ]
 
 [[package]]
@@ -610,7 +590,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
- "time",
+ "time 0.3.36",
  "uuid",
 ]
 
@@ -745,7 +725,7 @@ dependencies = [
  "percent-encoding",
  "rand",
  "subtle",
- "time",
+ "time 0.3.36",
  "version_check",
 ]
 
@@ -2005,6 +1985,7 @@ dependencies = [
  "rand",
  "serde",
  "strum",
+ "time 0.1.0",
 ]
 
 [[package]]
@@ -2837,7 +2818,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serde_with_macros 3.9.0",
- "time",
+ "time 0.3.36",
 ]
 
 [[package]]
@@ -2936,7 +2917,7 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "thiserror",
- "time",
+ "time 0.3.36",
 ]
 
 [[package]]
@@ -3253,6 +3234,13 @@ checksum = "8b9ef9bad013ada3808854ceac7b46812a6465ba368859a37e2100283d2d719c"
 dependencies = [
  "cfg-if",
  "once_cell",
+]
+
+[[package]]
+name = "time"
+version = "0.1.0"
+dependencies = [
+ "chrono",
 ]
 
 [[package]]
@@ -4041,7 +4029,7 @@ dependencies = [
  "rand",
  "sha1",
  "thiserror",
- "time",
+ "time 0.3.36",
  "zeroize",
  "zopfli",
  "zstd",

@@ -44,7 +44,7 @@ impl View for Marketing {
             }
             Calldata::Statistics => {
                 ctx.ensure(model::rights::Rule::ViewStatistics)?;
-                Ok(statistics::StatisticsView.into())
+                Ok(statistics::StatisticsView::default().into())
             }
         }
     }

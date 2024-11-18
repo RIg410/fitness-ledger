@@ -1,19 +1,13 @@
-use chrono::{DateTime, Datelike as _, Local, TimeZone as _, Utc, Weekday};
+use chrono::{DateTime, Datelike as _, Local, Utc, Weekday};
 use serde::{Deserialize, Serialize};
+use time::{at_midnight, at_mondays_midnight};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct WeekId(DateTime<Utc>);
 
 impl WeekId {
     pub fn new(date_time: DateTime<Local>) -> Self {
-        let date = date_time
-            .date_naive()
-            .week(Weekday::Mon)
-            .first_day()
-            .and_hms_opt(0, 0, 0)
-            .unwrap();
-        let local_date = Local.from_local_datetime(&date).earliest().unwrap();
-        WeekId(local_date.with_timezone(&Utc))
+        WeekId(at_mondays_midnight(date_time).with_timezone(&Utc))
     }
 
     pub fn local(&self) -> DateTime<Local> {
@@ -63,8 +57,7 @@ pub struct DayId(DateTime<Utc>);
 impl DayId {
     #[allow(deprecated)]
     pub fn new(date_time: DateTime<Local>) -> Self {
-        let date = date_time.date().and_hms(0, 0, 0);
-        DayId(date.with_timezone(&Utc))
+        DayId(at_midnight(date_time).with_timezone(&Utc))
     }
 
     /// Create DayId from Utc DateTime

@@ -1,20 +1,24 @@
 use async_trait::async_trait;
 use bot_core::{
-    callback_data::Calldata as _, calldata, context::Context, widget::{Jmp, View}
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    widget::{Jmp, View},
 };
-use chrono::{DateTime, Datelike, Duration, Local, Months, Timelike as _};
+use chrono::Local;
 use eyre::Result;
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
+use time::range::Range;
 
 pub struct Stat {
-    range: StatRange,
+    range: Range,
 }
 
 impl Stat {
-    pub fn new(range: StatRange) -> Self {
+    pub fn new(range: Range) -> Self {
         Self { range }
     }
 }
@@ -73,7 +77,7 @@ impl View for Stat {
 
         let mut keymap = InlineKeyboardMarkup::default();
 
-        if let StatRange::Month(date) = self.range {
+        if let Range::Month(date) = self.range {
             let mut row = Vec::new();
             row.push(Calldata::PrevMonth.button("🔙"));
 
@@ -105,52 +109,4 @@ impl View for Stat {
 enum Calldata {
     NextMonth,
     PrevMonth,
-}
-
-#[derive(Clone, Copy)]
-pub enum StatRange {
-    Full,
-    Month(DateTime<Local>),
-    Range(Option<DateTime<Local>>, Option<DateTime<Local>>),
-}
-
-impl StatRange {
-    pub fn range(&self) -> (Option<DateTime<Local>>, Option<DateTime<Local>>) {
-        match self {
-            StatRange::Full => (None, None),
-            StatRange::Month(date_time) => {
-                let from = date_time
-                    .with_day0(0)
-                    .and_then(|dt| dt.with_hour(0))
-                    .and_then(|dt| dt.with_minute(0))
-                    .and_then(|dt| dt.with_second(0));
-
-                let to = from
-                    .and_then(|dt| dt.checked_add_months(Months::new(1)))
-                    .map(|dt| dt - Duration::seconds(1));
-                (from, to)
-            }
-            StatRange::Range(from, to) => (*from, *to),
-        }
-    }
-
-    pub fn next_month(&self) -> Self {
-        match self {
-            StatRange::Full => StatRange::Month(Local::now()),
-            StatRange::Month(date) => {
-                StatRange::Month(date.checked_add_months(Months::new(1)).unwrap())
-            }
-            StatRange::Range(_, _) => StatRange::Full,
-        }
-    }
-
-    pub fn prev_month(&self) -> Self {
-        match self {
-            StatRange::Full => StatRange::Month(Local::now()),
-            StatRange::Month(date) => {
-                StatRange::Month(date.checked_sub_months(Months::new(1)).unwrap())
-            }
-            StatRange::Range(_, _) => StatRange::Full,
-        }
-    }
 }

@@ -1,14 +1,20 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use bot_core::{context::Context, widget::View};
+use bot_core::{
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    widget::{Jmp, View},
+};
 use bot_viewer::{
     day::{fmt_date, fmt_weekday},
     fmt_phone,
     user::fmt_come_from,
 };
-use chrono::Weekday;
+use chrono::{Local, Weekday};
 use eyre::Error;
+use eyre::Result;
 use itertools::Itertools;
 use model::{
     rights::Rule,
@@ -18,20 +24,24 @@ use model::{
     },
 };
 use mongodb::bson::oid::ObjectId;
+use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
+use time::range::Range;
 
-#[derive(Default)]
-pub struct StatisticsView;
+pub struct StatisticsView {
+    range: Range,
+}
 
-#[async_trait]
-impl View for StatisticsView {
-    fn name(&self) -> &'static str {
-        "StatisticsView"
+impl Default for StatisticsView {
+    fn default() -> Self {
+        Self {
+            range: Range::Month(Local::now()),
+        }
     }
+}
 
-    async fn show(&mut self, ctx: &mut Context) -> Result<(), Error> {
-        ctx.ensure(Rule::ViewStatistics)?;
-
+impl StatisticsView {
+    async fn print_statistics(&self, ctx: &mut Context) -> Result<()> {
         let stat = ctx
             .ledger
             .statistics
@@ -50,11 +60,72 @@ impl View for StatisticsView {
             .subscriptions(&mut ctx.session, None, None)
             .await?;
         subscriptions(ctx, &stat).await?;
-
-        ctx.edit_origin("📊Статистика там ☝️", InlineKeyboardMarkup::default())
-            .await?;
         Ok(())
     }
+}
+
+#[async_trait]
+impl View for StatisticsView {
+    fn name(&self) -> &'static str {
+        "StatisticsView"
+    }
+
+    async fn show(&mut self, ctx: &mut Context) -> Result<(), Error> {
+        ctx.ensure(Rule::ViewStatistics)?;
+        let keymap = InlineKeyboardMarkup::default()
+            .append_row(Calldata::PrevMonth.btn_row("⬅️"))
+            .append_row(Calldata::NextMonth.btn_row("➡️"))
+            .append_row(Calldata::Request.btn_row("Получить статистику📊"));
+
+        let (from, to) = self.range.range();
+        ctx.edit_origin(
+            &format!(
+                "📊Статистика с _{}_ по _{}_",
+                from.map(|f| f.format("%d\\.%m\\.%Y").to_string())
+                    .unwrap_or_else(|| "-".to_string()),
+                to.map(|f| f.format("%d\\.%m\\.%Y").to_string())
+                    .unwrap_or_else(|| "-".to_string())
+            ),
+            keymap,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
+        match calldata!(data) {
+            Calldata::NextMonth => {
+                if !self.range.is_month() {
+                    self.range = Range::Month(Local::now());
+                } else {
+                    self.range.next_month();
+                }
+            }
+            Calldata::PrevMonth => {
+                if !self.range.is_month() {
+                    self.range = Range::Month(Local::now());
+                } else {
+                    self.range.prev_month();
+                }
+            }
+            Calldata::Request => {
+                self.print_statistics(ctx).await?;
+            }
+            Calldata::Full => {
+                self.range = Range::Full;
+            }
+        }
+        Ok(Jmp::Stay)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+enum Calldata {
+    NextMonth,
+    PrevMonth,
+    Full,
+    Request,
 }
 
 async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Result<(), Error> {

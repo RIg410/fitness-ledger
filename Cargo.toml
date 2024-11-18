@@ -19,6 +19,7 @@ members = [
   "bins",
   "crates/env",
   "crates/payment/yookassa",
+  "crates/time",
 ]
 
 resolver = "2"
@@ -37,6 +38,7 @@ bot-trainigs = {path = "crates/bot/trainigs"}
 bot-users = {path = "crates/bot/users"}
 bot-viewer = {path = "crates/bot/viewer"}
 bot-views = {path = "crates/bot/views"}
+time = {path = "crates/time"}
 
 mini-app-main = {path = "crates/mini-app/main"}
 
