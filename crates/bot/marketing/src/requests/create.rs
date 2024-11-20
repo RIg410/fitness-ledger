@@ -75,21 +75,41 @@ impl View for SetComeFrom {
         Ok(())
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         let come_from: ComeFrom = calldata!(data);
-        Ok(Jmp::Next(
-            SetDescription {
-                phone: self.phone.clone(),
-                come_from,
-            }
-            .into(),
-        ))
+
+        let request = ctx
+            .ledger
+            .requests
+            .get_by_phone(&mut ctx.session, &sanitize_phone(&self.phone))
+            .await?;
+        if request.is_some() {
+            Ok(Jmp::Next(
+                SetDescription {
+                    phone: self.phone.clone(),
+                    come_from,
+                    first_name: None,
+                    last_name: None,
+                }
+                .into(),
+            ))
+        } else {
+            Ok(Jmp::Next(
+                SetName {
+                    phone: self.phone.clone(),
+                    come_from,
+                }
+                .into(),
+            ))
+        }
     }
 }
 
 pub struct SetDescription {
     phone: String,
     come_from: ComeFrom,
+    first_name: Option<String>,
+    last_name: Option<String>,
 }
 
 #[async_trait]
@@ -112,39 +132,22 @@ impl View for SetDescription {
         ctx.bot.delete_msg(msg.id).await?;
         let comment = msg.text().unwrap_or_default().to_string();
 
-        let request = ctx
-            .ledger
-            .requests
-            .get_by_phone(&mut ctx.session, &sanitize_phone(&self.phone))
-            .await?;
-        if request.is_some() {
-            Ok(Jmp::Next(
-                RemindLaterView {
-                    phone: self.phone.clone(),
-                    come_from: self.come_from,
-                    comment: comment.clone(),
-                    first_name: None,
-                    last_name: None,
-                }
-                .into(),
-            ))
-        } else {
-            Ok(Jmp::Next(
-                SetName {
-                    phone: self.phone.clone(),
-                    come_from: self.come_from,
-                    comment: comment.clone(),
-                }
-                .into(),
-            ))
-        }
+        Ok(Jmp::Next(
+            RemindLaterView {
+                phone: self.phone.clone(),
+                come_from: self.come_from,
+                comment: comment,
+                first_name: self.first_name.clone(),
+                last_name: self.last_name.clone(),
+            }
+            .into(),
+        ))
     }
 }
 
 pub struct SetName {
     phone: String,
     come_from: ComeFrom,
-    comment: String,
 }
 
 #[async_trait]
@@ -170,10 +173,9 @@ impl View for SetName {
         let first_name = parts.get(0).map(|s| s.to_string());
         let last_name = parts.get(1).map(|s| s.to_string());
         Ok(Jmp::Next(
-            RemindLaterView {
+            SetDescription {
                 phone: self.phone.clone(),
                 come_from: self.come_from,
-                comment: self.comment.clone(),
                 first_name,
                 last_name,
             }
@@ -220,7 +222,7 @@ impl View for RemindLaterView {
                 .into(),
             )),
             CalldataYesNo::No => Ok(Jmp::Next(
-                Comfirm {
+                Confirm {
                     phone: self.phone.clone(),
                     come_from: self.come_from,
                     comment: self.comment.clone(),
@@ -293,7 +295,7 @@ impl View for SetRemindLater {
             .and_then(|dt| Local.from_local_datetime(&dt).single());
         if let Some(dt) = dt {
             Ok(Jmp::Next(
-                Comfirm {
+                Confirm {
                     phone: self.phone.clone(),
                     come_from: self.come_from,
                     comment: self.comment.clone(),
@@ -307,7 +309,9 @@ impl View for SetRemindLater {
                 .into(),
             ))
         } else {
-            ctx.bot.send_notification("Введите корректную дату *дд\\.мм\\.гггг чч\\:мм*").await?;
+            ctx.bot
+                .send_notification("Введите корректную дату *дд\\.мм\\.гггг чч\\:мм*")
+                .await?;
             Ok(Jmp::Stay)
         }
     }
@@ -318,7 +322,7 @@ impl View for SetRemindLater {
         let remind_later = now + chrono::Duration::seconds(remind_later.remind_later as i64);
 
         Ok(Jmp::Next(
-            Comfirm {
+            Confirm {
                 phone: self.phone.clone(),
                 come_from: self.come_from,
                 comment: self.comment.clone(),
@@ -347,7 +351,7 @@ impl RememberLaterCalldata {
     }
 }
 
-pub struct Comfirm {
+pub struct Confirm {
     phone: String,
     come_from: ComeFrom,
     comment: String,
@@ -357,9 +361,9 @@ pub struct Comfirm {
 }
 
 #[async_trait]
-impl View for Comfirm {
+impl View for Confirm {
     fn name(&self) -> &'static str {
-        "Comfirm"
+        "Confirm"
     }
 
     async fn show(&mut self, ctx: &mut bot_core::context::Context) -> Result<(), eyre::Error> {

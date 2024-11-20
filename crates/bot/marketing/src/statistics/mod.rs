@@ -10,7 +10,7 @@ use bot_core::{
 use bot_viewer::{
     day::{fmt_date, fmt_weekday},
     fmt_phone,
-    user::fmt_come_from,
+    user::{fmt_come_from, link_to_user},
 };
 use chrono::{Local, Weekday};
 use eyre::Error;
@@ -41,23 +41,102 @@ impl Default for StatisticsView {
 }
 
 impl StatisticsView {
-    async fn print_statistics(&self, ctx: &mut Context) -> Result<()> {
+    async fn print_training_statistics(&self, ctx: &mut Context) -> Result<()> {
+        let (from, to) = self.range.range();
         let stat = ctx
             .ledger
             .statistics
-            .calendar(&mut ctx.session, None, None)
+            .calendar(&mut ctx.session, from, to)
             .await?;
         ctx.send_notification("📊Статистика посещений:").await?;
         by_program(ctx, stat.by_program).await?;
         by_weekday(ctx, stat.by_weekday).await?;
         by_instructor(ctx, stat.by_instructor).await?;
         by_time_slot(ctx, stat.by_time_slot).await?;
-        user_stat(ctx, stat.users).await?;
+        Ok(())
+    }
+    async fn print_top_clients(&self, ctx: &mut Context) -> Result<()> {
+        let (from, to) = self.range.range();
 
         let stat = ctx
             .ledger
             .statistics
-            .subscriptions(&mut ctx.session, None, None)
+            .calendar(&mut ctx.session, from, to)
+            .await?;
+        ctx.send_notification("📊Статистика посещений:").await?;
+        user_stat(ctx, stat.users).await?;
+        Ok(())
+    }
+
+    async fn print_clients_with_only_test_sub(&self, ctx: &mut Context) -> Result<()> {
+        let (from, to) = self.range.range();
+
+        let stat = ctx
+            .ledger
+            .statistics
+            .subscriptions(&mut ctx.session, from, to)
+            .await?;
+        let mut msg = format!(
+            "📊Клиенты с пробными занятиями но без абонементов: {}",
+            stat.people_buys_only_test_sub.len()
+        );
+        if stat.people_buys_only_test_sub.len() > 0 {
+            for id in &stat.people_buys_only_test_sub {
+                let user = ctx.ledger.users.get(&mut ctx.session, *id).await?;
+                if let Some(user) = user {
+                    msg.push_str(&format!(
+                        "\n👤{} {}",
+                        link_to_user(&user),
+                        fmt_phone(&user.phone)
+                    ));
+                } else {
+                    msg.push_str(&format!("\n👤{}", id));
+                }
+            }
+        }
+        ctx.send_notification(&msg).await?;
+
+        Ok(())
+    }
+
+    async fn print_clients_with_no_subs(&self, ctx: &mut Context) -> Result<()> {
+        let (from, to) = self.range.range();
+
+        let stat = ctx
+            .ledger
+            .statistics
+            .subscriptions(&mut ctx.session, from, to)
+            .await?;
+
+        let mut msg = format!(
+            "\n\nКлиенты без абонементов {}:",
+            stat.people_without_subs.len()
+        );
+        if stat.people_without_subs.len() > 0 {
+            for id in &stat.people_without_subs {
+                let user = ctx.ledger.users.get(&mut ctx.session, *id).await?;
+                if let Some(user) = user {
+                    msg.push_str(&format!(
+                        "\n👤{} {}",
+                        link_to_user(&user),
+                        fmt_phone(&user.phone)
+                    ));
+                } else {
+                    msg.push_str(&format!("\n👤{}", id));
+                }
+            }
+        }
+        ctx.send_notification(&msg).await?;
+
+        Ok(())
+    }
+    async fn print_subscription_statistics(&self, ctx: &mut Context) -> Result<()> {
+        let (from, to) = self.range.range();
+
+        let stat = ctx
+            .ledger
+            .statistics
+            .subscriptions(&mut ctx.session, from, to)
             .await?;
         subscriptions(ctx, &stat).await?;
         Ok(())
@@ -74,49 +153,71 @@ impl View for StatisticsView {
         ctx.ensure(Rule::ViewStatistics)?;
         let keymap = InlineKeyboardMarkup::default()
             .append_row(vec![
-                Calldata::PrevMonth.button("⬅️"),
-                Calldata::NextMonth.button("➡️"),
+                Calldata::PrevMonth.button("🔙"),
+                Calldata::Full.button("За все время"),
+                Calldata::NextMonth.button("🔜"),
             ])
-            .append_row(Calldata::Full.btn_row("За все время"))
-            .append_row(Calldata::Request.btn_row("Получить статистику📊"));
+            .append_row(Calldata::TrainingStat.btn_row("Статистика по тренировкам"))
+            .append_row(Calldata::ClientsTop.btn_row("ТОП девочек"))
+            .append_row(
+                Calldata::ClientsWithOnlyTestSub.btn_row("Клиенты с пробными но без абонементов"),
+            )
+            .append_row(Calldata::ClientsWithNoSubs.btn_row("Клиенты без абонементов"))
+            .append_row(Calldata::SubscriptionStatistics.btn_row("Статистика по абонементам"));
 
         let (from, to) = self.range.range();
-        ctx.edit_origin(
-            &format!(
+
+        let msg = match self.range {
+            Range::Full => "📊Статистика за все время".to_string(),
+            _ => format!(
                 "📊Статистика с _{}_ по _{}_",
                 from.map(|f| f.format("%d\\.%m\\.%Y").to_string())
-                    .unwrap_or_else(|| "-".to_string()),
+                    .unwrap_or_else(|| "\\-".to_string()),
                 to.map(|f| f.format("%d\\.%m\\.%Y").to_string())
-                    .unwrap_or_else(|| "-".to_string())
+                    .unwrap_or_else(|| "\\-".to_string())
             ),
-            keymap,
-        )
-        .await?;
+        };
+
+        ctx.edit_origin(&msg, keymap).await?;
 
         Ok(())
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
+        ctx.ensure(Rule::ViewStatistics)?;
+
         match calldata!(data) {
             Calldata::NextMonth => {
                 if !self.range.is_month() {
                     self.range = Range::Month(Local::now());
                 } else {
-                    self.range.next_month();
+                    self.range = __self.range.next_month();
                 }
             }
             Calldata::PrevMonth => {
                 if !self.range.is_month() {
                     self.range = Range::Month(Local::now());
                 } else {
-                    self.range.prev_month();
+                    self.range = __self.range.prev_month();
                 }
-            }
-            Calldata::Request => {
-                self.print_statistics(ctx).await?;
             }
             Calldata::Full => {
                 self.range = Range::Full;
+            }
+            Calldata::TrainingStat => {
+                self.print_training_statistics(ctx).await?;
+            }
+            Calldata::ClientsTop => {
+                self.print_top_clients(ctx).await?;
+            }
+            Calldata::ClientsWithOnlyTestSub => {
+                self.print_clients_with_only_test_sub(ctx).await?;
+            }
+            Calldata::ClientsWithNoSubs => {
+                self.print_clients_with_no_subs(ctx).await?;
+            }
+            Calldata::SubscriptionStatistics => {
+                self.print_subscription_statistics(ctx).await?;
             }
         }
         Ok(Jmp::Stay)
@@ -128,7 +229,11 @@ enum Calldata {
     NextMonth,
     PrevMonth,
     Full,
-    Request,
+    TrainingStat,
+    ClientsTop,
+    ClientsWithOnlyTestSub,
+    ClientsWithNoSubs,
+    SubscriptionStatistics,
 }
 
 async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Result<(), Error> {
@@ -159,25 +264,6 @@ async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Resu
         stat.test_subs_count, stat.users_buy_test_sub_and_stay,
     ));
 
-    if stat.unresolved_presells > 0 {
-        msg.push_str(&format!(
-            "\n\nКупили пробное занятия но не зашли в бот:*{}*",
-            stat.unresolved_presells
-        ));
-    }
-
-    if stat.people_buys_only_test_sub.len() > 0 {
-        msg.push_str("\n\nКупили только пробное занятие:");
-        for id in &stat.people_buys_only_test_sub {
-            let user = ctx.ledger.users.get(&mut ctx.session, *id).await?;
-            if let Some(user) = user {
-                msg.push_str(&format!("\n👤{}", fmt_phone(&user.phone)));
-            } else {
-                msg.push_str(&format!("\n👤{}", id));
-            }
-        }
-    }
-
     if stat.come_from.len() > 0 {
         msg.push_str("\n\nОткуда пришли:");
         for (come_from, stat) in &stat.come_from {
@@ -189,21 +275,6 @@ async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Resu
                 stat.buy_test_subs,
                 stat.buy_subs,
             ));
-        }
-    }
-
-    if stat.people_without_subs.len() > 0 {
-        msg.push_str(&format!(
-            "\n\nКлиенты без абонементов {}:",
-            stat.people_without_subs.len()
-        ));
-        for id in &stat.people_without_subs {
-            let user = ctx.ledger.users.get(&mut ctx.session, *id).await?;
-            if let Some(user) = user {
-                msg.push_str(&format!("\n👤{}", fmt_phone(&user.phone)));
-            } else {
-                msg.push_str(&format!("\n👤{}", id));
-            }
         }
     }
 
