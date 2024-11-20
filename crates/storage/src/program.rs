@@ -39,7 +39,7 @@ impl ProgramStore {
         only_visible: bool,
     ) -> Result<Vec<Program>, Error> {
         let filter = if only_visible {
-            doc! { "visible": true }
+            doc! { "$or": [ { "visible": true }, { "visible": { "$exists": false } } ] }
         } else {
             doc! {}
         };
