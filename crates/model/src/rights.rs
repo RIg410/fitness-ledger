@@ -129,6 +129,9 @@ pub enum Rule {
     // experimental
     MiniApp,
     BuySubscription,
+
+    // program
+    ViewHiddenPrograms,
 }
 
 impl Rule {

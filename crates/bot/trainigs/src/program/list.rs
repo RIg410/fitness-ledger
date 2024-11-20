@@ -20,7 +20,6 @@ pub struct ProgramList {
     preset: Option<ScheduleTrainingPreset>,
 }
 
-
 impl ProgramList {
     pub fn new(preset: ScheduleTrainingPreset) -> Self {
         Self {
@@ -59,12 +58,22 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup), Err
     let msg = "Тренировочные программы: 🤸🏼".to_string();
     let mut keymap = InlineKeyboardMarkup::default();
 
-    let trainings = ctx.ledger.programs.find(&mut ctx.session, None).await?;
+    let can_see_hidden_program = ctx.has_right(Rule::ViewHiddenPrograms);
+    let trainings = ctx
+        .ledger
+        .programs
+        .get_all(&mut ctx.session, !can_see_hidden_program)
+        .await?;
 
     for training in trainings {
+        let name = if training.visible {
+            training.name.clone()
+        } else {
+            format!("🔒 {}", training.name)
+        };
         keymap
             .inline_keyboard
-            .push(Callback::SelectTraining(training.id.bytes()).btn_row(training.name));
+            .push(Callback::SelectTraining(training.id.bytes()).btn_row(name));
     }
 
     if ctx.has_right(Rule::CreateTraining) {

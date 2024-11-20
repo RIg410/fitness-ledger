@@ -36,6 +36,7 @@ impl Programs {
             capacity,
             version: 0,
             tp,
+            visible: true,
         };
         let training = self.get_by_name(session, &proto.name).await?;
         if training.is_some() {

@@ -33,8 +33,18 @@ impl ProgramStore {
             .await?)
     }
 
-    pub async fn get_all(&self, session: &mut Session) -> Result<Vec<Program>, Error> {
-        let mut cursor = self.store.find(doc! {}).session(&mut *session).await?;
+    pub async fn get_all(
+        &self,
+        session: &mut Session,
+        only_visible: bool,
+    ) -> Result<Vec<Program>, Error> {
+        let filter = if only_visible {
+            doc! { "visible": true }
+        } else {
+            doc! {}
+        };
+
+        let mut cursor = self.store.find(filter).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 
@@ -87,6 +97,22 @@ impl ProgramStore {
     pub async fn delete(&self, session: &mut Session, id: &ObjectId) -> Result<(), Error> {
         self.store
             .delete_one(doc! { "_id": id })
+            .session(&mut *session)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn set_visible(
+        &self,
+        session: &mut Session,
+        id: &ObjectId,
+        visible: bool,
+    ) -> Result<(), Error> {
+        self.store
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$set": { "visible": visible }, "$inc" : { "version": 1 } },
+            )
             .session(&mut *session)
             .await?;
         Ok(())

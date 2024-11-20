@@ -13,6 +13,12 @@ pub struct Program {
     pub version: u64,
     #[serde(default)]
     pub tp: TrainingType,
+    #[serde(default = "default_visible")]
+    pub visible: bool,
+}
+
+fn default_visible() -> bool {
+    true
 }
 
 impl Default for Program {
@@ -25,6 +31,7 @@ impl Default for Program {
             capacity: 0,
             version: 0,
             tp: TrainingType::Group { is_free: false },
+            visible: true,
         }
     }
 }

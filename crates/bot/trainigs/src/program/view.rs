@@ -55,6 +55,17 @@ impl ProgramView {
         ctx.ensure(Rule::EditTraining)?;
         Ok(EditProgram::new(self.id, super::edit::EditType::Description).into())
     }
+
+    async fn hide(&mut self, ctx: &mut Context, hide: bool) -> Result<Jmp> {
+        ctx.ensure(Rule::EditTraining)?;
+
+        ctx.ledger
+            .programs
+            .set_visible(&mut ctx.session, &self.id, !hide)
+            .await?;
+
+        Ok(Jmp::Stay)
+    }
 }
 
 #[async_trait]
@@ -83,6 +94,7 @@ impl View for ProgramView {
             Callback::EditDuration => self.edit_duration(ctx).await,
             Callback::EditName => self.edit_name(ctx).await,
             Callback::EditDescription => self.edit_description(ctx).await,
+            Callback::Hide(visible) => self.hide(ctx, visible).await,
         }
     }
 }
@@ -115,6 +127,12 @@ async fn render(ctx: &Context, training: &Program) -> Result<(String, InlineKeyb
         keymap.push(vec![Callback::EditCapacity.button("👥Изменить вместимость")]);
         keymap.push(vec![Callback::EditName.button("📝Изменить название")]);
         keymap.push(vec![Callback::EditDescription.button("📝Изменить описание")]);
+
+        if training.visible {
+            keymap.push(vec![Callback::Hide(true).button("🔒Скрыть")]);
+        } else {
+            keymap.push(vec![Callback::Hide(false).button("🔓Показать")]);
+        }
     }
 
     if !ctx.me.is_couch() {
@@ -132,4 +150,5 @@ pub enum Callback {
     EditCapacity,
     EditName,
     EditDescription,
+    Hide(bool),
 }
