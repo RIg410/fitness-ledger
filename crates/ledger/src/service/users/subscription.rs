@@ -8,6 +8,27 @@ use tx_macro::tx;
 
 impl Users {
     #[tx]
+    pub async fn extend_subscriptions(&self, session: &mut Session, days: u32) -> Result<()> {
+        info!("Extending subscriptions");
+        let mut cursor = self.store.find_all(session, None, None).await?;
+        while let Some(user) = cursor.next(session).await {
+            let mut user = user?;
+            
+            for sub in user.subscriptions.iter_mut() {
+                if let model::subscription::Status::Active {
+                    start_date: _,
+                    end_date,
+                } = &mut sub.status
+                {
+                    *end_date = *end_date + chrono::Duration::days(days as i64);
+                }
+            }
+            self.store.update(session, &mut user).await?;
+        }
+        Ok(())
+    }
+
+    #[tx]
     pub async fn change_subscription_balance(
         &self,
         session: &mut Session,

@@ -10,6 +10,9 @@ use model::rights::Rule;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
+mod subscription;
+
+
 #[derive(Default)]
 pub struct SystemView {}
 
@@ -26,6 +29,7 @@ impl View for SystemView {
         ctx.ensure(Rule::System)?;
         let mut keymap = InlineKeyboardMarkup::default();
         keymap = keymap.append_row((Calldata::Dump).btn_row("🗑️ Dump"));
+        keymap = keymap.append_row((Calldata::ExtendSubscription).btn_row("🔄 Extend subscription"));
         ctx.edit_origin("🔧System", keymap).await?;
         Ok(())
     }
@@ -37,6 +41,9 @@ impl View for SystemView {
                 let dump_file = ctx.ledger.backup.make_backup(&mut ctx.session).await?;
                 ctx.send_document(dump_file, "dump.zip").await?;
             }
+            Calldata::ExtendSubscription => {
+                
+            }
         }
         Ok(Jmp::Stay)
     }
@@ -45,4 +52,5 @@ impl View for SystemView {
 #[derive(Serialize, Deserialize)]
 enum Calldata {
     Dump,
+    ExtendSubscription,
 }
