@@ -32,8 +32,16 @@ impl Task for SubscriptionBg {
 
         while let Some(user) = users.next(&mut session).await {
             let user = user?;
-            let expired = user
-                .subscriptions
+
+            let payer = if let Some(payer) = user.payer().ok() {
+                payer
+            } else {
+                log::warn!("User {:?} has no payer", user);
+                continue;
+            };
+
+            let expired = payer
+                .subscriptions()
                 .iter()
                 .any(|sub| sub.is_expired(Utc::now()));
             if expired {

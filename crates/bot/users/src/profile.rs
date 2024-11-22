@@ -158,11 +158,11 @@ async fn render_user_profile(
     let (msg, user, extension) = render_profile_msg(ctx, id).await?;
 
     let mut keymap = InlineKeyboardMarkup::default();
-    if (ctx.has_right(Rule::FreezeUsers)
-        || ctx.me.tg_id == user.tg_id
-        || !user.subscriptions.is_empty())
-        && user.freeze.is_none()
-        && user.freeze_days != 0
+    if ctx.has_right(Rule::FreezeUsers)
+        || (ctx.me.tg_id == user.tg_id
+            && user.payer()?.has_subscription()
+            && user.freeze.is_none()
+            && user.freeze_days != 0)
     {
         keymap = keymap.append_row(Callback::Freeze.btn_row("Заморозить ❄"));
     }

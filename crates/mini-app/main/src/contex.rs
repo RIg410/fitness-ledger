@@ -45,12 +45,13 @@ impl ContextBuilder {
         let mut session = self.ledger.db.start_session().await?;
 
         let user = self.ledger.users.get_by_tg_id(&mut session, tg_id).await?;
-        let user = if let Some(user) = user {
+        let mut user = if let Some(user) = user {
             user
         } else {
             sleep(std::time::Duration::from_secs(1)).await;
             return Err(eyre::eyre!("User not found"));
         };
+        self.ledger.users.resolve_family(&mut session, &mut user).await?;
 
         session.set_actor(user.id);
 

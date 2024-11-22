@@ -2,7 +2,10 @@ use crate::bot::TgBot;
 use ledger::Ledger;
 use model::{rights::Rule, session::Session, user::User};
 use mongodb::bson::oid::ObjectId;
-use std::{ops::{Deref, DerefMut}, sync::Arc};
+use std::{
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
 
 pub struct Context {
     pub bot: TgBot,
@@ -54,13 +57,16 @@ impl Context {
     }
 
     pub async fn reload_user(&mut self) -> Result<(), eyre::Error> {
-        let user = self
+        let mut user = self
             .ledger
             .users
             .get(&mut self.session, self.me.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Failed to load existing user:{}", self.me.id))?;
-
+        self.ledger
+            .users
+            .resolve_family(&mut self.session, &mut user)
+            .await?;
         self.me = user;
         Ok(())
     }

@@ -11,7 +11,8 @@ use model::statistics::marketing::ComeFrom;
 use model::training::{Training, TrainingStatus};
 use model::treasury::subs::UserId;
 use model::treasury::Sell;
-use model::user::{sanitize_phone, FindFor, User};
+use model::user::family::FindFor;
+use model::user::{sanitize_phone, User};
 use mongodb::bson::oid::ObjectId;
 use service::backup::Backup;
 use service::calendar::{Calendar, SignOutError};
@@ -53,7 +54,7 @@ impl Ledger {
         let history = history::History::new(storage.history.clone());
         let programs = Programs::new(storage.programs.clone());
 
-        let users = Users::new(storage.users,  history.clone());
+        let users = Users::new(storage.users, history.clone());
         let calendar = Calendar::new(storage.calendar, users.clone(), programs.clone());
 
         let treasury = Treasury::new(storage.treasury, history.clone());
@@ -80,11 +81,13 @@ impl Ledger {
     }
 
     pub async fn get_user(&self, session: &mut Session, id: ObjectId) -> Result<User> {
-        self.users
+        let mut user = self.users
             .get(session, id)
             .await
             .context("get_user")?
-            .ok_or_else(|| eyre!("User not found:{:?}", id))
+            .ok_or_else(|| eyre!("User not found:{:?}", id))?;
+        self.users.resolve_family(session, &mut user).await?;
+        Ok(user)
     }
 
     #[tx]
@@ -146,18 +149,21 @@ impl Ledger {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         let user_id = user.id;
+        self.users.resolve_family(session, &mut user).await?;
+        let mut payer = user.payer_mut()?;
+
         if !is_active {
             let users_training = self
                 .calendar
                 .find_trainings(
                     session,
-                    model::training::Filter::Client(user.id),
+                    model::training::Filter::Client(user_id),
                     usize::MAX,
                     0,
                 )
                 .await?;
             for training in users_training {
-                if !training.clients.contains(&user.id) {
+                if !training.clients.contains(&user_id) {
                     continue;
                 }
 
@@ -167,16 +173,16 @@ impl Ledger {
                 }
 
                 if training.tp.is_not_free() {
-                    let sub = user
+                    let sub = payer
                         .find_subscription(FindFor::Unlock, &training)
                         .ok_or_else(|| eyre!("User not found"))?;
                     sub.unlock_balance();
                     self.calendar
-                        .sign_out(session, training.start_at, user.id)
+                        .sign_out(session, training.start_at, user_id)
                         .await?;
                 }
             }
-            self.users.update(session, &mut user).await?;
+            self.users.update(session, &mut payer).await?;
         }
         self.history.block_user(session, user_id, is_active).await?;
         self.users.block_user(session, user_id, is_active).await?;
@@ -219,19 +225,23 @@ impl Ledger {
             .await?
             .ok_or_else(|| SignUpError::UserNotFound)?;
         let user_id = user.id;
+
         if user.couch.is_some() {
             return Err(SignUpError::UserIsCouch);
         }
 
+        self.users.resolve_family(session, &mut user).await?;
+        let mut payer = user.payer_mut()?;
+
         if training.tp.is_not_free() {
-            let subscription = user
+            let subscription = payer
                 .find_subscription(FindFor::Lock, &training)
                 .ok_or_else(|| SignUpError::NotEnoughBalance)?;
 
             if !subscription.lock_balance(&training) {
                 return Err(SignUpError::NotEnoughBalance);
             }
-            self.users.update(session, &mut user).await?;
+            self.users.update(session, &mut payer).await?;
         }
 
         self.calendar
@@ -290,17 +300,20 @@ impl Ledger {
             .get(session, client)
             .await?
             .ok_or_else(|| SignOutError::UserNotFound)?;
+        self.users.resolve_family(session, &mut user).await?;
+
         let user_id = user.id;
+        let mut payer = user.payer_mut()?;
 
         if training.tp.is_not_free() {
-            let sub = user
+            let sub = payer
                 .find_subscription(FindFor::Unlock, training)
                 .ok_or_else(|| SignOutError::NotEnoughReservedBalance)?;
 
             if !sub.unlock_balance() {
                 return Err(SignOutError::NotEnoughReservedBalance);
             }
-            self.users.update(session, &mut user).await?;
+            self.users.update(session, &mut payer).await?;
         }
 
         self.calendar

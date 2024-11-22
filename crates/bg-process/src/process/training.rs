@@ -6,7 +6,7 @@ use eyre::{eyre, Error, Result};
 use log::{error, info};
 use model::{
     session::Session,
-    training::{Statistics, Training, TrainingStatus},
+    training::{Statistics, Training, TrainingStatus}, user::family::FindFor,
 };
 use tx_macro::tx;
 
@@ -69,11 +69,10 @@ impl TriningBg {
             for client in &training.clients {
                 let mut user = self
                     .ledger
-                    .users
-                    .get(session, *client)
-                    .await?
-                    .ok_or_else(|| eyre!("User not found"))?;
-                if let Some(sub) = user.find_subscription(model::user::FindFor::Charge, &training) {
+                    .get_user(session, *client)
+                    .await?;
+                let mut payer = user.payer_mut()?;
+                if let Some(sub) = payer.find_subscription(FindFor::Charge, &training) {
                     if !sub.change_locked_balance() {
                         return Err(eyre!("Not enough balance:{}", user.id));
                     }
@@ -111,25 +110,6 @@ impl TriningBg {
     #[tx]
     async fn process_canceled(&self, session: &mut Session, training: Training) -> Result<()> {
         info!("Finalize canceled training:{:?}", training);
-        if training.tp.is_not_free() {
-            for client in &training.clients {
-                let mut user = self
-                    .ledger
-                    .users
-                    .get(session, *client)
-                    .await?
-                    .ok_or_else(|| eyre!("User not found"))?;
-                if let Some(sub) = user.find_subscription(model::user::FindFor::Unlock, &training) {
-                    if !sub.change_locked_balance() {
-                        return Err(eyre!("Not enough locked balance:{}", user.id));
-                    }
-                } else {
-                    return Err(eyre!("Subscription not found for user:{}", user.id));
-                }
-
-                self.ledger.users.update(session, &mut user).await?;
-            }
-        }
 
         self.ledger
             .calendar

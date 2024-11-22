@@ -27,7 +27,7 @@ async fn build_context(
         .start_session()
         .await
         .map_err(|err| (err, bot.clone()))?;
-    let (user, real) = if let Some(user) = ledger
+    let (mut user, real) = if let Some(user) = ledger
         .users
         .get_by_tg_id(&mut session, tg_id.0)
         .await
@@ -35,8 +35,13 @@ async fn build_context(
     {
         (user, true)
     } else {
-        (User::new(tg_id.0), false)
+        (User::with_tg_id(tg_id.0), false)
     };
+    ledger
+        .users
+        .resolve_family(&mut session, &mut user)
+        .await
+        .map_err(|err| (err, bot.clone()))?;
     session.set_actor(user.id);
     let state = state_holder.get_state(tg_id).unwrap_or_default();
 
@@ -55,12 +60,7 @@ async fn build_context(
         }
     };
 
-    let tg_bot = TgBot::new(
-        bot,
-        state_holder.tokens(),
-        origin,
-        env
-    );
+    let tg_bot = TgBot::new(bot, state_holder.tokens(), origin, env);
 
     Ok((
         Context::new(tg_bot, user, ledger, session, real),

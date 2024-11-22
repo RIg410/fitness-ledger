@@ -59,23 +59,7 @@ impl Users {
             self.store.set_name(session, user.id, name).await?;
             Ok(user.id)
         } else {
-            let user = User {
-                tg_id,
-                name: name.clone(),
-                rights,
-                phone: phone.clone(),
-                is_active: true,
-                id: ObjectId::new(),
-                subscriptions: vec![],
-                freeze_days: 0,
-                freeze: None,
-                version: 0,
-                created_at: Utc::now(),
-                couch: None,
-                settings: Default::default(),
-                come_from,
-                family: Default::default(),
-            };
+            let user = User::new(tg_id, name.clone(), rights, phone.clone(), come_from);
             let id = user.id;
             self.store.insert(session, user).await?;
             self.logs.create_user(session, name, phone).await?;
@@ -117,23 +101,13 @@ impl Users {
             last_name,
         };
 
-        let user = User {
-            tg_id: -1,
-            name: user_name.clone(),
-            rights: Rights::customer(),
-            phone: phone.clone(),
-            is_active: true,
-            id: ObjectId::new(),
-            subscriptions: vec![],
-            freeze_days: 0,
-            freeze: None,
-            version: 0,
-            created_at: Utc::now(),
-            couch: None,
-            settings: Default::default(),
+        let user = User::new(
+            -1,
+            user_name.clone(),
+            Rights::customer(),
+            phone.clone(),
             come_from,
-            family: Default::default(),
-        };
+        );
         self.store.insert(session, user.clone()).await?;
         self.logs.create_user(session, user_name, phone).await?;
         self.store
@@ -209,14 +183,20 @@ impl Users {
     }
 
     #[tx]
-    pub async fn freeze(&self, session: &mut Session, id: ObjectId, days: u32) -> Result<()> {
+    pub async fn freeze(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        days: u32,
+        force: bool,
+    ) -> Result<()> {
         let user = self
             .store
             .get(session, id)
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
-        if user.freeze_days < days {
+        if !force && user.freeze_days < days {
             bail!("Not enough days.");
         }
         if user.freeze.is_some() {
@@ -224,7 +204,7 @@ impl Users {
         }
 
         self.logs.freeze(session, user.id, days).await?;
-        self.store.freeze(session, id, days).await?;
+        self.store.freeze(session, id, days, force).await?;
         Ok(())
     }
 

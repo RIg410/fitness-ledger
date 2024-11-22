@@ -13,6 +13,7 @@ use eyre::{bail, Result};
 use model::{
     rights::Rule,
     training::{Training, TrainingStatus},
+    user::family::FindFor,
 };
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -96,10 +97,8 @@ impl TrainingView {
         }
 
         if training.tp.is_not_free() {
-            if let Some(sub) = ctx
-                .me
-                .find_subscription(model::user::FindFor::Lock, &training)
-            {
+            let mut payer = ctx.me.payer_mut()?;
+            if let Some(sub) = payer.find_subscription(FindFor::Lock, &training) {
                 if sub.balance < 1 {
                     ctx.send_msg("В абонементе нет занятий🥺").await?;
                     return Ok(Jmp::Stay);
@@ -130,7 +129,8 @@ impl TrainingView {
         );
 
         if training.tp.is_not_free() {
-            let balance = ctx.me.available_balance_for_training(&training);
+            let payer = ctx.me.payer()?;
+            let balance = payer.available_balance_for_training(&training);
             if balance <= 1 {
                 msg.push_str("Ваш абонемент заканчивается🥺");
                 if let Ok(users) = ctx

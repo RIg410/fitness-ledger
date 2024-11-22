@@ -13,8 +13,14 @@ impl Users {
         let mut cursor = self.store.find_all(session, None, None).await?;
         while let Some(user) = cursor.next(session).await {
             let mut user = user?;
-            
-            for sub in user.subscriptions.iter_mut() {
+
+            let mut payer = if let Some(payer) = user.payer_mut().ok() {
+                payer
+            } else {
+                continue;
+            };
+
+            for sub in payer.subscriptions_mut() {
                 if let model::subscription::Status::Active {
                     start_date: _,
                     end_date,
@@ -23,7 +29,7 @@ impl Users {
                     *end_date = *end_date + chrono::Duration::days(days as i64);
                 }
             }
-            self.store.update(session, &mut user).await?;
+            self.store.update(session, &mut payer).await?;
         }
         Ok(())
     }
@@ -43,7 +49,11 @@ impl Users {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
-        user.subscriptions
+        self.resolve_family(session, &mut user).await?;
+        let mut payer = user.payer_mut()?;
+
+        payer
+            .subscriptions_mut()
             .iter_mut()
             .find(|sub| sub.id == id)
             .map(|sub| {
@@ -53,7 +63,7 @@ impl Users {
                     sub.balance = sub.balance.saturating_sub(delta.abs() as u32);
                 }
             });
-        self.store.update(session, &mut user).await?;
+        self.store.update(session, &mut payer).await?;
         Ok(())
     }
 
@@ -72,7 +82,11 @@ impl Users {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
-        user.subscriptions
+        self.resolve_family(session, &mut user).await?;
+        let mut payer = user.payer_mut()?;
+
+        payer
+            .subscriptions_mut()
             .iter_mut()
             .find(|sub| sub.id == id)
             .map(|sub| {
@@ -88,7 +102,7 @@ impl Users {
                     }
                 }
             });
-        self.store.update(session, &mut user).await?;
+        self.store.update(session, &mut payer).await?;
         Ok(())
     }
 
@@ -100,18 +114,16 @@ impl Users {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
+        let mut payer = if let Some(payer) = user.payer_mut().ok() {
+            payer
+        } else {
+            log::warn!("User {:?} has no payer", user);
+            return Err(eyre!("User has no payer"));
+        };
+
         let now = Utc::now();
-        let (expired, actual) = user.subscriptions.into_iter().fold(
-            (Vec::new(), Vec::new()),
-            |(mut expired, mut actual), sub| {
-                if sub.is_expired(now) {
-                    expired.push(sub);
-                } else {
-                    actual.push(sub);
-                }
-                (expired, actual)
-            },
-        );
+
+        let expired = payer.expire(now);
 
         let mut expired_sub = false;
         for subscription in expired {
@@ -123,8 +135,7 @@ impl Users {
                 .expire_subscription(session, id, subscription)
                 .await?;
         }
-        user.subscriptions = actual;
-        self.store.update(session, &mut user).await?;
+        self.store.update(session, &mut payer).await?;
         Ok(expired_sub)
     }
 }

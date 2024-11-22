@@ -1,6 +1,7 @@
 use bot_core::context::Context;
 use chrono::{Local, Utc};
 use eyre::Error;
+use eyre::Result;
 use model::{
     couch::{CouchInfo, GroupRate, PersonalRate},
     rights::Rule,
@@ -13,12 +14,16 @@ use teloxide::utils::markdown::escape;
 
 use crate::{day::fmt_date, fmt_phone};
 
-pub fn render_sub(sub: &UserSubscription) -> String {
+pub fn render_sub(sub: &UserSubscription, is_owner: bool) -> String {
     let now = Utc::now();
+
+    let emoji = if is_owner { "💳" } else { "🎟" };
+
     match sub.status {
         Status::NotActive => {
             format!(
-                "🎟_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nНе активен\\. \n",
+                "{}_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nНе активен\\. \n",
+                emoji,
                 escape(&sub.name),
                 sub.balance,
                 sub.locked_balance,
@@ -35,7 +40,8 @@ pub fn render_sub(sub: &UserSubscription) -> String {
             };
 
             format!(
-                "🎟_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nДействует c _{}_ по _{}_{}",
+                "{}_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nДействует c _{}_ по _{}_{}",
+                emoji,
                 escape(&sub.name),
                 sub.balance,
                 sub.locked_balance,
@@ -62,7 +68,7 @@ pub async fn render_profile_msg(
     if let Some(couch) = user.couch.as_ref() {
         render_couch_info(ctx, id, &mut msg, couch);
     } else {
-        render_subscriptions(&mut msg, &user);
+        render_subscriptions(&mut msg, &user)?;
         render_trainings(ctx, &mut msg, &user).await?;
     }
     Ok((msg, user, extension))
@@ -96,8 +102,9 @@ async fn render_trainings(ctx: &mut Context, msg: &mut String, user: &User) -> R
     Ok(())
 }
 
-fn render_subscriptions(msg: &mut String, user: &User) {
-    let mut subs = user.subscriptions.iter().collect::<Vec<_>>();
+fn render_subscriptions(msg: &mut String, user: &User) -> Result<()> {
+    let payer = user.payer()?;
+    let mut subs = payer.subscriptions().to_vec();
     subs.sort_by(|a, b| a.status.cmp(&b.status));
 
     msg.push_str("Абонементы:\n");
@@ -112,7 +119,7 @@ fn render_subscriptions(msg: &mut String, user: &User) {
                 continue;
             }
             msg.push_str("\n");
-            msg.push_str(&render_sub(sub));
+            msg.push_str(&render_sub(sub, payer.is_owner()));
         }
         msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
     }
@@ -125,13 +132,14 @@ fn render_subscriptions(msg: &mut String, user: &User) {
                 continue;
             }
             msg.push_str("\n");
-            msg.push_str(&render_sub(sub));
+            msg.push_str(&render_sub(sub, payer.is_owner()));
         }
     }
     if subs.is_empty() {
         msg.push_str("*нет абонементов*🥺\n");
     }
     msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
+    Ok(())
 }
 
 pub fn user_base_info(user: &User, extension: &UserExtension) -> String {

@@ -20,13 +20,14 @@ pub(crate) async fn view(Extension(ctx): Extension<Arc<Context>>) -> impl IntoRe
         None
     };
 
+    let payer = me.payer().unwrap();
     let profile = Profile {
         id: me.id.clone(),
         tg_id: me.tg_id,
         name: me.name.clone(),
         phone: me.phone.clone(),
         freeze: me.freeze.clone(),
-        subscriptions: me.subscriptions.clone(),
+        subscriptions: payer.subscriptions().to_vec(),
         freeze_days: me.freeze_days,
         couch: me.couch.clone(),
         come_from,

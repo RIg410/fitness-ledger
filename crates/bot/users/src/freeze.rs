@@ -92,13 +92,15 @@ impl View for FreezeProfile {
 
         match cb {
             Callback::Yes => {
+                let can_freeze = ctx.has_right(Rule::FreezeUsers);
+
                 let user = ctx
                     .ledger
                     .users
                     .get(&mut ctx.session, self.id)
                     .await?
                     .ok_or_else(|| eyre!("User not found!"))?;
-                if user.freeze_days < self.days {
+                if !can_freeze && user.freeze_days < self.days {
                     self.state = State::SetDays;
                     ctx.send_msg("у вас недостаточно дней заморозки").await?;
                     return Ok(Jmp::Stay);
@@ -108,14 +110,14 @@ impl View for FreezeProfile {
                     ctx.send_msg("абонемент уже заморожен").await?;
                     return Ok(Jmp::Back);
                 }
-                if !ctx.has_right(Rule::FreezeUsers) && ctx.me.id != self.id {
+                if !can_freeze && ctx.me.id != self.id {
                     ctx.send_msg("Нет прав").await?;
                     return Ok(Jmp::Back);
                 }
 
                 ctx.ledger
                     .users
-                    .freeze(&mut ctx.session, user.id, self.days)
+                    .freeze(&mut ctx.session, user.id, self.days, can_freeze)
                     .await
                     .context("freeze")?;
             }

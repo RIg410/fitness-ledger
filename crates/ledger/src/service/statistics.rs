@@ -83,7 +83,7 @@ impl Statistics {
         let mut stat = UsersStat::default();
         let mut cursor = self.users.find_all(session, from, to).await?;
         while let Some(user) = cursor.next(&mut *session).await {
-            stat.extend(&user?);
+            stat.extend(&user?)?;
         }
 
         Ok(stat)

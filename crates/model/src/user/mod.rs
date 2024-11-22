@@ -1,22 +1,18 @@
 use core::fmt;
-use std::{
-    cmp::Ordering,
-    fmt::{Display, Formatter},
-};
+use eyre::eyre;
+use eyre::Result;
+use std::fmt::{Display, Formatter};
 
 use super::rights::Rights;
-use crate::{
-    couch::CouchInfo,
-    statistics::marketing::ComeFrom,
-    subscription::{self, Status, UserSubscription},
-    training::Training,
-};
+use crate::{couch::CouchInfo, statistics::marketing::ComeFrom, subscription::UserSubscription};
 use chrono::{DateTime, TimeZone as _, Utc};
+use family::{Family, Payer};
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 pub mod extension;
+pub mod family;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
@@ -31,7 +27,7 @@ pub struct User {
     #[serde(default)]
     pub freeze: Option<Freeze>,
     #[serde(default)]
-    pub subscriptions: Vec<UserSubscription>,
+    subscriptions: Vec<UserSubscription>,
     #[serde(default)]
     pub freeze_days: u32,
     #[serde(default)]
@@ -56,7 +52,33 @@ fn default_created_at() -> DateTime<Utc> {
 }
 
 impl User {
-    pub fn new(tg_id: i64) -> User {
+    pub fn new(
+        tg_id: i64,
+        name: UserName,
+        rights: Rights,
+        phone: String,
+        come_from: ComeFrom,
+    ) -> User {
+        User {
+            id: ObjectId::new(),
+            tg_id,
+            name,
+            rights,
+            phone,
+            is_active: true,
+            version: 0,
+            subscriptions: vec![],
+            freeze_days: 0,
+            freeze: None,
+            created_at: Utc::now(),
+            couch: None,
+            settings: UserSettings::default(),
+            come_from,
+            family: Family::default(),
+        }
+    }
+
+    pub fn with_tg_id(tg_id: i64) -> User {
         User {
             id: ObjectId::new(),
             tg_id,
@@ -84,129 +106,33 @@ impl User {
         self.couch.is_some()
     }
 
-    pub fn find_subscription(
-        &mut self,
-        reason: FindFor,
-        training: &Training,
-    ) -> Option<&mut UserSubscription> {
-        let start_at = training.get_slot().start_at();
-        self.subscriptions
-            .sort_by(|a, b| match (&a.status, &b.status) {
-                (
-                    Status::Active {
-                        start_date: _,
-                        end_date: a_end_date,
-                    },
-                    Status::Active {
-                        start_date: _,
-                        end_date: b_end_date,
-                    },
-                ) => a_end_date.cmp(b_end_date),
-                (Status::Active { .. }, Status::NotActive) => Ordering::Less,
-                (Status::NotActive, Status::Active { .. }) => Ordering::Greater,
-                (Status::NotActive, Status::NotActive) => Ordering::Equal,
-            });
-        self.subscriptions
-            .iter_mut()
-            .filter(|s| match s.tp {
-                subscription::SubscriptionType::Group {} => !training.tp.is_personal(),
-                subscription::SubscriptionType::Personal { couch_filter } => {
-                    if training.tp.is_personal() {
-                        if let Some(couch) = couch_filter {
-                            training.instructor == couch
-                        } else {
-                            true
-                        }
-                    } else {
-                        false
-                    }
-                }
-            })
-            .find(|s| match reason {
-                FindFor::Lock => {
-                    if let Status::Active {
-                        start_date: _,
-                        end_date,
-                    } = s.status
-                    {
-                        end_date > start_at && s.balance > 0
-                    } else {
-                        s.balance > 0
-                    }
-                }
-                FindFor::Charge => s.locked_balance > 0,
-                FindFor::Unlock => s.locked_balance > 0,
-            })
-    }
+    pub fn payer_mut(&mut self) -> Result<Payer<&mut User>> {
+        if self.family.payer_id.is_none() {
+            return Ok(Payer::new(self, true));
+        }
 
-    pub fn group_balance(&self) -> Balance {
-        let balance = self
-            .subscriptions
-            .iter()
-            .filter(|s| !s.tp.is_personal())
-            .map(|s| s.balance)
-            .sum();
-        let locked_balance = self
-            .subscriptions
-            .iter()
-            .filter(|s| !s.tp.is_personal())
-            .map(|s| s.locked_balance)
-            .sum();
-        Balance {
-            balance,
-            locked_balance,
+        if let Some(payer) = self.family.payer.as_mut() {
+            return Ok(Payer::new(payer, false));
+        } else {
+            return Err(eyre!("Payer not resolved"));
         }
     }
 
-    pub fn personal_balance(&self) -> Balance {
-        let balance = self
-            .subscriptions
-            .iter()
-            .filter(|s| s.tp.is_personal())
-            .map(|s| s.balance)
-            .sum();
-        let locked_balance = self
-            .subscriptions
-            .iter()
-            .filter(|s| s.tp.is_personal())
-            .map(|s| s.locked_balance)
-            .sum();
-        Balance {
-            balance,
-            locked_balance,
+    pub fn payer(&self) -> Result<Payer<&User>> {
+        if self.family.payer_id.is_none() {
+            return Ok(Payer::new(self, true));
         }
-    }
 
-    pub fn available_balance_for_training(&self, training: &Training) -> u32 {
-        self.subscriptions
-            .iter()
-            .filter(|s| match s.tp {
-                subscription::SubscriptionType::Group {} => !training.tp.is_personal(),
-                subscription::SubscriptionType::Personal { couch_filter } => {
-                    if training.tp.is_personal() {
-                        if let Some(couch) = couch_filter {
-                            training.instructor == couch
-                        } else {
-                            true
-                        }
-                    } else {
-                        false
-                    }
-                }
-            })
-            .map(|s| s.balance)
-            .sum()
+        if let Some(payer) = self.family.payer.as_ref() {
+            return Ok(Payer::new(payer, false));
+        } else {
+            return Err(eyre!("Payer not resolved"));
+        }
     }
 
     pub fn gc(&mut self) {
         self.subscriptions.retain(|s| !s.is_empty());
     }
-}
-
-pub enum FindFor {
-    Lock,
-    Charge,
-    Unlock,
 }
 
 fn default_is_active() -> bool {
@@ -277,39 +203,9 @@ impl Default for UserSettings {
     }
 }
 
-pub struct Balance {
-    pub balance: u32,
-    pub locked_balance: u32,
-}
-
-impl Balance {
-    pub fn is_empty(&self) -> bool {
-        self.balance == 0 && self.locked_balance == 0
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct Family {
-    head: Option<ObjectId>,
-    members: Vec<ObjectId>,
-}
-
 #[cfg(test)]
 mod tests {
-    use bson::oid::ObjectId;
-    use chrono::{DateTime, Utc};
-
-    use crate::{
-        decimal::Decimal,
-        program::TrainingType,
-        rights::Rights,
-        statistics::marketing::ComeFrom,
-        subscription::{Status, SubscriptionType, UserSubscription},
-        training::Training,
-        user::sanitize_phone,
-    };
-
-    use super::User;
+    use crate::user::sanitize_phone;
 
     #[test]
     fn test_sanitize_phone_with_special_characters() {
@@ -358,120 +254,5 @@ mod tests {
         let phone = "+-()";
         let sanitized = sanitize_phone(phone);
         assert_eq!(sanitized, "");
-    }
-
-    fn user(subs: Vec<UserSubscription>) -> User {
-        User {
-            id: ObjectId::new(),
-            tg_id: 0,
-            name: super::UserName {
-                tg_user_name: None,
-                first_name: "".to_owned(),
-                last_name: None,
-            },
-            rights: Rights::customer(),
-            phone: "".to_owned(),
-            is_active: true,
-            freeze: None,
-            subscriptions: subs,
-            freeze_days: 1,
-            version: 0,
-            created_at: Default::default(),
-            couch: None,
-            settings: Default::default(),
-            come_from: ComeFrom::default(),
-            family: Default::default(),
-        }
-    }
-
-    fn sub(
-        items: u32,
-        tp: SubscriptionType,
-        days: u32,
-        start_date: Option<&str>,
-    ) -> UserSubscription {
-        let status = if let Some(start_date) = start_date {
-            let start_date: DateTime<Utc> = start_date.parse().unwrap();
-            Status::Active {
-                start_date,
-                end_date: start_date + chrono::Duration::days(i64::from(days)),
-            }
-        } else {
-            Status::NotActive
-        };
-
-        UserSubscription {
-            id: ObjectId::new(),
-            subscription_id: ObjectId::new(),
-            name: "".to_owned(),
-            items: 0,
-            days,
-            status: status,
-            price: Decimal::zero(),
-            tp,
-            balance: items,
-            locked_balance: 0,
-        }
-    }
-
-    fn training(start_at: &str, group: bool) -> Training {
-        Training {
-            id: ObjectId::new(),
-            proto_id: ObjectId::new(),
-            name: "".to_owned(),
-            description: "".to_owned(),
-            start_at: start_at.parse::<DateTime<Utc>>().unwrap(),
-            duration_min: 1,
-            instructor: ObjectId::new(),
-            clients: vec![],
-            capacity: 1,
-            is_one_time: false,
-            is_canceled: false,
-            is_processed: false,
-            statistics: Default::default(),
-            notified: Default::default(),
-            keep_open: false,
-            tp: if group {
-                TrainingType::Group { is_free: false }
-            } else {
-                TrainingType::Personal { is_free: false }
-            },
-        }
-    }
-
-    #[test]
-    fn test_users_find_subscription() {
-        let mut alice = user(vec![]);
-        let tr = training("2012-12-12T12:12:12Z", true);
-        assert!(alice.find_subscription(super::FindFor::Lock, &tr).is_none());
-
-        let mut alice = user(vec![sub(0, SubscriptionType::Group {}, 1, None)]);
-        assert!(dbg!(alice.find_subscription(super::FindFor::Lock, &tr)).is_none());
-
-        let mut alice = user(vec![sub(1, SubscriptionType::Group {}, 1, None)]);
-        assert!(alice.find_subscription(super::FindFor::Lock, &tr).is_some());
-
-        let mut alice = user(vec![
-            sub(1, SubscriptionType::Group {}, 1, None),
-            sub(
-                1,
-                SubscriptionType::Group {},
-                30,
-                Some("2012-12-11T12:12:12Z"),
-            ),
-        ]);
-        assert!(alice
-            .find_subscription(super::FindFor::Lock, &tr)
-            .unwrap()
-            .status
-            .is_active());
-        assert!(!alice
-            .find_subscription(
-                super::FindFor::Lock,
-                &training("2014-12-12T12:12:12Z", true)
-            )
-            .unwrap()
-            .status
-            .is_active());
     }
 }

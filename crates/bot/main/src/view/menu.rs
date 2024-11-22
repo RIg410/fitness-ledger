@@ -57,8 +57,8 @@ impl MainMenuView {
             )]);
         }
 
-        let group_balance = ctx.me.group_balance();
-        let personal_balance = ctx.me.personal_balance();
+        let group_balance = ctx.me.payer()?.group_balance();
+        let personal_balance = ctx.me.payer()?.personal_balance();
 
         let mut txt = "🏠 *Меню* 🤸🏼\n".to_string();
 

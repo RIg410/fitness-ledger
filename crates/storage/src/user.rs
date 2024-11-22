@@ -54,6 +54,36 @@ impl UserStore {
             .await?)
     }
 
+    pub async fn resolve_family(&self, session: &mut Session, user: &mut User) -> Result<()> {
+        let family = &mut user.family;
+        if family.payer.is_none() {
+            if let Some(payer) = family.payer_id {
+                if let Some(payer) = self.get(session, payer).await? {
+                    family.payer = Some(Box::new(payer));
+                }
+            }
+        }
+
+        if family.children_ids.len() != family.children.len() {
+            family.children.clear();
+            for child in &family.children_ids {
+                if let Some(child) = self.get(session, *child).await? {
+                    family.children.push(child);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn get_by_tg_id(&self, session: &mut Session, tg_id: i64) -> Result<Option<User>> {
+        Ok(self
+            .users
+            .find_one(doc! { "tg_id": tg_id })
+            .session(&mut *session)
+            .await?)
+    }
+
     pub async fn find_by_phone(&self, session: &mut Session, phone: &str) -> Result<Option<User>> {
         Ok(self
             .users
@@ -78,14 +108,6 @@ impl UserStore {
         }
 
         Ok(())
-    }
-
-    pub async fn get_by_tg_id(&self, session: &mut Session, tg_id: i64) -> Result<Option<User>> {
-        Ok(self
-            .users
-            .find_one(doc! { "tg_id": tg_id })
-            .session(&mut *session)
-            .await?)
     }
 
     pub async fn set_tg_id(&self, session: &mut Session, id: ObjectId, tg_id: i64) -> Result<()> {
@@ -226,20 +248,32 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn freeze(&self, session: &mut Session, id: ObjectId, days: u32) -> Result<()> {
+    pub async fn freeze(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        days: u32,
+        force: bool,
+    ) -> Result<()> {
         info!("Freeze account:{}", id);
         let mut user = self
             .get(session, id)
             .await?
             .ok_or_else(|| eyre!("User not found:{}", id))?;
-        user.version += 1;
+        self.resolve_family(session, &mut user).await?;
 
-        if user.freeze_days < days {
+        if !user.payer()?.is_owner() {
+            bail!("Only owner can freeze account");
+        }
+
+        user.version += 1;
+        if !force && user.freeze_days < days {
             bail!("Insufficient freeze days");
         }
-        user.freeze_days -= days;
 
-        for sub in user.subscriptions.iter_mut() {
+        user.freeze_days = user.freeze_days.saturating_sub(days);
+
+        for sub in user.payer_mut()?.subscriptions_mut() {
             match sub.status {
                 Status::NotActive => {
                     //no-op

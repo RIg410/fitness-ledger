@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use bson::oid::ObjectId;
-use serde::{Deserialize, Serialize};
-
 use crate::user::User;
+use bson::oid::ObjectId;
+use eyre::Result;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum ComeFrom {
@@ -49,15 +49,16 @@ pub struct UsersStat {
 }
 
 impl UsersStat {
-    pub fn extend(&mut self, user: &User) {
+    pub fn extend(&mut self, user: &User) -> Result<()> {
         self.come_from
             .entry(user.come_from)
             .or_insert_with(Vec::new)
             .push(user.id.clone());
         self.users_count += 1;
-        if !user.subscriptions.is_empty() {
+        if !user.payer()?.has_subscription() {
             self.users_without_subscriptions.push(user.id.clone());
         }
+        Ok(())
     }
 }
 
