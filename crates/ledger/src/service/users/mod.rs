@@ -13,7 +13,7 @@ use model::{
 };
 use mongodb::bson::oid::ObjectId;
 use std::{ops::Deref, sync::Arc};
-use storage::{pre_sell::PreSellStore, user::UserStore};
+use storage::user::UserStore;
 use thiserror::Error;
 use tx_macro::tx;
 
@@ -23,17 +23,12 @@ pub mod subscription;
 #[derive(Clone)]
 pub struct Users {
     pub(super) store: Arc<UserStore>,
-    pub(super) presell: Arc<PreSellStore>,
     pub(super) logs: History,
 }
 
 impl Users {
-    pub(crate) fn new(store: Arc<UserStore>, presell: Arc<PreSellStore>, logs: History) -> Self {
-        Users {
-            store,
-            logs,
-            presell,
-        }
+    pub(crate) fn new(store: Arc<UserStore>, logs: History) -> Self {
+        Users { store, logs }
     }
 
     #[tx]
@@ -58,13 +53,6 @@ impl Users {
             return Err(eyre::eyre!("User {} already exists", tg_id));
         }
 
-        let subscriptions = if let Some(presell) = self.presell.get(session, &phone).await? {
-            self.presell.delete(session, &phone).await?;
-            vec![presell.subscription]
-        } else {
-            vec![]
-        };
-
         let user = self.get_by_phone(session, &phone).await?;
         if let Some(user) = user {
             self.store.set_tg_id(session, user.id, tg_id).await?;
@@ -78,7 +66,7 @@ impl Users {
                 phone: phone.clone(),
                 is_active: true,
                 id: ObjectId::new(),
-                subscriptions,
+                subscriptions: vec![],
                 freeze_days: 0,
                 freeze: None,
                 version: 0,
@@ -86,6 +74,7 @@ impl Users {
                 couch: None,
                 settings: Default::default(),
                 come_from,
+                family: Default::default(),
             };
             let id = user.id;
             self.store.insert(session, user).await?;
@@ -143,6 +132,7 @@ impl Users {
             couch: None,
             settings: Default::default(),
             come_from,
+            family: Default::default(),
         };
         self.store.insert(session, user.clone()).await?;
         self.logs.create_user(session, user_name, phone).await?;

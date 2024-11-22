@@ -3,7 +3,7 @@ use std::{io::{Cursor, Write as _}, sync::Arc};
 use eyre::{Context, Error};
 use model::session::Session;
 use storage::{
-    calendar::CalendarStore, history::HistoryStore, pre_sell::PreSellStore, program::ProgramStore,
+    calendar::CalendarStore, history::HistoryStore,  program::ProgramStore,
     rewards::RewardsStore, subscription::SubscriptionsStore, treasury::TreasuryStore,
     user::UserStore, Storage,
 };
@@ -15,7 +15,6 @@ pub struct Backup {
     history: Arc<HistoryStore>,
     programs: Arc<ProgramStore>,
     calendar: Arc<CalendarStore>,
-    pre_sell: Arc<PreSellStore>,
     rewards: Arc<RewardsStore>,
     subscriptions: Arc<SubscriptionsStore>,
     treasury: Arc<TreasuryStore>,
@@ -28,7 +27,6 @@ impl Backup {
             history: store.history,
             programs: store.programs,
             calendar: store.calendar,
-            pre_sell: store.presell,
             rewards: store.rewards,
             subscriptions: store.subscriptions,
             treasury: store.treasury,
@@ -64,11 +62,6 @@ impl Backup {
         zip.start_file("calendar.json", options)?;
         zip.write_all(&serde_json::to_vec_pretty(
             &self.calendar.dump(session).await.context("calendar")?,
-        )?)?;
-
-        zip.start_file("pre_sell.json", options)?;
-        zip.write_all(&serde_json::to_vec_pretty(
-            &self.pre_sell.dump(session).await.context("pre_sell")?,
         )?)?;
 
         zip.start_file("rewards.json", options)?;

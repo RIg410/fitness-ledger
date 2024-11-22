@@ -53,7 +53,7 @@ impl Ledger {
         let history = history::History::new(storage.history.clone());
         let programs = Programs::new(storage.programs.clone());
 
-        let users = Users::new(storage.users, storage.presell.clone(), history.clone());
+        let users = Users::new(storage.users,  history.clone());
         let calendar = Calendar::new(storage.calendar, users.clone(), programs.clone());
 
         let treasury = Treasury::new(storage.treasury, history.clone());

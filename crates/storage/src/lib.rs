@@ -1,7 +1,6 @@
 pub mod calendar;
 pub mod history;
 pub mod payment;
-pub mod pre_sell;
 pub mod program;
 pub mod requests;
 pub mod rewards;
@@ -29,7 +28,6 @@ pub struct Storage {
     pub treasury: Arc<treasury::TreasuryStore>,
     pub subscriptions: Arc<subscription::SubscriptionsStore>,
     pub history: Arc<HistoryStore>,
-    pub presell: Arc<pre_sell::PreSellStore>,
     pub rewards: Arc<RewardsStore>,
     pub requests: Arc<RequestStore>,
 }
@@ -42,7 +40,6 @@ impl Storage {
         let programs = program::ProgramStore::new(&db);
         let treasury = treasury::TreasuryStore::new(&db).await?;
         let subscriptions = subscription::SubscriptionsStore::new(&db);
-        let presell = pre_sell::PreSellStore::new(&db).await?;
         let history = history::HistoryStore::new(&db).await?;
         let rewards = RewardsStore::new(&db).await?;
         let requests = RequestStore::new(&db).await?;
@@ -55,7 +52,6 @@ impl Storage {
             treasury: Arc::new(treasury),
             subscriptions: Arc::new(subscriptions),
             history: Arc::new(history),
-            presell: Arc::new(presell),
             rewards: Arc::new(rewards),
             requests: Arc::new(requests),
         })

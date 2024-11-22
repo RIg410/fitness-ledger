@@ -518,15 +518,16 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn dump(&self, session: &mut Session) -> Result<Vec<User>> {
+    pub async fn dump(&self, session: &mut Session) -> Result<(Vec<User>, Vec<UserExtension>)> {
         let mut cursor = self.users.find(doc! {}).session(&mut *session).await?;
         let mut users: Vec<User> = cursor.stream(&mut *session).try_collect().await?;
         for user in users.as_mut_slice() {
             user.gc();
             self.update(session, user).await?;
         }
-
-        Ok(users)
+        let mut cursor = self.extensions.find(doc! {}).session(&mut *session).await?;
+        let extension: Vec<UserExtension> = cursor.stream(&mut *session).try_collect().await?;
+        Ok((users, extension))
     }
 
     pub async fn find_all(

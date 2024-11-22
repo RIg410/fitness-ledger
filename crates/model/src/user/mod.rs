@@ -45,6 +45,8 @@ pub struct User {
     pub settings: UserSettings,
     #[serde(default)]
     pub come_from: ComeFrom,
+    #[serde(default)]
+    pub family: Family,
 }
 
 fn default_created_at() -> DateTime<Utc> {
@@ -74,6 +76,7 @@ impl User {
             couch: None,
             settings: UserSettings::default(),
             come_from: ComeFrom::default(),
+            family: Family::default(),
         }
     }
 
@@ -238,14 +241,6 @@ impl Display for UserName {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UserPreSell {
-    #[serde(rename = "_id")]
-    pub id: ObjectId,
-    pub subscription: UserSubscription,
-    pub phone: String,
-}
-
 pub fn sanitize_phone(phone: &str) -> String {
     if phone.starts_with("8") {
         ("7".to_string() + &phone[1..])
@@ -291,6 +286,12 @@ impl Balance {
     pub fn is_empty(&self) -> bool {
         self.balance == 0 && self.locked_balance == 0
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct Family {
+    head: Option<ObjectId>,
+    members: Vec<ObjectId>,
 }
 
 #[cfg(test)]
@@ -379,6 +380,7 @@ mod tests {
             couch: None,
             settings: Default::default(),
             come_from: ComeFrom::default(),
+            family: Default::default(),
         }
     }
 
