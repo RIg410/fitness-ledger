@@ -14,6 +14,7 @@ use teloxide::utils::markdown::escape;
 use crate::{day::fmt_date, fmt_phone};
 
 pub fn render_sub(sub: &UserSubscription) -> String {
+    let now = Utc::now();
     match sub.status {
         Status::NotActive => {
             format!(
@@ -27,13 +28,20 @@ pub fn render_sub(sub: &UserSubscription) -> String {
             start_date,
             end_date,
         } => {
+            let exp = if sub.is_expired(now) {
+                "\n*Абонемент истек*"
+            } else {
+                ""
+            };
+
             format!(
-                "🎟_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nДействует c _{}_ по _{}_\n",
+                "🎟_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nДействует c _{}_ по _{}_{}",
                 escape(&sub.name),
                 sub.balance,
                 sub.locked_balance,
                 start_date.with_timezone(&Local).format("%d\\.%m\\.%Y"),
-                end_date.with_timezone(&Local).format("%d\\.%m\\.%Y")
+                end_date.with_timezone(&Local).format("%d\\.%m\\.%Y"),
+                exp
             )
         }
     }
@@ -89,8 +97,7 @@ async fn render_trainings(ctx: &mut Context, msg: &mut String, user: &User) -> R
 }
 
 fn render_subscriptions(msg: &mut String, user: &User) {
-    let now = Utc::now();
-    let mut subs = user.subscriptions.iter().filter(|sub| !sub.is_expired(now)).collect::<Vec<_>>();
+    let mut subs = user.subscriptions.iter().collect::<Vec<_>>();
     subs.sort_by(|a, b| a.status.cmp(&b.status));
 
     msg.push_str("Абонементы:\n");

@@ -7,7 +7,6 @@ use bot_core::{
 };
 use eyre::eyre;
 use model::rights::Rule;
-use mongodb::bson::de;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardMarkup, Message};
 

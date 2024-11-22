@@ -42,7 +42,7 @@ impl View for SystemView {
                 ctx.send_document(dump_file, "dump.zip").await?;
             }
             Calldata::ExtendSubscription => {
-                
+                return Ok(subscription::ExtendSubscriptions.into());
             }
         }
         Ok(Jmp::Stay)
