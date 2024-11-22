@@ -1,5 +1,5 @@
 use bot_core::context::Context;
-use chrono::Local;
+use chrono::{Local, Utc};
 use eyre::Error;
 use model::{
     couch::{CouchInfo, GroupRate, PersonalRate},
@@ -89,7 +89,8 @@ async fn render_trainings(ctx: &mut Context, msg: &mut String, user: &User) -> R
 }
 
 fn render_subscriptions(msg: &mut String, user: &User) {
-    let mut subs = user.subscriptions.iter().collect::<Vec<_>>();
+    let now = Utc::now();
+    let mut subs = user.subscriptions.iter().filter(|sub| !sub.is_expired(now)).collect::<Vec<_>>();
     subs.sort_by(|a, b| a.status.cmp(&b.status));
 
     msg.push_str("Абонементы:\n");
