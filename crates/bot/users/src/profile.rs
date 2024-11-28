@@ -1,5 +1,6 @@
 use crate::{
-    come_from::MarketingInfoView, family::FamilyView, history::HistoryList, notification::NotificationView, rewards::RewardsList, subscriptions::SubscriptionsList
+    come_from::MarketingInfoView, family::FamilyView, history::HistoryList,
+    notification::NotificationView, rewards::RewardsList, subscriptions::SubscriptionsList,
 };
 
 use super::{
@@ -111,6 +112,13 @@ impl UserProfile {
             Ok(Jmp::Stay)
         }
     }
+
+    async fn unfreeze_user(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
+        ctx.ensure(Rule::FreezeUsers)?;
+        ctx.ledger.users.unfreeze(&mut ctx.session, self.id).await?;
+        ctx.reload_user().await?;
+        Ok(Jmp::Stay)
+    }
 }
 
 #[async_trait]
@@ -155,6 +163,7 @@ impl View for UserProfile {
                 Ok(MarketingInfoView::new(self.id).into())
             }
             Callback::FamilyView => self.family_view(ctx, self.id).await,
+            Callback::UnFreeze => self.unfreeze_user(ctx).await,
         }
     }
 }
@@ -175,13 +184,17 @@ async fn render_user_profile(
         keymap = keymap.append_row(Callback::EditMarketingInfo.btn_row("Изменить источник 📝"));
     }
 
-    if ctx.has_right(Rule::FreezeUsers)
+    if (ctx.has_right(Rule::FreezeUsers)
         || (ctx.me.tg_id == user.tg_id
             && user.payer()?.has_subscription()
-            && user.freeze.is_none()
-            && user.freeze_days != 0)
+            && user.freeze_days != 0))
+        && user.freeze.is_none()
     {
         keymap = keymap.append_row(Callback::Freeze.btn_row("Заморозить ❄"));
+    } else {
+        if ctx.has_right(Rule::FreezeUsers) && user.freeze.is_some() {
+            keymap = keymap.append_row(Callback::UnFreeze.btn_row("Разморозить ❄"));
+        }
     }
 
     if user.is_couch() {
@@ -241,4 +254,5 @@ pub enum Callback {
     SubscriptionsList,
     EditMarketingInfo,
     FamilyView,
+    UnFreeze,
 }

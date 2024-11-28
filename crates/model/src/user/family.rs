@@ -17,9 +17,11 @@ use super::User;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Family {
+    #[serde(default)]
     pub payer_id: Option<ObjectId>,
     #[serde(skip)]
     pub payer: Option<Box<User>>,
+    #[serde(default)]
     pub children_ids: Vec<ObjectId>,
     #[serde(skip)]
     pub children: Vec<User>,

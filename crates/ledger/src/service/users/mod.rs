@@ -7,6 +7,7 @@ use model::{
     session::Session,
     statistics::marketing::ComeFrom,
     user::{
+        self,
         extension::{Birthday, UserExtension},
         sanitize_phone, User, UserName,
     },
@@ -184,6 +185,43 @@ impl Users {
     }
 
     #[tx]
+    pub async fn set_name(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        first_name: &str,
+        last_name: &str,
+    ) -> Result<()> {
+        self.store.set_first_name(session, id, first_name).await?;
+        self.store.set_last_name(session, id, last_name).await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn set_phone(&self, session: &mut Session, id: ObjectId, phone: &str) -> Result<()> {
+        let phone = sanitize_phone(phone);
+        self.store.set_phone(session, id, &phone).await?;
+        Ok(())
+    }
+}
+
+impl Users {
+    #[tx]
+    pub async fn unfreeze(&self, session: &mut Session, id: ObjectId) -> Result<()> {
+        let user = self
+            .store
+            .get(session, id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        if user.freeze.is_none() {
+            return Ok(());
+        }
+
+        self.logs.unfreeze(session, user.id).await?;
+        self.store.unfreeze(session, id).await
+    }
+
+    #[tx]
     pub async fn freeze(
         &self,
         session: &mut Session,
@@ -207,39 +245,6 @@ impl Users {
         self.logs.freeze(session, user.id, days).await?;
         self.store.freeze(session, id, days, force).await?;
         Ok(())
-    }
-
-    #[tx]
-    pub async fn set_name(
-        &self,
-        session: &mut Session,
-        id: ObjectId,
-        first_name: &str,
-        last_name: &str,
-    ) -> Result<()> {
-        self.store.set_first_name(session, id, first_name).await?;
-        self.store.set_last_name(session, id, last_name).await?;
-        Ok(())
-    }
-
-    #[tx]
-    pub async fn set_phone(&self, session: &mut Session, id: ObjectId, phone: &str) -> Result<()> {
-        let phone = sanitize_phone(phone);
-        self.store.set_phone(session, id, &phone).await?;
-        Ok(())
-    }
-}
-
-impl Users {
-    pub async fn unfreeze(&self, session: &mut Session, id: ObjectId) -> Result<()> {
-        let user = self
-            .store
-            .get(session, id)
-            .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-
-        self.logs.unfreeze(session, user.id).await?;
-        self.store.unfreeze(session, id).await
     }
 }
 
