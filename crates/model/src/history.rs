@@ -102,4 +102,6 @@ pub enum Action {
     BuySub {
         subscription: Subscription,
     },
+    RemoveFamilyMember {},
+    AddFamilyMember {  },
 }

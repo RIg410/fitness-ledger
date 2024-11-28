@@ -133,6 +133,10 @@ impl User {
     pub fn gc(&mut self) {
         self.subscriptions.retain(|s| !s.is_empty());
     }
+
+    pub fn has_family(&self) -> bool {
+        self.family.payer_id.is_some() || !self.family.children_ids.is_empty()
+    }
 }
 
 fn default_is_active() -> bool {

@@ -272,6 +272,34 @@ impl History {
         );
         self.store.store(session, entry).await
     }
+
+    pub async fn remove_family_member(
+        &self,
+        session: &mut Session,
+        main_id: ObjectId,
+        member_id: ObjectId,
+    ) -> Result<()> {
+        let entry = HistoryRow::with_sub_actors(
+            session.actor(),
+            vec![main_id, member_id],
+            Action::RemoveFamilyMember {},
+        );
+        self.store.store(session, entry).await
+    }
+
+    pub async fn add_family_member(
+        &self,
+        session: &mut Session,
+        main_id: ObjectId,
+        member_id: ObjectId,
+    ) -> Result<()> {
+        let entry = HistoryRow::with_sub_actors(
+            session.actor(),
+            vec![main_id, member_id],
+            Action::AddFamilyMember {},
+        );
+        self.store.store(session, entry).await
+    }
 }
 
 impl Deref for History {

@@ -346,6 +346,66 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 escape(&subscription.price.to_string())
             )
         }
+        model::history::Action::RemoveFamilyMember {} => {
+            let main_id = log.sub_actors.get(0);
+            let member_id = log.sub_actors.get(1);
+            let main = if let Some(id) = main_id {
+                ctx.ledger
+                    .get_user(&mut ctx.session, *id)
+                    .await?
+                    .name
+                    .to_string()
+            } else {
+                "-".to_string()
+            };
+
+            let member = if let Some(id) = member_id {
+                ctx.ledger
+                    .get_user(&mut ctx.session, *id)
+                    .await?
+                    .name
+                    .to_string()
+            } else {
+                "-".to_string()
+            };
+
+            format!(
+                "_{}_ удалил пользователя _{}_ из семьи _{}_",
+                escape(&actor.name.first_name),
+                escape(&member),
+                escape(&main),
+            )
+        }
+        model::history::Action::AddFamilyMember {} => {
+            let main_id = log.sub_actors.get(0);
+            let member_id = log.sub_actors.get(1);
+            let main = if let Some(id) = main_id {
+                ctx.ledger
+                    .get_user(&mut ctx.session, *id)
+                    .await?
+                    .name
+                    .to_string()
+            } else {
+                "-".to_string()
+            };
+
+            let member = if let Some(id) = member_id {
+                ctx.ledger
+                    .get_user(&mut ctx.session, *id)
+                    .await?
+                    .name
+                    .to_string()
+            } else {
+                "-".to_string()
+            };
+
+            format!(
+                "_{}_ добавил пользователя _{}_ в семью _{}_",
+                escape(&actor.name.first_name),
+                escape(&member),
+                escape(&main),
+            )
+        }
     };
 
     Ok(format!(

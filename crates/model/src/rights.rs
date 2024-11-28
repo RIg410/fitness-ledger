@@ -82,6 +82,7 @@ pub enum Rule {
     FreezeUsers,
     ChangeBalance,
     EditMarketingInfo,
+    EditFamily,
 
     // Training
     EditTraining,

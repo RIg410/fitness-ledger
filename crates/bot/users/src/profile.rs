@@ -1,6 +1,5 @@
 use crate::{
-    come_from::MarketingInfoView, history::HistoryList, notification::NotificationView,
-    rewards::RewardsList, subscriptions::SubscriptionsList,
+    come_from::MarketingInfoView, family::FamilyView, history::HistoryList, notification::NotificationView, rewards::RewardsList, subscriptions::SubscriptionsList
 };
 
 use super::{
@@ -104,6 +103,14 @@ impl UserProfile {
             Ok(Jmp::Stay)
         }
     }
+
+    async fn family_view(&mut self, ctx: &mut Context, id: ObjectId) -> Result<Jmp, eyre::Error> {
+        if ctx.has_right(Rule::EditFamily) || (ctx.me.id == id && ctx.me.has_family()) {
+            Ok(FamilyView::new(self.id).into())
+        } else {
+            Ok(Jmp::Stay)
+        }
+    }
 }
 
 #[async_trait]
@@ -147,6 +154,7 @@ impl View for UserProfile {
                 ctx.ensure(Rule::EditMarketingInfo)?;
                 Ok(MarketingInfoView::new(self.id).into())
             }
+            Callback::FamilyView => self.family_view(ctx, self.id).await,
         }
     }
 }
@@ -158,6 +166,15 @@ async fn render_user_profile(
     let (msg, user, extension) = render_profile_msg(ctx, id).await?;
 
     let mut keymap = InlineKeyboardMarkup::default();
+
+    if ctx.has_right(Rule::EditFamily) || (ctx.me.tg_id == user.tg_id && ctx.me.has_family()) {
+        keymap = keymap.append_row(Callback::FamilyView.btn_row("Семья 👨‍👩‍👧‍👦"));
+    }
+
+    if ctx.has_right(Rule::EditMarketingInfo) {
+        keymap = keymap.append_row(Callback::EditMarketingInfo.btn_row("Изменить источник 📝"));
+    }
+
     if ctx.has_right(Rule::FreezeUsers)
         || (ctx.me.tg_id == user.tg_id
             && user.payer()?.has_subscription()
@@ -223,4 +240,5 @@ pub enum Callback {
     Notification,
     SubscriptionsList,
     EditMarketingInfo,
+    FamilyView,
 }

@@ -18,6 +18,7 @@ use thiserror::Error;
 use tx_macro::tx;
 
 pub mod couch;
+pub mod family;
 pub mod subscription;
 
 #[derive(Clone)]
