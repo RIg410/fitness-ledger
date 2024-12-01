@@ -94,6 +94,8 @@ pub async fn render_week(
     filter: &Filter,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
     let week_local = week_id.local();
+    let selected_week_day = selected_day_id.week_day();
+
     let mut msg = format!(
         "
 📅  Расписание
@@ -107,15 +109,16 @@ pub async fn render_week(
 🔵\\- тренировка идет 
 ❤️\\- моя тренировка
 ➖➖➖➖➖➖➖➖➖➖➖➖➖➖
+*{}*
 ",
         fmt_month(&week_local),
         week_local.year(),
         fmt_dm(&week_local),
         fmt_dm(&(week_local + Duration::days(6))),
+        fmt_dm(&week_id.day(selected_week_day).local())
     );
 
     let now = Local::now();
-    let selected_week_day = selected_day_id.week_day();
     let mut buttons = InlineKeyboardMarkup::default();
     let mut row = vec![];
     for week_day in week() {
