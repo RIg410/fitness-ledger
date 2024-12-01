@@ -83,6 +83,7 @@ pub enum Rule {
     ChangeBalance,
     EditMarketingInfo,
     EditFamily,
+    ViewFamily,
 
     // Training
     EditTraining,
@@ -120,6 +121,7 @@ pub enum Rule {
     System,
 
     ViewRewards,
+    RecalculateRewards,
 
     ViewMarketingInfo,
     CreateRequest,
