@@ -133,6 +133,7 @@ pub enum Rule {
 
     // program
     ViewHiddenPrograms,
+    HistoryViewer,
 }
 
 impl Rule {

@@ -5,10 +5,10 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::day::fmt_dt;
+use bot_viewer::{day::fmt_dt, fmt_phone, user::link_to_user};
 use chrono::Local;
 use eyre::Result;
-use model::history::HistoryRow;
+use model::{history::HistoryRow, rights::Rule};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
@@ -115,7 +115,22 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             }
         }
         model::history::Action::SignOut { start_at, name } => {
-            if is_actor {
+            if ctx.has_right(Rule::HistoryViewer) {
+                let sub = if let Some(subject) = log.sub_actors.first() {
+                    let user = ctx.ledger.get_user(&mut ctx.session, *subject).await?;
+                    format!("{} {}",link_to_user(&user), fmt_phone(&user.phone))
+                } else {
+                    "-".to_string()
+                };
+
+                format!(
+                    "Пользователь \\(@{}\\) отменил запись на тренировку *{}* на {} пользователю {}",
+                    escape(&actor.name.tg_user_name.unwrap_or_default()),
+                    escape(name),
+                    fmt_dt(start_at),
+                    sub,
+                )
+            } else if is_actor {
                 format!(
                     "Вы отменили запись на тренировку *{}* на {}",
                     escape(name),

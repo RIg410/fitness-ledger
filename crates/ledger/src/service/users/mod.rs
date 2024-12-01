@@ -7,7 +7,6 @@ use model::{
     session::Session,
     statistics::marketing::ComeFrom,
     user::{
-        self,
         extension::{Birthday, UserExtension},
         sanitize_phone, User, UserName,
     },
