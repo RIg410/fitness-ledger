@@ -41,7 +41,7 @@ pub struct Profile {
     pub id: ObjectId,
     pub tg_id: i64,
     pub name: UserName,
-    pub phone: String,
+    pub phone: Option<String>,
     pub freeze: Option<Freeze>,
     pub subscriptions: Vec<UserSubscription>,
     pub freeze_days: u32,

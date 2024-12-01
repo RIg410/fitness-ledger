@@ -57,7 +57,7 @@ impl RewardsBg {
                 .await?;
             self.ledger
                 .users
-                .update_couch_rate_tx_less(session, couch_id, dbg!(couch.group_rate.clone()))
+                .update_couch_rate_tx_less(session, couch_id, couch.group_rate.clone())
                 .await?;
         }
         Ok(())

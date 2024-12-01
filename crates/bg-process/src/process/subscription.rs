@@ -74,7 +74,7 @@ impl Task for SubscriptionBg {
                         &format!(
                             "У пользователя {}\\({}\\) сгорел абонемент",
                             tg_link(id, Some(name.as_str())),
-                            fmt_phone(&phone)
+                            fmt_phone(phone.as_deref())
                         ),
                     )
                     .await?;

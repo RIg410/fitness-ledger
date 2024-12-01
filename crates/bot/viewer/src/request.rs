@@ -31,7 +31,7 @@ pub fn fmt_request(request: &Request) -> String {
         Имя:  {} {}\n\
         Дата: _{}_\n{}\
         История: {}",
-        fmt_phone(&request.phone),
+        fmt_phone(Some(&request.phone)),
         fmt_come_from(request.come_from),
         escape(&request.comment),
         escape(

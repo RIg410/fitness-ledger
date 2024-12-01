@@ -150,7 +150,7 @@ impl TrainingView {
                                 &format!(
                                     "У {} {} заканчивается абонемент\\.",
                                     link_to_user(&ctx.me),
-                                    fmt_phone(&ctx.me.phone)
+                                    fmt_phone(ctx.me.phone.as_deref())
                                 ),
                             )
                             .await;

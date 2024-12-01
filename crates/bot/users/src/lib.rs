@@ -6,9 +6,10 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::user::fmt_user_type;
-use model::rights::Rule;
+use eyre::Error;
 use model::user::User;
-use mongodb::bson::oid::ObjectId;
+use model::{rights::Rule, user::sanitize_phone};
+use mongodb::{bson::oid::ObjectId, SessionCursor};
 use profile::UserProfile;
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -17,6 +18,7 @@ use teloxide::{
 };
 
 pub mod come_from;
+pub mod family;
 pub mod freeze;
 pub mod history;
 pub mod notification;
@@ -27,7 +29,6 @@ pub mod set_birthday;
 pub mod set_fio;
 pub mod set_phone;
 pub mod subscriptions;
-pub mod family;
 
 pub const LIMIT: u64 = 7;
 
@@ -59,7 +60,9 @@ impl View for UsersView {
                 LIMIT,
             )
             .await?;
-        let (txt, markup) = render_message(count, &self.query.query, &users, self.query.offset);
+
+        let (txt, markup) =
+            render_message(ctx, count, &self.query.query, users, self.query.offset).await?;
         ctx.edit_origin(&txt, markup).await?;
         Ok(())
     }
@@ -77,14 +80,14 @@ impl View for UsersView {
             query = "".to_string();
         }
 
-        if query.starts_with("8") {
-            query = "7".to_string() + &query[1..];
-        }
-
-        self.query = Query {
-            query: remove_non_alphanumeric(&query),
-            offset: 0,
+        let phone = sanitize_phone(&query);
+        let query = if !phone.is_empty() {
+            phone
+        } else {
+            remove_non_alphanumeric(&query)
         };
+
+        self.query = Query { query, offset: 0 };
         Ok(Jmp::Stay)
     }
 
@@ -122,12 +125,13 @@ impl Default for Query {
     }
 }
 
-fn render_message(
+async fn render_message(
+    ctx: &mut Context,
     total_count: u64,
     query: &str,
-    users: &[User],
+    mut users: SessionCursor<User>,
     offset: u64,
-) -> (String, InlineKeyboardMarkup) {
+) -> Result<(String, InlineKeyboardMarkup), Error> {
     let msg = format!(
         "
     🟣 Всего пользователей: _{}_
@@ -144,9 +148,22 @@ fn render_message(
     );
 
     let mut keymap = InlineKeyboardMarkup::default();
+    let mut users_count = 0;
+    while let Some(user) = users.next(&mut ctx.session).await {
+        let user = user?;
+        if user.phone.is_none() && user.family.payer.is_some() {
+            continue;
+        }
 
-    for user in users {
-        keymap = keymap.append_row(vec![make_button(user)]);
+        keymap = keymap.append_row(vec![make_button(&user)]);
+        users_count += 1;
+
+        for child in user.family.children_ids.iter() {
+            let child = ctx.ledger.get_user(&mut ctx.session, *child).await?;
+            if child.phone.is_none() {
+                keymap = keymap.append_row(vec![make_child_button(&user, &child)]);
+            }
+        }
     }
 
     let mut raw = vec![];
@@ -158,7 +175,7 @@ fn render_message(
         ));
     }
 
-    if users.len() == LIMIT as usize {
+    if users_count == LIMIT as usize {
         raw.push(InlineKeyboardButton::callback(
             "➡️",
             Callback::Next.to_data(),
@@ -168,7 +185,7 @@ fn render_message(
     if !raw.is_empty() {
         keymap = keymap.append_row(raw);
     }
-    (msg, keymap)
+    Ok((msg, keymap))
 }
 
 fn make_button(user: &User) -> InlineKeyboardButton {
@@ -180,6 +197,18 @@ fn make_button(user: &User) -> InlineKeyboardButton {
     ))
 }
 
+fn make_child_button(parent: &User, child: &User) -> InlineKeyboardButton {
+    InlineKeyboardButton::callback(
+        format!(
+            "{}{} {} ({})",
+            fmt_user_type(child),
+            parent.name.first_name,
+            parent.name.last_name.as_ref().unwrap_or(&"".to_string()),
+            child.name.first_name
+        ),
+        Callback::Select(child.id.bytes()).to_data(),
+    )
+}
 #[derive(Debug, Serialize, Deserialize)]
 enum Callback {
     Next,

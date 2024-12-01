@@ -11,7 +11,7 @@ use model::{
         sanitize_phone, User, UserName,
     },
 };
-use mongodb::bson::oid::ObjectId;
+use mongodb::{bson::oid::ObjectId, SessionCursor};
 use std::{ops::Deref, sync::Arc};
 use storage::user::UserStore;
 use thiserror::Error;
@@ -60,7 +60,7 @@ impl Users {
             self.store.set_name(session, user.id, name).await?;
             Ok(user.id)
         } else {
-            let user = User::new(tg_id, name.clone(), rights, phone.clone(), come_from);
+            let user = User::new(tg_id, name.clone(), rights, Some(phone.clone()), come_from);
             let id = user.id;
             self.store.insert(session, user).await?;
             self.logs.create_user(session, name, phone).await?;
@@ -106,7 +106,7 @@ impl Users {
             -1,
             user_name.clone(),
             Rights::customer(),
-            phone.clone(),
+            Some(phone.clone()),
             come_from,
         );
         self.store.insert(session, user.clone()).await?;
@@ -133,7 +133,7 @@ impl Users {
         query: &str,
         offset: u64,
         limit: u64,
-    ) -> Result<Vec<User>> {
+    ) -> Result<SessionCursor<User>> {
         let keywords = query.split_whitespace().collect::<Vec<_>>();
         self.store.find(session, &keywords, offset, limit).await
     }

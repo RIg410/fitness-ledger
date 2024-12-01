@@ -175,7 +175,7 @@ pub fn user_base_info(user: &User, extension: &UserExtension) -> String {
         ),
         escape(&user.name.first_name),
         escape(user.name.last_name.as_ref().unwrap_or(&empty)),
-        fmt_phone(&user.phone),
+        fmt_phone(user.phone.as_deref()),
         escape(
             &extension
                 .birthday

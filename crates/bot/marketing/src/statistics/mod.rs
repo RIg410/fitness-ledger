@@ -87,7 +87,7 @@ impl StatisticsView {
                     msg.push_str(&format!(
                         "\n👤{} {}",
                         link_to_user(&user),
-                        fmt_phone(&user.phone)
+                        fmt_phone(user.phone.as_deref())
                     ));
                 } else {
                     msg.push_str(&format!("\n👤{}", id));
@@ -119,7 +119,7 @@ impl StatisticsView {
                     msg.push_str(&format!(
                         "\n👤{} {}",
                         link_to_user(&user),
-                        fmt_phone(&user.phone)
+                        fmt_phone(user.phone.as_deref())
                     ));
                 } else {
                     msg.push_str(&format!("\n👤{}", id));

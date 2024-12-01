@@ -257,7 +257,7 @@ mod tests {
                 last_name: None,
             },
             rights: Rights::customer(),
-            phone: "".to_owned(),
+            phone: None,
             is_active: true,
             freeze: None,
             subscriptions: subs,
@@ -337,11 +337,11 @@ mod tests {
             .is_none());
 
         let mut alice = user(vec![sub(0, SubscriptionType::Group {}, 1, None)]);
-        assert!(dbg!(alice
+        assert!(alice
             .payer_mut()
             .unwrap()
-            .find_subscription(super::FindFor::Lock, &tr))
-        .is_none());
+            .find_subscription(super::FindFor::Lock, &tr)
+            .is_none());
 
         let mut alice = user(vec![sub(1, SubscriptionType::Group {}, 1, None)]);
         assert!(alice

@@ -55,7 +55,7 @@ impl View for SellView {
                 {
                     text = format!(
                         "Пользователь с номером *{}* не найден\\. Создать нового пользователя?",
-                        fmt_phone(phone)
+                        fmt_phone(Some(&phone))
                     );
                     keymap = keymap.append_row(SellViewCallback::CreateNewUser.btn_row("Создать"));
                 }
@@ -273,7 +273,7 @@ impl View for CreateUserAndSell {
             sub.price.to_string().replace(".", ","),
             escape(&self.first_name),
             escape(&self.last_name.clone().unwrap_or_else(|| "-".to_string())),
-            fmt_phone(&self.phone),
+            fmt_phone(Some(&self.phone)),
             fmt_come_from(self.come_from)
         );
 

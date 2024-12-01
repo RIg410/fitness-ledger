@@ -1,5 +1,3 @@
-use std::vec;
-
 use async_trait::async_trait;
 use bot_core::{
     context::Context,
@@ -350,7 +348,7 @@ impl StageList<State> for UserList {
         limit: usize,
         offset: usize,
     ) -> Result<(String, Vec<Vec<ListItem>>), Error> {
-        let users = ctx
+        let mut users_stream = ctx
             .ledger
             .users
             .find(
@@ -359,10 +357,13 @@ impl StageList<State> for UserList {
                 offset as u64,
                 limit as u64,
             )
-            .await?
-            .into_iter()
-            .map(|u| vec![list_item(u)])
-            .collect();
+            .await?;
+        
+        let mut users = vec![];
+        while let Some(user) = users_stream.next(&mut ctx.session).await {
+            users.push(vec![list_item(user?)]);
+        }
+
         Ok((
             format!(
                 "Введите поисковый запрос, что бы выбрать пользователя\\.\n\\'{}\\'",

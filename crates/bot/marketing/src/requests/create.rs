@@ -372,7 +372,7 @@ impl View for Confirm {
             Телефон: *{}*\n\
             Откуда пришел: *{}*\n\
             Комментарий: *{}*\n",
-            fmt_phone(&self.phone),
+            fmt_phone(Some(&self.phone)),
             fmt_come_from(self.come_from),
             escape(&self.comment)
         );
@@ -548,7 +548,7 @@ impl View for ConfirmSellSubscription {
             Телефон: *{}*\n\
             Абонемент: *{}*\n\
            ",
-            fmt_phone(&self.phone),
+            fmt_phone(Some(&self.phone)),
             escape(&sub.name)
         );
         let mut markup = InlineKeyboardMarkup::default();

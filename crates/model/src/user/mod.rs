@@ -21,7 +21,7 @@ pub struct User {
     pub tg_id: i64,
     pub name: UserName,
     pub rights: Rights,
-    pub phone: String,
+    pub phone: Option<String>,
     #[serde(default = "default_is_active")]
     pub is_active: bool,
     #[serde(default)]
@@ -56,7 +56,7 @@ impl User {
         tg_id: i64,
         name: UserName,
         rights: Rights,
-        phone: String,
+        phone: Option<String>,
         come_from: ComeFrom,
     ) -> User {
         User {
@@ -92,7 +92,7 @@ impl User {
                 last_name: None,
             },
             rights: Rights::customer(),
-            phone: "".to_owned(),
+            phone: None,
             is_active: true,
             version: 0,
             subscriptions: vec![],

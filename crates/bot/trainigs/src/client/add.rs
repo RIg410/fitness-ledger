@@ -89,7 +89,7 @@ async fn render(
     query: &str,
     offset: u64,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
-    let users = ctx
+    let mut users = ctx
         .ledger
         .users
         .find(&mut ctx.session, query, offset, LIMIT)
@@ -101,11 +101,25 @@ async fn render(
     );
     let mut keymap = InlineKeyboardMarkup::default();
 
-    for user in &users {
+    let mut users_count = 0;
+    while let Some(user) = users.next(&mut ctx.session).await {
+        let user = user?;
+        users_count += 1;
         if user.couch.is_some() {
             continue;
         }
-        keymap = keymap.append_row(vec![make_button(user)]);
+        if user.phone.is_none() && user.family.payer.is_some() {
+            continue;
+        }
+        keymap = keymap.append_row(vec![make_button(&user)]);
+        if !user.family.children_ids.is_empty() {
+            for child_id in &user.family.children_ids {
+                let child = ctx.ledger.get_user(&mut ctx.session, *child_id).await?;
+                if child.phone.is_none() {
+                    keymap = keymap.append_row(vec![make_child_button(&user, &child)]);
+                }
+            }
+        }
     }
 
     let mut raw = vec![];
@@ -117,7 +131,7 @@ async fn render(
         ));
     }
 
-    if users.len() == LIMIT as usize {
+    if users_count == LIMIT as usize {
         raw.push(InlineKeyboardButton::callback(
             "➡️",
             Callback::Next.to_data(),
@@ -143,6 +157,19 @@ fn make_button(user: &User) -> InlineKeyboardButton {
             user.name.last_name.as_ref().unwrap_or(&"".to_string())
         ),
         Callback::Select(user.id.bytes()).to_data(),
+    )
+}
+
+fn make_child_button(parent: &User, child: &User) -> InlineKeyboardButton {
+    InlineKeyboardButton::callback(
+        format!(
+            "{}{} {} ({})",
+            fmt_user_type(child),
+            parent.name.first_name,
+            parent.name.last_name.as_ref().unwrap_or(&"".to_string()),
+            child.name.first_name
+        ),
+        Callback::Select(child.id.bytes()).to_data(),
     )
 }
 

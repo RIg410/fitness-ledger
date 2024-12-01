@@ -74,7 +74,7 @@ impl Users {
                 last_name: surname.clone(),
             },
             Rights::customer(),
-            "-".to_string(),
+            None,
             user.come_from.clone(),
         );
         child.family.payer_id = Some(user_id);

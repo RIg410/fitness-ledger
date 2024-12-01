@@ -373,6 +373,7 @@ dependencies = [
  "bot-viewer",
  "chrono",
  "eyre",
+ "futures-util",
  "hex",
  "itertools 0.2.9",
  "ledger",

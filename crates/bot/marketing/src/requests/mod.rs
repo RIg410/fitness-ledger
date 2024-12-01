@@ -34,7 +34,7 @@ impl View for Requests {
 
         let mut text = format!(
             "Заявки 🈸\nВведите номер телефона чтобы найти заявку: '{}'\n",
-            fmt_phone(&self.0.clone().unwrap_or_default())
+            fmt_phone(Some(&self.0.clone().unwrap_or_default()))
         );
 
         let mut keymap: InlineKeyboardMarkup = InlineKeyboardMarkup::default();

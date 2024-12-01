@@ -40,7 +40,7 @@ impl TgAuth {
             .ok_or_else(|| eyre::eyre!("Invalid user id"))?;
 
         let now = Utc::now().timestamp();
-        if dbg!(auth_date) > dbg!(now) || dbg!(now - auth_date) > TG_TTL {
+        if auth_date > now || now - auth_date > TG_TTL {
             return Err(eyre::eyre!("Invalid auth date"));
         }
 

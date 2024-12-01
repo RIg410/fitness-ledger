@@ -118,7 +118,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             if ctx.has_right(Rule::HistoryViewer) {
                 let sub = if let Some(subject) = log.sub_actors.first() {
                     let user = ctx.ledger.get_user(&mut ctx.session, *subject).await?;
-                    format!("{} {}",link_to_user(&user), fmt_phone(&user.phone))
+                    format!("{} {}",link_to_user(&user), fmt_phone(user.phone.as_deref()))
                 } else {
                     "-".to_string()
                 };

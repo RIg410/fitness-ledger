@@ -164,7 +164,7 @@ impl UserStore {
         keywords: &[&str],
         offset: u64,
         limit: u64,
-    ) -> Result<Vec<User>> {
+    ) -> Result<SessionCursor<User>> {
         let mut query = doc! {};
         if !keywords.is_empty() {
             let mut keyword_query = vec![];
@@ -182,14 +182,13 @@ impl UserStore {
             }
             query = doc! { "$or": keyword_query };
         }
-        let mut cursor = self
+        Ok(self
             .users
             .find(query)
             .skip(offset)
             .limit(limit as i64)
             .session(&mut *session)
-            .await?;
-        Ok(cursor.stream(&mut *session).try_collect().await?)
+            .await?)
     }
 
     pub async fn add_subscription(

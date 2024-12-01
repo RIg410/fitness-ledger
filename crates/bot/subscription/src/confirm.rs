@@ -3,6 +3,7 @@ use crate::SubscriptionView;
 use super::View;
 use async_trait::async_trait;
 use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
+use bot_viewer::fmt_phone;
 use eyre::{eyre, Error, Result};
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
@@ -88,7 +89,7 @@ async fn render(
         sub.price.to_string().replace(".", ","),
         escape(&user.name.first_name),
         escape(&user.name.last_name.unwrap_or_else(|| "-".to_string())),
-        escape(&user.phone)
+        fmt_phone(user.phone.as_deref())
     );
 
     let mut keymap = InlineKeyboardMarkup::default();

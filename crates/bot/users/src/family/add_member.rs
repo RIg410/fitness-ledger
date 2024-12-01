@@ -129,7 +129,7 @@ impl View for AddMemberConfirm {
         let msg = format!(
             "Вы уверены, что хотите добавить члена семьи {} {}?",
             escape(&child.name.first_name),
-            fmt_phone(&child.phone)
+            fmt_phone(child.phone.as_deref())
         );
         let keymap = InlineKeyboardMarkup::default().append_row(vec![
             ConfirmCalldata::AddMember.button("✅ Добавить"),
