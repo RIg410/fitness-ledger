@@ -10,8 +10,11 @@ use chrono::Local;
 use eyre::Result;
 use model::{couch::Reward, rights::Rule};
 use mongodb::bson::oid::ObjectId;
+use recalc::AddRecalcReward;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
+
+mod recalc;
 
 pub const LIMIT: u64 = 7;
 
@@ -54,16 +57,24 @@ impl View for RewardsList {
             keymap.push(Calldata::Offset(self.offset + LIMIT).button("➡️"));
         }
 
-        ctx.edit_origin(&msg, InlineKeyboardMarkup::new(vec![keymap]))
-            .await?;
+        let mut keymap = InlineKeyboardMarkup::new(vec![keymap]);
+        if ctx.has_right(Rule::RecalculateRewards) {
+            keymap = keymap.append_row(Calldata::Recalculate.btn_row("Добавить перерасчет"));
+        }
+
+        ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
 
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Jmp> {
+    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Calldata::Offset(offset) => {
                 self.offset = offset;
                 Ok(Jmp::Stay)
+            }
+            Calldata::Recalculate => {
+                ctx.ensure(Rule::RecalculateRewards)?;
+                Ok(Jmp::Next(AddRecalcReward::new(self.id).into()))
             }
         }
     }
@@ -72,6 +83,7 @@ impl View for RewardsList {
 #[derive(Serialize, Deserialize)]
 enum Calldata {
     Offset(u64),
+    Recalculate,
 }
 
 fn fmt_row(log: &Reward) -> String {
@@ -95,6 +107,14 @@ fn fmt_row(log: &Reward) -> String {
                 "*{}*\n начислено *{}* \\- _ежемесячное вознаграждение_",
                 fmt_dt(&log.created_at.with_timezone(&Local)),
                 escape(&log.reward.to_string())
+            )
+        }
+        model::couch::RewardSource::Recalc { comment } => {
+            format!(
+                "*{}*\n начислено *{}* \\- _перерасчет_ \\- {}",
+                fmt_dt(&log.created_at.with_timezone(&Local)),
+                escape(&log.reward.to_string()),
+                escape(comment)
             )
         }
     }

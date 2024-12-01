@@ -16,6 +16,19 @@ pub struct CouchInfo {
 }
 
 impl CouchInfo {
+    pub fn recalc_reward(&mut self, id: ObjectId, reward: Decimal, comment: String) -> Reward {
+        self.reward += reward;
+
+        Reward {
+            id: ObjectId::new(),
+            couch: id,
+            created_at: Local::now().with_timezone(&Utc),
+            reward,
+            rate: GroupRate::None,
+            source: RewardSource::Recalc { comment },
+        }
+    }
+
     pub fn get_reward(&mut self, take: Decimal) -> Result<(), Error> {
         if take > self.reward {
             bail!(
@@ -153,4 +166,7 @@ pub enum RewardSource {
         name: String,
     },
     FixedMonthly {},
+    Recalc {
+        comment: String,
+    },
 }

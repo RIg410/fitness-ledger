@@ -81,7 +81,8 @@ impl Ledger {
     }
 
     pub async fn get_user(&self, session: &mut Session, id: ObjectId) -> Result<User> {
-        let mut user = self.users
+        let mut user = self
+            .users
             .get(session, id)
             .await
             .context("get_user")?
@@ -475,6 +476,28 @@ impl Ledger {
             self.users.delete_couch(session, id).await?;
             Ok(true)
         }
+    }
+
+    #[tx]
+    pub async fn add_recalculation_reward(
+        &self,
+        session: &mut Session,
+        couch_id: ObjectId,
+        amount: Decimal,
+        comment: String,
+    ) -> Result<()> {
+        let mut user = self.get_user(session, couch_id).await?;
+
+        let couch_info = user
+            .couch
+            .as_mut()
+            .ok_or_else(|| eyre!("User is not couch"))?;
+        let reward = couch_info.recalc_reward(user.id, amount, comment);
+        self.rewards.add_reward(session, reward).await?;
+        self.users
+            .update_couch_reward(session, user.id, couch_info.reward)
+            .await?;
+        Ok(())
     }
 
     #[tx]
