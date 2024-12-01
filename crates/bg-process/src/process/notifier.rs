@@ -43,19 +43,29 @@ impl TrainingNotifier {
         by_day: bool,
     ) -> Result<bool, Error> {
         if let Ok(user) = self.ledger.get_user(session, id).await {
+            let receiver = if user.phone.is_some() {
+                &user
+            } else {
+                if let Some(user) = user.family.payer.as_ref() {
+                    user
+                } else {
+                    return Ok(true);
+                }
+            };
+
             if by_day {
-                if user.settings.notification.notify_by_day {
+                if receiver.settings.notification.notify_by_day {
                     self.bot
-                        .send_notification_to(ChatId(user.tg_id), &msg)
+                        .send_notification_to(ChatId(receiver.tg_id), &msg)
                         .await?;
                     return Ok(true);
                 }
             } else {
                 let now = Local::now();
-                if let Some(hours) = user.settings.notification.notify_by_n_hours {
+                if let Some(hours) = receiver.settings.notification.notify_by_n_hours {
                     if now + chrono::Duration::hours(hours as i64) > start_at {
                         self.bot
-                            .send_notification_to(ChatId(user.tg_id), &msg)
+                            .send_notification_to(ChatId(receiver.tg_id), &msg)
                             .await?;
                         return Ok(true);
                     }

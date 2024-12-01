@@ -15,13 +15,14 @@ use model::{
     training::{Training, TrainingStatus},
     user::family::FindFor,
 };
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
     types::{ChatId, InlineKeyboardMarkup},
     utils::markdown::escape,
 };
 
-use crate::{change_couch::ChangeCouch, client::list::ClientsList};
+use crate::{change_couch::ChangeCouch, client::list::ClientsList, family::FamilySignIn};
 
 pub struct TrainingView {
     id: DateTime<Local>,
@@ -79,110 +80,6 @@ impl TrainingView {
         Ok(Jmp::Stay)
     }
 
-    async fn sign_up(&mut self, ctx: &mut Context) -> Result<Jmp> {
-        let training = ctx
-            .ledger
-            .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        if !training.status(Local::now()).can_sign_in() {
-            ctx.send_msg("Запись на тренировку закрыта💔").await?;
-            return Ok(Jmp::Stay);
-        }
-
-        if training.is_full() {
-            ctx.send_msg("Мест нет🥺").await?;
-            return Ok(Jmp::Stay);
-        }
-
-        if training.tp.is_not_free() {
-            let mut payer = ctx.me.payer_mut()?;
-            if let Some(sub) = payer.find_subscription(FindFor::Lock, &training) {
-                if sub.balance < 1 {
-                    ctx.send_msg("В абонементе нет занятий🥺").await?;
-                    return Ok(Jmp::Stay);
-                }
-            } else {
-                ctx.send_msg("Нет подходящего абонемента🥺").await?;
-                return Ok(Jmp::Stay);
-            };
-        }
-
-        if let Some(freeze) = ctx.me.freeze.as_ref() {
-            let slot = training.get_slot();
-            if freeze.freeze_start <= slot.start_at() && freeze.freeze_end >= slot.end_at() {
-                ctx.send_msg("Ваш абонемент заморожен🥶").await?;
-                return Ok(Jmp::Stay);
-            }
-            return Ok(Jmp::Stay);
-        }
-
-        ctx.ledger
-            .sign_up(&mut ctx.session, &training, ctx.me.id, false)
-            .await?;
-
-        let mut msg: String = format!(
-            "Вы записались на тренировку '*{}*' в _{}_\\.\n",
-            escape(&training.name),
-            fmt_dt(&training.get_slot().start_at())
-        );
-
-        if training.tp.is_not_free() {
-            let payer = ctx.me.payer()?;
-            let balance = payer.available_balance_for_training(&training);
-            if balance <= 1 {
-                msg.push_str("Ваш абонемент заканчивается🥺");
-                if let Ok(users) = ctx
-                    .ledger
-                    .users
-                    .find_users_with_right(
-                        &mut ctx.session,
-                        Rule::ReceiveNotificationsAboutSubscriptions,
-                    )
-                    .await
-                {
-                    for user in users {
-                        let res = ctx
-                            .bot
-                            .send_notification_to(
-                                ChatId(user.tg_id),
-                                &format!(
-                                    "У {} {} заканчивается абонемент\\.",
-                                    link_to_user(&ctx.me),
-                                    fmt_phone(ctx.me.phone.as_deref())
-                                ),
-                            )
-                            .await;
-                        if let Err(e) = res {
-                            log::error!("Failed to send notification to {}: {}", user.tg_id, e);
-                        }
-                    }
-                }
-            }
-            ctx.send_notification(&msg).await?;
-        }
-
-        Ok(Jmp::Stay)
-    }
-
-    async fn sign_out(&mut self, ctx: &mut Context) -> Result<Jmp> {
-        let training = ctx
-            .ledger
-            .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        if !training.status(Local::now()).can_sign_out() {
-            ctx.send_msg("Запись на тренировку закрыта").await?;
-            return Ok(Jmp::Stay);
-        }
-        ctx.ledger
-            .sign_out(&mut ctx.session, &training, ctx.me.id, false)
-            .await?;
-        Ok(Jmp::Stay)
-    }
-
     async fn client_list(&mut self, ctx: &mut Context) -> Result<Jmp> {
         if !ctx.is_couch() && !ctx.has_right(Rule::EditTrainingClientsList) {
             bail!("Only couch can see client list");
@@ -212,12 +109,19 @@ impl TrainingView {
 
     async fn set_free(&mut self, ctx: &mut Context, free: bool) -> Result<Jmp> {
         ctx.ensure(Rule::SetFree)?;
+
         let training = ctx
             .ledger
             .calendar
             .get_training_by_start_at(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
+
+        if training.clients.len() > 0 {
+            ctx.send_msg("Нельзя изменить статус тренировки, на которую записаны клиенты")
+                .await?;
+            return Ok(Jmp::Stay);
+        }
 
         let mut tp = training.tp;
         tp.set_is_free(free);
@@ -254,13 +158,14 @@ impl View for TrainingView {
             Callback::Cancel => return Ok(Jmp::Next(ConfirmCancelTraining::new(self.id).into())),
             Callback::Delete(all) => self.delete_training(ctx, all).await,
             Callback::UnCancel => self.restore_training(ctx).await,
-            Callback::SignUp => self.sign_up(ctx).await,
-            Callback::SignOut => self.sign_out(ctx).await,
+            Callback::SignUp => sign_up(ctx, self.id, ctx.me.id).await,
+            Callback::SignOut => sign_out(ctx, self.id, ctx.me.id).await,
             Callback::ClientList => self.client_list(ctx).await,
             Callback::ChangeCouchOne => self.change_couch(ctx, false).await,
             Callback::ChangeCouchAll => self.change_couch(ctx, true).await,
             Callback::KeepOpen(keep_open) => self.keep_open(ctx, keep_open).await,
             Callback::SetFree(free) => self.set_free(ctx, free).await,
+            Callback::OpenSignInView => Ok(Jmp::Next(FamilySignIn::new(self.id).into())),
         }
     }
 }
@@ -370,12 +275,17 @@ _{}_                                                                 \n
     }
 
     if is_client {
-        if training.clients.contains(&ctx.me.id) {
-            if tr_status.can_sign_out() {
-                keymap = keymap.append_row(vec![Callback::SignOut.button("🔓 Отменить запись")]);
+        if ctx.me.family.children_ids.is_empty() {
+            if training.clients.contains(&ctx.me.id) {
+                if tr_status.can_sign_out() {
+                    keymap =
+                        keymap.append_row(vec![Callback::SignOut.button("🔓 Отменить запись")]);
+                }
+            } else if tr_status.can_sign_in() {
+                keymap = keymap.append_row(vec![Callback::SignUp.button("🔒 Записаться")]);
             }
-        } else if tr_status.can_sign_in() {
-            keymap = keymap.append_row(vec![Callback::SignUp.button("🔒 Записаться")]);
+        } else {
+            keymap = keymap.append_row(vec![Callback::OpenSignInView.button("👨‍👩‍👧‍👦 Запись")]);
         }
     }
     Ok((msg, keymap))
@@ -394,6 +304,7 @@ enum Callback {
     SignOut,
     KeepOpen(bool),
     SetFree(bool),
+    OpenSignInView,
 }
 
 fn status(status: TrainingStatus, is_full: bool) -> &'static str {
@@ -489,4 +400,117 @@ impl View for ConfirmCancelTraining {
 enum CancelCallback {
     Cancel,
     Stay,
+}
+
+pub async fn sign_up(
+    ctx: &mut Context,
+    start_at: DateTime<Local>,
+    user_id: ObjectId,
+) -> Result<Jmp> {
+    let training = ctx
+        .ledger
+        .calendar
+        .get_training_by_start_at(&mut ctx.session, start_at)
+        .await?
+        .ok_or_else(|| eyre::eyre!("Training not found"))?;
+    if !training.status(Local::now()).can_sign_in() {
+        ctx.send_msg("Запись на тренировку закрыта💔").await?;
+        return Ok(Jmp::Stay);
+    }
+
+    if training.is_full() {
+        ctx.send_msg("Мест нет🥺").await?;
+        return Ok(Jmp::Stay);
+    }
+
+    let mut user = ctx.ledger.get_user(&mut ctx.session, user_id).await?;
+
+    if training.tp.is_not_free() {
+        let mut payer = user.payer_mut()?;
+        if let Some(sub) = payer.find_subscription(FindFor::Lock, &training) {
+            if sub.balance < 1 {
+                ctx.send_msg("В абонементе нет занятий🥺").await?;
+                return Ok(Jmp::Stay);
+            }
+        } else {
+            ctx.send_msg("Нет подходящего абонемента🥺").await?;
+            return Ok(Jmp::Stay);
+        };
+    }
+
+    if let Some(freeze) = ctx.me.freeze.as_ref() {
+        let slot = training.get_slot();
+        if freeze.freeze_start <= slot.start_at() && freeze.freeze_end >= slot.end_at() {
+            ctx.send_msg("Ваш абонемент заморожен🥶").await?;
+            return Ok(Jmp::Stay);
+        }
+        return Ok(Jmp::Stay);
+    }
+
+    ctx.ledger
+        .sign_up(&mut ctx.session, &training, user.id, false)
+        .await?;
+
+    let mut msg: String = format!(
+        "Вы записались на тренировку '*{}*' в _{}_\\.\n",
+        escape(&training.name),
+        fmt_dt(&training.get_slot().start_at())
+    );
+
+    if training.tp.is_not_free() {
+        let payer = ctx.me.payer()?;
+        let balance = payer.available_balance_for_training(&training);
+        if balance <= 1 {
+            msg.push_str("Ваш абонемент заканчивается🥺");
+            if let Ok(users) = ctx
+                .ledger
+                .users
+                .find_users_with_right(
+                    &mut ctx.session,
+                    Rule::ReceiveNotificationsAboutSubscriptions,
+                )
+                .await
+            {
+                for user in users {
+                    let res = ctx
+                        .bot
+                        .send_notification_to(
+                            ChatId(user.tg_id),
+                            &format!(
+                                "У {} {} заканчивается абонемент\\.",
+                                link_to_user(&ctx.me),
+                                fmt_phone(ctx.me.phone.as_deref())
+                            ),
+                        )
+                        .await;
+                    if let Err(e) = res {
+                        log::error!("Failed to send notification to {}: {}", user.tg_id, e);
+                    }
+                }
+            }
+        }
+        ctx.send_notification(&msg).await?;
+    }
+    Ok(Jmp::Stay)
+}
+
+pub async fn sign_out(
+    ctx: &mut Context,
+    start_at: DateTime<Local>,
+    user_id: ObjectId,
+) -> Result<Jmp> {
+    let training = ctx
+        .ledger
+        .calendar
+        .get_training_by_start_at(&mut ctx.session, start_at)
+        .await?
+        .ok_or_else(|| eyre::eyre!("Training not found"))?;
+    if !training.status(Local::now()).can_sign_out() {
+        ctx.send_msg("Запись на тренировку закрыта").await?;
+        return Ok(Jmp::Stay);
+    }
+    ctx.ledger
+        .sign_out(&mut ctx.session, &training, user_id, false)
+        .await?;
+    Ok(Jmp::Stay)
 }
