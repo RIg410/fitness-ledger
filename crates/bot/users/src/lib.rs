@@ -149,11 +149,13 @@ async fn render_message(
 
     let mut keymap = InlineKeyboardMarkup::default();
     let mut users_count = 0;
+    let mut ids = vec![];
     while let Some(user) = users.next(&mut ctx.session).await {
         let user = user?;
-        if user.phone.is_none() && user.family.payer.is_some() {
+        if ids.contains(&user.id) {
             continue;
         }
+        ids.push(user.id);
 
         keymap = keymap.append_row(vec![make_button(&user)]);
         users_count += 1;
@@ -161,6 +163,10 @@ async fn render_message(
         for child in user.family.children_ids.iter() {
             let child = ctx.ledger.get_user(&mut ctx.session, *child).await?;
             if child.phone.is_none() {
+                if ids.contains(&child.id) {
+                    continue;
+                }
+                ids.push(child.id);
                 keymap = keymap.append_row(vec![make_child_button(&user, &child)]);
             }
         }

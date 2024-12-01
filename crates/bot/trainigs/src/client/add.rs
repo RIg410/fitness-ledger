@@ -101,6 +101,7 @@ async fn render(
     );
     let mut keymap = InlineKeyboardMarkup::default();
 
+    let mut ids = vec![];
     let mut users_count = 0;
     while let Some(user) = users.next(&mut ctx.session).await {
         let user = user?;
@@ -108,16 +109,20 @@ async fn render(
         if user.couch.is_some() {
             continue;
         }
-        if user.phone.is_none() && user.family.payer.is_some() {
+        if ids.contains(&user.id) {
             continue;
         }
+        ids.push(user.id);
+
         keymap = keymap.append_row(vec![make_button(&user)]);
-        if !user.family.children_ids.is_empty() {
-            for child_id in &user.family.children_ids {
-                let child = ctx.ledger.get_user(&mut ctx.session, *child_id).await?;
-                if child.phone.is_none() {
-                    keymap = keymap.append_row(vec![make_child_button(&user, &child)]);
+        for child_id in &user.family.children_ids {
+            let child = ctx.ledger.get_user(&mut ctx.session, *child_id).await?;
+            if child.phone.is_none() {
+                if ids.contains(&child_id) {
+                    continue;
                 }
+                ids.push(*child_id);
+                keymap = keymap.append_row(vec![make_child_button(&user, &child)]);
             }
         }
     }
