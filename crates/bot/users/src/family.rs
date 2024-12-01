@@ -1,3 +1,4 @@
+use crate::profile::UserProfile;
 use async_trait::async_trait;
 use bot_core::{
     callback_data::Calldata as _,
@@ -10,7 +11,6 @@ use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
-use crate::profile::UserProfile;
 
 pub mod add_member;
 
@@ -31,15 +31,21 @@ impl View for FamilyView {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
+        if !(ctx.has_right(Rule::ViewFamily) || (ctx.me.id == self.id && ctx.me.has_family())) {
+            ctx.send_notification("У вас нет прав на просмотр семьи")
+                .await?;
+            return Ok(());
+        }
+
         let mut keymap = InlineKeyboardMarkup::default();
         let mut msg = "👨‍👩‍👧‍👦 Cемья\n".to_string();
-       
+
         let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
         let family = &user.family;
 
         if let Some(payer) = family.payer.as_ref() {
             msg.push_str(&format!(
-                "Глава семьи: _{}_\n",
+                "Глава семьи: *{}*\n",
                 escape(&payer.name.first_name)
             ));
             if ctx.has_right(Rule::EditFamily) {
@@ -50,15 +56,17 @@ impl View for FamilyView {
             }
         }
 
-        msg.push_str("Члены семьи:\n");
-        for child in family.children.iter() {
-            msg.push_str(&format!("👤 _{}_\n", escape(&child.name.first_name)));
-            if ctx.has_right(Rule::EditFamily) {
-                keymap = keymap.append_row(vec![
-                    Calldata::GoToProfile(child.id.bytes())
-                        .button(format!("👤 {}", child.name.first_name)),
-                    Calldata::RemoveChild(child.id.bytes()).button("❌"),
-                ]);
+        if !family.children.is_empty() {
+            msg.push_str("Члены семьи:\n");
+            for child in family.children.iter() {
+                msg.push_str(&format!("👤 *{}*\n", escape(&child.name.first_name)));
+                if ctx.has_right(Rule::EditFamily) {
+                    keymap = keymap.append_row(vec![
+                        Calldata::GoToProfile(child.id.bytes())
+                            .button(format!("👤 {}", child.name.first_name)),
+                        Calldata::RemoveChild(child.id.bytes()).button("❌"),
+                    ]);
+                }
             }
         }
 
@@ -75,16 +83,12 @@ impl View for FamilyView {
             Calldata::GoToProfile(id) => {
                 Ok(Jmp::Next(UserProfile::new(ObjectId::from_bytes(id)).into()))
             }
-            Calldata::RemoveChild(id) => {
-                Ok(ConfirmRemoveChild {
-                    parent_id: self.id,
-                    child_id: ObjectId::from_bytes(id),
-                }
-                .into())
+            Calldata::RemoveChild(id) => Ok(ConfirmRemoveChild {
+                parent_id: self.id,
+                child_id: ObjectId::from_bytes(id),
             }
-            Calldata::AddChild => {
-                Ok(add_member::AddMember::new(self.id).into())
-            }
+            .into()),
+            Calldata::AddChild => Ok(add_member::AddMember::new(self.id).into()),
         }
     }
 }
@@ -128,7 +132,9 @@ impl View for ConfirmRemoveChild {
         ctx.ensure(Rule::EditFamily)?;
         match calldata!(data) {
             ConfirmRemoveChildCallback::Confirm => {
-                ctx.ledger.users.remove_family_member(&mut ctx.session, self.parent_id, self.child_id)
+                ctx.ledger
+                    .users
+                    .remove_family_member(&mut ctx.session, self.parent_id, self.child_id)
                     .await?;
                 ctx.send_notification("Член семьи удален").await?;
                 Ok(Jmp::Back)

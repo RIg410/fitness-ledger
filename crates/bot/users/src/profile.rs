@@ -106,7 +106,7 @@ impl UserProfile {
     }
 
     async fn family_view(&mut self, ctx: &mut Context, id: ObjectId) -> Result<Jmp, eyre::Error> {
-        if ctx.has_right(Rule::EditFamily) || (ctx.me.id == id && ctx.me.has_family()) {
+        if ctx.has_right(Rule::ViewFamily) || (ctx.me.id == id && ctx.me.has_family()) {
             Ok(FamilyView::new(self.id).into())
         } else {
             Ok(Jmp::Stay)
@@ -176,7 +176,7 @@ async fn render_user_profile(
 
     let mut keymap = InlineKeyboardMarkup::default();
 
-    if ctx.has_right(Rule::EditFamily) || (ctx.me.tg_id == user.tg_id && ctx.me.has_family()) {
+    if ctx.has_right(Rule::ViewFamily) || (ctx.me.tg_id == user.tg_id && ctx.me.has_family()) {
         keymap = keymap.append_row(Callback::FamilyView.btn_row("Семья 👨‍👩‍👧‍👦"));
     }
 
