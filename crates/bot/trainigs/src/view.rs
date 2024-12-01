@@ -188,6 +188,7 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
     let now = Local::now();
     let tr_status = training.status(now);
     let slot = training.get_slot();
+    let signed = training.clients.contains(&ctx.me.id);
 
     let couch = ctx
         .ledger
@@ -213,6 +214,7 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
 _{}_                                                                 \n
 [Описание]({})
 {}
+{}
 ",
         escape(&training.name),
         fmt_dt(&slot.start_at()),
@@ -222,6 +224,11 @@ _{}_                                                                 \n
         status(tr_status, training.is_full()),
         training.description,
         fmt_training_type(training.tp),
+        if signed {
+            "❤️ Вы записаны"
+        } else {
+            ""
+        }
     );
 
     let mut keymap = InlineKeyboardMarkup::default();
@@ -276,13 +283,13 @@ _{}_                                                                 \n
 
     if is_client {
         if ctx.me.family.children_ids.is_empty() {
-            if training.clients.contains(&ctx.me.id) {
+            if signed {
                 if tr_status.can_sign_out() {
                     keymap =
-                        keymap.append_row(vec![Callback::SignOut.button("🔓 Отменить запись")]);
+                        keymap.append_row(vec![Callback::SignOut.button("❌ Отменить запись")]);
                 }
             } else if tr_status.can_sign_in() {
-                keymap = keymap.append_row(vec![Callback::SignUp.button("🔒 Записаться")]);
+                keymap = keymap.append_row(vec![Callback::SignUp.button("✔️ Записаться")]);
             }
         } else {
             keymap = keymap.append_row(vec![Callback::OpenSignInView.button("👨‍👩‍👧‍👦 Запись")]);
@@ -451,17 +458,11 @@ pub async fn sign_up(
         .sign_up(&mut ctx.session, &training, user.id, false)
         .await?;
 
-    let mut msg: String = format!(
-        "Вы записались на тренировку '*{}*' в _{}_\\.\n",
-        escape(&training.name),
-        fmt_dt(&training.get_slot().start_at())
-    );
-
     if training.tp.is_not_free() {
         let payer = ctx.me.payer()?;
         let balance = payer.available_balance_for_training(&training);
         if balance <= 1 {
-            msg.push_str("Ваш абонемент заканчивается🥺");
+            let msg = "Ваш абонемент заканчивается🥺";
             if let Ok(users) = ctx
                 .ledger
                 .users
@@ -488,8 +489,8 @@ pub async fn sign_up(
                     }
                 }
             }
+            ctx.send_notification(&msg).await?;
         }
-        ctx.send_notification(&msg).await?;
     }
     Ok(Jmp::Stay)
 }
@@ -512,5 +513,6 @@ pub async fn sign_out(
     ctx.ledger
         .sign_out(&mut ctx.session, &training, user_id, false)
         .await?;
+
     Ok(Jmp::Stay)
 }
