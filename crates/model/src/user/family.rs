@@ -27,6 +27,12 @@ pub struct Family {
     pub children: Vec<User>,
 }
 
+impl Family {
+    pub fn exists(&self) -> bool {
+        self.payer_id.is_some() || !self.children_ids.is_empty()
+    }
+}
+
 pub struct Payer<U>(U, bool);
 
 impl<U> Payer<U> {

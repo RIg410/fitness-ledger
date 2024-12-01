@@ -1,5 +1,9 @@
 use eyre::{bail, eyre, Result};
-use model::session::Session;
+use model::{
+    rights::Rights,
+    session::Session,
+    user::{extension::UserExtension, User, UserName},
+};
 use mongodb::bson::oid::ObjectId;
 use tx_macro::tx;
 
@@ -42,16 +46,19 @@ impl Users {
         }
         self.store.update(session, &mut member).await?;
 
-        self.logs.remove_family_member(session, user_id, member_id).await?;
+        self.logs
+            .remove_family_member(session, user_id, member_id)
+            .await?;
         Ok(())
     }
 
     #[tx]
-    pub async fn add_family_member(
+    pub async fn create_family_member(
         &self,
         session: &mut Session,
         user_id: ObjectId,
-        member_id: ObjectId,
+        name: &str,
+        surname: &Option<String>,
     ) -> Result<()> {
         let mut user = self
             .store
@@ -59,14 +66,65 @@ impl Users {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
-        let family = &mut user.family;
+        let mut child = User::new(
+            -1,
+            UserName {
+                tg_user_name: None,
+                first_name: name.to_string(),
+                last_name: surname.clone(),
+            },
+            Rights::customer(),
+            "-".to_string(),
+            user.come_from.clone(),
+        );
+        child.family.payer_id = Some(user_id);
+        let id = child.id;
 
-        if family.children_ids.contains(&member_id) {
+        self.store.insert(session, child).await?;
+
+        user.family.children_ids.push(id);
+        self.store.update(session, &mut user).await?;
+
+        self.store
+            .update_extension(
+                session,
+                UserExtension {
+                    id,
+                    birthday: None,
+                    bought_test_group: false,
+                    bought_test_personal: false,
+                    bought_first_group: false,
+                    bought_first_personal: false,
+                },
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn add_family_member(
+        &self,
+        session: &mut Session,
+        parent_id: ObjectId,
+        member_id: ObjectId,
+    ) -> Result<()> {
+        let mut parent = self
+            .store
+            .get(session, parent_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+
+        if parent.family.payer_id.is_some() {
+            bail!("User already has family");
+        }
+
+        if parent.family.children_ids.contains(&member_id) {
             bail!("Member already in family");
         }
 
-        family.children_ids.push(member_id);
-        self.store.update(session, &mut user).await?;
+        parent.family.children_ids.push(member_id);
+        self.store.update(session, &mut parent).await?;
 
         let mut member = self
             .store
@@ -74,10 +132,20 @@ impl Users {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
-        member.family.payer_id = Some(user_id);
+        if member.has_subscriptions() {
+            bail!("Member already has subscriptions");
+        }
+
+        if member.family.exists() {
+            bail!("Member already in family");
+        }
+
+        member.family.payer_id = Some(parent_id);
         self.store.update(session, &mut member).await?;
 
-        self.logs.add_family_member(session, user_id, member_id).await?;
+        self.logs
+            .add_family_member(session, parent_id, member_id)
+            .await?;
         Ok(())
     }
 }

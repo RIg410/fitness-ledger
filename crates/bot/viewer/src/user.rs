@@ -255,7 +255,7 @@ pub fn link_to_user(user: &User) -> String {
 }
 
 pub fn tg_link(tg: i64, name: Option<&str>) -> String {
-    format!(" [{}](tg://user?id={}) ", name.unwrap_or("профиль"), tg)
+    format!(" [{}](tg://user?id={}) ", escape(name.unwrap_or("профиль")), tg)
 }
 
 pub fn fmt_come_from(from: ComeFrom) -> &'static str {

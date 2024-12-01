@@ -30,6 +30,9 @@ impl UserStore {
         users
             .create_index(IndexModel::builder().keys(doc! { "tg_id": 1 }).build())
             .await?;
+        users
+            .create_index(IndexModel::builder().keys(doc! { "phone": 1 }).build())
+            .await?;
         Ok(UserStore {
             users: users,
             extensions: db.collection("users_extension"),

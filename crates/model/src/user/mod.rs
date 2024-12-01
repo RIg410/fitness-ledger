@@ -78,6 +78,10 @@ impl User {
         }
     }
 
+    pub fn has_subscriptions(&self) -> bool {
+        !self.subscriptions.is_empty()
+    }
+
     pub fn with_tg_id(tg_id: i64) -> User {
         User {
             id: ObjectId::new(),

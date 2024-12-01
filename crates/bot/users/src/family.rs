@@ -33,7 +33,10 @@ impl View for FamilyView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         let mut keymap = InlineKeyboardMarkup::default();
         let mut msg = "👨‍👩‍👧‍👦 Cемья\n".to_string();
-        let family = &ctx.me.family;
+       
+        let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
+        let family = &user.family;
+
         if let Some(payer) = family.payer.as_ref() {
             msg.push_str(&format!(
                 "Глава семьи: _{}_\n",
@@ -49,7 +52,7 @@ impl View for FamilyView {
 
         msg.push_str("Члены семьи:\n");
         for child in family.children.iter() {
-            msg.push_str(&format!(" * _{}_\n", escape(&child.name.first_name)));
+            msg.push_str(&format!("👤 _{}_\n", escape(&child.name.first_name)));
             if ctx.has_right(Rule::EditFamily) {
                 keymap = keymap.append_row(vec![
                     Calldata::GoToProfile(child.id.bytes())
@@ -109,7 +112,7 @@ impl View for ConfirmRemoveChild {
         let child = ctx.ledger.get_user(&mut ctx.session, self.child_id).await?;
         let msg = format!(
             "Вы уверены, что хотите удалить члена семьи {}?",
-            child.name.first_name
+            escape(&child.name.first_name)
         );
 
         let mut keymap = InlineKeyboardMarkup::default();
