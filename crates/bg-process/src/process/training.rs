@@ -98,7 +98,7 @@ impl TriningBg {
 
         self.ledger
             .calendar
-            .finalized(session, training.start_at, statistic)
+            .finalized(session, training.id(), statistic)
             .await?;
         self.ledger
             .history
@@ -113,7 +113,7 @@ impl TriningBg {
 
         self.ledger
             .calendar
-            .finalized(session, training.start_at, Statistics::default())
+            .finalized(session, training.id(), Statistics::default())
             .await?;
         self.ledger
             .history

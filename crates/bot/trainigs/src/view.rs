@@ -8,11 +8,11 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::{day::fmt_dt, fmt_phone, training::fmt_training_type, user::link_to_user};
-use chrono::{DateTime, Local};
+use chrono::Local;
 use eyre::{bail, Result};
 use model::{
     rights::Rule,
-    training::{Training, TrainingStatus},
+    training::{Training, TrainingId, TrainingStatus},
     user::family::FindFor,
 };
 use mongodb::bson::oid::ObjectId;
@@ -25,11 +25,11 @@ use teloxide::{
 use crate::{change_couch::ChangeCouch, client::list::ClientsList, family::FamilySignIn};
 
 pub struct TrainingView {
-    id: DateTime<Local>,
+    id: TrainingId,
 }
 
 impl TrainingView {
-    pub fn new(id: DateTime<Local>) -> Self {
+    pub fn new(id: TrainingId) -> Self {
         Self { id }
     }
 
@@ -37,7 +37,7 @@ impl TrainingView {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let user = ctx
@@ -55,7 +55,7 @@ impl TrainingView {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         ctx.ledger
@@ -70,7 +70,7 @@ impl TrainingView {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         ctx.ledger
@@ -97,12 +97,12 @@ impl TrainingView {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         ctx.ledger
             .calendar
-            .set_keep_open(&mut ctx.session, training.start_at, keep_open)
+            .set_keep_open(&mut ctx.session, training.id(), keep_open)
             .await?;
         Ok(Jmp::Stay)
     }
@@ -113,7 +113,7 @@ impl TrainingView {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
 
@@ -128,7 +128,7 @@ impl TrainingView {
 
         ctx.ledger
             .calendar
-            .set_training_type(&mut ctx.session, training.start_at, tp)
+            .set_training_type(&mut ctx.session, training.id(), tp)
             .await?;
         Ok(Jmp::Stay)
     }
@@ -144,7 +144,7 @@ impl View for TrainingView {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let (msg, keymap) = render(ctx, &training).await?;
@@ -330,11 +330,11 @@ fn status(status: TrainingStatus, is_full: bool) -> &'static str {
     }
 }
 pub struct ConfirmCancelTraining {
-    id: DateTime<Local>,
+    id: TrainingId,
 }
 
 impl ConfirmCancelTraining {
-    pub fn new(id: DateTime<Local>) -> Self {
+    pub fn new(id: TrainingId) -> Self {
         Self { id }
     }
 
@@ -343,7 +343,7 @@ impl ConfirmCancelTraining {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let to_notify = ctx
@@ -377,7 +377,7 @@ impl View for ConfirmCancelTraining {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.id)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let msg = format!(
@@ -409,15 +409,11 @@ enum CancelCallback {
     Stay,
 }
 
-pub async fn sign_up(
-    ctx: &mut Context,
-    start_at: DateTime<Local>,
-    user_id: ObjectId,
-) -> Result<Jmp> {
+pub async fn sign_up(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> Result<Jmp> {
     let training = ctx
         .ledger
         .calendar
-        .get_training_by_start_at(&mut ctx.session, start_at)
+        .get_training_by_id(&mut ctx.session, id)
         .await?
         .ok_or_else(|| eyre::eyre!("Training not found"))?;
     if !training.status(Local::now()).can_sign_in() {
@@ -455,7 +451,7 @@ pub async fn sign_up(
     }
 
     ctx.ledger
-        .sign_up(&mut ctx.session, &training, user.id, false)
+        .sign_up(&mut ctx.session, id, user.id, false)
         .await?;
 
     if training.tp.is_not_free() {
@@ -495,15 +491,11 @@ pub async fn sign_up(
     Ok(Jmp::Stay)
 }
 
-pub async fn sign_out(
-    ctx: &mut Context,
-    start_at: DateTime<Local>,
-    user_id: ObjectId,
-) -> Result<Jmp> {
+pub async fn sign_out(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> Result<Jmp> {
     let training = ctx
         .ledger
         .calendar
-        .get_training_by_start_at(&mut ctx.session, start_at)
+        .get_training_by_id(&mut ctx.session, id)
         .await?
         .ok_or_else(|| eyre::eyre!("Training not found"))?;
     if !training.status(Local::now()).can_sign_out() {
@@ -511,7 +503,7 @@ pub async fn sign_out(
         return Ok(Jmp::Stay);
     }
     ctx.ledger
-        .sign_out(&mut ctx.session, &training, user_id, false)
+        .sign_out(&mut ctx.session, training.id(), user_id, false)
         .await?;
 
     Ok(Jmp::Stay)

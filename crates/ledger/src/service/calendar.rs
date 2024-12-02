@@ -6,7 +6,7 @@ use model::{
     ids::DayId,
     session::Session,
     slot::Slot,
-    training::{Training, TrainingStatus},
+    training::{Training, TrainingId, TrainingStatus},
 };
 use mongodb::bson::oid::ObjectId;
 use storage::calendar::CalendarStore;
@@ -31,17 +31,13 @@ impl Calendar {
         }
     }
 
-    pub async fn get_training_by_start_at(
+    pub async fn get_training_by_id(
         &self,
         session: &mut Session,
-        id: DateTime<Local>,
+        id: TrainingId,
     ) -> Result<Option<Training>, Error> {
-        let day = self.get_day(session, DayId::from(id)).await?;
-        Ok(day
-            .training
-            .iter()
-            .find(|slot| slot.start_at == id)
-            .cloned())
+        let day = self.get_day(session, DayId::from(id.start_at)).await?;
+        Ok(day.training.iter().find(|slot| slot.id() == id).cloned())
     }
 
     pub(crate) async fn cancel_training(
@@ -54,7 +50,7 @@ impl Calendar {
 
         if let Some(training) = training {
             self.calendar
-                .set_cancel_flag(session, training.start_at, true)
+                .set_cancel_flag(session, training.id(), true)
                 .await?;
             Ok(training)
         } else {
@@ -65,16 +61,18 @@ impl Calendar {
     #[tx]
     pub async fn restore_training(&self, session: &mut Session, training: &Training) -> Result<()> {
         let mut day = self.get_day(session, training.day_id()).await?;
-        let training = day.training.iter_mut().find(|slot| slot.id == training.id);
+        let training = day
+            .training
+            .iter_mut()
+            .find(|slot| slot.id() == training.id());
 
         if let Some(training) = training {
             if training.status(Local::now()) != TrainingStatus::Cancelled {
                 return Err(eyre::eyre!("Training is not cancelled"));
             }
             self.calendar
-                .set_cancel_flag(session, training.start_at, false)
+                .set_cancel_flag(session, training.id(), false)
                 .await?;
-            //self.logs.restore_training(session, training).await;
             Ok(())
         } else {
             return Err(eyre::eyre!("Training not found"));
@@ -85,14 +83,12 @@ impl Calendar {
     pub async fn change_couch(
         &self,
         session: &mut Session,
-        start_at: DateTime<Local>,
+        id: TrainingId,
         new_couch: ObjectId,
         all: bool,
     ) -> Result<(), Error> {
-        if let Some(training) = self.get_training_by_start_at(session, start_at).await? {
-            self.calendar
-                .change_couch(session, start_at, new_couch)
-                .await?;
+        if let Some(training) = self.get_training_by_id(session, id).await? {
+            self.calendar.change_couch(session, id, new_couch).await?;
 
             let day_id = DayId::from(training.get_slot().start_at());
             if all {
@@ -102,13 +98,13 @@ impl Calendar {
                     let training = day.training.iter().find(|slot| slot.id == training.id);
                     if let Some(training) = training {
                         self.calendar
-                            .change_couch(session, training.get_slot().start_at(), new_couch)
+                            .change_couch(session, training.id(), new_couch)
                             .await?;
                     }
                 }
             }
         } else {
-            return Err(eyre::eyre!("Training not found:{}", start_at));
+            return Err(eyre::eyre!("Training not found:{:?}", id));
         }
 
         Ok(())
@@ -121,16 +117,13 @@ impl Calendar {
         training: &Training,
         all: bool,
     ) -> Result<()> {
-        if let Some(training) = self
-            .get_training_by_start_at(session, training.get_slot().start_at())
-            .await?
-        {
+        if let Some(training) = self.get_training_by_id(session, training.id()).await? {
             if !training.clients.is_empty() {
                 return Err(eyre::eyre!("Training has clients"));
             }
 
             self.calendar
-                .delete_training(session, training.start_at)
+                .delete_training(session, training.id())
                 .await?;
 
             // self.logs.delete_training(session, &training, all).await;
@@ -145,7 +138,7 @@ impl Calendar {
                             return Err(eyre::eyre!("Training has clients"));
                         }
                         self.calendar
-                            .delete_training(session, training.start_at)
+                            .delete_training(session, training.id())
                             .await?;
                     }
                 }
@@ -163,6 +156,7 @@ impl Calendar {
         session: &mut Session,
         object_id: ObjectId,
         start_at: DateTime<Local>,
+        room: ObjectId,
         instructor: ObjectId,
         is_one_time: bool,
     ) -> Result<(), ScheduleError> {
@@ -181,14 +175,14 @@ impl Calendar {
             return Err(ScheduleError::InstructorHasNoRights);
         }
         let collision = self
-            .check_time_slot(session, program.id, start_at, is_one_time)
+            .check_time_slot(session, program.id, start_at, room, is_one_time)
             .await?;
         if let Some(collision) = collision {
             return Err(ScheduleError::TimeSlotCollision(collision));
         }
 
         let day_id = DayId::from(start_at);
-        let slot = Slot::new(start_at.with_timezone(&Utc), program.duration_min);
+        let slot = Slot::new(start_at.with_timezone(&Utc), program.duration_min, room);
         let day = self.get_day(session, day_id).await?;
         for training in day.training {
             if training.get_slot().has_conflict(&slot) {
@@ -197,7 +191,8 @@ impl Calendar {
                 )));
             }
         }
-        let mut training = Training::with_program(program, start_at, instructor.id, is_one_time);
+        let mut training =
+            Training::with_program(program, start_at, instructor.id, is_one_time, room);
         if !training.status(Local::now()).can_sign_in() {
             return Err(ScheduleError::TooCloseToStart);
         }
@@ -230,6 +225,7 @@ impl Calendar {
         session: &mut Session,
         program_id: ObjectId,
         start_at: DateTime<Local>,
+        room: ObjectId,
         is_one_time: bool,
     ) -> Result<Option<TimeSlotCollision>> {
         let program = self
@@ -239,7 +235,7 @@ impl Calendar {
             .ok_or_else(|| eyre::eyre!("Program not found:{}", program_id))?;
 
         let day_id = DayId::from(start_at);
-        let slot = Slot::new(start_at.with_timezone(&Utc), program.duration_min);
+        let slot = Slot::new(start_at.with_timezone(&Utc), program.duration_min, room);
         let day = self.get_day(session, day_id).await?;
         for training in day.training {
             if training.get_slot().has_conflict(&slot) {

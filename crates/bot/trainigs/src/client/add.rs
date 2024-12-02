@@ -6,9 +6,8 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::user::fmt_user_type;
-use chrono::{DateTime, Local};
 use eyre::{Error, Result};
-use model::{rights::Rule, user::User};
+use model::{rights::Rule, training::TrainingId, user::User};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -21,13 +20,13 @@ use crate::client::{ClientView, Reason};
 pub const LIMIT: u64 = 7;
 
 pub struct AddClientView {
-    training_id: DateTime<Local>,
+    training_id: TrainingId,
     query: String,
     offset: u64,
 }
 
 impl AddClientView {
-    pub fn new(training_id: DateTime<Local>) -> AddClientView {
+    pub fn new(training_id: TrainingId) -> AddClientView {
         AddClientView {
             training_id,
             query: "".to_string(),

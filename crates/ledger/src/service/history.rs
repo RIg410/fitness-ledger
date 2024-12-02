@@ -217,7 +217,7 @@ impl History {
             sub_actors,
             Action::FinalizedTraining {
                 name: training.name.clone(),
-                start_at: training.start_at,
+                start_at: training.start_at_utc(),
             },
         );
         self.store.store(session, entry).await
@@ -231,7 +231,7 @@ impl History {
             sub_actors,
             Action::FinalizedCanceledTraining {
                 name: training.name.clone(),
-                start_at: training.start_at,
+                start_at: training.start_at_utc(),
             },
         );
         self.store.store(session, entry).await

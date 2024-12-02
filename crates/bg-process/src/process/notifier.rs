@@ -105,7 +105,7 @@ impl TrainingNotifier {
 
             self.ledger
                 .calendar
-                .notify(session, training.start_at, Notified::Tomorrow {})
+                .notify(session, training.id(), Notified::Tomorrow {})
                 .await?;
         }
         Ok(())
@@ -127,7 +127,8 @@ impl TrainingNotifier {
             if start_at < now {
                 continue;
             }
-            let start_at = training.get_slot().start_at();
+
+            let training_id = training.id();
 
             let mut already_notified = match training.notified {
                 Notified::None {} => {
@@ -161,11 +162,7 @@ impl TrainingNotifier {
             if has_changes {
                 self.ledger
                     .calendar
-                    .notify(
-                        session,
-                        training.start_at,
-                        Notified::ByHours(already_notified),
-                    )
+                    .notify(session, training_id, Notified::ByHours(already_notified))
                     .await?;
             }
         }

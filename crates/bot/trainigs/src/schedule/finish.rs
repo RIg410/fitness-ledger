@@ -73,6 +73,8 @@ impl View for Finish {
                     .is_one_time
                     .ok_or_else(|| eyre::eyre!("IsOneTime is missing"))?;
 
+                let room = preset.room.ok_or_else(|| eyre::eyre!("Room is missing"))?;
+
                 match ctx
                     .ledger
                     .calendar
@@ -80,6 +82,7 @@ impl View for Finish {
                         &mut ctx.session,
                         self.id,
                         date_time,
+                        room,
                         instructor,
                         is_one_time,
                     )

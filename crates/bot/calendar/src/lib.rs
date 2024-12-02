@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use bot_core::callback_data::{CallbackDateTime, Calldata};
+use bot_core::callback_data::{CallbackDateTime, Calldata, TrainingIdCallback};
 use bot_core::calldata;
 use bot_core::context::Context;
 use bot_core::widget::{Jmp, View};
@@ -8,23 +8,26 @@ use bot_trainigs::program::list::ProgramList;
 use bot_trainigs::schedule::ScheduleTrainingPreset;
 use bot_trainigs::view::TrainingView;
 use bot_viewer::day::{fmt_dm, fmt_month, fmt_weekday};
+use bot_viewer::rooms::fmt_room_emoji;
 use bot_viewer::training::fmt_training_status;
 use bot_views::Filter;
 use chrono::{Datelike, Duration, Local, Weekday};
 use eyre::Error;
 use model::ids::{DayId, WeekId};
 use model::rights::Rule;
+use model::rooms::Room;
 use model::training::Statistics;
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use std::vec;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 use teloxide::utils::markdown::escape;
 
-#[derive(Default)]
 pub struct CalendarView {
     week_id: WeekId,
     selected_day: DayId,
     filter: Filter,
+    rooms: Vec<ObjectId>,
 }
 
 impl CalendarView {
@@ -33,6 +36,18 @@ impl CalendarView {
             week_id,
             selected_day: week_id.day(selected_day.unwrap_or_else(|| Local::now().weekday())),
             filter: filter.unwrap_or_default(),
+            rooms: vec![Room::Adult.id(), Room::Child.id()],
+        }
+    }
+}
+
+impl Default for CalendarView {
+    fn default() -> Self {
+        CalendarView {
+            week_id: WeekId::default(),
+            selected_day: Default::default(),
+            filter: Default::default(),
+            rooms: vec![Room::Adult.id(), Room::Child.id()],
         }
     }
 }
@@ -51,6 +66,7 @@ impl View for CalendarView {
             self.week_id.next().has_week() || ctx.is_couch() || ctx.is_admin(),
             self.selected_day,
             &self.filter,
+            &self.rooms,
         )
         .await?;
         ctx.edit_origin(&text, keymap).await?;
@@ -81,6 +97,15 @@ impl View for CalendarView {
                     Ok(TrainingList::users(ctx.me.id).into())
                 }
             }
+            Callback::SelectRoom(room) => {
+                let room_id = ObjectId::from_bytes(room);
+                if self.rooms.contains(&room_id) {
+                    self.rooms.retain(|r| r != &room_id);
+                } else {
+                    self.rooms.push(room_id);
+                }
+                Ok(Jmp::Stay)
+            }
         }
     }
 }
@@ -92,6 +117,7 @@ pub async fn render_week(
     hes_next: bool,
     selected_day_id: DayId,
     filter: &Filter,
+    rooms: &[ObjectId],
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
     let week_local = week_id.local();
     let selected_week_day = selected_day_id.week_day();
@@ -109,7 +135,7 @@ pub async fn render_week(
 🔵\\- тренировка идет 
 ❤️\\- моя тренировка
 ➖➖➖➖➖➖➖➖➖➖➖➖➖➖
-*{}*
+Выбранный день:*{}*
 ",
         fmt_month(&week_local),
         week_local.year(),
@@ -120,6 +146,23 @@ pub async fn render_week(
 
     let now = Local::now();
     let mut buttons = InlineKeyboardMarkup::default();
+    let adult_room_name = if rooms.contains(&Room::Adult.id()) {
+        "✔️🧘 Взрослые"
+    } else {
+        "🧘 Взрослые"
+    };
+
+    let child_room_name = if rooms.contains(&Room::Child.id()) {
+        "✔️🧒 Дети"
+    } else {
+        "🧒 Дети"
+    };
+
+    buttons = buttons.append_row(vec![
+        Callback::SelectRoom(Room::Adult.id().bytes()).button(adult_room_name),
+        Callback::SelectRoom(Room::Child.id().bytes()).button(child_room_name),
+    ]);
+
     let mut row = vec![];
     for week_day in week() {
         let date = week_id.day(week_day).local();
@@ -160,7 +203,7 @@ pub async fn render_week(
             .filter_map(|t| t.statistics)
             .sum::<Statistics>();
         msg.push_str(&escape(&format!(
-            "\n 📊Заработано {}\n📊Награда инструктора {}",
+            "\n📊Заработано {}\n📊Награда инструктора {}",
             stat.earned, stat.couch_rewards
         )));
     }
@@ -173,11 +216,15 @@ pub async fn render_week(
             }
         }
 
+        if !rooms.contains(&training.room()) {
+            continue;
+        }
+
         let start_at = training.get_slot().start_at();
         let mut row = vec![];
         row.push(InlineKeyboardButton::callback(
             format!(
-                "{} {} {}",
+                "{} {} {}{}",
                 fmt_training_status(
                     training.status(now),
                     training.is_processed,
@@ -185,9 +232,10 @@ pub async fn render_week(
                     training.clients.contains(&ctx.me.id)
                 ),
                 start_at.format("%H:%M"),
+                fmt_room_emoji(Room::from(training.room())),
                 training.name.as_str(),
             ),
-            Callback::SelectTraining(start_at.into()).to_data(),
+            Callback::SelectTraining(training.id().into()).to_data(),
         ));
         buttons = buttons.append_row(row);
     }
@@ -217,7 +265,8 @@ fn week() -> [Weekday; 7] {
 enum Callback {
     GoToWeek(CallbackDateTime),
     SelectDay(CallbackDateTime),
-    SelectTraining(CallbackDateTime),
+    SelectTraining(TrainingIdCallback),
     AddTraining,
     MyTrainings,
+    SelectRoom([u8; 12]),
 }

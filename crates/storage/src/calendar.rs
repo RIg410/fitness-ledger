@@ -1,13 +1,14 @@
 use bson::to_document;
 use chrono::{DateTime, Duration, Local, Utc, Weekday};
 use eyre::Result;
+use futures_util::StreamExt;
 use log::info;
 use model::{
     day::Day,
     ids::DayId,
     program::TrainingType,
     session::Session,
-    training::{Filter, Notified, Statistics, Training},
+    training::{Filter, Notified, Statistics, Training, TrainingId},
 };
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -29,6 +30,30 @@ impl CalendarStore {
             .options(IndexOptions::builder().unique(true).build())
             .build();
         days.create_index(index).await?;
+
+        days.create_index(
+            IndexModel::builder()
+                .keys(doc! { "training.start_at": 1 })
+                .build(),
+        )
+        .await?;
+
+        days.create_index(
+            IndexModel::builder()
+                .keys(doc! { "training.room": 1 })
+                .build(),
+        )
+        .await?;
+
+        info!("CalendarStore reload");
+        let mut days_c = days.find(doc! {}).await?;
+        while let Some(doc) = days_c.next().await {
+            let day: Day = doc?;
+            days.update_one(doc! { "_id": day.id }, doc! { "$set": to_document(&day)? })
+                .await?;
+        }
+        info!("CalendarStore reload done");
+
         Ok(CalendarStore { days })
     }
 
@@ -76,11 +101,11 @@ impl CalendarStore {
     pub async fn set_cancel_flag(
         &self,
         session: &mut Session,
-        start_at: DateTime<Utc>,
+        id: TrainingId,
         flag: bool,
     ) -> Result<(), eyre::Error> {
-        info!("Set cancel flag: {:?} {}", start_at, flag);
-        let filter = doc! { "training.start_at": start_at };
+        info!("Set cancel flag: {:?} {}", id, flag);
+        let filter = doc! { "training.start_at": id.start_at, "training.room": id.room };
         let update = doc! { "$set": { "training.$.is_canceled": flag }, "$inc": { "version": 1 } };
         let result = self
             .days
@@ -143,9 +168,10 @@ impl CalendarStore {
         let mut trainings = Vec::new();
         while let Some(day) = cursor.next(&mut *session).await {
             let mut day = day?;
-            day.training.sort_by(|a, b| a.start_at.cmp(&b.start_at));
+            day.training
+                .sort_by(|a, b| a.start_at_utc().cmp(&b.start_at_utc()));
             for training in day.training {
-                if training.start_at + Duration::minutes(training.duration_min as i64) < now {
+                if training.start_at_utc() + Duration::minutes(training.duration_min as i64) < now {
                     continue;
                 }
                 if skiped < offset {
@@ -213,14 +239,13 @@ impl CalendarStore {
     pub async fn delete_training(
         &self,
         session: &mut Session,
-        start_at: DateTime<Utc>,
+        id: TrainingId,
     ) -> std::result::Result<(), eyre::Error> {
-        info!("Delete training: {:?}", start_at);
-        let filter = doc! { "training.start_at": start_at };
-        let update =
-            doc! { "$pull": { "training": { "start_at": start_at } }, "$inc": { "version": 1 } };
+        info!("Delete training: {:?}", id);
+
+        let update = doc! { "$pull": { "training": { "start_at": id.start_at, "room": id.room } }, "$inc": { "version": 1 } };
         self.days
-            .update_one(filter, update)
+            .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
         Ok(())
@@ -259,18 +284,17 @@ impl CalendarStore {
     pub async fn sign_up(
         &self,
         session: &mut Session,
-        start_at: DateTime<Utc>,
+        id: TrainingId,
         user_id: ObjectId,
     ) -> Result<(), eyre::Error> {
-        info!("Sign up: {:?} {}", start_at, user_id);
-        let filter = doc! { "training.start_at": start_at };
+        info!("Sign up: {:?} {}", id, user_id);
         let update = doc! {
             "$addToSet": { "training.$.clients": user_id },
             "$inc": { "version": 1 }
         };
         let result = self
             .days
-            .update_one(filter, update)
+            .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
 
@@ -283,18 +307,17 @@ impl CalendarStore {
     pub async fn sign_out(
         &self,
         session: &mut Session,
-        start_at: DateTime<Utc>,
+        id: TrainingId,
         user_id: ObjectId,
     ) -> Result<(), eyre::Error> {
-        info!("Sign out: {:?} {}", start_at, user_id);
-        let filter = doc! { "training.start_at": start_at };
+        info!("Sign out: {:?} {}", id, user_id);
         let update = doc! {
             "$pull": { "training.$.clients": user_id },
             "$inc": { "version": 1 }
         };
         let result = self
             .days
-            .update_one(filter, update)
+            .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
 
@@ -324,18 +347,17 @@ impl CalendarStore {
     pub async fn finalized(
         &self,
         session: &mut Session,
-        start_at: DateTime<Utc>,
+        id: TrainingId,
         statistics: Statistics,
     ) -> Result<()> {
-        info!("Finalized: {:?}", start_at);
-        let filter = doc! { "training.start_at": start_at };
+        info!("Finalized: {:?}", id);
         let update = doc! {
             "$set": { "training.$.is_finished": true, "training.$.statistics": to_document(&statistics)? },
             "$inc": { "version": 1 }
         };
         let result = self
             .days
-            .update_one(filter, update)
+            .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
 
@@ -437,18 +459,17 @@ impl CalendarStore {
     pub async fn change_couch(
         &self,
         session: &mut Session,
-        start_at: DateTime<Local>,
+        id: TrainingId,
         couch_id: ObjectId,
     ) -> Result<(), eyre::Error> {
-        info!("Change couch: {:?} {}", start_at, couch_id);
-        let filter = doc! { "training.start_at": start_at };
+        info!("Change couch: {:?} {}", id, couch_id);
         let update = doc! {
             "$set": { "training.$.instructor": couch_id },
             "$inc": { "version": 1 }
         };
         let result = self
             .days
-            .update_one(filter, update)
+            .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
 
@@ -470,18 +491,17 @@ impl CalendarStore {
     pub async fn set_training_type(
         &self,
         session: &mut Session,
-        start_at: DateTime<Utc>,
+        id: TrainingId,
         tp: TrainingType,
     ) -> Result<(), eyre::Error> {
-        info!("Set type: {:?} -> {:?}", start_at, tp);
-        let filter = doc! { "training.start_at": start_at };
+        info!("Set type: {:?} -> {:?}", id, tp);
         let update = doc! {
             "$set": { "training.$.tp": to_document(&tp)? },
             "$inc": { "version": 1 }
         };
         let result = self
             .days
-            .update_one(filter, update)
+            .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
 
@@ -494,16 +514,15 @@ impl CalendarStore {
     pub async fn set_keep_open(
         &self,
         session: &mut Session,
-        start_at: DateTime<Utc>,
+        id: TrainingId,
         keep_open: bool,
     ) -> Result<(), eyre::Error> {
-        info!("Set keep open: {:?} {}", start_at, keep_open);
-        let filter = doc! { "training.start_at": start_at };
+        info!("Set keep open: {:?} {}", id, keep_open);
         let update =
             doc! { "$set": { "training.$.keep_open": keep_open }, "$inc": { "version": 1 } };
         let result = self
             .days
-            .update_one(filter, update)
+            .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
 
@@ -517,18 +536,17 @@ impl CalendarStore {
     pub async fn notify(
         &self,
         session: &mut Session,
-        start_at: DateTime<Utc>,
+        id: TrainingId,
         notified: Notified,
     ) -> Result<(), eyre::Error> {
-        info!("Notify: {:?}", start_at);
-        let filter = doc! { "training.start_at": start_at };
+        info!("Notify: {:?}", id);
         let update = doc! {
             "$set": { "training.$.notified": to_document(&notified)? },
             "$inc": { "version": 1 }
         };
         let result = self
             .days
-            .update_one(filter, update)
+            .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
 
@@ -537,5 +555,12 @@ impl CalendarStore {
         }
 
         Ok(())
+    }
+}
+
+fn training_filter(id: TrainingId) -> bson::Document {
+    doc! {
+        "training.start_at": id.start_at,
+        "training.room": id.room,
     }
 }

@@ -1,5 +1,7 @@
-use chrono::{DateTime, Datelike as _, Local, TimeZone as _, Timelike as _};
+use chrono::{DateTime, Datelike as _, Local, TimeZone as _, Timelike as _, Utc};
 use model::ids::{DayId, WeekId};
+use model::training::TrainingId;
+use mongodb::bson::oid::ObjectId;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
@@ -92,6 +94,19 @@ impl From<DateTime<Local>> for CallbackDateTime {
     }
 }
 
+impl From<DateTime<Utc>> for CallbackDateTime {
+    fn from(date: DateTime<Utc>) -> Self {
+        Self {
+            year: date.year(),
+            month: date.month() as u8,
+            day: date.day() as u8,
+            hour: date.hour() as u8,
+            minute: date.minute() as u8,
+            second: date.second() as u8,
+        }
+    }
+}
+
 impl From<CallbackDateTime> for WeekId {
     fn from(date: CallbackDateTime) -> Self {
         let local = DateTime::<Local>::from(date);
@@ -119,5 +134,44 @@ impl From<CallbackDateTime> for DateTime<Local> {
             )
             .earliest()
             .unwrap()
+    }
+}
+
+impl From<CallbackDateTime> for DateTime<Utc> {
+    fn from(date: CallbackDateTime) -> Self {
+        Utc.with_ymd_and_hms(
+            date.year,
+            date.month as u32,
+            date.day as u32,
+            date.hour as u32,
+            date.minute as u32,
+            date.second as u32,
+        )
+        .earliest()
+        .unwrap()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub struct TrainingIdCallback {
+    start_at: CallbackDateTime,
+    room: [u8; 12],
+}
+
+impl From<TrainingId> for TrainingIdCallback {
+    fn from(id: TrainingId) -> Self {
+        TrainingIdCallback {
+            start_at: CallbackDateTime::from(id.start_at),
+            room: id.room.bytes(),
+        }
+    }
+}
+
+impl From<TrainingIdCallback> for TrainingId {
+    fn from(id: TrainingIdCallback) -> Self {
+        Self {
+            start_at: DateTime::<Utc>::from(id.start_at),
+            room: ObjectId::from_bytes(id.room),
+        }
     }
 }

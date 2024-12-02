@@ -8,6 +8,7 @@ use crate::{
     decimal::Decimal,
     ids::DayId,
     program::{Program, TrainingType},
+    rooms::Room,
     slot::Slot,
 };
 
@@ -16,13 +17,15 @@ pub const CLOSE_SING_UP: u32 = 3 * 60; // 3 hours
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[non_exhaustive]
 pub struct Training {
+    #[serde(default = "default_room_id")]
+    room: ObjectId,
     #[serde(rename = "_id")]
     pub id: ObjectId,
     pub proto_id: ObjectId,
     pub name: String,
     pub description: String,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
-    pub start_at: DateTime<Utc>,
+    start_at: DateTime<Utc>,
     pub duration_min: u32,
     pub instructor: ObjectId,
     pub clients: Vec<ObjectId>,
@@ -54,6 +57,7 @@ impl Training {
         capacity: u32,
         is_one_time: bool,
         tp: TrainingType,
+        room: ObjectId,
     ) -> Training {
         Training {
             id: ObjectId::new(),
@@ -72,6 +76,7 @@ impl Training {
             notified: Default::default(),
             keep_open: false,
             tp,
+            room,
         }
     }
 
@@ -80,6 +85,7 @@ impl Training {
         start_at: DateTime<Local>,
         instructor: ObjectId,
         is_one_time: bool,
+        room: ObjectId,
     ) -> Training {
         Training {
             id: ObjectId::new(),
@@ -98,7 +104,12 @@ impl Training {
             notified: Default::default(),
             keep_open: false,
             tp: program.tp,
+            room,
         }
+    }
+
+    pub fn start_at_utc(&self) -> DateTime<Utc> {
+        self.start_at
     }
 
     pub fn with_day_and_training(day: DayId, training: Training) -> Training {
@@ -127,11 +138,12 @@ impl Training {
             notified: Default::default(),
             keep_open: false,
             tp: training.tp,
+            room: training.room,
         }
     }
 
     pub fn get_slot(&self) -> Slot {
-        Slot::new(self.start_at, self.duration_min)
+        Slot::new(self.start_at, self.duration_min, self.room)
     }
 
     pub fn status(&self, now: DateTime<Local>) -> TrainingStatus {
@@ -178,6 +190,17 @@ impl Training {
 
     pub fn day_id(&self) -> DayId {
         DayId::from(self.start_at)
+    }
+
+    pub fn id(&self) -> TrainingId {
+        TrainingId {
+            start_at: self.start_at,
+            room: self.room,
+        }
+    }
+
+    pub fn room(&self) -> ObjectId {
+        self.room
     }
 }
 
@@ -264,4 +287,14 @@ impl Default for Notified {
     fn default() -> Self {
         Notified::None {}
     }
+}
+
+fn default_room_id() -> ObjectId {
+    Room::Adult.id()
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub struct TrainingId {
+    pub start_at: DateTime<Utc>,
+    pub room: ObjectId,
 }

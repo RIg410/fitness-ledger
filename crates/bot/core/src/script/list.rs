@@ -1,4 +1,7 @@
-use crate::{callback_data::{CallbackDateTime, Calldata as _}, context::Context};
+use crate::{
+    callback_data::{Calldata as _, TrainingIdCallback},
+    context::Context,
+};
 use async_trait::async_trait;
 use eyre::{Error, Result};
 use mongodb::bson::oid::ObjectId;
@@ -46,7 +49,7 @@ pub struct ListItem {
 pub enum ListId {
     I64(i64),
     ObjectId([u8; 12]),
-    DateTime(CallbackDateTime),
+    TrainingId(TrainingIdCallback),
     Yes,
     No,
 }

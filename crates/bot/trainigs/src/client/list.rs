@@ -6,10 +6,10 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::day::fmt_dt;
-use chrono::{DateTime, Local};
+use chrono::Local;
 use eyre::{bail, Result};
 use ledger::service::calendar::SignOutError;
-use model::rights::Rule;
+use model::{rights::Rule, training::TrainingId};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
@@ -18,23 +18,22 @@ use crate::client::{ClientView, Reason};
 
 use super::add::AddClientView;
 
-#[derive(Default)]
 pub struct ClientsList {
-    start_at: DateTime<Local>,
+    id: TrainingId,
 }
 
 impl ClientsList {
-    pub fn new(start_at: DateTime<Local>) -> Self {
-        Self { start_at }
+    pub fn new(id: TrainingId) -> Self {
+        Self { id }
     }
 
     pub async fn view_user_profile(&mut self, id: ObjectId) -> Result<Jmp> {
-        Ok(ClientView::new(id, self.start_at, Reason::RemoveClient).into())
+        Ok(ClientView::new(id, self.id, Reason::RemoveClient).into())
     }
 
     pub async fn add_client(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::EditTrainingClientsList)?;
-        Ok(AddClientView::new(self.start_at).into())
+        Ok(AddClientView::new(self.id).into())
     }
 
     pub async fn delete_client(&mut self, ctx: &mut Context, id: ObjectId) -> Result<Jmp> {
@@ -43,7 +42,7 @@ impl ClientsList {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.start_at)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         if training.is_processed {
@@ -53,7 +52,7 @@ impl ClientsList {
         }
         let result = ctx
             .ledger
-            .sign_out(&mut ctx.session, &training, id, true)
+            .sign_out(&mut ctx.session, training.id(), id, true)
             .await;
         match result {
             Ok(_) => {}
@@ -95,12 +94,12 @@ impl View for ClientsList {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.start_at)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         let mut msg = format!(
             "📅 *{}*\n{}\n*Список участников:*\n",
-            fmt_dt(&self.start_at),
+            fmt_dt(&self.id.start_at.with_timezone(&Local)),
             escape(&training.name)
         );
         if training.is_processed {

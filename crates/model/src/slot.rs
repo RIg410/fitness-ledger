@@ -1,17 +1,29 @@
 use std::fmt::Debug;
 
+use bson::oid::ObjectId;
 use chrono::{DateTime, Local, Timelike, Utc};
 
+use crate::training::TrainingId;
+
 pub struct Slot {
-    pub start_at: DateTime<Utc>,
+    room: ObjectId,
+    start_at: DateTime<Utc>,
     duration_min: u32,
 }
 
 impl Slot {
-    pub fn new(start_at: DateTime<Utc>, duration_min: u32) -> Slot {
+    pub fn new(start_at: DateTime<Utc>, duration_min: u32, room: ObjectId) -> Slot {
         Slot {
             start_at,
             duration_min,
+            room,
+        }
+    }
+
+    pub fn training_id(&self) -> TrainingId {
+        TrainingId {
+            start_at: self.start_at,
+            room: self.room,
         }
     }
 
@@ -26,11 +38,23 @@ impl Slot {
         self.start_at.with_timezone(&Local)
     }
 
+    pub fn start_at_utc(&self) -> DateTime<Utc> {
+        self.start_at
+    }
+
     pub fn end_at(&self) -> DateTime<Local> {
         self.start_at.with_timezone(&Local) + chrono::Duration::minutes(self.duration_min as i64)
     }
 
+    pub fn room(&self) -> ObjectId {
+        self.room
+    }
+
     pub fn has_conflict(&self, other: &Slot) -> bool {
+        if self.room != other.room {
+            return false;
+        }
+
         let this_start = self.start_at + chrono::Duration::milliseconds(1);
         let this_end = self.start_at + chrono::Duration::minutes(self.duration_min as i64)
             - chrono::Duration::milliseconds(1);
@@ -65,7 +89,7 @@ impl Slot {
             .unwrap()
             .with_second(start_at.second())
             .unwrap();
-        Slot::new(start_at.with_timezone(&Utc), self.duration_min)
+        Slot::new(start_at.with_timezone(&Utc), self.duration_min, self.room)
     }
 }
 
@@ -91,17 +115,20 @@ mod tests {
 
     #[test]
     fn test_conflict_different_days_no_overlap() {
+        let room = ObjectId::new();
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 9, 14, 11, 15, 0)
                 .single()
                 .unwrap(),
             30,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 9, 13, 11, 0, 0)
                 .single()
                 .unwrap(),
             30,
+            room,
         );
 
         assert!(!slot1.has_conflict(&slot2));
@@ -109,17 +136,20 @@ mod tests {
 
     #[test]
     fn test_conflict_different_days_overlap() {
+        let room = ObjectId::new();
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 9, 14, 11, 15, 0)
                 .single()
                 .unwrap(),
             30,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 9, 14, 11, 0, 0)
                 .single()
                 .unwrap(),
             30,
+            room,
         );
 
         assert!(slot1.has_conflict(&slot2));
@@ -132,7 +162,7 @@ mod tests {
             .single()
             .unwrap();
         let duration_min = 60;
-        let slot = Slot::new(start_at, duration_min);
+        let slot = Slot::new(start_at, duration_min, ObjectId::new());
 
         assert_eq!(slot.start_at, start_at);
         assert_eq!(slot.duration_min, duration_min);
@@ -140,17 +170,20 @@ mod tests {
 
     #[test]
     fn test_no_conflict() {
+        let room = ObjectId::new();
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 14, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
 
         assert!(!slot1.has_conflict(&slot2));
@@ -158,17 +191,20 @@ mod tests {
 
     #[test]
     fn test_conflict_start_overlap() {
+        let room = ObjectId::new();
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 30, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
 
         assert!(slot1.has_conflict(&slot2));
@@ -176,17 +212,20 @@ mod tests {
 
     #[test]
     fn test_conflict_end_overlap() {
+        let room = ObjectId::new();
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 11, 30, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
 
         assert!(slot1.has_conflict(&slot2));
@@ -194,17 +233,20 @@ mod tests {
 
     #[test]
     fn test_conflict_full_overlap() {
+        let room = ObjectId::new();
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             30,
+            room,
         );
 
         assert!(slot1.has_conflict(&slot2));
@@ -212,17 +254,20 @@ mod tests {
 
     #[test]
     fn test_conflict_contained_within() {
+        let room = ObjectId::new();
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             120,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 30, 0)
                 .single()
                 .unwrap(),
             30,
+            room,
         );
 
         assert!(slot1.has_conflict(&slot2));
@@ -230,17 +275,21 @@ mod tests {
 
     #[test]
     fn test_conflict_exact_match() {
+        let room = ObjectId::new();
+
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
 
         assert!(slot1.has_conflict(&slot2));
@@ -248,17 +297,21 @@ mod tests {
 
     #[test]
     fn test_no_conflict_adjacent_slots() {
+        let room = ObjectId::new();
+
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 13, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
 
         assert!(!slot1.has_conflict(&slot2));
@@ -266,17 +319,21 @@ mod tests {
 
     #[test]
     fn test_conflict_partial_overlap() {
+        let room = ObjectId::new();
+
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             90,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 13, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
 
         assert!(slot1.has_conflict(&slot2));
@@ -284,17 +341,21 @@ mod tests {
 
     #[test]
     fn test_no_conflict_different_days() {
+        let room = ObjectId::new();
+
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 2, 12, 0, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
 
         assert!(!slot1.has_conflict(&slot2));
@@ -302,15 +363,18 @@ mod tests {
 
     #[test]
     fn test_conflict_overlap_midnight() {
+        let room = ObjectId::new();
         let slot1 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 1, 23, 30, 0)
                 .single()
                 .unwrap(),
             60,
+            room,
         );
         let slot2 = Slot::new(
             Utc.with_ymd_and_hms(2023, 10, 2, 0, 0, 0).single().unwrap(),
             60,
+            room,
         );
 
         assert!(slot1.has_conflict(&slot2));
@@ -325,6 +389,7 @@ mod tests {
                 .unwrap()
                 .with_timezone(&Utc),
             60,
+            ObjectId::new(),
         );
         let time = Local
             .with_ymd_and_hms(2023, 10, 1, 12, 0, 0)
@@ -343,6 +408,7 @@ mod tests {
                 .unwrap()
                 .with_timezone(&Utc),
             60,
+            ObjectId::new(),
         );
         let time = Local
             .with_ymd_and_hms(2023, 10, 1, 12, 30, 0)
@@ -361,6 +427,7 @@ mod tests {
                 .unwrap()
                 .with_timezone(&Utc),
             60,
+            ObjectId::new(),
         );
         let time = Local
             .with_ymd_and_hms(2023, 10, 1, 13, 0, 0)
@@ -379,6 +446,7 @@ mod tests {
                 .unwrap()
                 .with_timezone(&Utc),
             60,
+            ObjectId::new(),
         );
         let time = Local
             .with_ymd_and_hms(2023, 10, 1, 11, 59, 59)
@@ -397,6 +465,7 @@ mod tests {
                 .unwrap()
                 .with_timezone(&Utc),
             60,
+            ObjectId::new(),
         );
         let time = Local
             .with_ymd_and_hms(2023, 10, 1, 13, 0, 1)

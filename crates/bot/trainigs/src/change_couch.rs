@@ -6,9 +6,8 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::day::fmt_dt;
-use chrono::{DateTime, Local};
 use eyre::Result;
-use model::{rights::Rule, user::User};
+use model::{rights::Rule, training::TrainingId, user::User};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -17,13 +16,13 @@ use teloxide::{
 };
 
 pub struct ChangeCouch {
-    start_at: DateTime<Local>,
+    id: TrainingId,
     all: bool,
 }
 
 impl ChangeCouch {
-    pub fn new(start_at: DateTime<Local>, all: bool) -> ChangeCouch {
-        ChangeCouch { start_at, all }
+    pub fn new(id: TrainingId, all: bool) -> ChangeCouch {
+        ChangeCouch { id, all }
     }
 
     async fn change_couch(&self, ctx: &mut Context, id: ObjectId) -> Result<()> {
@@ -31,7 +30,7 @@ impl ChangeCouch {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.start_at)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         if training.is_processed {
@@ -43,12 +42,7 @@ impl ChangeCouch {
         let new_couch = id;
         ctx.ledger
             .calendar
-            .change_couch(
-                &mut ctx.session,
-                training.get_slot().start_at(),
-                id,
-                self.all,
-            )
+            .change_couch(&mut ctx.session, training.id(), id, self.all)
             .await?;
 
         ctx.send_notification("Тренер успешно изменен").await?;

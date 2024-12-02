@@ -61,7 +61,7 @@ impl CouchInfo {
                     reward: reward_sum,
                     rate: self.group_rate.clone(),
                     source: RewardSource::Training {
-                        start_at: training.start_at,
+                        start_at: training.get_slot().start_at_utc(),
                         clients: training.clients.len() as u32,
                         name: training.name.clone(),
                     },

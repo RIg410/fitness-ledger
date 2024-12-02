@@ -302,28 +302,22 @@ mod tests {
     }
 
     fn training(start_at: &str, group: bool) -> Training {
-        Training {
-            id: ObjectId::new(),
-            proto_id: ObjectId::new(),
-            name: "".to_owned(),
-            description: "".to_owned(),
-            start_at: start_at.parse::<DateTime<Utc>>().unwrap(),
-            duration_min: 1,
-            instructor: ObjectId::new(),
-            clients: vec![],
-            capacity: 1,
-            is_one_time: false,
-            is_canceled: false,
-            is_processed: false,
-            statistics: Default::default(),
-            notified: Default::default(),
-            keep_open: false,
-            tp: if group {
+        Training::new(
+            ObjectId::new(),
+            "name".to_owned(),
+            "desc".to_owned(),
+            start_at.parse::<DateTime<Utc>>().unwrap(),
+            1,
+            ObjectId::new(),
+            1,
+            false,
+            if group {
                 TrainingType::Group { is_free: false }
             } else {
                 TrainingType::Personal { is_free: false }
             },
-        }
+            ObjectId::new(),
+        )
     }
 
     #[test]

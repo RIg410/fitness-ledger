@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use bot_core::{
-    callback_data::{CallbackDateTime, Calldata as _},
+    callback_data::{Calldata as _, TrainingIdCallback},
     calldata,
     context::Context,
     widget::{Jmp, View},
@@ -103,18 +103,20 @@ async fn render(
         let mut row = vec![];
         let slot = training.get_slot();
         let start_at = slot.start_at();
-        row.push(Callback::SelectTraining(start_at.into()).button(format!(
-            "{} {} {} {}",
-            fmt_training_status(
-                training.status(now),
-                training.is_processed,
-                training.is_full(),
-                training.clients.contains(&ctx.me.id)
-            ),
-            fmt_weekday(start_at.weekday()),
-            start_at.format("%d.%m %H:%M"),
-            training.name.as_str(),
-        )));
+        row.push(
+            Callback::SelectTraining(training.id().into()).button(format!(
+                "{} {} {} {}",
+                fmt_training_status(
+                    training.status(now),
+                    training.is_processed,
+                    training.is_full(),
+                    training.clients.contains(&ctx.me.id)
+                ),
+                fmt_weekday(start_at.weekday()),
+                start_at.format("%d.%m %H:%M"),
+                training.name.as_str(),
+            )),
+        );
         keymap = keymap.append_row(row);
     }
     let mut row = vec![];
@@ -132,6 +134,6 @@ async fn render(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Callback {
-    SelectTraining(CallbackDateTime),
+    SelectTraining(TrainingIdCallback),
     Offset(u32),
 }

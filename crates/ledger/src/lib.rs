@@ -8,7 +8,7 @@ use model::decimal::Decimal;
 use model::request::{RemindLater, Request, RequestHistoryRow};
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
-use model::training::{Training, TrainingStatus};
+use model::training::{Training, TrainingId, TrainingStatus};
 use model::treasury::subs::UserId;
 use model::treasury::Sell;
 use model::user::family::FindFor;
@@ -179,7 +179,7 @@ impl Ledger {
                         .ok_or_else(|| eyre!("User not found"))?;
                     sub.unlock_balance();
                     self.calendar
-                        .sign_out(session, training.start_at, user_id)
+                        .sign_out(session, training.id(), user_id)
                         .await?;
                 }
             }
@@ -194,13 +194,13 @@ impl Ledger {
     pub async fn sign_up(
         &self,
         session: &mut Session,
-        training: &Training,
+        id: TrainingId,
         client: ObjectId,
         forced: bool,
     ) -> Result<(), SignUpError> {
         let training = self
             .calendar
-            .get_training_by_start_at(session, training.get_slot().start_at())
+            .get_training_by_id(session, id)
             .await?
             .ok_or_else(|| SignUpError::TrainingNotFound)?;
         let status = training.status(Local::now());
@@ -246,7 +246,7 @@ impl Ledger {
         }
 
         self.calendar
-            .sign_up(session, training.start_at, client)
+            .sign_up(session, training.id(), client)
             .await?;
         self.history
             .sign_up(
@@ -263,13 +263,13 @@ impl Ledger {
     pub async fn sign_out(
         &self,
         session: &mut Session,
-        training: &Training,
+        id: TrainingId,
         client: ObjectId,
         forced: bool,
     ) -> Result<(), SignOutError> {
         let training = self
             .calendar
-            .get_training_by_start_at(session, training.get_slot().start_at())
+            .get_training_by_id(session, id)
             .await?
             .ok_or_else(|| SignOutError::TrainingNotFound)?;
         self.sign_out_tx_less(session, &training, client, forced)
@@ -318,7 +318,7 @@ impl Ledger {
         }
 
         self.calendar
-            .sign_out(session, training.start_at, client)
+            .sign_out(session, training.id(), client)
             .await?;
         self.history
             .sign_out(

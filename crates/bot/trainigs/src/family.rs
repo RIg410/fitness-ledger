@@ -6,10 +6,10 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::day::fmt_dt;
-use chrono::{DateTime, Local};
+use chrono::Local;
 use eyre::Result;
 use model::{
-    training::{Training, TrainingStatus},
+    training::{Training, TrainingId, TrainingStatus},
     user::User,
 };
 use mongodb::bson::oid::ObjectId;
@@ -22,12 +22,12 @@ use teloxide::{
 use crate::view::{sign_out, sign_up};
 
 pub struct FamilySignIn {
-    start_at: DateTime<Local>,
+    id: TrainingId,
 }
 
 impl FamilySignIn {
-    pub fn new(start_at: DateTime<Local>) -> FamilySignIn {
-        FamilySignIn { start_at }
+    pub fn new(id: TrainingId) -> FamilySignIn {
+        FamilySignIn { id }
     }
 }
 
@@ -41,7 +41,7 @@ impl View for FamilySignIn {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.start_at)
+            .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
 
@@ -69,11 +69,11 @@ impl View for FamilySignIn {
         match calldata!(data) {
             Callback::SingIn(id) => {
                 let id = ObjectId::from_bytes(id);
-                sign_up(ctx, self.start_at, id).await?;
+                sign_up(ctx, self.id, id).await?;
             }
             Callback::SignOut(id) => {
                 let id = ObjectId::from_bytes(id);
-                sign_out(ctx, self.start_at, id).await?;
+                sign_out(ctx, self.id, id).await?;
             }
             Callback::None => {
                 // do nothing

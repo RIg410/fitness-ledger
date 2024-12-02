@@ -89,6 +89,7 @@ impl View for SetDateTime {
                         &mut ctx.session,
                         self.id,
                         date_time,
+                        preset.room.unwrap(),
                         preset.is_one_time.unwrap_or(true),
                     )
                     .await?

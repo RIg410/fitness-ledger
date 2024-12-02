@@ -5,10 +5,9 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::user::render_profile_msg;
-use chrono::{DateTime, Local};
 use eyre::{bail, Result};
 use ledger::{service::calendar::SignOutError, SignUpError};
-use model::{rights::Rule, training::Training};
+use model::{rights::Rule, training::{Training, TrainingId}};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
@@ -18,12 +17,12 @@ pub mod list;
 
 pub struct ClientView {
     id: ObjectId,
-    training_id: DateTime<Local>,
+    training_id: TrainingId,
     reason: Reason,
 }
 
 impl ClientView {
-    pub fn new(id: ObjectId, training_id: DateTime<Local>, reason: Reason) -> ClientView {
+    pub fn new(id: ObjectId, training_id: TrainingId, reason: Reason) -> ClientView {
         ClientView {
             id,
             reason,
@@ -35,7 +34,7 @@ impl ClientView {
         let training = ctx
             .ledger
             .calendar
-            .get_training_by_start_at(&mut ctx.session, self.training_id)
+            .get_training_by_id(&mut ctx.session, self.training_id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         Ok(training)
@@ -51,7 +50,7 @@ impl ClientView {
         }
         let result = ctx
             .ledger
-            .sign_up(&mut ctx.session, &training, self.id, true)
+            .sign_up(&mut ctx.session, training.id(), self.id, true)
             .await;
         match result {
             Ok(_) => {
@@ -95,7 +94,7 @@ impl ClientView {
         }
         let result = ctx
             .ledger
-            .sign_out(&mut ctx.session, &training, self.id, true)
+            .sign_out(&mut ctx.session, training.id(), self.id, true)
             .await;
 
         match result {

@@ -151,7 +151,7 @@ impl StageList<State> for CouchInfo {
         id: ListId,
     ) -> Result<Dispatch<State>, Error> {
         match id {
-            ListId::DateTime(id) => Ok(Dispatch::Widget(TrainingView::new(id.into()).into())),
+            ListId::TrainingId(id) => Ok(Dispatch::Widget(TrainingView::new(id.into()).into())),
             ListId::I64(id) => {
                 let action = Action::try_from(ListId::I64(id))?;
                 match action {
@@ -169,7 +169,7 @@ impl StageList<State> for CouchInfo {
 fn make_item(training: Training, ctx: &mut Context, now: DateTime<Local>) -> ListItem {
     let start_at = training.get_slot().start_at();
     ListItem {
-        id: ListId::DateTime(start_at.into()),
+        id: ListId::TrainingId(training.id().into()),
         name: format!(
             "{} {} {} {}",
             fmt_training_status(

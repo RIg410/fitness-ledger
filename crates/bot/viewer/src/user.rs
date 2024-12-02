@@ -90,9 +90,7 @@ async fn render_trainings(ctx: &mut Context, msg: &mut String, user: &User) -> R
         for training in trainings {
             msg.push_str(&escape(&format!(
                 "{} {}\n",
-                training
-                    .start_at
-                    .with_timezone(&Local)
+                training.get_slot().start_at()
                     .format("%d.%m %H:%M"),
                 training.name
             )))

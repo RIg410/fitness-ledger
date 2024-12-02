@@ -1,17 +1,20 @@
 use bot_core::{context::Context, widget::Widget};
+use bot_viewer::rooms::fmt_room;
 use chrono::{DateTime, Local};
 use eyre::Result;
 use is_one_time::SetOneTime;
-use model::program::Program;
+use model::{program::Program, rooms::Room};
 use mongodb::bson::oid::ObjectId;
 use set_date_time::SetDateTime;
 use set_instructor::SetInstructor;
+use set_room::SetRoom;
 use teloxide::utils::markdown::escape;
 
 mod finish;
 mod is_one_time;
 mod set_date_time;
 mod set_instructor;
+mod set_room;
 
 #[derive(Default, Clone)]
 pub struct ScheduleTrainingPreset {
@@ -19,6 +22,7 @@ pub struct ScheduleTrainingPreset {
     pub date_time: Option<DateTime<Local>>,
     pub instructor: Option<ObjectId>,
     pub is_one_time: Option<bool>,
+    pub room: Option<ObjectId>,
 }
 
 impl ScheduleTrainingPreset {
@@ -28,6 +32,7 @@ impl ScheduleTrainingPreset {
             date_time: None,
             instructor: None,
             is_one_time: None,
+            room: None,
         }
     }
 
@@ -35,7 +40,9 @@ impl ScheduleTrainingPreset {
         if self.instructor.is_none() {
             return SetInstructor::new(id, self).into();
         }
-
+        if self.room.is_none() {
+            return SetRoom::new(id, self).into();
+        }
         if self.is_one_time.is_none() {
             return SetOneTime::new(id, self).into();
         }
@@ -78,7 +85,7 @@ pub async fn render_msg(
     };
 
     Ok(format!(
-        "*Тренировка*: _{}_\n*Дата*: _{}_\n*Инструктор*: _{}_\n*Регулярность*: _{}_",
+        "*Тренировка*: _{}_\n*Дата*: _{}_\n*Инструктор*: _{}_\n*Регулярность*: _{}_\n*Зал*: _{}_",
         escape(&training.name),
         date_time,
         escape(&instructor),
@@ -90,5 +97,9 @@ pub async fn render_msg(
                 "регулярная".to_owned()
             })
             .unwrap_or_else(|| "❓".to_string()),
+        preset
+            .room
+            .map(|r| fmt_room(Room::from(r)))
+            .unwrap_or_else(|| "❓")
     ))
 }
