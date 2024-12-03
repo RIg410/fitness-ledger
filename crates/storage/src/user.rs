@@ -566,6 +566,33 @@ impl UserStore {
         Ok((users, extension))
     }
 
+    pub async fn find_by_birthday(
+        &self,
+        session: &mut Session,
+        day: u32,
+        month: u32,
+    ) -> Result<Vec<User>> {
+        let filter = doc! {
+            "extension.birthday": { "$exists": true },
+            "extension.birthday.day": day,
+            "extension.birthday.month": month,
+        };
+
+        let mut cursor = self.extensions.find(filter).session(&mut *session).await?;
+        let mut users = vec![];
+        while let Some(ext) = cursor.next(&mut *session).await {
+            let id = ext?.id;
+            let user = self.get(session, id).await?;
+            if let Some(user) = user {
+                users.push(user);
+            } else {
+                bail!("User not found: {}", id);
+            }
+        }
+
+        Ok(users)
+    }
+
     pub async fn find_all(
         &self,
         session: &mut Session,

@@ -1,5 +1,5 @@
 use super::history::History;
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Local};
 use eyre::{bail, eyre, Result};
 use log::info;
 use model::{
@@ -65,13 +65,7 @@ impl Users {
             self.store.insert(session, user).await?;
             self.logs.create_user(session, name, phone).await?;
             self.store
-                .update_extension(
-                    session,
-                    UserExtension {
-                        id,
-                        birthday: None,
-                    },
-                )
+                .update_extension(session, UserExtension { id, birthday: None })
                 .await?;
             Ok(id)
         }
@@ -146,9 +140,7 @@ impl Users {
         if !forced && user.birthday.is_some() {
             return Err(SetDateError::AlreadySet);
         }
-        user.birthday = Some(Birthday {
-            dt: date.with_timezone(&Utc),
-        });
+        user.birthday = Some(Birthday::new(date));
         self.store
             .update_extension(session, user)
             .await

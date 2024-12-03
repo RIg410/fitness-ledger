@@ -184,6 +184,10 @@ async fn render_user_profile(
         keymap = keymap.append_row(Callback::EditMarketingInfo.btn_row("Изменить источник 📝"));
     }
 
+    if extension.birthday.is_none() || ctx.has_right(Rule::EditUserInfo) {
+        keymap = keymap.append_row(Callback::SetBirthday.btn_row("Установить дату рождения 🎂"));
+    }
+
     if (ctx.has_right(Rule::FreezeUsers)
         || (ctx.me.tg_id == user.tg_id
             && user.payer()?.has_subscription()

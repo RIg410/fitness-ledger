@@ -62,12 +62,6 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
     msg.push_str(&delimiter);
     msg.push_str("_Групповые абонементы:_\n");
 
-    let user_extension = ctx
-        .ledger
-        .users
-        .get_extension(&mut ctx.session, ctx.me.id)
-        .await?;
-
     for subscription in subscriptions
         .iter()
         .filter(|s| !s.subscription_type.is_personal())

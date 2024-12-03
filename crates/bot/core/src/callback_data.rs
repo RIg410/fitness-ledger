@@ -1,4 +1,5 @@
 use chrono::{DateTime, Datelike as _, Local, TimeZone as _, Timelike as _, Utc};
+use log::error;
 use model::ids::{DayId, WeekId};
 use model::training::TrainingId;
 use mongodb::bson::oid::ObjectId;
@@ -8,18 +9,18 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use teloxide::types::InlineKeyboardButton;
 
-pub fn encode_data<T>(data: &T, type_id: u32) -> String
+pub fn encode_data<T>(data: &T, type_id: u16) -> String
 where
     T: Serialize + ?Sized,
 {
-    hex::encode(bincode::serialize(&(data, type_id)).unwrap())
+    bs58::encode(bincode::serialize(&(data, type_id)).unwrap()).into_string()
 }
 
-pub fn decode_data<T>(data: &str) -> Result<(T, u32), eyre::Error>
+pub fn decode_data<T>(data: &str) -> Result<(T, u16), eyre::Error>
 where
     T: DeserializeOwned,
 {
-    Ok(bincode::deserialize(&hex::decode(data)?)?)
+    Ok(bincode::deserialize(&bs58::decode(data).into_vec()?)?)
 }
 
 pub trait Calldata {
@@ -29,7 +30,14 @@ pub trait Calldata {
         Self: Sized;
 
     fn button<N: Into<String>>(&self, name: N) -> InlineKeyboardButton {
-        InlineKeyboardButton::callback(name, self.to_data())
+        let data = self.to_data();
+        if data.len() > 64 {
+            let name = name.into();
+            error!("Invalid callback data:{} [{}]", data, name);
+            InlineKeyboardButton::callback(name, data)
+        } else {
+            InlineKeyboardButton::callback(name, data)
+        }
     }
     fn btn_row<N: Into<String>>(&self, name: N) -> Vec<InlineKeyboardButton> {
         vec![self.button(name)]
@@ -53,11 +61,11 @@ where
     }
 }
 
-fn type_id<T>() -> u32 {
+fn type_id<T>() -> u16 {
     let type_name = std::any::type_name::<T>();
     let mut hasher = DefaultHasher::new();
     type_name.hash(&mut hasher);
-    (hasher.finish() % u32::MAX as u64) as u32
+    (hasher.finish() % u16::MAX as u64) as u16
 }
 
 #[macro_export]

@@ -90,8 +90,7 @@ async fn render_trainings(ctx: &mut Context, msg: &mut String, user: &User) -> R
         for training in trainings {
             msg.push_str(&escape(&format!(
                 "{} {}\n",
-                training.get_slot().start_at()
-                    .format("%d.%m %H:%M"),
+                training.get_slot().start_at().format("%d.%m %H:%M"),
                 training.name
             )))
         }
@@ -158,7 +157,7 @@ pub fn user_base_info(user: &User, extension: &UserExtension) -> String {
     format!(
         "{} Пользователь : _{}_
 *{}* _{}_
-Телефон : {} 
+Телефон : {}
 Дата рождения : _{}_\n
 {}\n
 {}\n",
@@ -178,7 +177,7 @@ pub fn user_base_info(user: &User, extension: &UserExtension) -> String {
             &extension
                 .birthday
                 .as_ref()
-                .map(|d| d.dt.format("%d.%m.%Y").to_string())
+                .map(|d| d.to_string())
                 .unwrap_or_else(|| empty.clone())
         ),
         link,
@@ -253,7 +252,11 @@ pub fn link_to_user(user: &User) -> String {
 }
 
 pub fn tg_link(tg: i64, name: Option<&str>) -> String {
-    format!(" [{}](tg://user?id={}) ", escape(name.unwrap_or("профиль")), tg)
+    format!(
+        " [{}](tg://user?id={}) ",
+        escape(name.unwrap_or("профиль")),
+        tg
+    )
 }
 
 pub fn fmt_come_from(from: ComeFrom) -> &'static str {

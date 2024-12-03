@@ -1,7 +1,6 @@
 use bson::to_document;
 use chrono::{DateTime, Duration, Local, Utc, Weekday};
 use eyre::Result;
-use futures_util::StreamExt;
 use log::info;
 use model::{
     day::Day,

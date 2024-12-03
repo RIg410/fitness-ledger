@@ -87,3 +87,4 @@ tokio-cron-scheduler = {version = "0.13.0", features = ["english"]}
 url = "2"
 uuid = "1.11.0"
 zip = "2.2.0"
+bs58 = "0.5.1"
