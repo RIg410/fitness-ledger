@@ -45,15 +45,6 @@ impl CalendarStore {
         )
         .await?;
 
-        info!("CalendarStore reload");
-        let mut days_c = days.find(doc! {}).await?;
-        while let Some(doc) = days_c.next().await {
-            let day: Day = doc?;
-            days.update_one(doc! { "_id": day.id }, doc! { "$set": to_document(&day)? })
-                .await?;
-        }
-        info!("CalendarStore reload done");
-
         Ok(CalendarStore { days })
     }
 
