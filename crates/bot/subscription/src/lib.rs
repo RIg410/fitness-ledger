@@ -72,7 +72,7 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
         .iter()
         .filter(|s| !s.subscription_type.is_personal())
     {
-        if !can_sell && !subscription.can_user_buy(&user_extension) {
+        if !can_sell && !subscription.can_user_buy() {
             continue;
         }
         msg.push_str(&format!(
@@ -95,7 +95,7 @@ async fn render(ctx: &mut Context) -> Result<(String, InlineKeyboardMarkup)> {
         .iter()
         .filter(|s| s.subscription_type.is_personal())
     {
-        if !can_sell && !subscription.can_user_buy(&user_extension) {
+        if !can_sell && !subscription.can_user_buy() {
             continue;
         }
 

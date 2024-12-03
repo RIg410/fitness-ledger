@@ -70,10 +70,6 @@ impl Users {
                     UserExtension {
                         id,
                         birthday: None,
-                        bought_test_group: false,
-                        bought_test_personal: false,
-                        bought_first_group: false,
-                        bought_first_personal: false,
                     },
                 )
                 .await?;
@@ -117,10 +113,6 @@ impl Users {
                 UserExtension {
                     birthday: None,
                     id: user.id,
-                    bought_test_group: false,
-                    bought_test_personal: false,
-                    bought_first_group: false,
-                    bought_first_personal: false,
                 },
             )
             .await?;
