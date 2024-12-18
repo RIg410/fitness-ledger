@@ -88,7 +88,7 @@ pub fn make_list_item(idx: usize, event: &TreasuryEvent) -> ListItem {
             format!("📉{} Аренда", idx)
         }
         model::treasury::Event::Marketing(come_from) => {
-            format!("📊{} Маркетинг ({})", idx, fmt_come_from(*come_from))
+            format!("📊{} Маркетинг \\({}\\)", idx, fmt_come_from(*come_from))
         }
     };
 

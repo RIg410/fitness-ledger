@@ -55,7 +55,13 @@ impl UsersStat {
             .or_insert_with(Vec::new)
             .push(user.id.clone());
         self.users_count += 1;
-        if !user.payer()?.has_subscription() {
+
+        if user
+            .payer()
+            .ok()
+            .map(|p| p.has_subscription())
+            .unwrap_or_default()
+        {
             self.users_without_subscriptions.push(user.id.clone());
         }
         Ok(())
