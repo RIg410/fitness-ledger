@@ -29,8 +29,8 @@ impl Task for BirthdaysNotifier {
             .users
             .find_by_birthday(&mut session, now.day(), now.month())
             .await?;
-
-        for user in users {}
+            
+        }
         Ok(())
     }
 }
