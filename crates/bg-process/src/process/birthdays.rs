@@ -24,13 +24,12 @@ impl Task for BirthdaysNotifier {
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;
         let now = Local::now();
-        let users = self
+        let _users = self
             .ledger
             .users
             .find_by_birthday(&mut session, now.day(), now.month())
             .await?;
             
-        }
         Ok(())
     }
 }
