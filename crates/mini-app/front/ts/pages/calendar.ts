@@ -42,14 +42,13 @@ function setMonthAndYear() {
 }
 
 function setDays() {
-    let mon = selectedWeek.getDate();
-    document.getElementById("mon-num").innerText = mon.toString();
-    document.getElementById("tue-num").innerText = (mon + 1).toString();
-    document.getElementById("wed-num").innerText = (mon + 2).toString();
-    document.getElementById("thu-num").innerText = (mon + 3).toString();
-    document.getElementById("fri-num").innerText = (mon + 4).toString();
-    document.getElementById("sat-num").innerText = (mon + 5).toString();
-    document.getElementById("sun-num").innerText = (mon + 6).toString();
+    let startOfWeek = new Date(selectedWeek);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1); 
+
+    for (let i = 0; i < 7; i++) {
+        let day = new Date(startOfWeek.getTime() + i * millesInDay);
+        document.getElementById(["mon", "tue", "wed", "thu", "fri", "sat", "sun"][i] + "-num").innerText = day.getDate().toString();
+    }
 }
 
 function setEvents() {

@@ -4,6 +4,7 @@ use eyre::Error;
 use model::{session::Session, statistics::marketing::ComeFrom};
 use storage::requests::RequestStore;
 
+#[derive(Clone)]
 pub struct Requests {
     store: Arc<RequestStore>,
 }

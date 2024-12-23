@@ -101,8 +101,12 @@ impl SubscriptionsStatisticsCollector {
         }
     }
 
-    pub fn finish(self, user_stat: UsersStat) -> SubscriptionStatistics {
-        let come_from = user_stat
+    pub fn finish(
+        self,
+        user_stat: UsersStat,
+        requests_map: HashMap<ComeFrom, u32>,
+    ) -> SubscriptionStatistics {
+        let mut come_from_map: HashMap<ComeFrom, ComeFromStat> = user_stat
             .come_from
             .into_iter()
             .map(|(come_from, users)| {
@@ -117,6 +121,10 @@ impl SubscriptionsStatisticsCollector {
                 )
             })
             .collect();
+
+        for (come_from, requests) in requests_map {
+            come_from_map.entry(come_from).or_default().requests = requests;
+        }
 
         SubscriptionStatistics {
             subs: self.subs.into_iter().map(|(_, stat)| stat).collect(),
@@ -148,7 +156,7 @@ impl SubscriptionsStatisticsCollector {
                     }
                 })
                 .collect(),
-            come_from,
+            come_from: come_from_map,
             people_without_subs: user_stat.users_without_subscriptions,
             total_users: user_stat.users_count as u32,
         }
@@ -187,6 +195,7 @@ pub struct SubscriptionStatistics {
 
 #[derive(Debug, Default)]
 pub struct ComeFromStat {
+    pub requests: u32,
     pub total_users: u32,
     pub buy_test_subs: u32,
     pub buy_subs: u32,

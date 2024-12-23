@@ -370,9 +370,12 @@ impl View for Confirm {
         let mut text = format!(
             "Все верно?:\n\
             Телефон: *{}*\n\
+            Имя: *{}* *{}*\n\
             Откуда пришел: *{}*\n\
             Комментарий: *{}*\n",
             fmt_phone(Some(&self.phone)),
+            escape(self.first_name.as_ref().map(|s| s.as_str()).unwrap_or("?")),
+            escape(self.last_name.as_ref().map(|s| s.as_str()).unwrap_or("?")),
             fmt_come_from(self.come_from),
             escape(&self.comment)
         );

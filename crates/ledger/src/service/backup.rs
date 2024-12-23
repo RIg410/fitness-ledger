@@ -3,9 +3,7 @@ use std::{io::{Cursor, Write as _}, sync::Arc};
 use eyre::{Context, Error};
 use model::session::Session;
 use storage::{
-    calendar::CalendarStore, history::HistoryStore,  program::ProgramStore,
-    rewards::RewardsStore, subscription::SubscriptionsStore, treasury::TreasuryStore,
-    user::UserStore, Storage,
+    calendar::CalendarStore, history::HistoryStore, program::ProgramStore, requests::RequestStore, rewards::RewardsStore, subscription::SubscriptionsStore, treasury::TreasuryStore, user::UserStore, Storage
 };
 use tx_macro::tx;
 use zip::write::SimpleFileOptions;
@@ -18,6 +16,7 @@ pub struct Backup {
     rewards: Arc<RewardsStore>,
     subscriptions: Arc<SubscriptionsStore>,
     treasury: Arc<TreasuryStore>,
+    requests: Arc<RequestStore>,
 }
 
 impl Backup {
@@ -30,6 +29,7 @@ impl Backup {
             rewards: store.rewards,
             subscriptions: store.subscriptions,
             treasury: store.treasury,
+            requests: store.requests,
         }
     }
 
@@ -77,6 +77,11 @@ impl Backup {
         zip.start_file("treasury.json", options)?;
         zip.write_all(&serde_json::to_vec_pretty(
             &self.treasury.dump(session).await.context("treasury")?,
+        )?)?;
+
+        zip.start_file("request.json", options)?;
+        zip.write_all(&serde_json::to_vec_pretty(
+            &self.requests.dump(session).await.context("treasury")?,
         )?)?;
 
         let mut writer = zip.finish()?;

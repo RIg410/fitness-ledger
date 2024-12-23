@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use crate::user::User;
 use bson::oid::ObjectId;
-use eyre::Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
@@ -49,7 +48,7 @@ pub struct UsersStat {
 }
 
 impl UsersStat {
-    pub fn extend(&mut self, user: &User) -> Result<()> {
+    pub fn extend(&mut self, user: &User) {
         self.come_from
             .entry(user.come_from)
             .or_insert_with(Vec::new)
@@ -64,7 +63,6 @@ impl UsersStat {
         {
             self.users_without_subscriptions.push(user.id.clone());
         }
-        Ok(())
     }
 }
 

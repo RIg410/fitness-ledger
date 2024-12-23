@@ -60,9 +60,10 @@ impl Ledger {
         let treasury = Treasury::new(storage.treasury, history.clone());
         let subscriptions = Subscriptions::new(storage.subscriptions, history.clone());
         let rewards = Rewards::new(storage.rewards);
-        let statistics =
-            statistics::Statistics::new(calendar.clone(), history.clone(), users.clone());
         let requests = Requests::new(storage.requests);
+
+        let statistics =
+            statistics::Statistics::new(calendar.clone(), history.clone(), users.clone(), requests.clone());
 
         Ledger {
             users,

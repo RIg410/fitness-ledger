@@ -1,4 +1,4 @@
-use bson::oid::ObjectId;
+use bson::{de, oid::ObjectId};
 use chrono::{DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -57,6 +57,7 @@ pub enum Action {
     SellSub {
         subscription: Subscription,
     },
+    #[deprecated]
     PreSellSub {
         subscription: Subscription,
         phone: String,
