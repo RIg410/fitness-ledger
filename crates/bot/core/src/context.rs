@@ -36,8 +36,8 @@ impl Context {
         self.me.id == id
     }
 
-    pub fn is_couch(&self) -> bool {
-        self.me.couch.is_some()
+    pub fn is_employee(&self) -> bool {
+        self.me.employee.is_some()
     }
 
     pub fn is_active(&self) -> bool {

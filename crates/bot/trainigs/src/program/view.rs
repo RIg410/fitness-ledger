@@ -135,7 +135,7 @@ async fn render(ctx: &Context, training: &Program) -> Result<(String, InlineKeyb
         }
     }
 
-    if !ctx.me.is_couch() {
+    if !ctx.me.employee.is_none() {
         keymap.push(vec![Callback::FindTraining.button("📅Расписание")]);
     }
 

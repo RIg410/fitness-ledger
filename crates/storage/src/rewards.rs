@@ -1,6 +1,6 @@
 use bson::{doc, oid::ObjectId};
 use eyre::Error;
-use model::{couch::Reward, session::Session};
+use model::{reward::Reward, session::Session};
 use mongodb::Collection;
 
 const REWARD_COLLECTION: &str = "reward";
@@ -34,14 +34,15 @@ impl RewardsStore {
     pub async fn get(
         &self,
         session: &mut Session,
-        couch_id: ObjectId,
+        employee_id: ObjectId,
         limit: i64,
         offset: u64,
     ) -> Result<Vec<Reward>, Error> {
+        // rename couch to employee_id
         let mut cursor = self
             .rewards
             .find(doc! {
-                "couch": couch_id
+                "couch": employee_id
             })
             .skip(offset)
             .limit(limit)

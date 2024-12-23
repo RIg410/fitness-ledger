@@ -10,16 +10,12 @@ use bot_core::{
 use bot_trainigs::view::TrainingView;
 use bot_viewer::{day::fmt_weekday, training::fmt_training_status};
 use chrono::{DateTime, Datelike, Local};
-use edit_group_rate::{ChangeRateState, SetRewardType};
-use edit_personal_rate::{ChangePersonalRateState, EditPersonalInterest};
 use eyre::{Error, Result};
 use model::{rights::Rule, training::Training};
 use mongodb::bson::oid::ObjectId;
 use teloxide::utils::markdown::escape;
 
 mod edit_description;
-mod edit_group_rate;
-mod edit_personal_rate;
 
 pub fn couch_view(id: ObjectId) -> Widget {
     ScriptView::new("couch_info", State { id }, Stage::list(CouchInfo)).into()
@@ -57,44 +53,6 @@ impl CouchInfo {
         }
         Ok(Dispatch::None)
     }
-
-    pub async fn change_rate(
-        &self,
-        ctx: &mut Context,
-        state: &mut State,
-    ) -> Result<Dispatch<State>> {
-        ctx.ensure(Rule::EditCouch)?;
-        Ok(Dispatch::Widget(
-            ScriptView::new(
-                "update_rate",
-                ChangeRateState {
-                    user: state.id,
-                    reward_rate: None,
-                },
-                Stage::list(SetRewardType),
-            )
-            .into(),
-        ))
-    }
-
-    pub async fn change_personal_rate(
-        &self,
-        ctx: &mut Context,
-        state: &mut State,
-    ) -> Result<Dispatch<State>> {
-        ctx.ensure(Rule::EditCouch)?;
-        Ok(Dispatch::Widget(
-            ScriptView::new(
-                "update_rate",
-                ChangePersonalRateState {
-                    user: state.id,
-                    personal_rate: Default::default(),
-                },
-                Stage::text(EditPersonalInterest),
-            )
-            .into(),
-        ))
-    }
 }
 
 #[async_trait]
@@ -107,7 +65,7 @@ impl StageList<State> for CouchInfo {
         offset: usize,
     ) -> Result<(String, Vec<Vec<ListItem>>)> {
         let user = ctx.ledger.get_user(&mut ctx.session, state.id).await?;
-        let couch = if let Some(couch) = user.couch.as_ref() {
+        let couch = if let Some(couch) = user.employee.as_ref() {
             couch
         } else {
             return Err(eyre::eyre!("User is not a couch"));
@@ -138,7 +96,6 @@ impl StageList<State> for CouchInfo {
         if ctx.has_right(Rule::EditCouch) {
             row.push(vec![Action::ChangeDescription.button()]);
             row.push(vec![Action::DeleteCouch.button()]);
-            row.push(vec![Action::ChangeRate.button()]);
         }
 
         Ok((msg, row))
@@ -157,8 +114,6 @@ impl StageList<State> for CouchInfo {
                 match action {
                     Action::ChangeDescription => self.change_description(ctx, state).await,
                     Action::DeleteCouch => self.delete_couch(ctx, state).await,
-                    Action::ChangeRate => self.change_rate(ctx, state).await,
-                    Action::ChangePersonalRate => self.change_personal_rate(ctx, state).await,
                 }
             }
             _ => Err(eyre::eyre!("Invalid id")),
@@ -188,8 +143,6 @@ fn make_item(training: Training, ctx: &mut Context, now: DateTime<Local>) -> Lis
 pub enum Action {
     ChangeDescription,
     DeleteCouch,
-    ChangeRate,
-    ChangePersonalRate,
 }
 
 impl Action {
@@ -203,14 +156,6 @@ impl Action {
                 id: ListId::I64(1),
                 name: "🗑 Удалить профиль".to_string(),
             },
-            Self::ChangeRate => ListItem {
-                id: ListId::I64(2),
-                name: "💰 Изменить оплату (группа)".to_string(),
-            },
-            Self::ChangePersonalRate => ListItem {
-                id: ListId::I64(3),
-                name: "💰 Изменить оплату (индивидуальные)".to_string(),
-            },
         }
     }
 }
@@ -222,7 +167,6 @@ impl TryFrom<ListId> for Action {
         match value {
             ListId::I64(0) => Ok(Self::ChangeDescription),
             ListId::I64(1) => Ok(Self::DeleteCouch),
-            ListId::I64(2) => Ok(Self::ChangeRate),
             _ => Err(eyre::eyre!("Invalid id")),
         }
     }

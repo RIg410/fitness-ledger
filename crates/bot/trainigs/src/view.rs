@@ -44,7 +44,7 @@ impl TrainingView {
             .ledger
             .get_user(&mut ctx.session, training.instructor)
             .await?;
-        if let Some(couch) = user.couch {
+        if let Some(couch) = user.employee {
             ctx.send_msg(&escape(&couch.description)).await?;
         }
         Ok(Jmp::Stay)
@@ -81,7 +81,7 @@ impl TrainingView {
     }
 
     async fn client_list(&mut self, ctx: &mut Context) -> Result<Jmp> {
-        if !ctx.is_couch() && !ctx.has_right(Rule::EditTrainingClientsList) {
+        if !ctx.is_employee() && !ctx.has_right(Rule::EditTrainingClientsList) {
             bail!("Only couch can see client list");
         }
         Ok(ClientsList::new(self.id).into())
@@ -171,7 +171,7 @@ impl View for TrainingView {
 }
 
 async fn render(ctx: &mut Context, training: &Training) -> Result<(String, InlineKeyboardMarkup)> {
-    let is_client = ctx.me.couch.is_none();
+    let is_client = ctx.me.employee.is_none();
     let cap = if is_client {
         format!(
             "*Свободных мест*: _{}_",

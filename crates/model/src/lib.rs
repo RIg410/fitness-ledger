@@ -1,4 +1,3 @@
-pub mod couch;
 pub mod day;
 pub mod decimal;
 pub mod history;
@@ -16,3 +15,4 @@ pub mod request;
 pub mod payment;
 
 pub mod rooms;
+pub mod reward;

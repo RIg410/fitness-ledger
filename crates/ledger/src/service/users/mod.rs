@@ -17,7 +17,7 @@ use storage::user::UserStore;
 use thiserror::Error;
 use tx_macro::tx;
 
-pub mod couch;
+pub mod employee;
 pub mod family;
 pub mod subscription;
 

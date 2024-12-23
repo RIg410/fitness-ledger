@@ -3,11 +3,11 @@ use chrono::{DateTime, Local, Utc};
 use eyre::{bail, eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
 use log::info;
-use model::couch::CouchInfo;
 use model::rights::{self, Rule};
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
 use model::subscription::{Status, Subscription, UserSubscription};
+use model::user::employee::Employee;
 use model::user::extension::UserExtension;
 use model::user::{Freeze, Notification, User, UserName};
 use mongodb::options::UpdateOptions;
@@ -358,7 +358,7 @@ impl UserStore {
     }
 
     pub async fn instructors(&self, session: &mut Session) -> Result<Vec<User>, Error> {
-        let filter = doc! { "couch": { "$exists": true, "$ne": null } };
+        let filter = doc! { "employee.role": "Couch" };
         let mut cursor = self.users.find(filter).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
@@ -452,30 +452,30 @@ impl UserStore {
             .await?)
     }
 
-    pub async fn set_couch(
+    pub async fn set_employee(
         &self,
         session: &mut Session,
         id: ObjectId,
-        couch: &CouchInfo,
+        couch: &Employee,
     ) -> Result<()> {
-        info!("Setting couch for user {}: {:?}", id, couch);
+        info!("Setting employee for user {}: {:?}", id, couch);
         self.users
             .update_one(
                 doc! { "_id": id },
-                doc! { "$set": { "couch": to_document(couch)? }, "$inc": { "version": 1 } },
+                doc! { "$set": { "employee": to_document(couch)? }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
             .await?;
         Ok(())
     }
 
-    pub async fn delete_couch(&self, session: &mut Session, id: ObjectId) -> Result<(), Error> {
-        info!("Deleting couch: {:?}", id);
+    pub async fn delete_employee(&self, session: &mut Session, id: ObjectId) -> Result<(), Error> {
+        info!("Deleting employee: {:?}", id);
         let result = self
             .users
             .update_one(
                 doc! { "_id": id },
-                doc! { "$unset": { "couch": "" }, "$inc": { "version": 1 } },
+                doc! { "$unset": { "employee": "" }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
             .await?;
@@ -485,7 +485,7 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn update_couch_reward(
+    pub async fn update_employee_reward(
         &self,
         session: &mut Session,
         id: ObjectId,
@@ -496,12 +496,12 @@ impl UserStore {
             .users
             .update_one(
                 doc! { "_id": id },
-                doc! { "$set": { "couch.reward":  reward.inner() }, "$inc": { "version": 1 } },
+                doc! { "$set": { "employee.reward":  reward.inner() }, "$inc": { "version": 1 } },
             )
             .session(&mut *session)
             .await?;
         if result.modified_count == 0 {
-            return Err(Error::msg("Couch not found"));
+            return Err(Error::msg("employee not found"));
         }
         Ok(())
     }

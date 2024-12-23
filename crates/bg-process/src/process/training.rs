@@ -6,7 +6,8 @@ use eyre::{eyre, Error, Result};
 use log::{error, info};
 use model::{
     session::Session,
-    training::{Statistics, Training, TrainingStatus}, user::family::FindFor,
+    training::{Statistics, Training, TrainingStatus},
+    user::family::FindFor,
 };
 use tx_macro::tx;
 
@@ -67,10 +68,7 @@ impl TriningBg {
 
         if training.tp.is_not_free() {
             for client in &training.clients {
-                let mut user = self
-                    .ledger
-                    .get_user(session, *client)
-                    .await?;
+                let mut user = self.ledger.get_user(session, *client).await?;
                 let mut payer = user.payer_mut()?;
                 if let Some(sub) = payer.find_subscription(FindFor::Charge, &training) {
                     if !sub.change_locked_balance() {
@@ -84,17 +82,17 @@ impl TriningBg {
             }
         }
 
-        let mut couch = self.ledger.get_user(session, training.instructor).await?;
-        if let Some(couch_info) = couch.couch.as_mut() {
-            if let Some(reward) = couch_info.collect_training_rewards(&training) {
-                statistic.couch_rewards += reward.reward;
-                self.ledger.rewards.add_reward(session, reward).await?;
-                self.ledger
-                    .users
-                    .update_couch_reward(session, couch.id, couch_info.reward)
-                    .await?;
-            }
-        }
+        // let mut couch = self.ledger.get_user(session, training.instructor).await?;
+        // if let Some(couch_info) = couch.employee.as_mut() {
+        //     if let Some(reward) = couch_info.collect_training_rewards(&training) {
+        //         statistic.couch_rewards += reward.reward;
+        //         self.ledger.rewards.add_reward(session, reward).await?;
+        //         self.ledger
+        //             .users
+        //             .update_employee_reward(session, couch.id, couch_info.reward)
+        //             .await?;
+        //     }
+        // }
 
         self.ledger
             .calendar

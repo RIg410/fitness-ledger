@@ -4,7 +4,7 @@ use crate::{Ledger, Task};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use eyre::Error;
-use model::{couch::CouchInfo, session::Session};
+use model::{session::Session, user::employee::Employee};
 use mongodb::bson::oid::ObjectId;
 use tx_macro::tx;
 
@@ -23,13 +23,13 @@ impl Task for RewardsBg {
 
         let mut instructors = self.ledger.users.instructors(&mut session).await?;
 
-        let now = Local::now();
+        //let now = Local::now();
         for instructor in instructors.iter_mut() {
-            if let Some(couch) = instructor.couch.as_mut() {
-                if couch.group_rate.is_fixed_monthly() {
-                    self.process_rewards(&mut session, instructor.id, couch, now)
-                        .await?;
-                }
+            if let Some(couch) = instructor.employee.as_mut() {
+                // if couch.group_rate.is_fixed_monthly() {
+                //     self.process_rewards(&mut session, instructor.id, couch, now)
+                //         .await?;
+                // }
             }
         }
         Ok(())
@@ -46,20 +46,20 @@ impl RewardsBg {
         &self,
         session: &mut Session,
         couch_id: ObjectId,
-        couch: &mut CouchInfo,
+        couch: &mut Employee,
         now: DateTime<Local>,
     ) -> Result<(), Error> {
-        if let Some(reward) = couch.collect_monthly_rewards(couch_id, now)? {
-            self.ledger.rewards.add_reward(session, reward).await?;
-            self.ledger
-                .users
-                .update_couch_reward(session, couch_id, couch.reward)
-                .await?;
-            self.ledger
-                .users
-                .update_couch_rate_tx_less(session, couch_id, couch.group_rate.clone())
-                .await?;
-        }
+        //if let Some(reward) = couch.collect_monthly_rewards(couch_id, now)? {
+        // self.ledger.rewards.add_reward(session, reward).await?;
+        // self.ledger
+        //     .users
+        //     .update_employee_reward(session, couch_id, couch.reward)
+        //     .await?;
+        // self.ledger
+        //     .users
+        //     .update_couch_rate_tx_less(session, couch_id, couch.group_rate.clone())
+        //     .await?;
+        // }
         Ok(())
     }
 }

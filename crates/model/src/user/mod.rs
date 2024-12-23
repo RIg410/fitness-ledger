@@ -4,15 +4,18 @@ use eyre::Result;
 use std::fmt::{Display, Formatter};
 
 use super::rights::Rights;
-use crate::{couch::CouchInfo, statistics::marketing::ComeFrom, subscription::UserSubscription};
+use crate::{statistics::marketing::ComeFrom, subscription::UserSubscription};
 use chrono::{DateTime, TimeZone as _, Utc};
 use family::{Family, Payer};
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
+pub mod employee;
 pub mod extension;
 pub mod family;
+pub mod rate;
+
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
@@ -36,7 +39,7 @@ pub struct User {
     #[serde(default = "default_created_at")]
     pub created_at: DateTime<Utc>,
     #[serde(default)]
-    pub couch: Option<CouchInfo>,
+    pub employee: Option<employee::Employee>,
     #[serde(default)]
     pub settings: UserSettings,
     #[serde(default)]
@@ -71,10 +74,10 @@ impl User {
             freeze_days: 0,
             freeze: None,
             created_at: Utc::now(),
-            couch: None,
             settings: UserSettings::default(),
             come_from,
             family: Family::default(),
+            employee: Default::default(),
         }
     }
 
@@ -99,15 +102,11 @@ impl User {
             freeze_days: 0,
             freeze: None,
             created_at: Utc::now(),
-            couch: None,
             settings: UserSettings::default(),
             come_from: ComeFrom::default(),
             family: Family::default(),
+            employee: Default::default(),
         }
-    }
-
-    pub fn is_couch(&self) -> bool {
-        self.couch.is_some()
     }
 
     pub fn payer_mut(&mut self) -> Result<Payer<&mut User>> {

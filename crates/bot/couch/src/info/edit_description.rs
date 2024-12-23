@@ -23,7 +23,7 @@ impl StageText<State> for CouchDescription {
     ) -> Result<Dispatch<State>, Error> {
         ctx.ledger
             .users
-            .update_couch_description(&mut ctx.session, state.id, query.to_string())
+            .update_employee_description(&mut ctx.session, state.id, query.to_string())
             .await?;
         Ok(Dispatch::Stage(Stage::list(CouchInfo)))
     }

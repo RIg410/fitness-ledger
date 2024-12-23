@@ -62,10 +62,10 @@ impl MainMenuView {
 
         let mut txt = "🏠 *Меню* 🤸🏼\n".to_string();
 
-        if ctx.me.is_couch() {
+        if ctx.me.employee.is_some() {
             txt.push_str(&format!(
                 "Накопленное вознаграждение: *{}*",
-                escape(&ctx.me.couch.as_ref().unwrap().reward.to_string())
+                escape(&ctx.me.employee.as_ref().unwrap().reward.to_string())
             ));
         } else {
             if group_balance.is_empty() {

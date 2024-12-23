@@ -1,11 +1,10 @@
 use axum::{response::IntoResponse, Extension};
 use bot_core::context::Context;
 use model::{
-    couch::CouchInfo,
     rights::Rule,
     statistics::marketing::ComeFrom,
     subscription::UserSubscription,
-    user::{Freeze, UserName},
+    user::{employee::Employee, Freeze, UserName},
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -29,7 +28,7 @@ pub(crate) async fn view(Extension(ctx): Extension<Arc<Context>>) -> impl IntoRe
         freeze: me.freeze.clone(),
         subscriptions: payer.subscriptions().to_vec(),
         freeze_days: me.freeze_days,
-        couch: me.couch.clone(),
+        employee: me.employee.clone(),
         come_from,
     };
 
@@ -45,6 +44,6 @@ pub struct Profile {
     pub freeze: Option<Freeze>,
     pub subscriptions: Vec<UserSubscription>,
     pub freeze_days: u32,
-    pub couch: Option<CouchInfo>,
+    pub employee: Option<Employee>,
     pub come_from: Option<ComeFrom>,
 }

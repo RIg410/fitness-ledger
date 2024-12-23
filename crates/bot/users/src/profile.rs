@@ -68,7 +68,7 @@ impl UserProfile {
 
     async fn training_list(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
         let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
-        if user.is_couch() {
+        if user.employee.is_some() {
             Ok(TrainingList::couches(user.id).into())
         } else {
             Ok(TrainingList::users(user.id).into())
@@ -82,7 +82,7 @@ impl UserProfile {
 
     async fn rewards_list(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
         let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
-        if user.is_couch() && (ctx.is_me(user.id) || ctx.has_right(Rule::ViewRewards)) {
+        if user.employee.is_some() && (ctx.is_me(user.id) || ctx.has_right(Rule::ViewRewards)) {
             Ok(RewardsList::new(user.id).into())
         } else {
             Ok(Jmp::Stay)
@@ -201,7 +201,7 @@ async fn render_user_profile(
         }
     }
 
-    if user.is_couch() {
+    if user.employee.is_some() {
         keymap = keymap.append_row(Callback::TrainingList.btn_row("Тренировки 📝"));
     } else {
         keymap = keymap.append_row(Callback::TrainingList.btn_row("Записи 📝"));
@@ -237,7 +237,7 @@ async fn render_user_profile(
     keymap = keymap.append_row(Callback::Notification.btn_row("Уведомления 🔔"));
 
     keymap = keymap.append_row(Callback::HistoryList.btn_row("История 📝"));
-    if user.is_couch() && (ctx.is_me(id) || ctx.has_right(Rule::ViewRewards)) {
+    if user.employee.is_some() && (ctx.is_me(id) || ctx.has_right(Rule::ViewRewards)) {
         keymap = keymap.append_row(Callback::RewardsList.btn_row("Вознаграждения 📝"));
     }
     Ok((msg, keymap))

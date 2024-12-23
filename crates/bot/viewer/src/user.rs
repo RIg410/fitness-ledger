@@ -2,8 +2,10 @@ use bot_core::context::Context;
 use chrono::{Local, Utc};
 use eyre::Error;
 use eyre::Result;
+use model::user::employee::Employee;
+use model::user::rate;
+use model::user::rate::Rate;
 use model::{
-    couch::{CouchInfo, GroupRate, PersonalRate},
     rights::Rule,
     statistics::marketing::ComeFrom,
     subscription::{Status, UserSubscription},
@@ -65,8 +67,8 @@ pub async fn render_profile_msg(
         msg.push_str(&format!("Источник : _{}_\n", fmt_come_from(user.come_from)));
     }
 
-    if let Some(couch) = user.couch.as_ref() {
-        render_couch_info(ctx, id, &mut msg, couch);
+    if let Some(employee) = user.employee.as_ref() {
+        render_employee_info(ctx, id, &mut msg, employee);
     } else {
         render_subscriptions(&mut msg, &user)?;
         render_trainings(ctx, &mut msg, &user).await?;
@@ -185,44 +187,38 @@ pub fn user_base_info(user: &User, extension: &UserExtension) -> String {
     )
 }
 
-fn render_couch_info(ctx: &mut Context, id: ObjectId, msg: &mut String, couch: &CouchInfo) {
+fn render_employee_info(ctx: &mut Context, id: ObjectId, msg: &mut String, employee: &Employee) {
     msg.push_str("➖➖➖➖➖➖➖➖➖➖");
-    msg.push_str(&format!("\n[Анкета]({})", escape(&couch.description)));
+    msg.push_str(&format!("\n[Анкета]({})", escape(&employee.description)));
     if ctx.has_right(Rule::ViewCouchRates) || ctx.is_me(id) {
         msg.push_str(&format!(
-            "\nНакопленная награда : _{}_💰\n{}\n{}\n",
-            escape(&couch.reward.to_string()),
-            fmt_group_rate(&couch.group_rate),
-            fmt_personal_rate(&couch.personal_rate),
+            "\nНакопленная награда : _{}_💰\n",
+            escape(&employee.reward.to_string()),
         ));
     }
-}
 
-pub fn fmt_group_rate(rate: &GroupRate) -> String {
-    match rate {
-        GroupRate::FixedMonthly { rate, next_reward } => {
-            format!(
-                "Фиксированный месячный тариф : _{}_💰\nСледующая награда : _{}_\n",
-                escape(&rate.to_string()),
-                next_reward.with_timezone(&Local).format("%d\\.%m\\.%Y")
-            )
+    for rate in &employee.rates {
+        match rate {
+            Rate::FixByTraining { amount } => {
+                msg.push_str(&format!(
+                    "\nФиксированная сумма за тренировку : _{}_💰",
+                    amount
+                ));
+            }
+            rate::Rate::Fix {
+                amount,
+                last_payment_date: _,
+                next_payment_date,
+                interval: _,
+            } => {
+                msg.push_str(&format!(
+                    "\nФиксированная сумма : _{}_💰\nСледующая оплата : _{}_",
+                    amount,
+                    fmt_date(&next_payment_date.with_timezone(&Local)),
+                ));
+            }
         }
-        GroupRate::PerClient { min, per_client } => {
-            format!(
-                "За клиента : _{}_💰\nМинимальная награда : _{}_💰\n",
-                escape(&per_client.to_string()),
-                escape(&min.to_string())
-            )
-        }
-        GroupRate::None => "Тариф не определен".to_string(),
     }
-}
-
-pub fn fmt_personal_rate(rate: &PersonalRate) -> String {
-    format!(
-        "Вознаграждение за персональные тренировки : _{}%_💰",
-        escape(&rate.couch_interest.to_string())
-    )
 }
 
 pub fn fmt_user_type(user: &User) -> &str {
@@ -232,7 +228,7 @@ pub fn fmt_user_type(user: &User) -> &str {
         "⚫"
     } else if user.rights.is_full() {
         "🔴"
-    } else if user.couch.is_some() {
+    } else if user.employee.is_some() {
         "🔵"
     } else {
         "🟢"

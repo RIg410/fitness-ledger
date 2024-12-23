@@ -50,9 +50,9 @@ enum Callback {
 
 fn render_button(user: &User) -> InlineKeyboardButton {
     Callback::SelectCouch(user.id.bytes()).button(format!(
-        "💪🏼 {} {}",
+        "{} {}",
         user.name.first_name,
-        user.couch.as_ref().map(|c| c.reward).unwrap_or_default()
+        user.employee.as_ref().map(|c| c.reward).unwrap_or_default()
     ))
 }
 
@@ -95,7 +95,7 @@ impl View for WriteSum {
                 .ledger
                 .get_user(&mut ctx.session, self.id)
                 .await?
-                .couch
+                .employee
                 .ok_or_else(|| eyre::eyre!("No couch"))?;
 
             if user.reward < sum {

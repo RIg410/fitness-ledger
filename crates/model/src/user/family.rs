@@ -264,10 +264,10 @@ mod tests {
             freeze_days: 1,
             version: 0,
             created_at: Default::default(),
-            couch: None,
             settings: Default::default(),
             come_from: ComeFrom::default(),
             family: Default::default(),
+            employee: Default::default(),
         }
     }
 

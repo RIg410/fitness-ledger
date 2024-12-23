@@ -62,8 +62,12 @@ impl Ledger {
         let rewards = Rewards::new(storage.rewards);
         let requests = Requests::new(storage.requests);
 
-        let statistics =
-            statistics::Statistics::new(calendar.clone(), history.clone(), users.clone(), requests.clone());
+        let statistics = statistics::Statistics::new(
+            calendar.clone(),
+            history.clone(),
+            users.clone(),
+            requests.clone(),
+        );
 
         Ledger {
             users,
@@ -228,7 +232,7 @@ impl Ledger {
             .ok_or_else(|| SignUpError::UserNotFound)?;
         let user_id = user.id;
 
-        if user.couch.is_some() {
+        if user.employee.is_some() {
             return Err(SignUpError::UserIsCouch);
         }
 
@@ -474,7 +478,7 @@ impl Ledger {
             warn!("Couch has trainings");
             return Ok(false);
         } else {
-            self.users.delete_couch(session, id).await?;
+            self.users.delete_employee(session, id).await?;
             Ok(true)
         }
     }
@@ -489,14 +493,14 @@ impl Ledger {
     ) -> Result<()> {
         let mut user = self.get_user(session, couch_id).await?;
 
-        let couch_info = user
-            .couch
+        let employee_info = user
+            .employee
             .as_mut()
             .ok_or_else(|| eyre!("User is not couch"))?;
-        let reward = couch_info.recalc_reward(user.id, amount, comment);
+        let reward = employee_info.recalc_reward(user.id, amount, comment);
         self.rewards.add_reward(session, reward).await?;
         self.users
-            .update_couch_reward(session, user.id, couch_info.reward)
+            .update_employee_reward(session, user.id, employee_info.reward)
             .await?;
         Ok(())
     }
@@ -509,14 +513,14 @@ impl Ledger {
         amount: Decimal,
     ) -> Result<()> {
         let user = self.get_user(session, couch_id).await?;
-        let mut couch_info = user.couch.ok_or_else(|| eyre!("User is not couch"))?;
-        couch_info.get_reward(amount)?;
+        let mut employee_info = user.employee.ok_or_else(|| eyre!("User is not couch"))?;
+        employee_info.get_reward(amount)?;
         self.history.pay_reward(session, couch_id, amount).await?;
         self.treasury
             .reward_employee(session, UserId::Id(couch_id), amount, &Local::now())
             .await?;
         self.users
-            .update_couch_reward(session, couch_id, couch_info.reward)
+            .update_employee_reward(session, couch_id, employee_info.reward)
             .await?;
         Ok(())
     }

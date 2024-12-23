@@ -8,7 +8,7 @@ use bot_core::{
 use bot_viewer::day::fmt_dt;
 use chrono::Local;
 use eyre::Result;
-use model::{couch::Reward, rights::Rule};
+use model::{reward::{Reward, RewardSource}, rights::Rule};
 use mongodb::bson::oid::ObjectId;
 use recalc::AddRecalcReward;
 use serde::{Deserialize, Serialize};
@@ -88,7 +88,7 @@ enum Calldata {
 
 fn fmt_row(log: &Reward) -> String {
     match &log.source {
-        model::couch::RewardSource::Training {
+        RewardSource::Training {
             start_at,
             clients,
             name,
@@ -102,19 +102,35 @@ fn fmt_row(log: &Reward) -> String {
                 clients
             )
         }
-        model::couch::RewardSource::FixedMonthly {} => {
+        RewardSource::FixedMonthly {} => {
             format!(
                 "*{}*\n начислено *{}* \\- _ежемесячное вознаграждение_",
                 fmt_dt(&log.created_at.with_timezone(&Local)),
                 escape(&log.reward.to_string())
             )
         }
-        model::couch::RewardSource::Recalc { comment } => {
+        RewardSource::Recalc { comment } => {
             format!(
                 "*{}*\n начислено *{}* \\- _перерасчет_ \\- {}",
                 fmt_dt(&log.created_at.with_timezone(&Local)),
                 escape(&log.reward.to_string()),
                 escape(comment)
+            )
+        }
+        RewardSource::TrainingV2 { training_id, name } => {
+            format!(
+                "*{}*\n начислено *{}* \\- тренировка '{}' \\- {}",
+                fmt_dt(&log.created_at.with_timezone(&Local)),
+                escape(&log.reward.to_string()),
+                escape(name),
+                fmt_dt(&training_id.start_at.with_timezone(&Local)),
+            )
+        }
+        RewardSource::Fixed {} => {
+            format!(
+                "*{}*\n начислено *{}* \\- _фиксированное вознаграждение_",
+                fmt_dt(&log.created_at.with_timezone(&Local)),
+                escape(&log.reward.to_string())
             )
         }
     }

@@ -105,7 +105,7 @@ async fn render(
     while let Some(user) = users.next(&mut ctx.session).await {
         let user = user?;
         users_count += 1;
-        if user.couch.is_some() {
+        if user.employee.is_some() {
             continue;
         }
         if ids.contains(&user.id) {

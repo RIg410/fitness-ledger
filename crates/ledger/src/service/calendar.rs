@@ -171,7 +171,7 @@ impl Calendar {
             .get(session, instructor)
             .await?
             .ok_or(ScheduleError::InstructorNotFound)?;
-        if instructor.couch.is_none() {
+        if instructor.employee.is_none() {
             return Err(ScheduleError::InstructorHasNoRights);
         }
         let collision = self

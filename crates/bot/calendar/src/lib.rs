@@ -62,8 +62,8 @@ impl View for CalendarView {
         let (text, keymap) = render_week(
             ctx,
             self.week_id,
-            self.week_id.prev().has_week() || ctx.is_couch() || ctx.is_admin(),
-            self.week_id.next().has_week() || ctx.is_couch() || ctx.is_admin(),
+            self.week_id.prev().has_week() || ctx.is_employee() || ctx.is_admin(),
+            self.week_id.next().has_week() || ctx.is_employee() || ctx.is_admin(),
             self.selected_day,
             &self.filter,
             &self.rooms,
@@ -91,7 +91,7 @@ impl View for CalendarView {
                 Ok(ProgramList::new(preset).into())
             }
             Callback::MyTrainings => {
-                if ctx.me.couch.is_some() {
+                if ctx.me.employee.is_some() {
                     Ok(TrainingList::couches(ctx.me.id).into())
                 } else {
                     Ok(TrainingList::users(ctx.me.id).into())
