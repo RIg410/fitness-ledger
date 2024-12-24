@@ -8,7 +8,10 @@ use bot_core::{
 use bot_viewer::day::fmt_dt;
 use chrono::Local;
 use eyre::Result;
-use model::{reward::{Reward, RewardSource}, rights::Rule};
+use model::{
+    reward::{Reward, RewardSource},
+    rights::Rule,
+};
 use mongodb::bson::oid::ObjectId;
 use recalc::AddRecalcReward;
 use serde::{Deserialize, Serialize};
@@ -88,27 +91,6 @@ enum Calldata {
 
 fn fmt_row(log: &Reward) -> String {
     match &log.source {
-        RewardSource::Training {
-            start_at,
-            clients,
-            name,
-        } => {
-            format!(
-                "*{}*\n начислено *{}* \\- тренировка '{}' '{}' клиентов \\- {}",
-                fmt_dt(&log.created_at.with_timezone(&Local)),
-                escape(&log.reward.to_string()),
-                escape(name),
-                fmt_dt(&start_at.with_timezone(&Local)),
-                clients
-            )
-        }
-        RewardSource::FixedMonthly {} => {
-            format!(
-                "*{}*\n начислено *{}* \\- _ежемесячное вознаграждение_",
-                fmt_dt(&log.created_at.with_timezone(&Local)),
-                escape(&log.reward.to_string())
-            )
-        }
         RewardSource::Recalc { comment } => {
             format!(
                 "*{}*\n начислено *{}* \\- _перерасчет_ \\- {}",
@@ -117,20 +99,24 @@ fn fmt_row(log: &Reward) -> String {
                 escape(comment)
             )
         }
-        RewardSource::TrainingV2 { training_id, name, details } => {
+        RewardSource::Fixed {} => {
+            format!(
+                "*{}*\n начислено *{}* \\- _фиксированное вознаграждение_",
+                fmt_dt(&log.created_at.with_timezone(&Local)),
+                escape(&log.reward.to_string())
+            )
+        }
+        RewardSource::Training {
+            training_id,
+            name,
+            details: _,
+        } => {
             format!(
                 "*{}*\n начислено *{}* \\- тренировка '{}' \\- {}",
                 fmt_dt(&log.created_at.with_timezone(&Local)),
                 escape(&log.reward.to_string()),
                 escape(name),
                 fmt_dt(&training_id.start_at.with_timezone(&Local)),
-            )
-        }
-        RewardSource::Fixed {} => {
-            format!(
-                "*{}*\n начислено *{}* \\- _фиксированное вознаграждение_",
-                fmt_dt(&log.created_at.with_timezone(&Local)),
-                escape(&log.reward.to_string())
             )
         }
     }

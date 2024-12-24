@@ -60,7 +60,7 @@ impl Employee {
             employee: training.instructor,
             created_at: Local::now().with_timezone(&Utc),
             reward: Decimal::zero(),
-            source: RewardSource::TrainingV2 {
+            source: RewardSource::Training {
                 training_id: training.id(),
                 name: training.name.clone(),
                 details: vec![],

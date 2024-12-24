@@ -1,6 +1,6 @@
-use bson::{doc, oid::ObjectId};
-use eyre::Error;
-use model::{reward::Reward, session::Session};
+use bson::{doc, oid::ObjectId, to_document};
+use eyre::{bail, Error};
+use model::{reward::Reward, rooms::Room, session::Session, training::TrainingId};
 use mongodb::Collection;
 
 const REWARD_COLLECTION: &str = "reward";
