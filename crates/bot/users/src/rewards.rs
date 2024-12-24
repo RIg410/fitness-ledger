@@ -117,7 +117,7 @@ fn fmt_row(log: &Reward) -> String {
                 escape(comment)
             )
         }
-        RewardSource::TrainingV2 { training_id, name } => {
+        RewardSource::TrainingV2 { training_id, name, details } => {
             format!(
                 "*{}*\n начислено *{}* \\- тренировка '{}' \\- {}",
                 fmt_dt(&log.created_at.with_timezone(&Local)),

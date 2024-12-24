@@ -25,4 +25,8 @@ pub enum Rate {
     FixByTraining {
         amount: Decimal,
     },
+    TrainingPercent {
+        percent: Decimal,
+        min_reward: Option<Decimal>,
+    },
 }

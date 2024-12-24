@@ -12,7 +12,7 @@ const DECIMALS: u8 = 2;
 pub struct Decimal(i64);
 
 impl Decimal {
-    pub fn int(value: i64) -> Decimal {
+    pub const fn int(value: i64) -> Decimal {
         Decimal(value * 10i64.pow(DECIMALS as u32))
     }
 

@@ -82,7 +82,10 @@ impl SubscriptionsStatisticsCollector {
         }
 
         match history.action {
-            crate::history::Action::SellSub { subscription } => {
+            crate::history::Action::SellSub {
+                subscription,
+                discount: _,
+            } => {
                 let user_id = if let Some(user_id) = history.sub_actors.first() {
                     *user_id
                 } else {

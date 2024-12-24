@@ -2,8 +2,8 @@ use bot_core::context::Context;
 use chrono::{Local, Utc};
 use eyre::Error;
 use eyre::Result;
+use model::decimal::Decimal;
 use model::user::employee::Employee;
-use model::user::rate;
 use model::user::rate::Rate;
 use model::{
     rights::Rule,
@@ -23,13 +23,21 @@ pub fn render_sub(sub: &UserSubscription, is_owner: bool) -> String {
 
     match sub.status {
         Status::NotActive => {
-            format!(
-                "{}_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nНе активен\\. \n",
-                emoji,
-                escape(&sub.name),
-                sub.balance,
-                sub.locked_balance,
-            )
+            if sub.unlimited {
+                format!(
+                    "{}_{}_\nБезлимитный абонемент\nНе активен\\. \n",
+                    emoji,
+                    escape(&sub.name),
+                )
+            } else {
+                format!(
+                    "{}_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nНе активен\\. \n",
+                    emoji,
+                    escape(&sub.name),
+                    sub.balance,
+                    sub.locked_balance,
+                )
+            }
         }
         Status::Active {
             start_date,
@@ -40,17 +48,27 @@ pub fn render_sub(sub: &UserSubscription, is_owner: bool) -> String {
             } else {
                 ""
             };
-
-            format!(
-                "{}_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nДействует c _{}_ по _{}_{}",
-                emoji,
-                escape(&sub.name),
-                sub.balance,
-                sub.locked_balance,
-                start_date.with_timezone(&Local).format("%d\\.%m\\.%Y"),
-                end_date.with_timezone(&Local).format("%d\\.%m\\.%Y"),
-                exp
-            )
+            if sub.unlimited {
+                format!(
+                    "{}_{}_\nБезлимитный абонемент\nДействует c _{}_ по _{}_{}",
+                    emoji,
+                    escape(&sub.name),
+                    start_date.with_timezone(&Local).format("%d\\.%m\\.%Y"),
+                    end_date.with_timezone(&Local).format("%d\\.%m\\.%Y"),
+                    exp
+                )
+            } else {
+                format!(
+                    "{}_{}_\nОсталось занятий:*{}*\\(_{}_ резерв\\)\nДействует c _{}_ по _{}_{}",
+                    emoji,
+                    escape(&sub.name),
+                    sub.balance,
+                    sub.locked_balance,
+                    start_date.with_timezone(&Local).format("%d\\.%m\\.%Y"),
+                    end_date.with_timezone(&Local).format("%d\\.%m\\.%Y"),
+                    exp
+                )
+            }
         }
     }
 }
@@ -202,10 +220,10 @@ fn render_employee_info(ctx: &mut Context, id: ObjectId, msg: &mut String, emplo
             Rate::FixByTraining { amount } => {
                 msg.push_str(&format!(
                     "\nФиксированная сумма за тренировку : _{}_💰",
-                    amount
+                    escape(&amount.to_string())
                 ));
             }
-            rate::Rate::Fix {
+            Rate::Fix {
                 amount,
                 last_payment_date: _,
                 next_payment_date,
@@ -213,8 +231,19 @@ fn render_employee_info(ctx: &mut Context, id: ObjectId, msg: &mut String, emplo
             } => {
                 msg.push_str(&format!(
                     "\nФиксированная сумма : _{}_💰\nСледующая оплата : _{}_",
-                    amount,
+                    escape(&amount.to_string()),
                     fmt_date(&next_payment_date.with_timezone(&Local)),
+                ));
+            }
+
+            Rate::TrainingPercent {
+                percent,
+                min_reward,
+            } => {
+                msg.push_str(&format!(
+                    "\nПроцент от тренировки : _{}_ %\nМинимальная сумма : _{}_💰",
+                    escape(&(*percent * Decimal::from(100)).to_string()),
+                    escape(&min_reward.unwrap_or_default().to_string()),
                 ));
             }
         }

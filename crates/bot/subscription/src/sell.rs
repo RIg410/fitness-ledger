@@ -6,7 +6,8 @@ use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget:
 use bot_viewer::{fmt_phone, user::fmt_come_from};
 use eyre::Result;
 use model::{
-    request::Request, rights::Rule, statistics::marketing::ComeFrom, user::sanitize_phone,
+    decimal::Decimal, request::Request, rights::Rule, statistics::marketing::ComeFrom,
+    user::sanitize_phone,
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -15,17 +16,18 @@ use teloxide::{
     utils::markdown::escape,
 };
 
+pub const FAMILY_DISCOUNT: Decimal = Decimal::int(10);
 pub const LIMIT: u64 = 7;
 
 pub struct SellView {
-    sell: ObjectId,
+    sub_id: ObjectId,
     state: SellViewState,
 }
 
 impl SellView {
     pub fn new(sell: ObjectId) -> SellView {
         SellView {
-            sell,
+            sub_id: sell,
             state: SellViewState::SelectUser,
         }
     }
@@ -88,7 +90,28 @@ impl View for SellView {
                 .get_by_phone(&mut ctx.session, phone)
                 .await?
             {
-                return Ok(Jmp::Next(ConfirmSell::new(user.id, self.sell).into()));
+                return Ok(Jmp::Next(ConfirmSell::new(user.id, self.sub_id).into()));
+            }
+
+            if let Some(request) = ctx
+                .ledger
+                .requests
+                .get_by_phone(&mut ctx.session, phone)
+                .await?
+            {
+                return Ok(Jmp::Next(
+                    CreateUserAndSell::new(
+                        self.sub_id,
+                        phone.clone(),
+                        request
+                            .first_name
+                            .clone()
+                            .unwrap_or_else(|| "-".to_string()),
+                        request.last_name.clone(),
+                        request.come_from,
+                    )
+                    .into(),
+                ));
             }
         }
 
@@ -100,7 +123,7 @@ impl View for SellView {
         match calldata!(data) {
             SellViewCallback::CreateNewUser => {
                 if let SellViewState::FindByPhone(phone) = &self.state {
-                    return Ok(Jmp::Next(SetName::new(self.sell, phone.clone()).into()));
+                    return Ok(Jmp::Next(SetName::new(self.sub_id, phone.clone()).into()));
                 }
             }
         }
@@ -218,27 +241,29 @@ impl View for SelectComeFrom {
 }
 
 pub struct CreateUserAndSell {
-    sell: ObjectId,
+    sub_id: ObjectId,
     phone: String,
     first_name: String,
     last_name: Option<String>,
     come_from: ComeFrom,
+    discount: Option<Decimal>,
 }
 
 impl CreateUserAndSell {
     pub fn new(
-        sell: ObjectId,
+        sub_id: ObjectId,
         phone: String,
         first_name: String,
         last_name: Option<String>,
         come_from: ComeFrom,
     ) -> CreateUserAndSell {
         CreateUserAndSell {
-            sell,
+            sub_id,
             phone,
             first_name,
             last_name,
             come_from,
+            discount: None,
         }
     }
 }
@@ -253,9 +278,9 @@ impl View for CreateUserAndSell {
         let sub = ctx
             .ledger
             .subscriptions
-            .get(&mut ctx.session, self.sell)
+            .get(&mut ctx.session, self.sub_id)
             .await?
-            .ok_or_else(|| eyre::eyre!("Subscription {} not found", self.sell))?;
+            .ok_or_else(|| eyre::eyre!("Subscription {} not found", self.sub_id))?;
 
         let text = format!(
             "
@@ -266,6 +291,7 @@ impl View for CreateUserAndSell {
     Фамилия:*{}*
     Номер:*{}*
     Источник: *{}*\n\n
+    Скидка: *{}*
     Все верно? 
     ",
             escape(&sub.name),
@@ -274,7 +300,10 @@ impl View for CreateUserAndSell {
             escape(&self.first_name),
             escape(&self.last_name.clone().unwrap_or_else(|| "-".to_string())),
             fmt_phone(Some(&self.phone)),
-            fmt_come_from(self.come_from)
+            fmt_come_from(self.come_from),
+            self.discount
+                .map(|d| d.to_string().replace(".", ","))
+                .unwrap_or_else(|| "нет".to_string())
         );
 
         let mut keymap = InlineKeyboardMarkup::default();
@@ -282,6 +311,13 @@ impl View for CreateUserAndSell {
             Callback::Sell.button("✅ Да"),
             Callback::Cancel.button("❌ Отмена"),
         ]);
+        if self.discount.is_none() {
+            keymap = keymap.append_row(vec![
+                Callback::AddFamilyDiscount.button("👨‍👩‍👧‍👦 Добавить семейную скидку")
+            ]);
+        } else {
+            keymap = keymap.append_row(vec![Callback::RemoveDiscount.button("👨‍👩‍👧‍👦 Убрать скидку")]);
+        }
         ctx.edit_origin(&text, keymap).await?;
         Ok(())
     }
@@ -294,11 +330,12 @@ impl View for CreateUserAndSell {
                     .ledger
                     .presell_subscription(
                         &mut ctx.session,
-                        self.sell,
+                        self.sub_id,
                         self.phone.clone(),
                         self.first_name.clone(),
                         self.last_name.clone(),
                         self.come_from,
+                        self.discount.map(|d| d / Decimal::int(100)),
                     )
                     .await;
 
@@ -332,6 +369,14 @@ impl View for CreateUserAndSell {
                     Ok(Jmp::Goto(SubscriptionView.into()))
                 }
             }
+            Callback::AddFamilyDiscount => {
+                self.discount = Some(FAMILY_DISCOUNT);
+                Ok(Jmp::Stay)
+            }
+            Callback::RemoveDiscount => {
+                self.discount = None;
+                Ok(Jmp::Stay)
+            }
             Callback::Cancel => Ok(Jmp::Back),
         }
     }
@@ -340,5 +385,7 @@ impl View for CreateUserAndSell {
 #[derive(Serialize, Deserialize)]
 enum Callback {
     Sell,
+    AddFamilyDiscount,
+    RemoveDiscount,
     Cancel,
 }

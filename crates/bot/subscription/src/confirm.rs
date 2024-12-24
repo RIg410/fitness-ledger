@@ -1,11 +1,11 @@
-use crate::SubscriptionView;
+use crate::{sell::FAMILY_DISCOUNT, SubscriptionView};
 
 use super::View;
 use async_trait::async_trait;
 use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
 use bot_viewer::fmt_phone;
 use eyre::{eyre, Error, Result};
-use model::rights::Rule;
+use model::{decimal::Decimal, rights::Rule};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
@@ -13,11 +13,16 @@ use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 pub struct ConfirmSell {
     user_id: ObjectId,
     sub: ObjectId,
+    discount: Option<Decimal>,
 }
 
 impl ConfirmSell {
     pub fn new(user_id: ObjectId, sell: ObjectId) -> ConfirmSell {
-        ConfirmSell { user_id, sub: sell }
+        ConfirmSell {
+            user_id,
+            sub: sell,
+            discount: None,
+        }
     }
 }
 
@@ -28,7 +33,7 @@ impl View for ConfirmSell {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let (text, keymap) = render(ctx, self.user_id, self.sub).await?;
+        let (text, keymap) = render(ctx, self.user_id, self.sub, self.discount).await?;
         ctx.edit_origin(&text, keymap).await?;
         Ok(())
     }
@@ -39,7 +44,12 @@ impl View for ConfirmSell {
                 ctx.ensure(Rule::SellSubscription)?;
                 let result = ctx
                     .ledger
-                    .sell_subscription(&mut ctx.session, self.sub, self.user_id)
+                    .sell_subscription(
+                        &mut ctx.session,
+                        self.sub,
+                        self.user_id,
+                        self.discount.map(|d| d / Decimal::int(100)),
+                    )
                     .await;
 
                 if let Err(err) = result {
@@ -50,6 +60,14 @@ impl View for ConfirmSell {
                     Ok(Jmp::Goto(SubscriptionView.into()))
                 }
             }
+            Callback::AddFamilyDiscount => {
+                self.discount = Some(FAMILY_DISCOUNT);
+                Ok(Jmp::Stay)
+            }
+            Callback::RemoveFamilyDiscount => {
+                self.discount = None;
+                Ok(Jmp::Stay)
+            }
             Callback::Cancel => Ok(Jmp::Back),
         }
     }
@@ -59,6 +77,7 @@ async fn render(
     ctx: &mut Context,
     user_id: ObjectId,
     sub: ObjectId,
+    discount: Option<Decimal>,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
     let sub = ctx
         .ledger
@@ -81,7 +100,9 @@ async fn render(
 Пользователь:
     Имя:_{}_
     Фамилия:_{}_
-    Номер:_{}_\n\n
+    Номер:_{}_\n
+    Скидка: _{}%_
+    \n
     Все верно? 
     ",
         escape(&sub.name),
@@ -89,7 +110,8 @@ async fn render(
         sub.price.to_string().replace(".", ","),
         escape(&user.name.first_name),
         escape(&user.name.last_name.unwrap_or_else(|| "-".to_string())),
-        fmt_phone(user.phone.as_deref())
+        fmt_phone(user.phone.as_deref()),
+        discount.unwrap_or_default().to_string().replace(".", ",")
     );
 
     let mut keymap = InlineKeyboardMarkup::default();
@@ -97,11 +119,22 @@ async fn render(
         Callback::Sell.button("✅ Да"),
         Callback::Cancel.button("❌ Отмена"),
     ]);
+    if discount.is_none() {
+        keymap = keymap.append_row(vec![
+            Callback::AddFamilyDiscount.button("👨‍👩‍👧‍👦 Добавить семейную скидку")
+        ]);
+    } else {
+        keymap = keymap.append_row(vec![
+            Callback::RemoveFamilyDiscount.button("👨‍👩‍👧‍👦 Убрать семейную скидку")
+        ]);
+    }
     Ok((text, keymap))
 }
 
 #[derive(Serialize, Deserialize)]
 enum Callback {
     Sell,
+    AddFamilyDiscount,
+    RemoveFamilyDiscount,
     Cancel,
 }

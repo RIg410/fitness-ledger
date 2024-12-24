@@ -1,4 +1,4 @@
-use bson::{de, oid::ObjectId};
+use bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +28,7 @@ pub enum RewardSource {
     TrainingV2 {
         training_id: TrainingId,
         name: String,
+        details: Vec<(ObjectId, Decimal)>,
     },
     Fixed {},
     #[deprecated]

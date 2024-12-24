@@ -10,7 +10,6 @@ use model::session::Session;
 use model::statistics::marketing::ComeFrom;
 use model::training::{Training, TrainingId, TrainingStatus};
 use model::treasury::subs::UserId;
-use model::treasury::Sell;
 use model::user::family::FindFor;
 use model::user::{sanitize_phone, User};
 use mongodb::bson::oid::ObjectId;
@@ -58,7 +57,12 @@ impl Ledger {
         let calendar = Calendar::new(storage.calendar, users.clone(), programs.clone());
 
         let treasury = Treasury::new(storage.treasury, history.clone());
-        let subscriptions = Subscriptions::new(storage.subscriptions, history.clone());
+        let subscriptions = Subscriptions::new(
+            storage.subscriptions,
+            history.clone(),
+            programs.clone(),
+            users.clone(),
+        );
         let rewards = Rewards::new(storage.rewards);
         let requests = Requests::new(storage.requests);
 
@@ -342,6 +346,7 @@ impl Ledger {
         session: &mut Session,
         subscription: ObjectId,
         buyer: ObjectId,
+        discount: Option<Decimal>,
     ) -> Result<(), SellSubscriptionError> {
         let buyer = self
             .users
@@ -356,15 +361,15 @@ impl Ledger {
             .ok_or_else(|| eyre!("User not found"))?;
 
         self.history
-            .sell_subscription(session, subscription.clone(), buyer.id)
+            .sell_subscription(session, subscription.clone(), buyer.id, discount)
             .await?;
 
         self.users
-            .add_subscription(session, buyer.id, subscription.clone())
+            .add_subscription(session, buyer.id, subscription.clone(), discount)
             .await?;
 
         self.treasury
-            .sell(session, buyer.id, Sell::Sub(subscription))
+            .sell(session, buyer.id, subscription, discount)
             .await?;
         Ok(())
     }
@@ -378,6 +383,7 @@ impl Ledger {
         first_name: String,
         last_name: Option<String>,
         come_from: model::statistics::marketing::ComeFrom,
+        discount: Option<Decimal>,
     ) -> Result<()> {
         let phone = sanitize_phone(&phone);
         let buyer = if let Some(bayer) = self.users.get_by_phone(session, &phone).await? {
@@ -394,15 +400,15 @@ impl Ledger {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
         self.history
-            .sell_subscription(session, subscription.clone(), buyer.id)
+            .sell_subscription(session, subscription.clone(), buyer.id, discount)
             .await?;
 
         self.users
-            .add_subscription(session, buyer.id, subscription.clone())
+            .add_subscription(session, buyer.id, subscription.clone(), discount)
             .await?;
 
         self.treasury
-            .sell(session, buyer.id, Sell::Sub(subscription))
+            .sell(session, buyer.id, subscription, discount)
             .await?;
         Ok(())
     }

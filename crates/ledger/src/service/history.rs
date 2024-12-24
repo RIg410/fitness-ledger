@@ -128,11 +128,15 @@ impl History {
         session: &mut Session,
         subscription: Subscription,
         buyer: ObjectId,
+        discount: Option<Decimal>,
     ) -> Result<()> {
         let entry = HistoryRow::with_sub_actors(
             session.actor(),
             vec![buyer],
-            Action::SellSub { subscription },
+            Action::SellSub {
+                subscription,
+                discount,
+            },
         );
         self.store.store(session, entry).await
     }

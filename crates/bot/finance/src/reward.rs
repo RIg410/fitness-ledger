@@ -9,7 +9,10 @@ use eyre::Result;
 use model::{decimal::Decimal, rights::Rule, user::User};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::{types::{InlineKeyboardButton, InlineKeyboardMarkup, Message}, utils::markdown::escape};
+use teloxide::{
+    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    utils::markdown::escape,
+};
 
 #[derive(Default)]
 pub struct SelectCouch;
@@ -23,7 +26,7 @@ impl View for SelectCouch {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let msg = "Инструкторы ❤️";
         let mut keymap = InlineKeyboardMarkup::default();
-        let instructs = ctx.ledger.users.instructors(&mut ctx.session).await?;
+        let instructs = ctx.ledger.users.employees(&mut ctx.session).await?;
 
         for instruct in instructs {
             keymap = keymap.append_row(vec![render_button(&instruct)]);
@@ -133,7 +136,8 @@ impl View for ConfirmSum {
 
         let msg = format!(
             "Выплатить _{}_ пользователю _{}_?",
-            escape(&self.sum.to_string()), escape(&user.name.first_name)
+            escape(&self.sum.to_string()),
+            escape(&user.name.first_name)
         );
 
         let mut keymap = InlineKeyboardMarkup::default();

@@ -4,12 +4,13 @@ use model::{
     decimal::Decimal,
     session::Session,
     statistics::marketing::ComeFrom,
+    subscription::Subscription,
     treasury::{
         aggregate::{AggIncome, AggOutcome, TreasuryAggregate},
         income::Income,
         outcome::Outcome,
         subs::{SellSubscription, UserId},
-        Event, Sell, TreasuryEvent,
+        Event, TreasuryEvent,
     },
 };
 use mongodb::bson::oid::ObjectId;
@@ -43,12 +44,19 @@ impl Treasury {
         &self,
         session: &mut Session,
         buyer_id: ObjectId,
-        sell: Sell,
+        sub: Subscription,
+        discount: Option<Decimal>,
     ) -> Result<(), Error> {
-        let debit = sell.debit();
+        let mut debit = sub.price;
+
+        if let Some(discount) = discount {
+            debit -= sub.price * discount;
+        }
+
         let sub = SellSubscription {
-            info: sell.into(),
+            info: sub.into(),
             buyer_id: UserId::Id(buyer_id),
+            discount,
         };
 
         let event = TreasuryEvent {

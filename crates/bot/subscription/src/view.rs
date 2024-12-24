@@ -1,4 +1,4 @@
-use crate::{edit_requirement::EditRequirement, edit_type::EditSubscriptionType};
+use crate::edit_programs::EditPrograms;
 
 use super::{
     edit::{EditSubscription, EditType},
@@ -29,7 +29,7 @@ impl SubscriptionOption {
 
     async fn edit_requirement(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::EditSubscription)?;
-        Ok(EditRequirement::new(self.id).into())
+        Ok(EditPrograms::new(self.id).into())
     }
 
     async fn buy(&mut self, ctx: &mut Context) -> Result<Jmp> {
@@ -82,7 +82,7 @@ impl View for SubscriptionOption {
                 ctx.ensure(Rule::EditSubscription)?;
                 self.edit(EditType::Price).await
             }
-            Callback::EditRequirement => {
+            Callback::EditPrograms => {
                 ctx.ensure(Rule::EditSubscription)?;
                 self.edit_requirement(ctx).await
             }
@@ -101,10 +101,6 @@ impl View for SubscriptionOption {
             Callback::EditCanBuyByUser => {
                 ctx.ensure(Rule::EditSubscription)?;
                 self.edit(EditType::CanBuyByUser).await
-            }
-            Callback::EditSubscriptionType => {
-                ctx.ensure(Rule::EditSubscription)?;
-                Ok(EditSubscriptionType::new(self.id).into())
             }
             Callback::EditExpirationDays => {
                 ctx.ensure(Rule::EditSubscription)?;
@@ -125,39 +121,31 @@ async fn render_sub(
         .await?
         .ok_or_else(|| eyre::eyre!("Subscription not found"))?;
 
-    let req = if ctx.has_right(Rule::EditSubscription) {
-        if let Some(req) = sub.requirements {
-            match req {
-                model::subscription::SubRequirements::TestGroupBuy => {
-                    "Требования: Тестовой групповой"
-                }
-                model::subscription::SubRequirements::TestPersonalBuy => {
-                    "Требования: Тестовой персональный"
-                }
-                model::subscription::SubRequirements::BuyOnFirstDayGroup => {
-                    "Требования: Покупка в первый день группового"
-                }
-                model::subscription::SubRequirements::BuyOnFirstDayPersonal => {
-                    "Требования: Покупка в первый день персонального"
-                }
-            }
-        } else {
-            "Требования: Нет"
-        }
+    let msg = if sub.unlimited {
+        format!(
+            "📌 Тариф: _{}_\nБезлимитный\nЦена:_{}_\nДни заморозки:_{}_\nДействует дней:_{}_\n{}\n",
+            escape(&sub.name),
+            sub.price.to_string().replace(".", ","),
+            sub.freeze_days,
+            sub.expiration_days,
+            fmt_subscription_type(
+                ctx,
+                &sub.subscription_type,
+                !ctx.has_right(Rule::EditSubscription)
+            )
+            .await?,
+        )
     } else {
-        ""
-    };
-
-    let msg = format!(
-        "📌 Тариф: _{}_\nКоличество занятий:_{}_\nЦена:_{}_\nДни заморозки:_{}_\nДействует дней:_{}_\nТип:_{}_\n{}",
+        format!(
+        "📌 Тариф: _{}_\nКоличество занятий:_{}_\nЦена:_{}_\nДни заморозки:_{}_\nДействует дней:_{}_\n{}\n",
         escape(&sub.name),
         sub.items,
         sub.price.to_string().replace(".", ","),
         sub.freeze_days,
         sub.expiration_days,
-        fmt_subscription_type(ctx, &sub.subscription_type).await?,
-        req
-    );
+        fmt_subscription_type(ctx, &sub.subscription_type, !ctx.has_right(Rule::EditSubscription)).await?,
+    )
+    };
 
     let mut keymap = InlineKeyboardMarkup::default();
 
@@ -175,9 +163,10 @@ async fn render_sub(
         keymap = keymap.append_row(Callback::EditFreezeDays.btn_row("Изменить дни заморозки"));
         keymap = keymap
             .append_row(Callback::EditCanBuyByUser.btn_row("Изменить доступность для покупки"));
-        keymap = keymap.append_row(Callback::EditSubscriptionType.btn_row("Изменить тип"));
         keymap = keymap.append_row(Callback::EditExpirationDays.btn_row("Изменить время действия"));
-        keymap = keymap.append_row(Callback::EditRequirement.btn_row("Изменить требования"));
+        if sub.subscription_type.is_group() {
+            keymap = keymap.append_row(Callback::EditPrograms.btn_row("Изменить программы"));
+        }
     }
 
     Ok((msg, keymap))
@@ -190,10 +179,9 @@ enum Callback {
     Buy,
     EditPrice,
     EditItems,
-    EditRequirement,
+    EditPrograms,
     EditName,
     EditFreezeDays,
     EditCanBuyByUser,
-    EditSubscriptionType,
     EditExpirationDays,
 }

@@ -38,83 +38,118 @@ impl CreateSubscription {
 
     async fn render_state(&self, ctx: &mut Context) -> Result<String> {
         let none = "❓".to_string();
-        let (name, items, price, days, freeze, can_buy_by_user, sub_type) = match self.state {
-            State::SetName => (None, None, None, None, None, None, None),
-            State::SetItems => (
-                Some(self.subscription.name.as_str()),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ),
-            State::SetPrice => (
-                Some(self.subscription.name.as_str()),
-                Some(self.subscription.items),
-                None,
-                None,
-                None,
-                None,
-                None,
-            ),
-            State::SetExpirationDaysDays => (
-                Some(self.subscription.name.as_str()),
-                Some(self.subscription.items),
-                Some(self.subscription.price),
-                None,
-                None,
-                None,
-                None,
-            ),
-            State::SetFreezeDays => (
-                Some(self.subscription.name.as_str()),
-                Some(self.subscription.items),
-                Some(self.subscription.price),
-                Some(self.subscription.expiration_days),
-                None,
-                None,
-                None,
-            ),
-            State::SetCanBuyWithUser => (
-                Some(self.subscription.name.as_str()),
-                Some(self.subscription.items),
-                Some(self.subscription.price),
-                Some(self.subscription.expiration_days),
-                Some(self.subscription.freeze_days),
-                None,
-                None,
-            ),
-            State::SubscriptionType => (
-                Some(self.subscription.name.as_str()),
-                Some(self.subscription.items),
-                Some(self.subscription.price),
-                Some(self.subscription.expiration_days),
-                Some(self.subscription.freeze_days),
-                Some(self.subscription.user_can_buy),
-                None,
-            ),
-            State::SubscriptionTypeFilter => (
-                Some(self.subscription.name.as_str()),
-                Some(self.subscription.items),
-                Some(self.subscription.price),
-                Some(self.subscription.expiration_days),
-                Some(self.subscription.freeze_days),
-                Some(self.subscription.user_can_buy),
-                None,
-            ),
-            State::Finish => (
-                Some(self.subscription.name.as_str()),
-                Some(self.subscription.items),
-                Some(self.subscription.price),
-                Some(self.subscription.expiration_days),
-                Some(self.subscription.freeze_days),
-                Some(self.subscription.user_can_buy),
-                Some(self.subscription.subscription_type),
-            ),
-        };
+        let (name, items, price, days, freeze, can_buy_by_user, sub_type, unlimited) =
+            match self.state {
+                State::SetName => (None, None, None, None, None, None, None, None),
+                State::SetItems => (
+                    Some(self.subscription.name.as_str()),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ),
+                State::SetPrice => (
+                    Some(self.subscription.name.as_str()),
+                    Some(self.subscription.items),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ),
+                State::SetExpirationDaysDays => (
+                    Some(self.subscription.name.as_str()),
+                    Some(self.subscription.items),
+                    Some(self.subscription.price),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ),
+                State::SetFreezeDays => (
+                    Some(self.subscription.name.as_str()),
+                    Some(self.subscription.items),
+                    Some(self.subscription.price),
+                    Some(self.subscription.expiration_days),
+                    None,
+                    None,
+                    None,
+                    None,
+                ),
+                State::SetCanBuyWithUser => (
+                    Some(self.subscription.name.as_str()),
+                    Some(self.subscription.items),
+                    Some(self.subscription.price),
+                    Some(self.subscription.expiration_days),
+                    Some(self.subscription.freeze_days),
+                    None,
+                    None,
+                    None,
+                ),
+                State::SubscriptionType => (
+                    Some(self.subscription.name.as_str()),
+                    Some(self.subscription.items),
+                    Some(self.subscription.price),
+                    Some(self.subscription.expiration_days),
+                    Some(self.subscription.freeze_days),
+                    Some(self.subscription.user_can_buy),
+                    None,
+                    None,
+                ),
+                State::SubscriptionTypeFilter => (
+                    Some(self.subscription.name.as_str()),
+                    Some(self.subscription.items),
+                    Some(self.subscription.price),
+                    Some(self.subscription.expiration_days),
+                    Some(self.subscription.freeze_days),
+                    Some(self.subscription.user_can_buy),
+                    None,
+                    None,
+                ),
+                State::SetUnlimited => (
+                    Some(self.subscription.name.as_str()),
+                    Some(self.subscription.items),
+                    Some(self.subscription.price),
+                    Some(self.subscription.expiration_days),
+                    Some(self.subscription.freeze_days),
+                    Some(self.subscription.user_can_buy),
+                    Some(self.subscription.subscription_type.clone()),
+                    None,
+                ),
+                State::Finish => (
+                    Some(self.subscription.name.as_str()),
+                    Some(self.subscription.items),
+                    Some(self.subscription.price),
+                    Some(self.subscription.expiration_days),
+                    Some(self.subscription.freeze_days),
+                    Some(self.subscription.user_can_buy),
+                    Some(self.subscription.subscription_type.clone()),
+                    Some(self.subscription.unlimited),
+                ),
+            };
 
-        Ok(format!("📌 Тариф: *{}*\nКоличество занятий:*{}*\nЦена:*{}*\nСрок действия:*{}*\nЗаморозка:*{}*\nПользователь может купить:*{}*\nТип:*{}*\n",
+        let unlimited = unlimited.unwrap_or(false);
+
+        if unlimited {
+            Ok(format!("📌 Тариф: *{}*\nЦена:*{}*\nСрок действия:*{}*\nЗаморозка:*{}*\nПользователь может купить:*{}*\n{}\n",
+                    escape(name.unwrap_or(&none)),
+                    price.map(|i|i.to_string().replace(".", ",")).unwrap_or_else(||none.clone()),
+                    days.map(|i|i.to_string()).unwrap_or_else(||none.clone()),
+                    freeze.map(|i|i.to_string()).unwrap_or_else(||none.clone()),
+                    can_buy_by_user.map(|i|if i {"Да"} else {"Нет"}.to_string()).unwrap_or_else(||none.clone()),
+                    if let Some(sub_type) = sub_type {
+                        fmt_subscription_type(ctx, &sub_type, false).await?
+                    } else {
+                        none.clone()
+                    }
+                ))
+        } else {
+            Ok(format!("📌 Тариф: *{}*\nКоличество занятий:*{}*\nЦена:*{}*\nСрок действия:*{}*\nЗаморозка:*{}*\nПользователь может купить:*{}*\n{}\n",
                     escape(name.unwrap_or(&none)),
                     items.map(|i|i.to_string()).unwrap_or_else(||none.clone()),
                     price.map(|i|i.to_string().replace(".", ",")).unwrap_or_else(||none.clone()),
@@ -122,11 +157,12 @@ impl CreateSubscription {
                     freeze.map(|i|i.to_string()).unwrap_or_else(||none.clone()),
                     can_buy_by_user.map(|i|if i {"Да"} else {"Нет"}.to_string()).unwrap_or_else(||none.clone()),
                     if let Some(sub_type) = sub_type {
-                        fmt_subscription_type(ctx, &sub_type).await?
+                        fmt_subscription_type(ctx, &sub_type, false).await?
                     } else {
                         none.clone()
                     }
                 ))
+        }
     }
 }
 
@@ -168,6 +204,13 @@ impl View for CreateSubscription {
                 keymap = keymap.append_row(vec![
                     Callback::Group(true).button("Груповой"),
                     Callback::Group(false).button("Индивидуальный"),
+                ]);
+            }
+            State::SetUnlimited => {
+                text.push_str("*Безлимитный абонемент?*");
+                keymap = keymap.append_row(vec![
+                    Callback::Unlimited(true).button("Да"),
+                    Callback::Unlimited(false).button("Нет"),
                 ]);
             }
             State::Finish => {
@@ -265,6 +308,10 @@ impl View for CreateSubscription {
                 ctx.delete_msg(message.id).await?;
                 State::SubscriptionTypeFilter
             }
+            State::SetUnlimited => {
+                ctx.delete_msg(message.id).await?;
+                State::SetUnlimited
+            }
             State::Finish => {
                 ctx.delete_msg(message.id).await?;
                 State::Finish
@@ -318,8 +365,10 @@ impl View for CreateSubscription {
             }
             Callback::Group(is_group) => {
                 if is_group {
-                    self.subscription.subscription_type = SubscriptionType::Group {};
-                    self.state = State::Finish;
+                    self.subscription.subscription_type = SubscriptionType::Group {
+                        program_filter: vec![],
+                    };
+                    self.state = State::SetUnlimited;
                 } else {
                     self.subscription.subscription_type =
                         SubscriptionType::Personal { couch_filter: None };
@@ -327,10 +376,15 @@ impl View for CreateSubscription {
                 }
                 Ok(Jmp::Stay)
             }
+            Callback::Unlimited(unlimited) => {
+                self.subscription.unlimited = unlimited;
+                self.state = State::Finish;
+                Ok(Jmp::Stay)
+            }
             Callback::Couch(couch_id) => {
                 let couch_filter = couch_id.map(|id| ObjectId::from_bytes(id));
                 self.subscription.subscription_type = SubscriptionType::Personal { couch_filter };
-                self.state = State::Finish;
+                self.state = State::SetUnlimited;
                 Ok(Jmp::Stay)
             }
         }
@@ -348,6 +402,7 @@ enum State {
     SetCanBuyWithUser,
     SubscriptionType,
     SubscriptionTypeFilter,
+    SetUnlimited,
     Finish,
 }
 
@@ -358,4 +413,5 @@ enum Callback {
     CanUserBuy(bool),
     Group(bool),
     Couch(Option<[u8; 12]>),
+    Unlimited(bool),
 }

@@ -1,4 +1,4 @@
-use bson::{de, oid::ObjectId};
+use bson::oid::ObjectId;
 use chrono::{DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -56,6 +56,8 @@ pub enum Action {
     },
     SellSub {
         subscription: Subscription,
+        #[serde(default)]
+        discount: Option<Decimal>,
     },
     #[deprecated]
     PreSellSub {
@@ -104,5 +106,5 @@ pub enum Action {
         subscription: Subscription,
     },
     RemoveFamilyMember {},
-    AddFamilyMember {  },
+    AddFamilyMember {},
 }

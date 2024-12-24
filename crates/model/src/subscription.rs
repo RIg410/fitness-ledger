@@ -2,7 +2,6 @@ use crate::{decimal::Decimal, training::Training};
 use bson::oid::ObjectId;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Subscription {
@@ -21,37 +20,10 @@ pub struct Subscription {
     #[serde(default)]
     pub subscription_type: SubscriptionType,
     #[serde(default)]
-    pub requirements: Option<SubRequirements>,
+    pub unlimited: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, EnumIter)]
-pub enum SubRequirements {
-    TestGroupBuy,
-    TestPersonalBuy,
-    BuyOnFirstDayGroup,
-    BuyOnFirstDayPersonal,
-}
-
-impl SubRequirements {
-    pub fn into_value(&self) -> u8 {
-        match self {
-            SubRequirements::TestGroupBuy => 0,
-            SubRequirements::TestPersonalBuy => 1,
-            SubRequirements::BuyOnFirstDayGroup => 2,
-            SubRequirements::BuyOnFirstDayPersonal => 3,
-        }
-    }
-
-    pub fn from_value(value: u8) -> Option<Self> {
-        match value {
-            0 => Some(SubRequirements::TestGroupBuy),
-            1 => Some(SubRequirements::TestPersonalBuy),
-            2 => Some(SubRequirements::BuyOnFirstDayGroup),
-            3 => Some(SubRequirements::BuyOnFirstDayPersonal),
-            _ => None,
-        }
-    }
-}
+pub type CostOfLesson = Decimal;
 
 fn default_user_can_buy() -> bool {
     false
@@ -66,7 +38,7 @@ impl Subscription {
         expiration_days: u32,
         user_can_buy: bool,
         subscription_type: SubscriptionType,
-        requirements: Option<SubRequirements>,
+        unlimited: bool,
     ) -> Self {
         Subscription {
             id: ObjectId::new(),
@@ -78,7 +50,7 @@ impl Subscription {
             expiration_days,
             user_can_buy,
             subscription_type,
-            requirements,
+            unlimited,
         }
     }
 
@@ -107,6 +79,10 @@ pub struct UserSubscription {
     pub balance: u32,
     #[serde(default)]
     pub locked_balance: u32,
+    #[serde(default)]
+    pub unlimited: bool,
+    #[serde(default)]
+    pub discount: Option<Decimal>,
 }
 
 impl UserSubscription {
@@ -129,18 +105,27 @@ impl UserSubscription {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.balance == 0 && self.locked_balance == 0
+        !self.unlimited || self.balance == 0 && self.locked_balance == 0
     }
 
     pub fn item_price(&self) -> Decimal {
-        if self.items == 0 {
+        let full_price = if self.items == 0 {
             Decimal::zero()
         } else {
             self.price / Decimal::from(self.items)
+        };
+        if let Some(discount) = self.discount {
+            full_price * (Decimal::int(1) - discount)
+        } else {
+            full_price
         }
     }
 
     pub fn lock_balance(&mut self, training: &Training) -> bool {
+        if self.unlimited {
+            return true;
+        }
+
         if self.balance == 0 {
             return false;
         }
@@ -155,6 +140,10 @@ impl UserSubscription {
     }
 
     pub fn unlock_balance(&mut self) -> bool {
+        if self.unlimited {
+            return true;
+        }
+
         if self.locked_balance == 0 {
             return false;
         }
@@ -165,6 +154,10 @@ impl UserSubscription {
     }
 
     pub fn change_locked_balance(&mut self) -> bool {
+        if self.unlimited {
+            return true;
+        }
+
         if self.locked_balance == 0 {
             return false;
         }
@@ -187,6 +180,8 @@ impl From<Subscription> for UserSubscription {
             balance: value.items,
             locked_balance: 0,
             id: ObjectId::new(),
+            unlimited: value.unlimited,
+            discount: None,
         }
     }
 }
@@ -231,20 +226,32 @@ impl Status {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, Hash)]
 pub enum SubscriptionType {
-    Group {},
-    Personal { couch_filter: Option<ObjectId> },
+    Group {
+        #[serde(default)]
+        program_filter: Vec<ObjectId>,
+    },
+    Personal {
+        couch_filter: Option<ObjectId>,
+    },
 }
 
 impl SubscriptionType {
     pub fn is_personal(&self) -> bool {
         matches!(self, SubscriptionType::Personal { .. })
     }
+
+    pub fn is_group(&self) -> bool {
+        matches!(self, SubscriptionType::Group { .. })
+    }
 }
 
 impl Default for SubscriptionType {
     fn default() -> Self {
-        SubscriptionType::Group {}
+        SubscriptionType::Group {
+            program_filter: Vec::new(),
+        }
     }
 }
+

@@ -8,7 +8,10 @@ use chrono::{DateTime, Local, Utc};
 use eyre::{bail, Error};
 use serde::{Deserialize, Serialize};
 
-use super::rate::{EmployeeRole, Rate};
+use super::{
+    rate::{EmployeeRole, Rate},
+    User,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Employee {
@@ -43,7 +46,11 @@ impl Employee {
         Ok(())
     }
 
-    pub fn collect_training_rewards(&mut self, training: &Training) -> Option<Reward> {
+    pub fn collect_training_rewards(
+        &mut self,
+        training: &Training,
+        users: &[&User],
+    ) -> Option<Reward> {
         if training.clients.is_empty() {
             return None;
         }
@@ -56,6 +63,7 @@ impl Employee {
             source: RewardSource::TrainingV2 {
                 training_id: training.id(),
                 name: training.name.clone(),
+                details: vec![],
             },
         };
         for rate in &self.rates {

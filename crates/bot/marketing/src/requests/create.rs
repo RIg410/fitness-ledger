@@ -9,7 +9,8 @@ use bot_core::{
 use bot_viewer::{day::fmt_dt, fmt_phone, user::fmt_come_from};
 use chrono::{Local, NaiveDateTime, TimeZone as _};
 use model::{
-    request::RemindLater, rights::Rule, statistics::marketing::ComeFrom, user::sanitize_phone,
+    decimal::Decimal, request::RemindLater, rights::Rule, statistics::marketing::ComeFrom,
+    user::sanitize_phone,
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -514,6 +515,7 @@ impl View for SelectSubscriptionsView {
                 first_name: self.first_name.clone(),
                 last_name: self.last_name.clone(),
                 subscription_id: sub_id,
+                discount: None,
             }
             .into(),
         ))
@@ -529,6 +531,7 @@ pub struct ConfirmSellSubscription {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
     pub subscription_id: ObjectId,
+    pub discount: Option<Decimal>,
 }
 
 #[async_trait]
@@ -550,15 +553,26 @@ impl View for ConfirmSellSubscription {
             "Все верно?:\n\
             Телефон: *{}*\n\
             Абонемент: *{}*\n\
+            Скидка: *{}*\n
            ",
             fmt_phone(Some(&self.phone)),
-            escape(&sub.name)
+            escape(&sub.name),
+            escape(&self.discount.unwrap_or_default().to_string())
         );
         let mut markup = InlineKeyboardMarkup::default();
         markup = markup.append_row(vec![
-            CalldataYesNo::Yes.button("✅Да"),
-            CalldataYesNo::No.button("❌Нет"),
+            ConfirmSellSubscriptionCallback::Yes.button("✅Да"),
+            ConfirmSellSubscriptionCallback::No.button("❌Нет"),
         ]);
+
+        if self.discount.is_none() {
+            markup = markup.append_row(vec![ConfirmSellSubscriptionCallback::AddFamilyDiscount
+                .button("👨‍👩‍👧‍👦 Добавить семейную скидку")]);
+        } else {
+            markup = markup.append_row(vec![ConfirmSellSubscriptionCallback::RemoveFamilyDiscount
+                .button("👨‍👩‍👧‍👦 Убрать семейную скидку")]);
+        }
+
         ctx.bot.edit_origin(&text, markup).await?;
         Ok(())
     }
@@ -566,7 +580,7 @@ impl View for ConfirmSellSubscription {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         ctx.ensure(Rule::SellSubscription)?;
         match calldata!(data) {
-            CalldataYesNo::Yes => {
+            ConfirmSellSubscriptionCallback::Yes => {
                 ctx.ledger
                     .presell_subscription(
                         &mut ctx.session,
@@ -575,13 +589,30 @@ impl View for ConfirmSellSubscription {
                         self.first_name.clone().unwrap_or_default(),
                         self.last_name.clone(),
                         self.come_from,
+                        self.discount.map(|d| d / Decimal::from(100)),
                     )
                     .await?;
 
                 ctx.send_msg("Абонемент продан").await?;
                 Ok(Jmp::Goto(Marketing {}.into()))
             }
-            CalldataYesNo::No => Ok(Jmp::Goto(Marketing {}.into())),
+            ConfirmSellSubscriptionCallback::No => Ok(Jmp::Goto(Marketing {}.into())),
+            ConfirmSellSubscriptionCallback::AddFamilyDiscount => {
+                self.discount = Some(Decimal::from(10));
+                Ok(Jmp::Stay)
+            }
+            ConfirmSellSubscriptionCallback::RemoveFamilyDiscount => {
+                self.discount = None;
+                Ok(Jmp::Stay)
+            }
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ConfirmSellSubscriptionCallback {
+    Yes,
+    No,
+    AddFamilyDiscount,
+    RemoveFamilyDiscount,
 }

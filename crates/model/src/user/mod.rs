@@ -85,6 +85,10 @@ impl User {
         !self.subscriptions.is_empty()
     }
 
+    pub fn subscriptions_mut(&mut self) -> &mut [UserSubscription] {
+        &mut self.subscriptions
+    }
+
     pub fn with_tg_id(tg_id: i64) -> User {
         User {
             id: ObjectId::new(),

@@ -3,6 +3,7 @@ use chrono::{DateTime, Local, Utc};
 use eyre::{bail, eyre, Error, Result};
 use futures_util::stream::TryStreamExt;
 use log::info;
+use model::decimal::Decimal;
 use model::rights::{self, Rule};
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
@@ -196,10 +197,14 @@ impl UserStore {
         session: &mut Session,
         id: ObjectId,
         sub: Subscription,
+        discount: Option<Decimal>,
     ) -> Result<()> {
         info!("Add subscription for user {}: {:?}", id, sub);
         let freeze_days = sub.freeze_days as i32;
         let amount = sub.items as i32;
+
+        let mut sub = UserSubscription::from(sub);
+        sub.discount = discount;
 
         let result = self
             .users
@@ -212,7 +217,7 @@ impl UserStore {
                      "version": 1
                     },
                     "$push": {
-                        "subscriptions": to_document(&UserSubscription::from(sub))?
+                        "subscriptions": to_document(&sub)?
                     }
                 },
             )
@@ -359,6 +364,12 @@ impl UserStore {
 
     pub async fn instructors(&self, session: &mut Session) -> Result<Vec<User>, Error> {
         let filter = doc! { "employee.role": "Couch" };
+        let mut cursor = self.users.find(filter).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
+    }
+
+    pub async fn employees(&self, session: &mut Session) -> Result<Vec<User>, Error> {
+        let filter = doc! { "employee": { "$exists": true } };
         let mut cursor = self.users.find(filter).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
@@ -641,5 +652,17 @@ impl UserStore {
             .session(&mut *session)
             .await?;
         Ok(())
+    }
+
+    pub async fn find_with_subscription(
+        &self,
+        session: &mut Session,
+        subscription: ObjectId,
+    ) -> Result<Vec<User>> {
+        let filter = doc! {
+            "subscriptions.subscription_id": subscription
+        };
+        let mut cursor = self.users.find(filter).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 }

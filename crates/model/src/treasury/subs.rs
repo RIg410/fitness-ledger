@@ -30,6 +30,8 @@ pub struct SellSubscription {
     #[serde(default)]
     pub buyer_id: UserId,
     pub info: SubscriptionInfo,
+    #[serde(default)]
+    pub discount: Option<Decimal>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]

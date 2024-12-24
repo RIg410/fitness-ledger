@@ -145,7 +145,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             }
         }
-        model::history::Action::SellSub { subscription } => {
+        model::history::Action::SellSub { subscription, discount } => {
             if is_actor {
                 let sub = if let Some(subject) = log.sub_actors.first() {
                     ctx.ledger

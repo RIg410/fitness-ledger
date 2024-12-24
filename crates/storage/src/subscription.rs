@@ -1,12 +1,8 @@
 use crate::session::Db;
-use bson::{doc, oid::ObjectId, to_document};
+use bson::{doc, oid::ObjectId};
 use eyre::Error;
 use log::info;
-use model::{
-    decimal::Decimal,
-    session::Session,
-    subscription::{SubRequirements, Subscription, SubscriptionType},
-};
+use model::{decimal::Decimal, session::Session, subscription::Subscription};
 use mongodb::Collection;
 
 const TABLE_NAME: &str = "subscriptions";
@@ -74,48 +70,15 @@ impl SubscriptionsStore {
             .await?)
     }
 
-    pub async fn edit_type(
+    pub async fn update(
         &self,
         session: &mut Session,
-        id: ObjectId,
-        subscription_type: &SubscriptionType,
+        subscription: &Subscription,
     ) -> Result<(), Error> {
         self.collection
-            .update_one(
-                doc! { "_id": id },
-                doc! {
-                    "$set": {"subscription_type": to_document(subscription_type)?}
-                },
-            )
-            .session(session)
+            .replace_one(doc! { "_id": subscription.id }, subscription)
+            .session(&mut *session)
             .await?;
-        Ok(())
-    }
-
-    pub async fn update_requirements(
-        &self,
-        session: &mut Session,
-        id: ObjectId,
-        requirements: Option<SubRequirements>,
-    ) -> Result<(), Error> {
-        if let Some(req) = requirements.map(|r| format!("{:?}", r)) {
-            self.collection
-                .update_one(
-                    doc! { "_id": id },
-                    doc! {
-                        "$set": {"requirements": req}
-                    },
-                )
-                .session(session)
-                .await?;
-        } else {
-            self.collection
-                .update_one(doc! { "_id": id }, doc! {
-                    "$unset": {"requirements": ""}
-                })
-                .session(session)
-                .await?;
-        }
         Ok(())
     }
 

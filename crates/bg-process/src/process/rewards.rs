@@ -21,15 +21,12 @@ impl Task for RewardsBg {
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;
 
-        let mut instructors = self.ledger.users.instructors(&mut session).await?;
+        let mut users = self.ledger.users.employees(&mut session).await?;
 
-        //let now = Local::now();
-        for instructor in instructors.iter_mut() {
-            if let Some(couch) = instructor.employee.as_mut() {
-                // if couch.group_rate.is_fixed_monthly() {
-                //     self.process_rewards(&mut session, instructor.id, couch, now)
-                //         .await?;
-                // }
+        let now = Local::now();
+        for user in users.iter_mut() {
+            if let Some(employee) = user.employee.as_mut() {
+                let reward = employee.collect_fix_rewards(user.id, now)?;
             }
         }
         Ok(())
@@ -49,7 +46,7 @@ impl RewardsBg {
         couch: &mut Employee,
         now: DateTime<Local>,
     ) -> Result<(), Error> {
-        //if let Some(reward) = couch.collect_monthly_rewards(couch_id, now)? {
+        // if let Some(reward) = couch.collect_monthly_rewards(couch_id, now)? {
         // self.ledger.rewards.add_reward(session, reward).await?;
         // self.ledger
         //     .users

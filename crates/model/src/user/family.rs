@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    subscription::{self, Status, UserSubscription},
+    subscription::{self, Status, SubscriptionType, UserSubscription},
     training::Training,
 };
 
@@ -89,12 +89,14 @@ impl Payer<&mut User> {
         self.0
             .subscriptions
             .iter_mut()
-            .filter(|s| match s.tp {
-                subscription::SubscriptionType::Group {} => !training.tp.is_personal(),
-                subscription::SubscriptionType::Personal { couch_filter } => {
+            .filter(|s| match &s.tp {
+                SubscriptionType::Group { program_filter } => {
+                    !training.tp.is_personal() && program_filter.contains(&training.proto_id)
+                }
+                SubscriptionType::Personal { couch_filter } => {
                     if training.tp.is_personal() {
                         if let Some(couch) = couch_filter {
-                            training.instructor == couch
+                            training.instructor == *couch
                         } else {
                             true
                         }
@@ -110,13 +112,13 @@ impl Payer<&mut User> {
                         end_date,
                     } = s.status
                     {
-                        end_date > start_at && s.balance > 0
+                        end_date > start_at && (s.unlimited || s.balance > 0)
                     } else {
-                        s.balance > 0
+                        s.unlimited || s.balance > 0
                     }
                 }
-                FindFor::Charge => s.locked_balance > 0,
-                FindFor::Unlock => s.locked_balance > 0,
+                FindFor::Charge => s.unlimited || s.locked_balance > 0,
+                FindFor::Unlock => s.unlimited || s.locked_balance > 0,
             })
     }
 }
@@ -135,44 +137,48 @@ impl<'u> Payer<&User> {
     }
 
     pub fn group_balance(&self) -> Balance {
-        let balance = self
-            .0
-            .subscriptions
-            .iter()
-            .filter(|s| !s.tp.is_personal())
-            .map(|s| s.balance)
-            .sum();
-        let locked_balance = self
-            .0
-            .subscriptions
-            .iter()
-            .filter(|s| !s.tp.is_personal())
-            .map(|s| s.locked_balance)
-            .sum();
+        let mut balance = 0;
+        let mut locked_balance = 0;
+        let mut unlimited = false;
+
+        for sub in &self.0.subscriptions {
+            if !sub.tp.is_personal() {
+                balance += sub.balance;
+                locked_balance += sub.locked_balance;
+                if unlimited {
+                    continue;
+                }
+                unlimited |= sub.unlimited;
+            }
+        }
+
         Balance {
             balance,
             locked_balance,
+            unlimited,
         }
     }
 
     pub fn personal_balance(&self) -> Balance {
-        let balance = self
-            .0
-            .subscriptions
-            .iter()
-            .filter(|s| s.tp.is_personal())
-            .map(|s| s.balance)
-            .sum();
-        let locked_balance = self
-            .0
-            .subscriptions
-            .iter()
-            .filter(|s| s.tp.is_personal())
-            .map(|s| s.locked_balance)
-            .sum();
+        let mut balance = 0;
+        let mut locked_balance = 0;
+        let mut unlimited = false;
+
+        for sub in &self.0.subscriptions {
+            if sub.tp.is_personal() {
+                balance += sub.balance;
+                locked_balance += sub.locked_balance;
+                if unlimited {
+                    continue;
+                }
+                unlimited |= sub.unlimited;
+            }
+        }
+
         Balance {
             balance,
             locked_balance,
+            unlimited,
         }
     }
 
@@ -180,12 +186,14 @@ impl<'u> Payer<&User> {
         self.0
             .subscriptions
             .iter()
-            .filter(|s| match s.tp {
-                subscription::SubscriptionType::Group {} => !training.tp.is_personal(),
+            .filter(|s| match &s.tp {
+                subscription::SubscriptionType::Group { program_filter } => {
+                    !training.tp.is_personal() && program_filter.contains(&training.proto_id)
+                }
                 subscription::SubscriptionType::Personal { couch_filter } => {
                     if training.tp.is_personal() {
                         if let Some(couch) = couch_filter {
-                            training.instructor == couch
+                            training.instructor == *couch
                         } else {
                             true
                         }
@@ -216,6 +224,7 @@ impl DerefMut for Payer<&mut User> {
 pub struct Balance {
     pub balance: u32,
     pub locked_balance: u32,
+    pub unlimited: bool,
 }
 
 impl Balance {
@@ -298,6 +307,8 @@ mod tests {
             tp,
             balance: items,
             locked_balance: 0,
+            unlimited: false,
+            discount: None,
         }
     }
 
@@ -330,14 +341,28 @@ mod tests {
             .find_subscription(super::FindFor::Lock, &tr)
             .is_none());
 
-        let mut alice = user(vec![sub(0, SubscriptionType::Group {}, 1, None)]);
+        let mut alice = user(vec![sub(
+            0,
+            SubscriptionType::Group {
+                program_filter: vec![ObjectId::new()],
+            },
+            1,
+            None,
+        )]);
         assert!(alice
             .payer_mut()
             .unwrap()
             .find_subscription(super::FindFor::Lock, &tr)
             .is_none());
 
-        let mut alice = user(vec![sub(1, SubscriptionType::Group {}, 1, None)]);
+        let mut alice = user(vec![sub(
+            1,
+            SubscriptionType::Group {
+                program_filter: vec![ObjectId::new()],
+            },
+            1,
+            None,
+        )]);
         assert!(alice
             .payer_mut()
             .unwrap()
@@ -345,10 +370,19 @@ mod tests {
             .is_some());
 
         let mut alice = user(vec![
-            sub(1, SubscriptionType::Group {}, 1, None),
             sub(
                 1,
-                SubscriptionType::Group {},
+                SubscriptionType::Group {
+                    program_filter: vec![ObjectId::new()],
+                },
+                1,
+                None,
+            ),
+            sub(
+                1,
+                SubscriptionType::Group {
+                    program_filter: vec![ObjectId::new()],
+                },
                 30,
                 Some("2012-12-11T12:12:12Z"),
             ),
