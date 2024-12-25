@@ -1,120 +1,27 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>SoulFamily</title>
-    <style>
-        body,
-        html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            --bg-color: var(--tg-theme-bg-color);
-            font: 12px/18px "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--tg-theme-text-color);
-            color-scheme: var(--tg-color-scheme);
-            overflow: hidden;
-            -webkit-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
-
-        header,
-        footer {
-            text-align: center;
-            padding: 10px 0;
-            position: fixed;
-            width: 100%;
-            z-index: 1000;
-        }
-
-        header {
-            top: 0;
-        }
-
-        footer {
-            bottom: 0;
-        }
-
-        .navbar {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: var(--tg-theme-bg-color);
-            border-top: 1px solid var(--tg-theme-hint-color);
-            padding-bottom: 10px;
-            box-sizing: border-box;
-            padding-top: 5px;
-            padding-bottom: 10px;
-        }
-
-        .nav-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            background: var(--tg-theme-bg-color);
-            color: var(--tg-theme-text-color);
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .content {
-            position: absolute;
-            top: 50px;
-            bottom: 50px;
-            left: 0;
-            right: 0;
-            overflow-x: hidden;
-            overflow-y: scroll;
-            padding: 10px;
-            box-sizing: border-box;
-            background-color: #f8f8f8;
-        }
-
-        .pull-to-refresh {
-            display: none;
-            text-align: center;
-            padding: 10px;
-            background-color: #ddd;
-            position: absolute;
-            width: 100%;
-            top: 0;
-        }
-
-        .placeholder {
-            height: 120vh;
-        }
-    </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-        const module = {};
-    </script>
-    <script type="module">
-        import { refresh } from "./main.js";
-        module.refresh = refresh;
-    </script>
+    <script type="module" src="main.js"></script>
 </head>
 
 <body>
-    <header id="header"></header>
-    <div class="content" id="content">
-        <div class="pull-to-refresh" id="pullToRefresh">Обновление...</div>
-        <div class="placeholder">
-            <div id="main-home-frame" class="navi-view">
-            </div>
-            <div id="main-schedule-frame" class="navi-view" style="display:none;">
-            </div>
-            <div id="main-programs-frame" class="navi-view" style="display:none;">
-            </div>
-            <div id="main-instructors-frame" class="navi-view" style="display:none;">
-            </div>
-            <div id="main-more-frame" class="navi-view" style="display:none;">
-            </div>
+    <div class="main">
+        <div id="main-home-frame" class="navi-view">
+        </div>
+        <div id="main-schedule-frame" class="navi-view" style="display:none;">
+        </div>
+        <div id="main-programs-frame" class="navi-view" style="display:none;">
+        </div>
+        <div id="main-instructors-frame" class="navi-view" style="display:none;">
+        </div>
+        <div id="main-more-frame" class="navi-view" style="display:none;">
         </div>
     </div>
 
@@ -208,50 +115,66 @@
             Еще
         </button>
     </footer>
-
     <script>
-        const contentEl = document.getElementById('content');
-        const ptrEl = document.getElementById('pullToRefresh');
-        let startTouchY = 0;
-        let isPulling = false;
-
-        contentEl.addEventListener('touchstart', (event) => {
-            if (contentEl.scrollTop === 0) {
-                startTouchY = event.touches[0].clientY;
-                isPulling = true;
-            }
-        });
-
-        contentEl.addEventListener('touchmove', (event) => {
-            const currentY = event.touches[0].clientY;
-            if (isPulling && currentY > startTouchY) {
-                const pullDistance = currentY - startTouchY;
-                if (pullDistance > 50) {
-                    ptrEl.style.display = 'block';
-                    ptrEl.style.height = `${pullDistance}px`;
-                } else {
-                    ptrEl.style.display = 'none';
-                }
-            }
-        });
-
-        contentEl.addEventListener('touchend', () => {
-            if (isPulling) {
-                ptrEl.style.height = '0px';
-                isPulling = false;
-                if (ptrEl.style.display === 'block') {
-                    ptrEl.style.display = 'none';
-                    module.refresh();
-                }
-            }
-        });
+        
     </script>
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>
-        if (true) {
+        if (false) {
             eruda.init();
         }
     </script>
 </body>
+<style>
+    body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        --bg-color: var(--tg-theme-bg-color);
+        font: 12px/18px "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, Verdana, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--tg-theme-text-color);
+        padding: 0;
+        color-scheme: var(--tg-color-scheme);
+        width: 100%;
+        overflow: hidden;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+
+    .main {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
+    .navbar {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        background: var(--tg-theme-bg-color);
+        border-top: 1px solid var(--tg-theme-hint-color);
+        padding-bottom: 10px;
+        position: sticky;
+        bottom: 0;
+        box-sizing: border-box;
+    }
+
+    .nav-btn {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        background: var(--tg-theme-bg-color);
+        color: var(--tg-theme-text-color);
+        font-size: 12px;
+        cursor: pointer;
+    }
+</style>
 
 </html>

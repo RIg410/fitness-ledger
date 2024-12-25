@@ -1938,6 +1938,7 @@ dependencies = [
  "axum-extra",
  "bot-core",
  "bot-main",
+ "bot-viewer",
  "chrono",
  "env",
  "eyre",

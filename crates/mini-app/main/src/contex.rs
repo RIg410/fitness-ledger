@@ -14,12 +14,27 @@ use chrono::{Duration, Utc};
 use eyre::Error;
 use ledger::Ledger;
 use log::warn;
+use model::rights::Rule;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc, u64};
 use teloxide::types::{ChatId, MessageId};
 use tokio::time::sleep;
 
 use crate::{auth::TgAuth, jwt::Jwt};
+
+pub trait WebContext {
+    fn check_rule(&self, rule: Rule) -> Result<(), (StatusCode, String)>;
+}
+
+impl WebContext for Context {
+    fn check_rule(&self, rule: Rule) -> Result<(), (StatusCode, String)> {
+        if self.has_right(rule) {
+            Ok(())
+        } else {
+            Err((StatusCode::FORBIDDEN, "Forbidden".to_string()))
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct ContextBuilder {
@@ -51,7 +66,10 @@ impl ContextBuilder {
             sleep(std::time::Duration::from_secs(1)).await;
             return Err(eyre::eyre!("User not found"));
         };
-        self.ledger.users.resolve_family(&mut session, &mut user).await?;
+        self.ledger
+            .users
+            .resolve_family(&mut session, &mut user)
+            .await?;
 
         session.set_actor(user.id);
 

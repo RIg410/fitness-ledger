@@ -19,7 +19,11 @@ async function run() {
         });
     }
 
-    
+
+}
+
+export async function refresh() {
+    console.log("refresh");
 }
 
 window.addEventListener("load", run);
