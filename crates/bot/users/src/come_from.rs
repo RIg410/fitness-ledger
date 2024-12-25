@@ -6,7 +6,7 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::user::fmt_come_from;
-use model::{rights::Rule, statistics::marketing::ComeFrom};
+use model::{rights::Rule, statistics::marketing::ComeFrom, user::sanitize_phone};
 use mongodb::bson::oid::ObjectId;
 use teloxide::types::InlineKeyboardMarkup;
 
@@ -41,6 +41,23 @@ impl View for MarketingInfoView {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         ctx.ensure(Rule::EditMarketingInfo)?;
         let come_from = calldata!(data);
+
+        let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
+        if let Some(phone) = user.phone {
+            let request = ctx
+                .ledger
+                .requests
+                .get_by_phone(&mut ctx.session, &sanitize_phone(&phone))
+                .await?;
+            if let Some(mut request) = request {
+                request.come_from = come_from;
+                ctx.ledger
+                    .requests
+                    .update(&mut ctx.session, &request)
+                    .await?;
+            }
+        }
+
         ctx.ledger
             .users
             .update_come_from(&mut ctx.session, self.id, come_from)

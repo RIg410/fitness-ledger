@@ -313,7 +313,7 @@ impl View for CreateUserAndSell {
         ]);
         if self.discount.is_none() {
             keymap = keymap.append_row(vec![
-                Callback::AddFamilyDiscount.button("👨‍👩‍👧‍👦 Добавить семейную скидку")
+                Callback::AddFamilyDiscount.button("👨‍👩‍👧‍👦 Добавить скидку 10%")
             ]);
         } else {
             keymap = keymap.append_row(vec![Callback::RemoveDiscount.button("👨‍👩‍👧‍👦 Убрать скидку")]);

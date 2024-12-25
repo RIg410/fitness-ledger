@@ -121,11 +121,11 @@ async fn render(
     ]);
     if discount.is_none() {
         keymap = keymap.append_row(vec![
-            Callback::AddFamilyDiscount.button("👨‍👩‍👧‍👦 Добавить семейную скидку")
+            Callback::AddFamilyDiscount.button("👨‍👩‍👧‍👦 Добавить скидку 10%")
         ]);
     } else {
         keymap = keymap.append_row(vec![
-            Callback::RemoveFamilyDiscount.button("👨‍👩‍👧‍👦 Убрать семейную скидку")
+            Callback::RemoveFamilyDiscount.button("👨‍👩‍👧‍👦 Убрать скидку")
         ]);
     }
     Ok((text, keymap))

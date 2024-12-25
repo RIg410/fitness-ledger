@@ -5,8 +5,6 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_couch::info;
-use bot_viewer::day::fmt_dt;
 use eyre::Error;
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};

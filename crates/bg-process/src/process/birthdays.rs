@@ -51,7 +51,6 @@ impl BirthdaysNotifier {
         let id = self.bot.send_notification_to(ChatId(user), &msg).await?;
         self.bot.pin_message(ChatId(user), id).await?;
         request.remind_later = None;
-        ledger.requests.update(&mut *session, request).await?;
         Ok(())
     }
 }

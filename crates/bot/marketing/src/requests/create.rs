@@ -567,10 +567,10 @@ impl View for ConfirmSellSubscription {
 
         if self.discount.is_none() {
             markup = markup.append_row(vec![ConfirmSellSubscriptionCallback::AddFamilyDiscount
-                .button("👨‍👩‍👧‍👦 Добавить семейную скидку")]);
+                .button("👨‍👩‍👧‍👦 Добавить скидку 10%")]);
         } else {
             markup = markup.append_row(vec![ConfirmSellSubscriptionCallback::RemoveFamilyDiscount
-                .button("👨‍👩‍👧‍👦 Убрать семейную скидку")]);
+                .button("👨‍👩‍👧‍👦 Убрать скидку")]);
         }
 
         ctx.bot.edit_origin(&text, markup).await?;
