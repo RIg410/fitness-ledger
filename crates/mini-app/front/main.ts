@@ -1,5 +1,6 @@
 import { tg_init, showPopup, close } from "./tg.js";
 import { auth } from "./auth.js";
+import { reload_me } from "./state/me.js";
 
 async function run() {
     console.log("Starting...");
@@ -18,8 +19,19 @@ async function run() {
             }
         });
     }
-
-
+    try {
+        await reload_me();
+    } catch (e) {
+        console.error("Failed to reload me", e);
+        showPopup('Произошла ошибка при загрузке данных. Попробуйте перезагрузить страницу.', [
+            { id: 'ok', type: 'default', text: 'Ок' },
+        ], function (btn) {
+            if (btn === 'ok') {
+                close();
+                return;
+            }
+        });
+    }
 }
 
 export async function refresh() {

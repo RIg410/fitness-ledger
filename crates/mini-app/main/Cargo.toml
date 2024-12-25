@@ -27,4 +27,3 @@ teloxide.workspace = true
 tokio.workspace = true
 sha2.workspace = true
 hex.workspace = true
-bot-viewer.workspace = true

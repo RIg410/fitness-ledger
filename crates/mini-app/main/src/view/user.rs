@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use bot_viewer::fmt_phone;
 use chrono::{DateTime, Utc};
 use eyre::Error;
 use model::{
@@ -73,7 +72,7 @@ impl TryFrom<User> for UserView {
             tg_id: value.tg_id,
             name: value.name,
             rights: value.rights,
-            phone: value.phone.map(|p| fmt_phone(Some(&p))),
+            phone: value.phone.map(|p| fmt_phone(&p)),
             is_active: value.is_active,
             freeze: value.freeze,
             subscriptions,
@@ -238,4 +237,20 @@ pub struct FixByTrainingView {
 pub struct TrainingPercentView {
     percent: Decimal,
     min_reward: Option<Decimal>,
+}
+
+pub fn fmt_phone(phone: &str) -> String {
+    if phone.len() != 11 {
+        return phone.to_string();
+    }
+    let mut result = String::with_capacity(16);
+    result.push_str("+7 (");
+    result.push_str(&phone[1..4]);
+    result.push_str(") ");
+    result.push_str(&phone[4..7]);
+    result.push_str("-");
+    result.push_str(&phone[7..9]);
+    result.push_str("-");
+    result.push_str(&phone[9..11]);
+    result
 }
