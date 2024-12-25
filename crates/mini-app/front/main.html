@@ -8,12 +8,22 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>SoulFamily</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="main.js"></script>
 </head>
 
 <body>
-    <main class="main">
-    </main>
+    <div class="main">
+        <div id="main-home-frame" class="navi-view">
+        </div>
+        <div id="main-schedule-frame" class="navi-view" style="display:none;">
+        </div>
+        <div id="main-programs-frame" class="navi-view" style="display:none;">
+        </div>
+        <div id="main-instructors-frame" class="navi-view" style="display:none;">
+        </div>
+        <div id="main-more-frame" class="navi-view" style="display:none;">
+        </div>
+    </div>
 
     <footer class="navbar">
         <button class="nav-btn" id="main-home-btn">
@@ -38,7 +48,6 @@
             </svg>
             Расписание
         </button>
-
         <button class="nav-btn" id="main-programs-btn">
             <svg width="28" height="28" xmlns="http://www.w3.org/2000/svg" fill="none">
                 <g>
@@ -113,5 +122,55 @@
         }
     </script>
 </body>
+<style>
+    body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        --bg-color: var(--tg-theme-bg-color);
+        font: 12px/18px "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, Verdana, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--tg-theme-text-color);
+        padding: 0;
+        color-scheme: var(--tg-color-scheme);
+        width: 100%;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        overflow-y: hidden;
+        overflow-x: hidden;
+    }
+
+    /* .navi-view {
+        padding: 0px;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: hidden;
+    } */
+
+    .navbar {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        background: var(--tg-theme-bg-color);
+        border-top: 1px solid var(--tg-theme-hint-color);
+        padding-bottom: 10px;
+        position: sticky;
+        bottom: 0;
+    }
+
+    .nav-btn {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        background: var(--tg-theme-bg-color);
+        color: var(--tg-theme-text-color);
+        font-size: 12px;
+        cursor: pointer;
+    }
+</style>
 
 </html>
