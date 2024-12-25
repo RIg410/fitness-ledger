@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "sourceMap": false,
+        "outDir": "../../../bot-static",
+        "allowJs": true,
+        "checkJs": false,
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "lib": [
+            "DOM",
+            "ES2015"
+        ]
+    }
+}

@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "sourceMap": false,
-        "outDir": "../../../../bot-static/js",
+        "outDir": "../../../bot-static",
         "allowJs": true,
         "checkJs": false,
         "module": "ESNext",

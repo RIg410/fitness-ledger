@@ -18,8 +18,10 @@ test:
 	cargo test
 
 build-front:
-	rm -rf bot-static/js
-	cd crates/mini-app/front/ts; tsc
+	rm -rf bot-static/*
+	cd crates/mini-app/front; cp -rf * ../../../bot-static
+	cd bot-static; rm -r *.json 
+	cd crates/mini-app/front; tsc
 
 deploy-front: build-front
 	sh ./scripts/sync.sh
