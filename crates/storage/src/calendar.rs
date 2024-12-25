@@ -478,6 +478,23 @@ impl CalendarStore {
         Ok(days)
     }
 
+    pub async fn restore_dump(
+        &self,
+        session: &mut Session,
+        days: Vec<Day>,
+    ) -> Result<(), eyre::Error> {
+        self.days
+            .delete_many(doc! {})
+            .session(&mut *session)
+            .await?;
+
+        for day in days {
+            info!("Restoring {:?}", day);
+            self.days.insert_one(day).session(&mut *session).await?;
+        }
+        Ok(())
+    }
+
     pub async fn set_training_type(
         &self,
         session: &mut Session,

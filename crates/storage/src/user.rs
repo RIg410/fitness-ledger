@@ -565,18 +565,6 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn dump(&self, session: &mut Session) -> Result<(Vec<User>, Vec<UserExtension>)> {
-        let mut cursor = self.users.find(doc! {}).session(&mut *session).await?;
-        let mut users: Vec<User> = cursor.stream(&mut *session).try_collect().await?;
-        for user in users.as_mut_slice() {
-            user.gc();
-            self.update(session, user).await?;
-        }
-        let mut cursor = self.extensions.find(doc! {}).session(&mut *session).await?;
-        let extension: Vec<UserExtension> = cursor.stream(&mut *session).try_collect().await?;
-        Ok((users, extension))
-    }
-
     pub async fn find_by_birthday(
         &self,
         session: &mut Session,
@@ -664,5 +652,52 @@ impl UserStore {
         };
         let mut cursor = self.users.find(filter).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
+    }
+}
+
+impl UserStore {
+    pub async fn dump(&self, session: &mut Session) -> Result<(Vec<User>, Vec<UserExtension>)> {
+        let mut cursor = self.users.find(doc! {}).session(&mut *session).await?;
+        let mut users: Vec<User> = cursor.stream(&mut *session).try_collect().await?;
+        for user in users.as_mut_slice() {
+            user.gc();
+            self.update(session, user).await?;
+        }
+        let mut cursor = self.extensions.find(doc! {}).session(&mut *session).await?;
+        let extension: Vec<UserExtension> = cursor.stream(&mut *session).try_collect().await?;
+        Ok((users, extension))
+    }
+
+    pub async fn restore_dump(
+        &self,
+        session: &mut Session,
+        users: (Vec<User>, Vec<UserExtension>),
+    ) -> Result<()> {
+        self.users
+            .delete_many(doc! {})
+            .session(&mut *session)
+            .await?;
+        self.extensions
+            .delete_many(doc! {})
+            .session(&mut *session)
+            .await?;
+        
+        for user in users.0.iter() {
+            info!("Restoring user: {:?}", user);
+            self.users
+                .insert_one(user.clone())
+                .session(&mut *session)
+                .await?;
+        }
+
+        for extension in users.1.iter() {
+            info!("Restoring extension: {:?}", extension);
+            self.extensions
+                .insert_one(extension.clone())
+                .session(&mut *session)
+                .await?;
+        }
+
+        Ok(())
     }
 }

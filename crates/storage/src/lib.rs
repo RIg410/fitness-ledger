@@ -8,6 +8,7 @@ pub mod session;
 pub mod subscription;
 pub mod treasury;
 pub mod user;
+pub mod dump;
 
 use eyre::Result;
 use history::HistoryStore;

@@ -105,7 +105,7 @@ impl UserSubscription {
     }
 
     pub fn is_empty(&self) -> bool {
-        !self.unlimited || self.balance == 0 && self.locked_balance == 0
+        !self.unlimited && self.balance == 0 && self.locked_balance == 0
     }
 
     pub fn item_price(&self) -> Decimal {

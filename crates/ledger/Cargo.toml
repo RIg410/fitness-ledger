@@ -21,4 +21,5 @@ tx_macro.workspace = true
 zip.workspace = true
 yookassa.workspace = true
 env.workspace = true
+serde.workspace = true
 

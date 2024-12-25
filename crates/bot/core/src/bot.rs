@@ -1,15 +1,19 @@
 use crate::{state::Tokens, sys_button};
 use env::Env;
 use eyre::{Context as _, Error};
+use futures_util::stream::StreamExt;
 use std::{
     fmt::Debug,
     ops::Deref,
     sync::{atomic::AtomicBool, Arc},
 };
 use teloxide::{
+    net::Download,
     payloads::{EditMessageTextSetters as _, SendMessageSetters as _},
     prelude::Requester as _,
-    types::{ChatId, InlineKeyboardMarkup, InputFile, MessageId, ParseMode, ReplyMarkup, True},
+    types::{
+        ChatId, FileMeta, InlineKeyboardMarkup, InputFile, MessageId, ParseMode, ReplyMarkup, True,
+    },
     ApiError, Bot, RequestError,
 };
 
@@ -61,6 +65,19 @@ impl TgBot {
         self.origin.message_id = id;
         self.origin.set_valid();
         Ok(())
+    }
+
+    pub async fn load_document(&self, file: &FileMeta) -> Result<Vec<u8>, Error> {
+        let mut buff = Vec::new();
+        let id = self.bot.get_file(&file.id).await?;
+        let mut file = self.bot.download_file_stream(&id.path);
+
+        while let Some(chunk) = file.next().await {
+            let chunk = chunk?;
+            buff.extend_from_slice(&chunk);
+        }
+
+        Ok(buff)
     }
 
     pub async fn edit_origin(

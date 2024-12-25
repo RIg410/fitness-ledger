@@ -2,6 +2,7 @@ use bson::{doc, oid::ObjectId};
 use chrono::{DateTime, Local, Utc};
 use eyre::Error;
 use futures_util::TryStreamExt as _;
+use log::info;
 use model::{history::HistoryRow, session::Session};
 use mongodb::{Collection, IndexModel, SessionCursor};
 
@@ -113,5 +114,21 @@ impl HistoryStore {
     pub async fn dump(&self, session: &mut Session) -> Result<Vec<HistoryRow>, Error> {
         let mut cursor = self.store.find(doc! {}).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
+    }
+
+    pub async fn restore_dump(
+        &self,
+        session: &mut Session,
+        dump: Vec<HistoryRow>,
+    ) -> Result<(), Error> {
+        self.store
+            .delete_many(doc! {})
+            .session(&mut *session)
+            .await?;
+        for entry in dump {
+            info!("Restoring {:?}", entry);
+            self.store.insert_one(entry).session(&mut *session).await?;
+        }
+        Ok(())
     }
 }

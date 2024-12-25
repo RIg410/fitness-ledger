@@ -5,19 +5,19 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use bot_couch::info;
+use bot_viewer::day::fmt_dt;
 use eyre::Error;
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
-use teloxide::types::InlineKeyboardMarkup;
+use teloxide::types::{InlineKeyboardMarkup, Message};
 
 mod subscription;
-
 
 #[derive(Default)]
 pub struct SystemView {}
 
-impl SystemView {
-}
+impl SystemView {}
 
 #[async_trait]
 impl View for SystemView {
@@ -29,7 +29,9 @@ impl View for SystemView {
         ctx.ensure(Rule::System)?;
         let mut keymap = InlineKeyboardMarkup::default();
         keymap = keymap.append_row((Calldata::Dump).btn_row("🗑️ Dump"));
-        keymap = keymap.append_row((Calldata::ExtendSubscription).btn_row("🔄 Extend subscription"));
+        keymap = keymap.append_row((Calldata::ApplyDump).btn_row("🔄 ApplyDump"));
+        keymap =
+            keymap.append_row((Calldata::ExtendSubscription).btn_row("🔄 Extend subscription"));
         ctx.edit_origin("🔧System", keymap).await?;
         Ok(())
     }
@@ -44,6 +46,9 @@ impl View for SystemView {
             Calldata::ExtendSubscription => {
                 return Ok(subscription::ExtendSubscriptions.into());
             }
+            Calldata::ApplyDump => {
+                return Ok(ApplyDump.into());
+            }
         }
         Ok(Jmp::Stay)
     }
@@ -52,5 +57,40 @@ impl View for SystemView {
 #[derive(Serialize, Deserialize)]
 enum Calldata {
     Dump,
+    ApplyDump,
     ExtendSubscription,
+}
+
+pub struct ApplyDump;
+
+#[async_trait]
+impl View for ApplyDump {
+    fn name(&self) -> &'static str {
+        "ApplyDump"
+    }
+
+    async fn show(&mut self, ctx: &mut Context) -> Result<(), Error> {
+        ctx.ensure(Rule::System)?;
+        ctx.edit_origin("Отправьте дамп", Default::default())
+            .await?;
+        Ok(())
+    }
+
+    async fn handle_message(&mut self, ctx: &mut Context, msg: &Message) -> Result<Jmp, Error> {
+        ctx.ensure(Rule::System)?;
+        log::info!("Apply dump");
+        if let Some(document) = msg.document() {
+            log::info!("Apply dump {:?}", document);
+            let dump = ctx.bot.load_document(&document.file).await?;
+            ctx.ledger
+                .backup
+                .apply_backup(&mut ctx.session, dump)
+                .await?;
+            ctx.send_msg("Дамп применен").await?;
+            Ok(Jmp::Stay)
+        } else {
+            ctx.send_msg("Отправьте дамп").await?;
+            return Ok(Jmp::Stay);
+        }
+    }
 }
