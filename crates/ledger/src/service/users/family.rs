@@ -91,6 +91,7 @@ impl Users {
                 UserExtension {
                     id,
                     birthday: None,
+                    notification_mask: Default::default(),
                 },
             )
             .await?;

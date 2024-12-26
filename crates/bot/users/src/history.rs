@@ -176,7 +176,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             }
         }
-        model::history::Action::PreSellSub { .. } => {
+        model::history::Action::PreSellSub { subscription, phone  } => {
             if is_actor {
                 format!(
                     "Вы продали абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",

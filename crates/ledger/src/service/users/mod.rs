@@ -65,7 +65,7 @@ impl Users {
             self.store.insert(session, user).await?;
             self.logs.create_user(session, name, phone).await?;
             self.store
-                .update_extension(session, UserExtension { id, birthday: None })
+                .update_extension(session, UserExtension { id, birthday: None, notification_mask: Default::default() })
                 .await?;
             Ok(id)
         }
@@ -107,6 +107,7 @@ impl Users {
                 UserExtension {
                     birthday: None,
                     id: user.id,
+                    notification_mask: Default::default(),
                 },
             )
             .await?;

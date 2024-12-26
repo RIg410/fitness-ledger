@@ -624,7 +624,7 @@ impl UserStore {
             .find_one(doc! { "_id": id })
             .session(&mut *session)
             .await?
-            .unwrap_or_else(|| UserExtension { id, birthday: None }))
+            .unwrap_or_else(|| UserExtension { id, birthday: None, notification_mask: Default::default() }))
     }
 
     pub async fn update_extension(
