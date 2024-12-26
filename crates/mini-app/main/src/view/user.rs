@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserShortView {
+    #[serde(serialize_with = "bson::serde_helpers::serialize_object_id_as_hex_string")]
     pub id: ObjectId,
     pub tg_id: i64,
     pub name: UserName,
@@ -39,6 +40,7 @@ impl From<User> for UserShortView {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserView {
+    #[serde(serialize_with = "bson::serde_helpers::serialize_object_id_as_hex_string")]
     pub id: ObjectId,
     pub tg_id: i64,
     pub name: UserName,
@@ -88,7 +90,9 @@ impl TryFrom<User> for UserView {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserSubscriptionView {
+    #[serde(serialize_with = "bson::serde_helpers::serialize_object_id_as_hex_string")]
     pub id: ObjectId,
+    #[serde(serialize_with = "bson::serde_helpers::serialize_object_id_as_hex_string")]
     pub subscription_id: ObjectId,
     pub name: String,
     pub active: Option<SubscriptionActiveView>,

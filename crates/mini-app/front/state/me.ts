@@ -7,6 +7,7 @@ var last_update: number = 0;
 const me_ttl = 60 * 1000;
 
 export async function reload_me() {
+    console.log("Reloading me");
     let jwt = get_token();
     if (!jwt) {
         console.error("No token. Can't reload me");
@@ -29,6 +30,14 @@ export async function reload_me() {
 
     const data = await response.json();
     console.log(data);
-    // me = new UserView(data);
+    me = new UserView(data);
+    console.log(me);
     last_update = Date.now();
+}
+
+export async function get_me(): Promise<UserView> {
+    if (me === null || Date.now() - last_update > me_ttl) {
+        await reload_me();
+    }
+    return me;
 }

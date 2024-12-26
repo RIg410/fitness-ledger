@@ -1,4 +1,4 @@
-import { prepareCalendarView } from './pages/calendar.js';
+// import { prepareCalendarView } from '../main/dump/ts/pages/calendar.js';
 import { selectionChanged } from './tg.js';
 
 export function init() {
@@ -14,7 +14,7 @@ export async function showView(viewId: string) {
     selectionChanged();
     switch (viewId) {
         case "main-schedule-frame":
-            await prepareCalendarView();
+            // await prepareCalendarView();
             break;
         default:
             console.log("Unknown view", viewId);
