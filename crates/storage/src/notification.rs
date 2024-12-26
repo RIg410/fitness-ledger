@@ -26,7 +26,7 @@ impl NotificationStore {
         store
             .create_index(
                 IndexModel::builder()
-                    .keys(doc! { "notified_at": 1 })
+                    .keys(doc! { "user_notification_time": 1 })
                     .build(),
             )
             .await?;
@@ -105,7 +105,7 @@ impl NotificationStore {
     pub async fn to_send(&self, session: &mut Session) -> Result<Vec<Notification>> {
         let filter = doc! {
             "sent": false,
-            "notified_at": {
+            "user_notification_time": {
                 "$lt": chrono::Utc::now()
             }
         };

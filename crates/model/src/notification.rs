@@ -18,7 +18,10 @@ pub struct Notification {
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub notified_at: DateTime<Utc>,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub user_notification_time: DateTime<Utc>,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub deadline: DateTime<Utc>,
+    pub send_exact: bool,
     bassness_id: ObjectId,
 }
 
@@ -28,6 +31,7 @@ impl Notification {
         message: String,
         notified_at: DateTime<Local>,
         deadline: DateTime<Local>,
+        send_exact: bool,
         id: NotificationId,
     ) -> Notification {
         Notification {
@@ -39,6 +43,8 @@ impl Notification {
             notified_at: notified_at.with_timezone(&Utc),
             deadline: deadline.with_timezone(&Utc),
             bassness_id: id.encode(),
+            send_exact,
+            user_notification_time: notified_at.with_timezone(&Utc),
         }
     }
 }
