@@ -36,7 +36,7 @@ impl CalendarView {
             week_id,
             selected_day: week_id.day(selected_day.unwrap_or_else(|| Local::now().weekday())),
             filter: filter.unwrap_or_default(),
-            rooms: vec![Room::Adult.id(), Room::Child.id()],
+            rooms: vec![],
         }
     }
 }
@@ -47,7 +47,7 @@ impl Default for CalendarView {
             week_id: WeekId::default(),
             selected_day: Default::default(),
             filter: Default::default(),
-            rooms: vec![Room::Adult.id(), Room::Child.id()],
+            rooms: vec![],
         }
     }
 }
@@ -147,13 +147,13 @@ pub async fn render_week(
     let now = Local::now();
     let mut buttons = InlineKeyboardMarkup::default();
     let adult_room_name = if rooms.contains(&Room::Adult.id()) {
-        "✔️🧘 Взрослые"
+        "✅🧘 Взрослые"
     } else {
         "🧘 Взрослые"
     };
 
     let child_room_name = if rooms.contains(&Room::Child.id()) {
-        "✔️🧒 Дети"
+        "✅🧒 Дети"
     } else {
         "🧒 Дети"
     };
@@ -216,7 +216,7 @@ pub async fn render_week(
             }
         }
 
-        if !rooms.contains(&training.room()) {
+        if !rooms.is_empty() && !rooms.contains(&training.room()) {
             continue;
         }
 
