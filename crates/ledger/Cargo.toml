@@ -22,4 +22,4 @@ zip.workspace = true
 yookassa.workspace = true
 env.workspace = true
 serde.workspace = true
-
+bson.workspace = true

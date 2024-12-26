@@ -1,30 +1,27 @@
 use bson::{doc, oid::ObjectId};
-use eyre::{bail, Error};
+use eyre::Error;
 use model::{reward::Reward, session::Session};
 use mongodb::Collection;
 
 const REWARD_COLLECTION: &str = "reward";
 
 pub struct RewardsStore {
-    rewards: Collection<Reward>,
+    pub(crate) store: Collection<Reward>,
 }
 
 impl RewardsStore {
     pub async fn new(db: &mongodb::Database) -> Result<Self, Error> {
         let rewards = db.collection(REWARD_COLLECTION);
-        Ok(RewardsStore { rewards })
+        Ok(RewardsStore { store: rewards })
     }
 
     pub async fn add_reward(&self, session: &mut Session, reward: Reward) -> Result<(), Error> {
-        self.rewards
-            .insert_one(reward)
-            .session(&mut *session)
-            .await?;
+        self.store.insert_one(reward).session(&mut *session).await?;
         Ok(())
     }
 
     pub async fn delete(&self, session: &mut Session, reward: Reward) -> Result<(), Error> {
-        self.rewards
+        self.store
             .delete_one(doc! {"_id": reward.id})
             .session(session)
             .await?;
@@ -40,7 +37,7 @@ impl RewardsStore {
     ) -> Result<Vec<Reward>, Error> {
         // rename couch to employee_id
         let mut cursor = self
-            .rewards
+            .store
             .find(doc! {
                 "couch": employee_id
             })
@@ -51,16 +48,6 @@ impl RewardsStore {
             .await?;
 
         let mut rewards = Vec::with_capacity(limit as usize);
-        while let Some(reward) = cursor.next(&mut *session).await {
-            rewards.push(reward?);
-        }
-        Ok(rewards)
-    }
-
-    pub async fn dump(&self, session: &mut Session) -> Result<Vec<Reward>, Error> {
-        let mut cursor = self.rewards.find(doc! {}).session(&mut *session).await?;
-
-        let mut rewards = Vec::new();
         while let Some(reward) = cursor.next(&mut *session).await {
             rewards.push(reward?);
         }

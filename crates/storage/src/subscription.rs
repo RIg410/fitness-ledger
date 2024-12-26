@@ -8,7 +8,7 @@ use mongodb::Collection;
 const TABLE_NAME: &str = "subscriptions";
 
 pub struct SubscriptionsStore {
-    collection: Collection<Subscription>,
+    pub(crate) collection: Collection<Subscription>,
 }
 
 impl SubscriptionsStore {
@@ -188,14 +188,5 @@ impl SubscriptionsStore {
             .session(session)
             .await?;
         Ok(())
-    }
-
-    pub async fn dump(&self, session: &mut Session) -> Result<Vec<Subscription>, Error> {
-        let mut cursor = self.collection.find(doc! {}).session(&mut *session).await?;
-        let mut subscriptions = Vec::new();
-        while let Some(subscription) = cursor.next(&mut *session).await {
-            subscriptions.push(subscription?);
-        }
-        Ok(subscriptions)
     }
 }

@@ -137,13 +137,4 @@ impl TreasuryStore {
             .session(session)
             .await?)
     }
-
-    pub async fn dump(&self, session: &mut Session) -> Result<Vec<TreasuryEvent>, Error> {
-        let mut cursor = self.store.find(doc! {}).session(&mut *session).await?;
-        let mut events = Vec::new();
-        while let Some(event) = cursor.next(&mut *session).await {
-            events.push(event?);
-        }
-        Ok(events)
-    }
 }

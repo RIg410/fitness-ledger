@@ -18,7 +18,7 @@ use mongodb::{
 const COLLECTION: &str = "days";
 
 pub struct CalendarStore {
-    pub(crate) days: Collection<Day>,
+    pub(crate) store: Collection<Day>,
 }
 
 impl CalendarStore {
@@ -44,7 +44,7 @@ impl CalendarStore {
         )
         .await?;
 
-        Ok(CalendarStore { days })
+        Ok(CalendarStore { store: days })
     }
 
     pub async fn find_range(
@@ -72,7 +72,7 @@ impl CalendarStore {
             },
             (None, None) => doc! {},
         };
-        Ok(self.days.find(filter).session(&mut *session).await?)
+        Ok(self.store.find(filter).session(&mut *session).await?)
     }
 
     pub async fn cursor(
@@ -85,7 +85,7 @@ impl CalendarStore {
             "weekday": week_day.to_string(),
             "date_time": { "$gt": from.id() },
         };
-        Ok(self.days.find(filter).session(&mut *session).await?)
+        Ok(self.store.find(filter).session(&mut *session).await?)
     }
 
     pub async fn set_cancel_flag(
@@ -97,7 +97,7 @@ impl CalendarStore {
         info!("Set cancel flag: {:?} {}", id, flag);
         let update = doc! { "$set": { "training.$.is_canceled": flag }, "$inc": { "version": 1 } };
         let result = self
-            .days
+            .store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
@@ -151,7 +151,7 @@ impl CalendarStore {
                 }
             }
         };
-        let mut cursor = self.days.find(find).session(&mut *session).await?;
+        let mut cursor = self.store.find(find).session(&mut *session).await?;
 
         let mut skiped = 0;
         let mut trainings = Vec::new();
@@ -181,7 +181,7 @@ impl CalendarStore {
 
     pub async fn get_day(&self, session: &mut Session, id: DayId) -> Result<Day, eyre::Error> {
         let day = self
-            .days
+            .store
             .find_one(doc! { "date_time": id.id() })
             .session(&mut *session)
             .await?;
@@ -203,7 +203,7 @@ impl CalendarStore {
                     .build();
 
                 let prev_day = self
-                    .days
+                    .store
                     .find_one(filter)
                     .with_options(find_options)
                     .session(&mut *session)
@@ -212,7 +212,7 @@ impl CalendarStore {
 
                 let day = Day::copy_day(id, prev_day);
 
-                self.days
+                self.store
                     .update_one(
                         doc! { "date_time": day.day_date() },
                         doc! { "$setOnInsert": to_document(&day)? },
@@ -233,7 +233,7 @@ impl CalendarStore {
         info!("Delete training: {:?}", id);
 
         let update = doc! { "$pull": { "training": { "start_at": id.start_at, "room": id.room } }, "$inc": { "version": 1 } };
-        self.days
+        self.store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
@@ -249,7 +249,7 @@ impl CalendarStore {
             "date_time": { "$gt": day.id() },
             "weekday": day.week_day().to_string(),
         };
-        Ok(self.days.find(filter).session(&mut *session).await?)
+        Ok(self.store.find(filter).session(&mut *session).await?)
     }
 
     pub async fn add_training(
@@ -263,7 +263,7 @@ impl CalendarStore {
             "$push": { "training": to_document(training)? },
             "$inc": { "version": 1 }
         };
-        self.days
+        self.store
             .update_one(filter, update)
             .session(&mut *session)
             .await?;
@@ -282,7 +282,7 @@ impl CalendarStore {
             "$inc": { "version": 1 }
         };
         let result = self
-            .days
+            .store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
@@ -305,7 +305,7 @@ impl CalendarStore {
             "$inc": { "version": 1 }
         };
         let result = self
-            .days
+            .store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
@@ -330,7 +330,7 @@ impl CalendarStore {
                 }
             }
         };
-        Ok(self.days.find(filter).session(&mut *session).await?)
+        Ok(self.store.find(filter).session(&mut *session).await?)
     }
 
     pub async fn finalized(
@@ -345,7 +345,7 @@ impl CalendarStore {
             "$inc": { "version": 1 }
         };
         let result = self
-            .days
+            .store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
@@ -368,7 +368,7 @@ impl CalendarStore {
             "$set": { "training.$.capacity": capacity },
             "$inc": { "version": 1 }
         };
-        self.days
+        self.store
             .update_many(filter, update)
             .session(&mut *session)
             .await?;
@@ -387,7 +387,7 @@ impl CalendarStore {
             "$set": { "training.$.name": name },
             "$inc": { "version": 1 }
         };
-        self.days
+        self.store
             .update_many(filter, update)
             .session(&mut *session)
             .await?;
@@ -406,7 +406,7 @@ impl CalendarStore {
             "$set": { "training.$.description": description },
             "$inc": { "version": 1 }
         };
-        self.days
+        self.store
             .update_many(filter, update)
             .session(&mut *session)
             .await?;
@@ -419,7 +419,7 @@ impl CalendarStore {
         program_id: ObjectId,
     ) -> Result<SessionCursor<Day>, eyre::Error> {
         let filter = doc! { "training.proto_id": program_id };
-        Ok(self.days.find(filter).session(&mut *session).await?)
+        Ok(self.store.find(filter).session(&mut *session).await?)
     }
 
     pub async fn update_duration_in_day(
@@ -438,7 +438,7 @@ impl CalendarStore {
             "$set": { "training.$.duration_min": duration },
             "$inc": { "version": 1 }
         };
-        self.days
+        self.store
             .update_one(filter, update)
             .session(&mut *session)
             .await?;
@@ -457,39 +457,13 @@ impl CalendarStore {
             "$inc": { "version": 1 }
         };
         let result = self
-            .days
+            .store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
 
         if result.modified_count != 1 {
             return Err(eyre::eyre!("Training not found"));
-        }
-        Ok(())
-    }
-
-    pub async fn dump(&self, session: &mut Session) -> Result<Vec<Day>, eyre::Error> {
-        let mut cursor = self.days.find(doc! {}).session(&mut *session).await?;
-        let mut days = Vec::new();
-        while let Some(day) = cursor.next(&mut *session).await {
-            days.push(day?);
-        }
-        Ok(days)
-    }
-
-    pub async fn restore_dump(
-        &self,
-        session: &mut Session,
-        days: Vec<Day>,
-    ) -> Result<(), eyre::Error> {
-        self.days
-            .delete_many(doc! {})
-            .session(&mut *session)
-            .await?;
-
-        for day in days {
-            info!("Restoring {:?}", day);
-            self.days.insert_one(day).session(&mut *session).await?;
         }
         Ok(())
     }
@@ -506,7 +480,7 @@ impl CalendarStore {
             "$inc": { "version": 1 }
         };
         let result = self
-            .days
+            .store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
@@ -527,7 +501,7 @@ impl CalendarStore {
         let update =
             doc! { "$set": { "training.$.keep_open": keep_open }, "$inc": { "version": 1 } };
         let result = self
-            .days
+            .store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
@@ -551,7 +525,7 @@ impl CalendarStore {
             "$inc": { "version": 1 }
         };
         let result = self
-            .days
+            .store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;

@@ -17,7 +17,6 @@ pub struct ProgramStore {
 impl ProgramStore {
     pub(crate) fn new(db: &mongodb::Database) -> Self {
         let store = db.collection(COLLECTION);
-
         ProgramStore { store }
     }
 
@@ -244,10 +243,5 @@ impl ProgramStore {
             .session(&mut *session)
             .await?;
         Ok(())
-    }
-
-    pub async fn dump(&self, session: &mut Session) -> Result<Vec<Program>, Error> {
-        let mut cursor = self.store.find(doc! {}).session(&mut *session).await?;
-        Ok(cursor.stream(&mut *session).try_collect().await?)
     }
 }
