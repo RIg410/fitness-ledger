@@ -21,7 +21,7 @@ async function run() {
             }
         });
     }
-    
+
     console.log("Loading main parts...");
     await Promise.all([
         refresh(),
@@ -32,7 +32,7 @@ async function run() {
         loadParts('view/more/more.html', 'main-more-frame')
     ]);
     console.log("Main parts loaded");
-    initNavi();
+    await initNavi();
 }
 
 async function loadParts(url, viewId) {
@@ -56,6 +56,23 @@ export async function refresh() {
             }
         });
     }
+}
+
+export function showHeader(show: boolean) {
+    const header = document.getElementById(headerId());
+    const content = document.getElementById('content');
+    if (show) {
+        header.style.display = 'block';
+        content.style.top = '50px';
+    } else {
+        header.style.display = 'none';
+        content.style.top = '0';
+    }
+
+}
+
+export function headerId() {
+    return 'header';
 }
 
 window.addEventListener("load", run);
