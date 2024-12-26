@@ -298,3 +298,9 @@ pub struct TrainingId {
     pub start_at: DateTime<Utc>,
     pub room: ObjectId,
 }
+
+impl TrainingId {
+    pub fn day_id(&self) -> DayId {
+        DayId::from(self.start_at)
+    }
+}

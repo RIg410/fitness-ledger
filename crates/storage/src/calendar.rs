@@ -95,15 +95,14 @@ impl CalendarStore {
         flag: bool,
     ) -> Result<(), eyre::Error> {
         info!("Set cancel flag: {:?} {}", id, flag);
-        let filter = doc! { "training.start_at": id.start_at, "training.room": id.room };
         let update = doc! { "$set": { "training.$.is_canceled": flag }, "$inc": { "version": 1 } };
         let result = self
             .days
-            .update_one(filter, update)
+            .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
 
-        if result.modified_count == 0 {
+        if dbg!(result.modified_count) == 0 {
             return Err(eyre::eyre!("Training not found"));
         }
 
@@ -567,7 +566,12 @@ impl CalendarStore {
 
 fn training_filter(id: TrainingId) -> bson::Document {
     doc! {
-        "training.start_at": id.start_at,
-        "training.room": id.room,
+        "date_time": id.day_id().id(),
+        "training":{
+            "$elemMatch": {
+                "start_at": id.start_at,
+                "room": id.room,
+            }
+        }
     }
 }
