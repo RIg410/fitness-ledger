@@ -624,7 +624,7 @@ impl UserStore {
             .find_one(doc! { "_id": id })
             .session(&mut *session)
             .await?
-            .unwrap_or_default())
+            .unwrap_or_else(|| UserExtension { id, birthday: None }))
     }
 
     pub async fn update_extension(
@@ -637,6 +637,7 @@ impl UserStore {
                 doc! { "_id": extension.id },
                 doc! { "$set": to_document(&extension)? },
             )
+            .upsert(true)
             .session(&mut *session)
             .await?;
         Ok(())
@@ -681,7 +682,7 @@ impl UserStore {
             .delete_many(doc! {})
             .session(&mut *session)
             .await?;
-        
+
         for user in users.0.iter() {
             info!("Restoring user: {:?}", user);
             self.users

@@ -5,6 +5,7 @@ use bot_core::{
 };
 use chrono::{Local, TimeZone as _};
 use eyre::{Error, Result};
+use log::warn;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use teloxide::types::{InlineKeyboardMarkup, Message};
@@ -54,7 +55,8 @@ impl View for SetBirthday {
                     .users
                     .set_user_birthday(&mut ctx.session, self.id, date, forced)
                     .await;
-                if let Err(_) = result {
+                if let Err(err) = result {
+                    warn!("Failed to set birthday: {}", err);
                     ctx.send_notification("Не удалось установить дату рождения")
                         .await?;
                 }
