@@ -118,7 +118,11 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             if ctx.has_right(Rule::HistoryViewer) {
                 let sub = if let Some(subject) = log.sub_actors.first() {
                     let user = ctx.ledger.get_user(&mut ctx.session, *subject).await?;
-                    format!("{} {}",link_to_user(&user), fmt_phone(user.phone.as_deref()))
+                    format!(
+                        "{} {}",
+                        link_to_user(&user),
+                        fmt_phone(user.phone.as_deref())
+                    )
                 } else {
                     "-".to_string()
                 };
@@ -145,7 +149,10 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             }
         }
-        model::history::Action::SellSub { subscription, discount } => {
+        model::history::Action::SellSub {
+            subscription,
+            discount: _,
+        } => {
             if is_actor {
                 let sub = if let Some(subject) = log.sub_actors.first() {
                     ctx.ledger
@@ -169,10 +176,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             }
         }
-        model::history::Action::PreSellSub {
-            subscription,
-            phone,
-        } => {
+        model::history::Action::PreSellSub { .. } => {
             if is_actor {
                 format!(
                     "Вы продали абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",

@@ -293,7 +293,7 @@ fn default_room_id() -> ObjectId {
     Room::Adult.id()
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TrainingId {
     pub start_at: DateTime<Utc>,
     pub room: ObjectId,

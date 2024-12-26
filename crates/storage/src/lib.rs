@@ -8,6 +8,7 @@ pub mod session;
 pub mod subscription;
 pub mod treasury;
 pub mod user;
+pub mod notification;
 
 use bson::{doc, Bson};
 use eyre::Result;
@@ -15,6 +16,7 @@ use futures_util::{StreamExt as _, TryStreamExt as _};
 use history::HistoryStore;
 use model::session::Session;
 use mongodb::Collection;
+use notification::NotificationStore;
 use requests::RequestStore;
 use rewards::RewardsStore;
 use serde::{Deserialize, Serialize};
@@ -35,6 +37,7 @@ pub struct Storage {
     pub history: Arc<HistoryStore>,
     pub rewards: Arc<RewardsStore>,
     pub requests: Arc<RequestStore>,
+    pub notification: Arc<NotificationStore>,
 }
 
 impl Storage {
@@ -48,6 +51,7 @@ impl Storage {
         let history = history::HistoryStore::new(&db).await?;
         let rewards = RewardsStore::new(&db).await?;
         let requests = RequestStore::new(&db).await?;
+        let notification = NotificationStore::new(&db).await?;
 
         Ok(Storage {
             db: Arc::new(db),
@@ -59,6 +63,7 @@ impl Storage {
             history: Arc::new(history),
             rewards: Arc::new(rewards),
             requests: Arc::new(requests),
+            notification: Arc::new(notification),
         })
     }
 

@@ -13,6 +13,6 @@ pub mod user;
 pub mod statistics;
 pub mod request;
 pub mod payment;
-
 pub mod rooms;
 pub mod reward;
+pub mod notification;

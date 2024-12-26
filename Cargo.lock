@@ -1991,6 +1991,7 @@ dependencies = [
 name = "model"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "bson",
  "chrono",
  "eyre",
