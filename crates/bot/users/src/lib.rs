@@ -58,6 +58,7 @@ impl View for UsersView {
                 &self.query.query,
                 self.query.offset,
                 LIMIT,
+                Some(false),
             )
             .await?;
 

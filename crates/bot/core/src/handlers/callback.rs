@@ -86,7 +86,7 @@ async fn inner_callback_handler(
     let mut widget = widget.unwrap_or_else(|| system_handler());
 
     if !has_widget {
-        widget.show(ctx).await?;  
+        widget.show(ctx).await?;
     }
 
     ctx.set_system_go_back(!widget.is_back_main_view() && !widget.main_view());

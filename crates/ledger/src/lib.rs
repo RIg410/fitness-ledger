@@ -5,6 +5,7 @@ use env::Env;
 use eyre::{eyre, Context as _, Result};
 use log::{error, warn};
 use model::decimal::Decimal;
+use model::errors::LedgerError;
 use model::request::{RemindLater, Request, RequestHistoryRow};
 use model::session::Session;
 use model::statistics::marketing::ComeFrom;
@@ -474,18 +475,36 @@ impl Ledger {
     }
 
     #[tx]
-    pub async fn delete_couch(&self, session: &mut Session, id: ObjectId) -> Result<bool> {
+    pub async fn delete_employee(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+    ) -> Result<(), LedgerError> {
         let has_trainings = !self
             .calendar
             .find_trainings(session, model::training::Filter::Instructor(id), 1, 0)
             .await?
             .is_empty();
+
+        let user = self
+            .users
+            .get(session, id)
+            .await?
+            .ok_or_else(|| LedgerError::UserNotFound(id))?;
+
+        if let Some(employee) = user.employee {
+            if employee.reward != Decimal::zero() {
+                return Err(LedgerError::EmployeeHasReward { user_id: id });
+            }
+        } else {
+            return Err(LedgerError::UserNotEmployee { user_id: id });
+        }
+
         if has_trainings {
-            warn!("Couch has trainings");
-            return Ok(false);
+            return Err(LedgerError::CouchHasTrainings(id));
         } else {
             self.users.delete_employee(session, id).await?;
-            Ok(true)
+            Ok(())
         }
     }
 

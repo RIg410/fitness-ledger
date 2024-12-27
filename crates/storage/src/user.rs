@@ -165,6 +165,7 @@ impl UserStore {
         keywords: &[&str],
         offset: u64,
         limit: u64,
+        employee: Option<bool>,
     ) -> Result<SessionCursor<User>> {
         let mut query = doc! {};
         if !keywords.is_empty() {
@@ -183,6 +184,15 @@ impl UserStore {
             }
             query = doc! { "$or": keyword_query };
         }
+
+        if let Some(is_employee) = employee {
+            query = if is_employee {
+                doc! { "$and": [ query, { "employee.role": { "$ne": null } } ] }
+            } else {
+                doc! { "$and": [ query, { "employee.role": null } ]}
+            }
+        }
+
         Ok(self
             .users
             .find(query)
@@ -624,7 +634,11 @@ impl UserStore {
             .find_one(doc! { "_id": id })
             .session(&mut *session)
             .await?
-            .unwrap_or_else(|| UserExtension { id, birthday: None, notification_mask: Default::default() }))
+            .unwrap_or_else(|| UserExtension {
+                id,
+                birthday: None,
+                notification_mask: Default::default(),
+            }))
     }
 
     pub async fn update_extension(

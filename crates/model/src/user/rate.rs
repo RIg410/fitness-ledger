@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::decimal::Decimal;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum EmployeeRole {
     Couch,
     Manager,

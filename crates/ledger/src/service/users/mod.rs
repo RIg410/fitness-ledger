@@ -65,7 +65,14 @@ impl Users {
             self.store.insert(session, user).await?;
             self.logs.create_user(session, name, phone).await?;
             self.store
-                .update_extension(session, UserExtension { id, birthday: None, notification_mask: Default::default() })
+                .update_extension(
+                    session,
+                    UserExtension {
+                        id,
+                        birthday: None,
+                        notification_mask: Default::default(),
+                    },
+                )
                 .await?;
             Ok(id)
         }
@@ -120,9 +127,12 @@ impl Users {
         query: &str,
         offset: u64,
         limit: u64,
+        employee: Option<bool>,
     ) -> Result<SessionCursor<User>> {
         let keywords = query.split_whitespace().collect::<Vec<_>>();
-        self.store.find(session, &keywords, offset, limit).await
+        self.store
+            .find(session, &keywords, offset, limit, employee)
+            .await
     }
 
     #[tx]

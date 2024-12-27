@@ -21,3 +21,5 @@ storage.workspace = true
 strum.workspace = true
 teloxide.workspace = true
 time.workspace = true
+bot-users.workspace = true
+bot-trainigs.workspace = true

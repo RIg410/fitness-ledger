@@ -1,6 +1,7 @@
-use eyre::{bail, eyre, Result};
+use eyre::Result;
 use model::{
     decimal::Decimal,
+    errors::LedgerError,
     session::Session,
     user::{
         employee::Employee,
@@ -19,13 +20,15 @@ impl Users {
         session: &mut Session,
         id: ObjectId,
         description: String,
-    ) -> Result<()> {
+    ) -> Result<(), LedgerError> {
         let user = self
             .store
             .get(session, id)
             .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-        let employee = user.employee.ok_or_else(|| eyre!("User is not a couch"))?;
+            .ok_or_else(|| LedgerError::UserNotFound(id))?;
+        let employee = user
+            .employee
+            .ok_or_else(|| LedgerError::UserNotEmployee { user_id: id })?;
         let employee = Employee {
             description: description.clone(),
             reward: employee.reward,
@@ -45,14 +48,14 @@ impl Users {
         description: String,
         rates: Vec<Rate>,
         role: EmployeeRole,
-    ) -> Result<()> {
+    ) -> Result<(), LedgerError> {
         let user = self
             .store
             .get(session, id)
             .await?
-            .ok_or_else(|| eyre!("User not found"))?;
+            .ok_or_else(|| LedgerError::UserNotFound(id))?;
         if user.employee.is_some() {
-            bail!("Already instructor");
+            return Err(LedgerError::UserAlreadyEmployee { user_id: id });
         }
 
         let employee = Employee {

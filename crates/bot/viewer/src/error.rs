@@ -4,6 +4,28 @@ use model::errors::LedgerError;
 use mongodb::bson::oid::ObjectId;
 use teloxide::utils::markdown::escape;
 
+pub async fn notify<T>(
+    proc: &str,
+    result: Result<T, LedgerError>,
+    ok: &str,
+    ctx: &mut Context,
+) -> Result<T, LedgerError> {
+    match result {
+        Ok(r) => {
+            ctx.send_notification(ok).await?;
+            Ok(r)
+        }
+        Err(err) => match bassness_error(ctx, &err).await? {
+            Some(msg) => {
+                ctx.send_notification(&format!("{}: *{}*", proc, msg))
+                    .await?;
+                Err(err)
+            }
+            None => Err(err),
+        },
+    }
+}
+
 pub async fn bassness_error(ctx: &mut Context, err: &LedgerError) -> Result<Option<String>> {
     Ok(Some(escape(&match err {
         LedgerError::Eyre(_) => return Ok(None),
@@ -33,6 +55,22 @@ pub async fn bassness_error(ctx: &mut Context, err: &LedgerError) -> Result<Opti
                 member, user
             )
         }
+        LedgerError::UserAlreadyEmployee { user_id } => format!(
+            "Пользователь {} уже является сотрудником",
+            user_name(ctx, *user_id).await?
+        ),
+        LedgerError::UserNotEmployee { user_id } => format!(
+            "Пользователь {} не является сотрудником",
+            user_name(ctx, *user_id).await?
+        ),
+        LedgerError::EmployeeHasReward { user_id } => format!(
+            "У сотрудника {} есть не выданные награда",
+            user_name(ctx, *user_id).await?
+        ),
+        LedgerError::CouchHasTrainings(user_id) => format!(
+            "Тренер {} имеет незавершенные тренировки",
+            user_name(ctx, *user_id).await?
+        ),
     })))
 }
 

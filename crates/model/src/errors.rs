@@ -24,4 +24,12 @@ pub enum LedgerError {
         user_id: ObjectId,
         member_id: ObjectId,
     },
+    #[error("User already employee")]
+    UserAlreadyEmployee { user_id: ObjectId },
+    #[error("User not employee")]
+    UserNotEmployee { user_id: ObjectId },
+    #[error("Employee has reward")]
+    EmployeeHasReward { user_id: ObjectId },
+    #[error("Employee has trainings")]
+    CouchHasTrainings(ObjectId),
 }

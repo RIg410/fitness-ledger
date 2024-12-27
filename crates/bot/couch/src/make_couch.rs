@@ -115,6 +115,7 @@ impl StageList<State> for UserList {
                 &state.query.clone().unwrap_or_default(),
                 offset as u64,
                 limit as u64,
+                Some(false),
             )
             .await?;
 
