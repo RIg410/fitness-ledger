@@ -6,6 +6,7 @@ pub mod pay_rent;
 pub mod reward;
 pub mod stat;
 pub mod sub_rent;
+pub mod employees;
 
 use async_trait::async_trait;
 use bot_core::{
@@ -15,6 +16,7 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use chrono::{Datelike as _, Local};
+use employees::list::EmployeeList;
 use eyre::Result;
 use history::history_view;
 use in_out::{Op, TreasuryOp};
@@ -39,7 +41,7 @@ impl View for FinanceView {
 
         if ctx.has_right(Rule::MakePayment) {
             keymap = keymap.append_row(Callback::Payment.btn_row("Оплатить 💳"));
-            keymap = keymap.append_row(Callback::PayReward.btn_row("Ваплата ЗП 🎁"));
+            // keymap = keymap.append_row(Callback::PayReward.btn_row("Ваплата ЗП 🎁"));
             keymap = keymap.append_row(Callback::PayRent.btn_row("Оплата аренды 🏠"));
             keymap = keymap.append_row(Callback::PayMarketing.btn_row("Оплата маркетинга 📈"));
 
@@ -48,6 +50,11 @@ impl View for FinanceView {
 
         if ctx.has_right(Rule::MakeDeposit) {
             keymap = keymap.append_row(Callback::Deposit.btn_row("Внести средства 🤑"));
+        }
+
+        if ctx.has_right(Rule::ViewEmployees) {
+            keymap = keymap.append_row(Callback::EmployeeList.btn_row("Сотрудники ❤️"));
+
         }
 
         keymap = keymap.append_row(Callback::StatAll.btn_row("Общая статистика 📊"));
@@ -68,10 +75,10 @@ impl View for FinanceView {
                 ctx.ensure(Rule::MakeDeposit)?;
                 Ok(TreasuryOp::new(Op::Deposit).into())
             }
-            Callback::PayReward => {
-                ctx.ensure(Rule::MakePayment)?;
-                Ok(SelectCouch.into())
-            }
+            // Callback::PayReward => {
+            //     ctx.ensure(Rule::MakePayment)?;
+            //     Ok(SelectCouch.into())
+            // }
             Callback::History => {
                 ctx.ensure(Rule::ViewFinance)?;
                 Ok(Jmp::Next(history_view()))
@@ -99,13 +106,17 @@ impl View for FinanceView {
                 ctx.ensure(Rule::MakePayment)?;
                 Ok(sub_rent::TakeSubRent.into())
             }
+            Callback::EmployeeList => {
+                ctx.ensure(Rule::ViewEmployees)?;
+                Ok(EmployeeList::new().into())
+            }
         }
     }
 }
 
 #[derive(Serialize, Deserialize)]
 enum Callback {
-    PayReward,
+    // PayReward,
     PayRent,
     PayMarketing,
     Payment,
@@ -116,4 +127,6 @@ enum Callback {
     History,
     StatByMonth,
     StatAll,
+
+    EmployeeList,
 }

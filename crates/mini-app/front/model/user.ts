@@ -56,6 +56,7 @@ export class Rights {
 export enum Rule {
     ViewProfile,
 
+    // User menu
     ViewUsers,
     EditUserRights,
     BlockUser,
@@ -67,6 +68,7 @@ export enum Rule {
     EditFamily,
     ViewFamily,
 
+    // Training
     EditTraining,
     CancelTraining,
     CreateTraining,
@@ -75,23 +77,32 @@ export enum Rule {
     SetKeepOpen,
     SetFree,
 
+    // Subscription
     CreateSubscription,
     EditSubscription,
     SellSubscription,
     FreeSell,
 
+    //Finance
     ViewFinance,
     MakePayment,
     MakeDeposit,
     FinanceHistoricalDate,
     DeleteHistory,
 
+    //Employees
+    ViewEmployees,
+    EditEmployee,
+
+    //Logs
     ViewLogs,
 
+    //Couching
     CreateCouch,
     EditCouch,
     ViewCouchRates,
 
+    //statistics
     ViewStatistics,
 
     System,
@@ -105,9 +116,11 @@ export enum Rule {
 
     ReceiveNotificationsAboutSubscriptions,
 
+    // experimental
     MiniApp,
     BuySubscription,
 
+    // program
     ViewHiddenPrograms,
     HistoryViewer,
 }

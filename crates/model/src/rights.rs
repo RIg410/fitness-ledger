@@ -107,6 +107,10 @@ pub enum Rule {
     FinanceHistoricalDate,
     DeleteHistory,
 
+    //Employees
+    ViewEmployees,
+    EditEmployee,
+
     //Logs
     ViewLogs,
 

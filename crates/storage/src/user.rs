@@ -369,7 +369,7 @@ impl UserStore {
     }
 
     pub async fn employees(&self, session: &mut Session) -> Result<Vec<User>, Error> {
-        let filter = doc! { "employee": { "$exists": true } };
+        let filter = doc! { "employee.role": { "$ne": null } };
         let mut cursor = self.users.find(filter).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
     }
