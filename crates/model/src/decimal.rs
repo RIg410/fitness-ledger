@@ -40,14 +40,22 @@ impl Decimal {
 impl Debug for Decimal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let value = self.0 as f64 / 10i64.pow(DECIMALS as u32) as f64;
-        write!(f, "{:.2}", value)
+        if value.fract() == 0.0 {
+            write!(f, "{:.0}", value)
+        } else {
+            write!(f, "{:.2}", value)
+        }
     }
 }
 
 impl Display for Decimal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let value = self.0 as f64 / 10i64.pow(DECIMALS as u32) as f64;
-        write!(f, "{:.2}", value)
+        if value.fract() == 0.0 {
+            write!(f, "{:.0}", value)
+        } else {
+            write!(f, "{:.2}", value)
+        }
     }
 }
 

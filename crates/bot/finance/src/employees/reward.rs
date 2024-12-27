@@ -6,71 +6,26 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use eyre::Result;
-use model::{decimal::Decimal, rights::Rule, user::User};
+use model::{decimal::Decimal, rights::Rule};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    types::{InlineKeyboardMarkup, Message},
     utils::markdown::escape,
 };
 
-#[derive(Default)]
-pub struct SelectCouch;
-
-#[async_trait]
-impl View for SelectCouch {
-    fn name(&self) -> &'static str {
-        "SelectCouch"
-    }
-
-    async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let msg = "Инструкторы ❤️";
-        let mut keymap = InlineKeyboardMarkup::default();
-        let instructs = ctx.ledger.users.employees(&mut ctx.session).await?;
-
-        for instruct in instructs {
-            keymap = keymap.append_row(vec![render_button(&instruct)]);
-        }
-
-        ctx.edit_origin(msg, keymap).await?;
-        Ok(())
-    }
-
-    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Jmp> {
-        match calldata!(data) {
-            Callback::SelectCouch(id) => {
-                let id: ObjectId = ObjectId::from_bytes(id);
-                return Ok(WriteSum::new(id).into());
-            }
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-enum Callback {
-    SelectCouch([u8; 12]),
-}
-
-fn render_button(user: &User) -> InlineKeyboardButton {
-    Callback::SelectCouch(user.id.bytes()).button(format!(
-        "{} {}",
-        user.name.first_name,
-        user.employee.as_ref().map(|c| c.reward).unwrap_or_default()
-    ))
-}
-
-pub struct WriteSum {
+pub struct PayReward {
     id: ObjectId,
 }
 
-impl WriteSum {
-    pub fn new(id: ObjectId) -> WriteSum {
-        WriteSum { id }
+impl PayReward {
+    pub fn new(id: ObjectId) -> PayReward {
+        PayReward { id }
     }
 }
 
 #[async_trait]
-impl View for WriteSum {
+impl View for PayReward {
     fn name(&self) -> &'static str {
         "WriteSum"
     }

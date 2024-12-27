@@ -127,7 +127,7 @@ impl View for EmployeeRoleView {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         let role: EmployeeRole = calldata!(data);
         notify(
-            "Ошибки при добавлении сотрудника",
+            "Ошибка добавления сотрудника",
             ctx.ledger
                 .users
                 .make_user_employee(

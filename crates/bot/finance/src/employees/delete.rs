@@ -47,7 +47,7 @@ impl View for DeleteEmployeeConfirm {
         match calldata!(callback) {
             CallbackQuery::Yes => {
                 notify(
-                    "Ошибки при удалении сотрудника",
+                    "Ошибка удаления сотрудника",
                     ctx.ledger
                         .delete_employee(&mut ctx.session, self.user_id)
                         .await,

@@ -106,6 +106,7 @@ impl Default for NotificationMask {
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use chrono::TimeZone as _;
 

@@ -17,7 +17,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
-use super::delete::DeleteEmployeeConfirm;
+use super::{delete::DeleteEmployeeConfirm, reward::PayReward};
 
 pub struct EmployeeProfile {
     id: ObjectId,
@@ -79,6 +79,11 @@ impl EmployeeProfile {
         }
     }
 
+    async fn pay_reward(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
+        ctx.ensure(Rule::MakePayment)?;
+        Ok(Jmp::Next(PayReward::new(self.id).into()))
+    }
+
     async fn delete_employee(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
         ctx.ensure(Rule::EditEmployee)?;
         Ok(Jmp::Next(DeleteEmployeeConfirm::new(self.id).into()))
@@ -133,6 +138,7 @@ impl View for EmployeeProfile {
             Callback::HistoryList => self.history_list(ctx).await,
             Callback::RewardsList => self.rewards_list(ctx).await,
             Callback::DeleteEmployee => self.delete_employee(ctx).await,
+            Callback::PayReward => self.pay_reward(ctx).await,
         }
     }
 }
@@ -177,7 +183,10 @@ async fn render_user_profile(
     if user.employee.is_some() && (ctx.is_me(id) || ctx.has_right(Rule::ViewRewards)) {
         keymap = keymap.append_row(Callback::RewardsList.btn_row("Вознаграждения 📝"));
     }
- 
+    if ctx.has_right(Rule::MakePayment) {
+        keymap = keymap.append_row(Callback::PayReward.btn_row("Выплатить вознаграждение 💰"));
+    }
+
     if ctx.has_right(Rule::EditEmployee) {
         keymap = keymap.append_row(Callback::DeleteEmployee.btn_row("Удалить сотрудника ❌"));
     }
@@ -196,4 +205,5 @@ pub enum Callback {
     HistoryList,
     RewardsList,
     DeleteEmployee,
+    PayReward,
 }

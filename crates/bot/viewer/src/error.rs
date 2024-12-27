@@ -4,22 +4,22 @@ use model::errors::LedgerError;
 use mongodb::bson::oid::ObjectId;
 use teloxide::utils::markdown::escape;
 
-pub async fn notify<T>(
+pub async fn notify(
     proc: &str,
-    result: Result<T, LedgerError>,
+    result: Result<(), LedgerError>,
     ok: &str,
     ctx: &mut Context,
-) -> Result<T, LedgerError> {
+) -> Result<(), LedgerError> {
     match result {
-        Ok(r) => {
+        Ok(_) => {
             ctx.send_notification(ok).await?;
-            Ok(r)
+            Ok(())
         }
         Err(err) => match bassness_error(ctx, &err).await? {
             Some(msg) => {
                 ctx.send_notification(&format!("{}: *{}*", proc, msg))
                     .await?;
-                Err(err)
+                Ok(())
             }
             None => Err(err),
         },
@@ -64,7 +64,7 @@ pub async fn bassness_error(ctx: &mut Context, err: &LedgerError) -> Result<Opti
             user_name(ctx, *user_id).await?
         ),
         LedgerError::EmployeeHasReward { user_id } => format!(
-            "У сотрудника {} есть не выданные награда",
+            "У сотрудника {} есть не выданная награда",
             user_name(ctx, *user_id).await?
         ),
         LedgerError::CouchHasTrainings(user_id) => format!(

@@ -3,7 +3,6 @@ pub mod in_out;
 pub mod marketing;
 pub mod operation;
 pub mod pay_rent;
-pub mod reward;
 pub mod stat;
 pub mod sub_rent;
 pub mod employees;
