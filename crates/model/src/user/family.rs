@@ -346,7 +346,7 @@ mod tests {
         let mut alice = user(vec![sub(
             0,
             SubscriptionType::Group {
-                program_filter: vec![ObjectId::new()],
+                program_filter: vec![tr.proto_id],
             },
             1,
             None,
@@ -360,7 +360,7 @@ mod tests {
         let mut alice = user(vec![sub(
             1,
             SubscriptionType::Group {
-                program_filter: vec![ObjectId::new()],
+                program_filter: vec![tr.proto_id],
             },
             1,
             None,
@@ -371,11 +371,12 @@ mod tests {
             .find_subscription(super::FindFor::Lock, &tr)
             .is_some());
 
+        let tr_1 = training("2014-12-12T12:12:12Z", true);
         let mut alice = user(vec![
             sub(
                 1,
                 SubscriptionType::Group {
-                    program_filter: vec![ObjectId::new()],
+                    program_filter: vec![tr.proto_id, tr_1.proto_id],
                 },
                 1,
                 None,
@@ -383,7 +384,7 @@ mod tests {
             sub(
                 1,
                 SubscriptionType::Group {
-                    program_filter: vec![ObjectId::new()],
+                    program_filter: vec![tr.proto_id, tr_1.proto_id],
                 },
                 30,
                 Some("2012-12-11T12:12:12Z"),
@@ -399,10 +400,7 @@ mod tests {
         assert!(!alice
             .payer_mut()
             .unwrap()
-            .find_subscription(
-                super::FindFor::Lock,
-                &training("2014-12-12T12:12:12Z", true)
-            )
+            .find_subscription(super::FindFor::Lock, &tr_1)
             .unwrap()
             .status
             .is_active());
