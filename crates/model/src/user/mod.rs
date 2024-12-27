@@ -16,7 +16,6 @@ pub mod extension;
 pub mod family;
 pub mod rate;
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     #[serde(rename = "_id")]
@@ -114,6 +113,10 @@ impl User {
     }
 
     pub fn payer_mut(&mut self) -> Result<Payer<&mut User>> {
+        if !self.subscriptions.is_empty() {
+            return Ok(Payer::new(self, true));
+        }
+
         if self.family.payer_id.is_none() {
             return Ok(Payer::new(self, true));
         }
@@ -126,6 +129,10 @@ impl User {
     }
 
     pub fn payer(&self) -> Result<Payer<&User>> {
+        if !self.subscriptions.is_empty() {
+            return Ok(Payer::new(self, true));
+        }
+
         if self.family.payer_id.is_none() {
             return Ok(Payer::new(self, true));
         }

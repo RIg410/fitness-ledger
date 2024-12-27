@@ -1,8 +1,9 @@
-use eyre::{bail, eyre, Result};
+use eyre::Result;
 use model::{
+    errors::LedgerError,
     rights::Rights,
     session::Session,
-    user::{extension::UserExtension, User, UserName},
+    user::{User, UserName},
 };
 use mongodb::bson::oid::ObjectId;
 use tx_macro::tx;
@@ -16,12 +17,12 @@ impl Users {
         session: &mut Session,
         user_id: ObjectId,
         member_id: ObjectId,
-    ) -> Result<()> {
+    ) -> Result<(), LedgerError> {
         let mut user = self
             .store
             .get(session, user_id)
             .await?
-            .ok_or_else(|| eyre!("User not found"))?;
+            .ok_or_else(|| LedgerError::UserNotFound(user_id))?;
 
         let family = &mut user.family;
 
@@ -29,7 +30,7 @@ impl Users {
         if let Some(idx) = member_idx {
             family.children_ids.remove(idx);
         } else {
-            bail!("Member not found");
+            return Err(LedgerError::MemberNotFound { user_id, member_id });
         }
         self.store.update(session, &mut user).await?;
 
@@ -37,18 +38,19 @@ impl Users {
             .store
             .get(session, member_id)
             .await?
-            .ok_or_else(|| eyre!("User not found"))?;
+            .ok_or_else(|| LedgerError::UserNotFound(member_id))?;
 
         if member.family.payer_id == Some(user_id) {
             member.family.payer_id = None;
         } else {
-            bail!("Member not found");
+            return Err(LedgerError::WrongFamilyMember { user_id, member_id });
         }
         self.store.update(session, &mut member).await?;
 
         self.logs
             .remove_family_member(session, user_id, member_id)
             .await?;
+
         Ok(())
     }
 
@@ -59,12 +61,12 @@ impl Users {
         user_id: ObjectId,
         name: &str,
         surname: &Option<String>,
-    ) -> Result<()> {
+    ) -> Result<(), LedgerError> {
         let mut user = self
             .store
             .get(session, user_id)
             .await?
-            .ok_or_else(|| eyre!("User not found"))?;
+            .ok_or_else(|| LedgerError::UserNotFound(user_id))?;
 
         let mut child = User::new(
             -1,
@@ -80,21 +82,13 @@ impl Users {
         child.family.payer_id = Some(user_id);
         let id = child.id;
 
+        self.logs
+            .add_family_member(session, user_id, child.id)
+            .await?;
         self.store.insert(session, child).await?;
 
         user.family.children_ids.push(id);
         self.store.update(session, &mut user).await?;
-
-        self.store
-            .update_extension(
-                session,
-                UserExtension {
-                    id,
-                    birthday: None,
-                    notification_mask: Default::default(),
-                },
-            )
-            .await?;
 
         Ok(())
     }
@@ -105,19 +99,26 @@ impl Users {
         session: &mut Session,
         parent_id: ObjectId,
         member_id: ObjectId,
-    ) -> Result<()> {
+    ) -> Result<(), LedgerError> {
         let mut parent = self
             .store
             .get(session, parent_id)
             .await?
-            .ok_or_else(|| eyre!("User not found"))?;
+            .ok_or_else(|| LedgerError::UserNotFound(parent_id))?;
 
-        if parent.family.payer_id.is_some() {
-            bail!("User already has family");
+        if let Some(payer_id) = parent.family.payer_id {
+            parent = self
+                .store
+                .get(session, payer_id)
+                .await?
+                .ok_or_else(|| LedgerError::UserNotFound(payer_id))?;
         }
 
         if parent.family.children_ids.contains(&member_id) {
-            bail!("Member already in family");
+            return Err(LedgerError::UserAlreadyInFamily {
+                user_id: parent.id,
+                member_id,
+            });
         }
 
         parent.family.children_ids.push(member_id);
@@ -127,14 +128,13 @@ impl Users {
             .store
             .get(session, member_id)
             .await?
-            .ok_or_else(|| eyre!("User not found"))?;
-
-        if member.has_subscriptions() {
-            bail!("Member already has subscriptions");
-        }
+            .ok_or_else(|| LedgerError::UserNotFound(member_id))?;
 
         if member.family.exists() {
-            bail!("Member already in family");
+            return Err(LedgerError::UserAlreadyInFamily {
+                user_id: parent.id,
+                member_id,
+            });
         }
 
         member.family.payer_id = Some(parent_id);

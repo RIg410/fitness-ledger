@@ -6,6 +6,7 @@ pub mod subscription;
 pub mod training;
 pub mod user;
 pub mod rooms;
+pub mod error;
 
 pub fn fmt_phone(phone: Option<&str>) -> String {
     if let Some(phone) = phone {

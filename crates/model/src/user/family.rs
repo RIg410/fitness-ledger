@@ -25,6 +25,8 @@ pub struct Family {
     pub children_ids: Vec<ObjectId>,
     #[serde(skip)]
     pub children: Vec<User>,
+    #[serde(default)]
+    pub members: Vec<ObjectId>,
 }
 
 impl Family {

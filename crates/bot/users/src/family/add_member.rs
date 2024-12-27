@@ -5,11 +5,14 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::fmt_phone;
+use bot_viewer::{error::bassness_error, fmt_phone};
 use model::{rights::Rule, user::sanitize_phone};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::{types::{InlineKeyboardMarkup, Message}, utils::markdown::escape};
+use teloxide::{
+    types::{InlineKeyboardMarkup, Message},
+    utils::markdown::escape,
+};
 
 pub struct AddMember {
     id: ObjectId,
@@ -51,8 +54,8 @@ impl View for AddMember {
                             "\n\nПользователь найден: *{}*",
                             escape(&user.name.first_name)
                         ));
-                        keymap =
-                            keymap.append_row(Calldata::AddMember(user.id.bytes()).btn_row("Добавить"));
+                        keymap = keymap
+                            .append_row(Calldata::AddMember(user.id.bytes()).btn_row("Добавить"));
                     }
                 }
             } else {
@@ -91,7 +94,9 @@ impl View for AddMember {
 
         match calldata!(data) {
             Calldata::CreateUser => Ok(Jmp::Next(CreateUser::new(self.id).into())),
-            Calldata::AddMember(id) => Ok(AddMemberConfirm::new(self.id, ObjectId::from_bytes(id)).into()),
+            Calldata::AddMember(id) => {
+                Ok(AddMemberConfirm::new(self.id, ObjectId::from_bytes(id)).into())
+            }
         }
     }
 }
@@ -145,11 +150,25 @@ impl View for AddMemberConfirm {
 
         match calldata!(data) {
             ConfirmCalldata::AddMember => {
-                ctx.ledger
+                let result = ctx
+                    .ledger
                     .users
                     .add_family_member(&mut ctx.session, self.parent_id, self.child_id)
-                    .await?;
-                Ok(Jmp::Back)
+                    .await;
+                match result {
+                    Ok(_) => {
+                        ctx.send_notification("Член семьи добавлен").await?;
+                        Ok(Jmp::Back)
+                    }
+                    Err(err) => {
+                        if let Some(msg) = bassness_error(ctx, &err).await? {
+                            ctx.send_notification(&msg).await?;
+                            Ok(Jmp::Back)
+                        } else {
+                            Err(err.into())
+                        }
+                    }
+                }
             }
             ConfirmCalldata::Cancel => Ok(Jmp::Back),
         }
@@ -256,7 +275,8 @@ impl View for CreateMemberConfirm {
 
         match calldata!(data) {
             ConfirmCalldata::AddMember => {
-                ctx.ledger
+                let result = ctx
+                    .ledger
                     .users
                     .create_family_member(
                         &mut ctx.session,
@@ -264,8 +284,21 @@ impl View for CreateMemberConfirm {
                         &self.name,
                         &self.surname,
                     )
-                    .await?;
-                Ok(Jmp::Back)
+                    .await;
+                match result {
+                    Ok(_) => {
+                        ctx.send_notification("Член семьи добавлен").await?;
+                        Ok(Jmp::Back)
+                    }
+                    Err(err) => {
+                        if let Some(msg) = bassness_error(ctx, &err).await? {
+                            ctx.send_notification(&msg).await?;
+                            Ok(Jmp::Back)
+                        } else {
+                            Err(err.into())
+                        }
+                    }
+                }
             }
             ConfirmCalldata::Cancel => Ok(Jmp::Back),
         }

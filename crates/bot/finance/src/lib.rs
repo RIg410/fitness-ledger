@@ -21,7 +21,6 @@ use eyre::Result;
 use history::history_view;
 use in_out::{Op, TreasuryOp};
 use model::rights::Rule;
-use reward::SelectCouch;
 use serde::{Deserialize, Serialize};
 use stat::Stat;
 use teloxide::types::InlineKeyboardMarkup;

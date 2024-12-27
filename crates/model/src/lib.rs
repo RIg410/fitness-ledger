@@ -16,3 +16,4 @@ pub mod payment;
 pub mod rooms;
 pub mod reward;
 pub mod notification;
+pub mod errors;

@@ -6,6 +6,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use bot_viewer::error::bassness_error;
 use eyre::Result;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
@@ -132,12 +133,25 @@ impl View for ConfirmRemoveChild {
         ctx.ensure(Rule::EditFamily)?;
         match calldata!(data) {
             ConfirmRemoveChildCallback::Confirm => {
-                ctx.ledger
+                let result = ctx
+                    .ledger
                     .users
                     .remove_family_member(&mut ctx.session, self.parent_id, self.child_id)
-                    .await?;
-                ctx.send_notification("Член семьи удален").await?;
-                Ok(Jmp::Back)
+                    .await;
+                match result {
+                    Ok(_) => {
+                        ctx.send_notification("Член семьи удален").await?;
+                        Ok(Jmp::Back)
+                    }
+                    Err(err) => {
+                        if let Some(msg) = bassness_error(ctx, &err).await? {
+                            ctx.send_notification(&msg).await?;
+                            Ok(Jmp::Back)
+                        } else {
+                            Err(err.into())
+                        }
+                    }
+                }
             }
             ConfirmRemoveChildCallback::Cancel => Ok(Jmp::Back),
         }
