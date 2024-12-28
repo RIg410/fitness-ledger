@@ -143,6 +143,6 @@ impl View for EmployeeRoleView {
         )
         .await?;
 
-        Ok(Jmp::Stay)
+        Ok(Jmp::Home)
     }
 }

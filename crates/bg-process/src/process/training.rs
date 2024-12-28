@@ -78,7 +78,7 @@ impl TriningBg {
                 } else {
                     return Err(eyre!("Subscription not found for user:{}", user.id));
                 }
-                self.ledger.users.update(session, &mut user).await?;
+                self.ledger.users.update(session, &mut payer).await?;
             }
         }
 
