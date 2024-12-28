@@ -22,11 +22,11 @@ pub enum Rate {
         next_payment_date: DateTime<Utc>,
         interval: Duration,
     },
-    FixByTraining {
-        amount: Decimal,
-    },
-    TrainingPercent {
+    GroupTraining {
         percent: Decimal,
         min_reward: Option<Decimal>,
+    },
+    PersonalTraining {
+        percent: Decimal,
     },
 }

@@ -55,32 +55,33 @@ impl Employee {
             return None;
         }
 
-        let mut reward = Reward {
-            id: ObjectId::new(),
-            employee: training.instructor,
-            created_at: Local::now().with_timezone(&Utc),
-            reward: Decimal::zero(),
-            source: RewardSource::Training {
-                training_id: training.id(),
-                name: training.name.clone(),
-                details: vec![],
-            },
-        };
-        for rate in &self.rates {
-            match rate {
-                Rate::FixByTraining { amount } => {
-                    reward.reward += *amount;
-                }
-                _ => {}
-            }
-        }
+        // let mut reward = Reward {
+        //     id: ObjectId::new(),
+        //     employee: training.instructor,
+        //     created_at: Local::now().with_timezone(&Utc),
+        //     reward: Decimal::zero(),
+        //     source: RewardSource::Training {
+        //         training_id: training.id(),
+        //         name: training.name.clone(),
+        //         details: vec![],
+        //     },
+        // };
+        // for rate in &self.rates {
+        //     match rate {
+        //         Rate::FixByTraining { amount } => {
+        //             reward.reward += *amount;
+        //         }
+        //         _ => {}
+        //     }
+        // }
 
-        if reward.reward.is_zero() {
-            None
-        } else {
-            self.reward += reward.reward;
-            Some(reward)
-        }
+        // if reward.reward.is_zero() {
+        //     None
+        // } else {
+        //     self.reward += reward.reward;
+        //     Some(reward)
+        // }
+        None
     }
 
     pub fn collect_fix_rewards(

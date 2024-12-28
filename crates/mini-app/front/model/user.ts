@@ -205,8 +205,8 @@ export enum EmployeeRole {
 
 export class Rate {
     fix?: Fix;
-    fix_by_training?: FixByTraining;
-    training_percent?: TrainingPercent;
+    group_training?: GroupTraining;
+    personal_percent?: number;
 }
 
 export class Fix {
@@ -231,7 +231,7 @@ export class FixByTraining {
     }
 }
 
-export class TrainingPercent {
+export class GroupTraining {
     percent: number;
     min_reward?: number;
 

@@ -217,12 +217,6 @@ fn render_employee_info(ctx: &mut Context, id: ObjectId, msg: &mut String, emplo
 
     for rate in &employee.rates {
         match rate {
-            Rate::FixByTraining { amount } => {
-                msg.push_str(&format!(
-                    "\nФиксированная сумма за тренировку : _{}_💰",
-                    escape(&amount.to_string())
-                ));
-            }
             Rate::Fix {
                 amount,
                 last_payment_date: _,
@@ -235,15 +229,27 @@ fn render_employee_info(ctx: &mut Context, id: ObjectId, msg: &mut String, emplo
                     fmt_date(&next_payment_date.with_timezone(&Local)),
                 ));
             }
-
-            Rate::TrainingPercent {
+            Rate::GroupTraining {
                 percent,
                 min_reward,
             } => {
+                if percent.is_zero() {
+                    msg.push_str(&format!(
+                        "\nФиксированная сумма за тренировку : _{}_💰",
+                        escape(&min_reward.unwrap_or_default().to_string())
+                    ));
+                } else {
+                    msg.push_str(&format!(
+                        "\nПроцент от тренировки : _{}_ %\nМинимальная сумма : _{}_💰",
+                        escape(&(*percent * Decimal::from(100)).to_string()),
+                        escape(&min_reward.unwrap_or_default().to_string()),
+                    ));
+                }
+            }
+            Rate::PersonalTraining { percent } => {
                 msg.push_str(&format!(
-                    "\nПроцент от тренировки : _{}_ %\nМинимальная сумма : _{}_💰",
-                    escape(&(*percent * Decimal::from(100)).to_string()),
-                    escape(&min_reward.unwrap_or_default().to_string()),
+                    "\nПроцент от персональной тренировки : _{}_ %",
+                    escape(&(*percent * Decimal::from(100)).to_string())
                 ));
             }
         }

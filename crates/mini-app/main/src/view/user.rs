@@ -173,8 +173,8 @@ impl From<Employee> for EmployeeView {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RateView {
     fix: Option<FixView>,
-    fix_by_training: Option<FixByTrainingView>,
-    training_percent: Option<TrainingPercentView>,
+    group_training: Option<GroupTrainingRate>,
+    personal_training: Option<Decimal>,
 }
 
 impl From<Rate> for RateView {
@@ -194,32 +194,29 @@ impl From<Rate> for RateView {
                 };
                 RateView {
                     fix: Some(fix),
-                    fix_by_training: None,
-                    training_percent: None,
+                    group_training: None,
+                    personal_training: None,
                 }
-            }
-            Rate::FixByTraining { amount } => {
-                let fix_by_training = FixByTrainingView { amount };
-                RateView {
-                    fix: None,
-                    fix_by_training: Some(fix_by_training),
-                    training_percent: None,
-                }
-            }
-            Rate::TrainingPercent {
+            },
+            Rate::GroupTraining {
                 percent,
                 min_reward,
             } => {
-                let training_percent = TrainingPercentView {
+                let training_percent = GroupTrainingRate {
                     percent,
                     min_reward,
                 };
                 RateView {
                     fix: None,
-                    fix_by_training: None,
-                    training_percent: Some(training_percent),
+                    group_training: Some(training_percent),
+                    personal_training: None,
                 }
             }
+            Rate::PersonalTraining { percent } => RateView {
+                fix: None,
+                group_training: None,
+                personal_training: Some(percent),
+            },
         }
     }
 }
@@ -238,7 +235,7 @@ pub struct FixByTrainingView {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TrainingPercentView {
+pub struct GroupTrainingRate {
     percent: Decimal,
     min_reward: Option<Decimal>,
 }
