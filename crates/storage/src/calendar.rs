@@ -365,11 +365,12 @@ impl CalendarStore {
         info!("Edit capacity: {:?} {}", program_id, capacity);
         let filter = doc! { "training.proto_id": program_id };
         let update = doc! {
-            "$set": { "training.$[].capacity": capacity },
+            "$set": { "training.$[elem].capacity": capacity },
             "$inc": { "version": 1 }
         };
         self.store
             .update_many(filter, update)
+            .array_filters([doc! { "elem.proto_id": program_id }])
             .session(&mut *session)
             .await?;
         Ok(())
@@ -384,11 +385,12 @@ impl CalendarStore {
         info!("Edit program name: {:?} {}", program_id, name);
         let filter = doc! { "training.proto_id": program_id };
         let update = doc! {
-            "$set": { "training.$[].name": name },
+            "$set": { "training.$[elem].name": name },
             "$inc": { "version": 1 }
         };
         self.store
             .update_many(filter, update)
+            .array_filters([doc! { "elem.proto_id": program_id }])
             .session(&mut *session)
             .await?;
         Ok(())
@@ -403,11 +405,12 @@ impl CalendarStore {
         info!("Edit program description: {:?} {}", program_id, description);
         let filter = doc! { "training.proto_id": program_id };
         let update = doc! {
-            "$set": { "training.$[].description": description },
+            "$set": { "training.$[elem].description": description },
             "$inc": { "version": 1 }
         };
         self.store
             .update_many(filter, update)
+            .array_filters([doc! { "elem.proto_id": program_id }])
             .session(&mut *session)
             .await?;
         Ok(())
@@ -435,11 +438,12 @@ impl CalendarStore {
             "training.proto_id": program_id
         };
         let update = doc! {
-            "$set": { "training.$[].duration_min": duration },
+            "$set": { "training.$[elem].duration_min": duration },
             "$inc": { "version": 1 }
         };
         self.store
             .update_one(filter, update)
+            .array_filters([doc! { "elem.proto_id": program_id }])
             .session(&mut *session)
             .await?;
         Ok(())
