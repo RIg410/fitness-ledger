@@ -8,7 +8,12 @@ use bot_core::{
 use bot_viewer::{day::fmt_dt, fmt_phone, user::link_to_user};
 use chrono::Local;
 use eyre::Result;
-use model::{history::HistoryRow, rights::Rule};
+use model::{
+    history::HistoryRow,
+    rights::{Rights, Rule},
+    statistics::marketing::ComeFrom,
+    user::{User, UserName},
+};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
@@ -76,8 +81,26 @@ enum Calldata {
 }
 
 async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
-    let actor = ctx.ledger.get_user(&mut ctx.session, log.actor).await?;
-    let is_actor = actor.id == ctx.me.id;
+    let actor = ctx.ledger.get_user(&mut ctx.session, log.actor).await;
+    let (actor, is_actor) = if let Ok(actor) = actor {
+        let is_actor = actor.id == ctx.me.id;
+        (actor, is_actor)
+    } else {
+        (
+            User::new(
+                -1,
+                UserName {
+                    tg_user_name: None,
+                    first_name: "system".to_string(),
+                    last_name: None,
+                },
+                Rights::customer(),
+                None,
+                ComeFrom::Unknown {},
+            ),
+            false,
+        )
+    };
     let message = match &log.action {
         model::history::Action::BlockUser { is_active } => {
             if is_actor {
@@ -176,7 +199,10 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             }
         }
-        model::history::Action::PreSellSub { subscription, phone  } => {
+        model::history::Action::PreSellSub {
+            subscription,
+            phone,
+        } => {
             if is_actor {
                 format!(
                     "Вы продали абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",
@@ -265,7 +291,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             }
         }
         model::history::Action::Unfreeze {} => {
-            let sub = if let Some(subject) = log.sub_actors.first() {
+            let sub: String = if let Some(subject) = log.sub_actors.first() {
                 ctx.ledger
                     .get_user(&mut ctx.session, *subject)
                     .await?
