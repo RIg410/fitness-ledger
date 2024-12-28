@@ -62,6 +62,10 @@ impl View for SubscriptionsList {
                 Calldata::ChangeBalance(1).button("Увеличить баланс"),
             ]);
             keymap = keymap.append_row(vec![
+                Calldata::ChangeLockBalance(-1).button("Уменьшить резерв"),
+                Calldata::ChangeLockBalance(1).button("Увеличить резерв"),
+            ]);
+            keymap = keymap.append_row(vec![
                 Calldata::ChangeDays(-1).button("Уменьшить дни"),
                 Calldata::ChangeDays(1).button("Увеличить дни"),
             ]);
@@ -93,6 +97,16 @@ impl View for SubscriptionsList {
                     .change_subscription_balance(&mut ctx.session, self.id, sub.id, delta)
                     .await?;
             }
+            Calldata::ChangeLockBalance(delta) => {
+                if self.index >= payer.subscriptions().len() {
+                    return Ok(Jmp::Stay);
+                }
+                let sub = &payer.subscriptions()[self.index];
+                ctx.ledger
+                    .users
+                    .change_subscription_locked_balance(&mut ctx.session, self.id, sub.id, delta)
+                    .await?;
+            }
             Calldata::ChangeDays(delta) => {
                 if self.index >= payer.subscriptions().len() {
                     return Ok(Jmp::Stay);
@@ -113,5 +127,6 @@ impl View for SubscriptionsList {
 enum Calldata {
     Select(usize),
     ChangeBalance(i64),
+    ChangeLockBalance(i64),
     ChangeDays(i64),
 }

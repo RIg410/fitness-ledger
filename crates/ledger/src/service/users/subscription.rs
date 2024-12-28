@@ -68,6 +68,39 @@ impl Users {
     }
 
     #[tx]
+    pub async fn change_subscription_locked_balance(
+        &self,
+        session: &mut Session,
+        user_id: ObjectId,
+        id: ObjectId,
+        delta: i64,
+    ) -> Result<()> {
+        info!("Changing subscription balance for user {}", user_id);
+        let mut user = self
+            .store
+            .get(session, user_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+
+        self.resolve_family(session, &mut user).await?;
+        let mut payer = user.payer_mut()?;
+
+        payer
+            .subscriptions_mut()
+            .iter_mut()
+            .find(|sub| sub.id == id)
+            .map(|sub| {
+                if delta > 0 {
+                    sub.locked_balance += delta as u32;
+                } else {
+                    sub.locked_balance = sub.locked_balance.saturating_sub(delta.abs() as u32);
+                }
+            });
+        self.store.update(session, &mut payer).await?;
+        Ok(())
+    }
+
+    #[tx]
     pub async fn change_subscription_days(
         &self,
         session: &mut Session,

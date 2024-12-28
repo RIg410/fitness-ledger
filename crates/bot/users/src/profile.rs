@@ -128,6 +128,69 @@ impl View for UserProfile {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
+        let mut users = ctx
+            .ledger
+            .users
+            .find_all(&mut ctx.session, None, None)
+            .await?;
+
+        while let Some(user) = users.next(&mut ctx.session).await {
+            let mut user = user?;
+            ctx.ledger
+                .users
+                .resolve_family(&mut ctx.session, &mut user)
+                .await?;
+            let payer = user.payer()?;
+
+            if !payer.has_subscription() {
+                continue;
+            }
+            let has_lock = payer.subscriptions().iter().any(|s| s.locked_balance != 0);
+            if !has_lock {
+                continue;
+            }
+
+            let locked = payer
+                .subscriptions()
+                .iter()
+                .map(|i| i.locked_balance)
+                .sum::<u32>();
+            let trainings = ctx
+                .ledger
+                .calendar
+                .find_trainings(
+                    &mut ctx.session,
+                    model::training::Filter::Client(user.id),
+                    20,
+                    0,
+                )
+                .await?;
+
+            if trainings.len() as u32 == locked {
+                continue;
+            }
+
+            println!("{:?}: ", user.phone);
+            println!(
+                "{}",
+                payer
+                    .subscriptions()
+                    .iter()
+                    .map(|i| i.locked_balance)
+                    .sum::<u32>()
+            );
+            if !trainings.is_empty() {
+                println!("Записи:");
+                for training in trainings {
+                    println!(
+                        "{} {}",
+                        training.get_slot().start_at().format("%d.%m %H:%M"),
+                        training.name
+                    )
+                }
+            }
+        }
+
         let (msg, keymap) = render_user_profile(ctx, self.id).await?;
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
