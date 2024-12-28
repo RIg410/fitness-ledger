@@ -365,7 +365,7 @@ impl CalendarStore {
         info!("Edit capacity: {:?} {}", program_id, capacity);
         let filter = doc! { "training.proto_id": program_id };
         let update = doc! {
-            "$set": { "training.$.capacity": capacity },
+            "$set": { "training.$[].capacity": capacity },
             "$inc": { "version": 1 }
         };
         self.store
@@ -384,7 +384,7 @@ impl CalendarStore {
         info!("Edit program name: {:?} {}", program_id, name);
         let filter = doc! { "training.proto_id": program_id };
         let update = doc! {
-            "$set": { "training.$.name": name },
+            "$set": { "training.$[].name": name },
             "$inc": { "version": 1 }
         };
         self.store
@@ -403,7 +403,7 @@ impl CalendarStore {
         info!("Edit program description: {:?} {}", program_id, description);
         let filter = doc! { "training.proto_id": program_id };
         let update = doc! {
-            "$set": { "training.$.description": description },
+            "$set": { "training.$[].description": description },
             "$inc": { "version": 1 }
         };
         self.store
@@ -435,7 +435,7 @@ impl CalendarStore {
             "training.proto_id": program_id
         };
         let update = doc! {
-            "$set": { "training.$.duration_min": duration },
+            "$set": { "training.$[].duration_min": duration },
             "$inc": { "version": 1 }
         };
         self.store
