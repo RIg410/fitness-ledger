@@ -175,7 +175,7 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
     let cap = if is_client {
         format!(
             "*Свободных мест*: _{}_",
-            training.capacity - training.clients.len() as u32
+            training.capacity.saturating_sub(training.clients.len() as u32)
         )
     } else {
         format!(
