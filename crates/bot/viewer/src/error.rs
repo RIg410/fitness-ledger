@@ -87,6 +87,10 @@ pub async fn bassness_error(ctx: &mut Context, err: &LedgerError) -> Result<Opti
                 user
             )
         }
+        LedgerError::NoRatesFound { user_id } => {
+            let user = user_name(ctx, *user_id).await?;
+            format!("У пользователя {} нет тарифов", user)
+        }
     })))
 }
 

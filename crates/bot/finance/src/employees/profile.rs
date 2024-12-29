@@ -174,8 +174,8 @@ async fn render_user_profile(
             "Разблокировать ✅"
         }));
     }
-    if ctx.has_right(Rule::EditUserInfo) || (ctx.me.id == user.id && extension.birthday.is_none()) {
-        keymap = keymap.append_row(Callback::SetBirthday.btn_row("Установить дату рождения"));
+    if ctx.has_right(Rule::EditEmployeeRates) {
+        keymap = keymap.append_row(Callback::Rates.btn_row("Тарифы 💰"));
     }
     if ctx.has_right(Rule::EditUserInfo) {
         keymap = keymap.append_row(Callback::EditFio.btn_row("✍️ Редактировать ФИО"));

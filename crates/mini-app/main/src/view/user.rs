@@ -237,7 +237,7 @@ pub struct FixByTrainingView {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GroupTrainingRate {
     percent: Decimal,
-    min_reward: Option<Decimal>,
+    min_reward: Decimal,
 }
 
 pub fn fmt_phone(phone: &str) -> String {

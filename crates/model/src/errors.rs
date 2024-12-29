@@ -34,6 +34,8 @@ pub enum LedgerError {
     EmployeeHasReward { user_id: ObjectId },
     #[error("Employee has trainings")]
     CouchHasTrainings(ObjectId),
+    #[error("Employee has trainings")]
+    NoRatesFound { user_id: ObjectId },
     #[error("Rate not found")]
     RateNotFound { user_id: ObjectId, rate: Rate },
     #[error("Rate already exists")]

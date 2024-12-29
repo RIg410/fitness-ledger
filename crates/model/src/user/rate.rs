@@ -24,7 +24,7 @@ pub enum Rate {
     },
     GroupTraining {
         percent: Decimal,
-        min_reward: Option<Decimal>,
+        min_reward: Decimal,
     },
     PersonalTraining {
         percent: Decimal,

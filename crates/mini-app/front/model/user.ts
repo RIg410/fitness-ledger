@@ -234,7 +234,7 @@ export class FixByTraining {
 
 export class GroupTraining {
     percent: number;
-    min_reward?: number;
+    min_reward: number;
 
     constructor(data: any) {
         this.percent = data.percent;

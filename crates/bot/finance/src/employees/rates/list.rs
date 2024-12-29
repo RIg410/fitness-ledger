@@ -12,7 +12,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
-use super::new::CreateRate;
+use super::{fix::FixRateAmount, group::GroupRateMin, new::CreateRate, personal::PersonalRate};
 
 pub struct RatesList {
     id: ObjectId,
@@ -90,9 +90,24 @@ impl View for RatesList {
             }
             ListCalldata::Edit => {
                 let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
-                let rate = user.employee.unwrap().rates.get(self.index).unwrap();
-                //Ok(RateEdit::new(self.id, rate.clone()).into())
-                todo!()
+                let rate = *user
+                    .employee
+                    .ok_or_else(|| LedgerError::UserNotEmployee { user_id: self.id })?
+                    .rates
+                    .get(self.index)
+                    .ok_or_else(|| LedgerError::NoRatesFound { user_id: self.id })?;
+
+                match rate {
+                    Rate::Fix { .. } => {
+                        Ok(Jmp::Next(FixRateAmount::new(Some(rate), self.id).into()))
+                    }
+                    Rate::GroupTraining { .. } => {
+                        Ok(Jmp::Next(GroupRateMin::new(Some(rate), self.id).into()))
+                    }
+                    Rate::PersonalTraining { .. } => {
+                        Ok(Jmp::Next(PersonalRate::new(Some(rate), self.id).into()))
+                    }
+                }
             }
             ListCalldata::Delete => {
                 if let Some(rate) = self.rate.clone() {

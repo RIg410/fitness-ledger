@@ -228,13 +228,13 @@ pub fn render_rate(rate: &Rate) -> String {
             if percent.is_zero() {
                 format!(
                     "Фиксированная сумма за тренировку : _{}_💰",
-                    escape(&min_reward.unwrap_or_default().to_string())
+                    escape(&min_reward.to_string())
                 )
             } else {
                 format!(
                     "Процент от тренировки : _{}_ %\n Минимальная сумма : _{}_💰",
                     escape(&(*percent * Decimal::from(100)).to_string()),
-                    escape(&min_reward.unwrap_or_default().to_string()),
+                    escape(&min_reward.to_string()),
                 )
             }
         }
