@@ -1,6 +1,6 @@
 use bot_core::context::Context;
 use eyre::Result;
-use model::errors::LedgerError;
+use model::{errors::LedgerError, user::rate::Rate};
 use mongodb::bson::oid::ObjectId;
 use teloxide::utils::markdown::escape;
 
@@ -71,6 +71,22 @@ pub async fn bassness_error(ctx: &mut Context, err: &LedgerError) -> Result<Opti
             "Тренер {} имеет незавершенные тренировки",
             user_name(ctx, *user_id).await?
         ),
+        LedgerError::RateNotFound { user_id, rate } => {
+            let user = user_name(ctx, *user_id).await?;
+            format!(
+                "{} тариф не найден у пользователя {}",
+                rate_name(rate),
+                user
+            )
+        }
+        LedgerError::RateTypeAlreadyExists { user_id, rate } => {
+            let user = user_name(ctx, *user_id).await?;
+            format!(
+                "{} тариф уже существует у пользователя {}",
+                rate_name(rate),
+                user
+            )
+        }
     })))
 }
 
@@ -79,4 +95,12 @@ async fn user_name(ctx: &mut Context, user_id: ObjectId) -> Result<String> {
     Ok(user
         .map(|u| u.name.first_name)
         .unwrap_or_else(|| user_id.to_string()))
+}
+
+fn rate_name(rate: &Rate) -> &'static str {
+    match rate {
+        Rate::Fix { .. } => "Фиксированный",
+        Rate::GroupTraining { .. } => "Групповой",
+        Rate::PersonalTraining { .. } => "Персональный",
+    }
 }

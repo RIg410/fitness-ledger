@@ -93,6 +93,7 @@ export enum Rule {
     //Employees
     ViewEmployees,
     EditEmployee,
+    EditEmployeeRates,
 
     //Logs
     ViewLogs,

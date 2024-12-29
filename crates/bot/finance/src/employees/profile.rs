@@ -17,7 +17,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
-use super::{delete::DeleteEmployeeConfirm, reward::PayReward};
+use super::{delete::DeleteEmployeeConfirm, rates::list::RatesList, reward::PayReward};
 
 pub struct EmployeeProfile {
     id: ObjectId,
@@ -77,6 +77,11 @@ impl EmployeeProfile {
         } else {
             Ok(Jmp::Stay)
         }
+    }
+
+    async fn rates_list(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
+        ctx.ensure(Rule::EditEmployeeRates)?;
+        Ok(Jmp::Next(RatesList::new(self.id).into()))
     }
 
     async fn pay_reward(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
@@ -139,6 +144,7 @@ impl View for EmployeeProfile {
             Callback::RewardsList => self.rewards_list(ctx).await,
             Callback::DeleteEmployee => self.delete_employee(ctx).await,
             Callback::PayReward => self.pay_reward(ctx).await,
+            Callback::Rates => self.rates_list(ctx).await,
         }
     }
 }
@@ -206,4 +212,5 @@ pub enum Callback {
     RewardsList,
     DeleteEmployee,
     PayReward,
+    Rates,
 }

@@ -110,6 +110,7 @@ pub enum Rule {
     //Employees
     ViewEmployees,
     EditEmployee,
+    EditEmployeeRates,
 
     //Logs
     ViewLogs,

@@ -1,6 +1,8 @@
 use bson::oid::ObjectId;
 use thiserror::Error;
 
+use crate::user::rate::Rate;
+
 #[derive(Error, Debug)]
 pub enum LedgerError {
     #[error("Common error: {0}")]
@@ -32,4 +34,8 @@ pub enum LedgerError {
     EmployeeHasReward { user_id: ObjectId },
     #[error("Employee has trainings")]
     CouchHasTrainings(ObjectId),
+    #[error("Rate not found")]
+    RateNotFound { user_id: ObjectId, rate: Rate },
+    #[error("Rate already exists")]
+    RateTypeAlreadyExists { user_id: ObjectId, rate: Rate },
 }

@@ -12,7 +12,7 @@ pub enum EmployeeRole {
     Admin,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum Rate {
     Fix {
         amount: Decimal,
@@ -29,4 +29,14 @@ pub enum Rate {
     PersonalTraining {
         percent: Decimal,
     },
+}
+
+impl Rate {
+    pub fn as_u8(&self) -> u8 {
+        match self {
+            Rate::Fix { .. } => 0,
+            Rate::GroupTraining { .. } => 1,
+            Rate::PersonalTraining { .. } => 2,
+        }
+    }
 }

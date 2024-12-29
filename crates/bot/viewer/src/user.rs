@@ -205,6 +205,48 @@ pub fn user_base_info(user: &User, extension: &UserExtension) -> String {
     )
 }
 
+pub fn render_rate(rate: &Rate) -> String {
+    match rate {
+        Rate::Fix {
+            amount,
+            last_payment_date,
+            next_payment_date,
+            interval,
+        } => {
+            format!(
+                "Фиксированная сумма : _{}_💰\n Последняя оплата : _{}\n Следующая оплата : _{}\n Интервал : _{}_",
+                escape(&amount.to_string()),
+                fmt_date(&last_payment_date.with_timezone(&Local)),
+                fmt_date(&next_payment_date.with_timezone(&Local)),
+                interval.as_secs() / 60 / 60 / 24
+            )
+        }
+        Rate::GroupTraining {
+            percent,
+            min_reward,
+        } => {
+            if percent.is_zero() {
+                format!(
+                    "Фиксированная сумма за тренировку : _{}_💰",
+                    escape(&min_reward.unwrap_or_default().to_string())
+                )
+            } else {
+                format!(
+                    "Процент от тренировки : _{}_ %\n Минимальная сумма : _{}_💰",
+                    escape(&(*percent * Decimal::from(100)).to_string()),
+                    escape(&min_reward.unwrap_or_default().to_string()),
+                )
+            }
+        }
+        Rate::PersonalTraining { percent } => {
+            format!(
+                "Процент от персональной тренировки : _{}_%",
+                escape(&(*percent * Decimal::from(100)).to_string())
+            )
+        }
+    }
+}
+
 fn render_employee_info(ctx: &mut Context, id: ObjectId, msg: &mut String, employee: &Employee) {
     msg.push_str("➖➖➖➖➖➖➖➖➖➖");
     msg.push_str(&format!("\n[Анкета]({})", escape(&employee.description)));
@@ -216,43 +258,8 @@ fn render_employee_info(ctx: &mut Context, id: ObjectId, msg: &mut String, emplo
     }
 
     for rate in &employee.rates {
-        match rate {
-            Rate::Fix {
-                amount,
-                last_payment_date: _,
-                next_payment_date,
-                interval: _,
-            } => {
-                msg.push_str(&format!(
-                    "\nФиксированная сумма : _{}_💰\nСледующая оплата : _{}_",
-                    escape(&amount.to_string()),
-                    fmt_date(&next_payment_date.with_timezone(&Local)),
-                ));
-            }
-            Rate::GroupTraining {
-                percent,
-                min_reward,
-            } => {
-                if percent.is_zero() {
-                    msg.push_str(&format!(
-                        "\nФиксированная сумма за тренировку : _{}_💰",
-                        escape(&min_reward.unwrap_or_default().to_string())
-                    ));
-                } else {
-                    msg.push_str(&format!(
-                        "\nПроцент от тренировки : _{}_ %\nМинимальная сумма : _{}_💰",
-                        escape(&(*percent * Decimal::from(100)).to_string()),
-                        escape(&min_reward.unwrap_or_default().to_string()),
-                    ));
-                }
-            }
-            Rate::PersonalTraining { percent } => {
-                msg.push_str(&format!(
-                    "\nПроцент от персональной тренировки : _{}_ %",
-                    escape(&(*percent * Decimal::from(100)).to_string())
-                ));
-            }
-        }
+        msg.push_str("\n");
+        msg.push_str(&render_rate(rate));
     }
 }
 
