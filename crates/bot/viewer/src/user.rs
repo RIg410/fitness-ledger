@@ -135,7 +135,7 @@ fn render_subscriptions(msg: &mut String, user: &User) -> Result<()> {
             if sub.tp.is_personal() {
                 continue;
             }
-            msg.push_str("\n");
+            msg.push('\n');
             msg.push_str(&render_sub(sub, payer.is_owner()));
         }
         msg.push_str("➖➖➖➖➖➖➖➖➖➖\n");
@@ -148,7 +148,7 @@ fn render_subscriptions(msg: &mut String, user: &User) -> Result<()> {
             if !sub.tp.is_personal() {
                 continue;
             }
-            msg.push_str("\n");
+            msg.push('\n');
             msg.push_str(&render_sub(sub, payer.is_owner()));
         }
     }
@@ -258,7 +258,7 @@ fn render_employee_info(ctx: &mut Context, id: ObjectId, msg: &mut String, emplo
     }
 
     for rate in &employee.rates {
-        msg.push_str("\n");
+        msg.push('\n');
         msg.push_str(&render_rate(rate));
     }
 }

@@ -50,7 +50,7 @@ impl View for RatesList {
 
         for (i, rate) in employee_info.rates.iter().enumerate() {
             let select = if i == self.index {
-                self.rate = Some(rate.clone());
+                self.rate = Some(*rate);
                 "✅"
             } else {
                 "🔸"
@@ -110,7 +110,7 @@ impl View for RatesList {
                 }
             }
             ListCalldata::Delete => {
-                if let Some(rate) = self.rate.clone() {
+                if let Some(rate) = self.rate {
                     Ok(DeleteRateConfirm::new(self.id, self.index, rate).into())
                 } else {
                     Ok(Jmp::Stay)

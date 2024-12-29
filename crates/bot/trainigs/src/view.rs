@@ -117,7 +117,7 @@ impl TrainingView {
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
 
-        if training.clients.len() > 0 {
+        if !training.clients.is_empty() {
             ctx.send_msg("Нельзя изменить статус тренировки, на которую записаны клиенты")
                 .await?;
             return Ok(Jmp::Stay);
@@ -485,7 +485,7 @@ pub async fn sign_up(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> Re
                     }
                 }
             }
-            ctx.send_notification(&msg).await?;
+            ctx.send_notification(msg).await?;
         }
     }
     Ok(Jmp::Stay)

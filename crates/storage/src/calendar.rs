@@ -157,8 +157,7 @@ impl CalendarStore {
         let mut trainings = Vec::new();
         while let Some(day) = cursor.next(&mut *session).await {
             let mut day = day?;
-            day.training
-                .sort_by(|a, b| a.start_at_utc().cmp(&b.start_at_utc()));
+            day.training.sort_by_key(|a| a.start_at_utc());
             for training in day.training {
                 if training.start_at_utc() + Duration::minutes(training.duration_min as i64) < now {
                     continue;

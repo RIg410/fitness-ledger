@@ -58,10 +58,8 @@ pub async fn callback_handler(
                 {
                     error!("send message error :{:#}", err);
                 }
-            } else {
-                if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
-                    error!("send message error :{:#}", err);
-                }
+            } else if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
+                error!("send message error :{:#}", err);
             }
             Ok(())
         }
@@ -83,7 +81,7 @@ async fn inner_callback_handler(
     }
 
     let has_widget = widget.is_some();
-    let mut widget = widget.unwrap_or_else(|| system_handler());
+    let mut widget = widget.unwrap_or_else(&system_handler);
 
     if !has_widget {
         widget.show(ctx).await?;

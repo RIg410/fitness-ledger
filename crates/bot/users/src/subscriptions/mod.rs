@@ -52,7 +52,7 @@ impl View for SubscriptionsList {
             }
         }
 
-        if subs.len() >= 1 {
+        if !subs.is_empty() {
             keymap = keymap.append_row(vec![
                 Calldata::Select(self.index.saturating_sub(1)).button("⬆️"),
                 Calldata::Select(self.index + 1).button("⬇️"),

@@ -35,17 +35,13 @@ pub fn fmt_request(request: &Request) -> String {
         fmt_come_from(request.come_from),
         escape(&request.comment),
         escape(
-            &request
-                .first_name
-                .as_ref()
-                .map(|n| n.as_str())
+            request
+                .first_name.as_deref()
                 .unwrap_or("?")
         ),
         escape(
-            &request
-                .last_name
-                .as_ref()
-                .map(|n| n.as_str())
+            request
+                .last_name.as_deref()
                 .unwrap_or("?")
         ),
         fmt_dt(&request.created_at.with_timezone(&Local)),

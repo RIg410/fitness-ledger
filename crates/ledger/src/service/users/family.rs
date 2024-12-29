@@ -77,7 +77,7 @@ impl Users {
             },
             Rights::customer(),
             None,
-            user.come_from.clone(),
+            user.come_from,
         );
         child.family.payer_id = Some(user_id);
         let id = child.id;

@@ -54,7 +54,7 @@ impl Tokens {
         let mut tokens = self.tokens.lock();
         tokens
             .entry(chat_id)
-            .or_insert_with(ValidToken::new)
+            .or_default()
             .clone()
     }
 }

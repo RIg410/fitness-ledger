@@ -96,7 +96,7 @@ impl View for ConfirmCreationRate {
         if let Some(old) = &self.old_data {
             let msg = format!(
                 "Обновить тариф\nСтарый тариф:\n{}\nНовый тариф:\n{}",
-                render_rate(&old),
+                render_rate(old),
                 render_rate(&self.new_data)
             );
             ctx.edit_origin(&msg, keymap).await?;

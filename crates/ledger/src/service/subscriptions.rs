@@ -86,12 +86,10 @@ impl Subscriptions {
                 } else {
                     program_filter.push(program_id);
                 }
+            } else if program_filter.contains(&program_id) {
+                program_filter.retain(|&x| x != program_id);
             } else {
-                if program_filter.contains(&program_id) {
-                    program_filter.retain(|&x| x != program_id);
-                } else {
-                    return Ok(());
-                }
+                return Ok(());
             }
             self.store.update(session, &subscription).await?;
         } else {

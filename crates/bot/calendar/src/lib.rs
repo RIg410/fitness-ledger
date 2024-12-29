@@ -23,6 +23,7 @@ use std::vec;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 use teloxide::utils::markdown::escape;
 
+#[derive(Default)]
 pub struct CalendarView {
     week_id: WeekId,
     selected_day: DayId,
@@ -41,16 +42,6 @@ impl CalendarView {
     }
 }
 
-impl Default for CalendarView {
-    fn default() -> Self {
-        CalendarView {
-            week_id: WeekId::default(),
-            selected_day: Default::default(),
-            filter: Default::default(),
-            rooms: vec![],
-        }
-    }
-}
 
 #[async_trait]
 impl View for CalendarView {

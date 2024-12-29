@@ -80,7 +80,7 @@ impl StatisticsView {
             "📊Клиенты с пробными занятиями но без абонементов: {}",
             stat.people_buys_only_test_sub.len()
         );
-        if stat.people_buys_only_test_sub.len() > 0 {
+        if !stat.people_buys_only_test_sub.is_empty() {
             for id in &stat.people_buys_only_test_sub {
                 let user = ctx.ledger.users.get(&mut ctx.session, *id).await?;
                 if let Some(user) = user {
@@ -112,7 +112,7 @@ impl StatisticsView {
             "\n\nКлиенты без абонементов {}:",
             stat.people_without_subs.len()
         );
-        if stat.people_without_subs.len() > 0 {
+        if !stat.people_without_subs.is_empty() {
             for id in &stat.people_without_subs {
                 let user = ctx.ledger.users.get(&mut ctx.session, *id).await?;
                 if let Some(user) = user {
@@ -264,7 +264,7 @@ async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Resu
         stat.test_subs_count, stat.users_buy_test_sub_and_stay,
     ));
 
-    if stat.come_from.len() > 0 {
+    if !stat.come_from.is_empty() {
         msg.push_str("\n\nОткуда пришли:");
         for (come_from, stat) in &stat.come_from {
             msg.push_str(&format!(

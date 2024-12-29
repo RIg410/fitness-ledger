@@ -54,7 +54,7 @@ impl View for AddRecalcReward {
             .parse::<Decimal>()
             .map_err(|_| eyre::eyre!("Сумма коррекции должна быть числом"))?;
         Ok(Jmp::Next(
-            AddRecalcComment::new(self.user_id.clone(), amount).into(),
+            AddRecalcComment::new(self.user_id, amount).into(),
         ))
     }
 }
@@ -78,7 +78,7 @@ impl View for AddRecalcComment {
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         ctx.ensure(Rule::RecalculateRewards)?;
-        let msg = format!("Введите комментарий к коррекции:",);
+        let msg = "Введите комментарий к коррекции:".to_string();
         ctx.edit_origin(&msg, InlineKeyboardMarkup::default())
             .await?;
         Ok(())
@@ -94,8 +94,8 @@ impl View for AddRecalcComment {
 
         Ok(Jmp::Next(
             AddRecalcConfirm {
-                user_id: self.user_id.clone(),
-                amount: self.amount.clone(),
+                user_id: self.user_id,
+                amount: self.amount,
                 comment,
             }
             .into(),
@@ -158,6 +158,6 @@ impl View for AddRecalcConfirm {
                 // no-op
             }
         }
-        Ok(Jmp::Goto(UserProfile::new(self.user_id.clone()).into()))
+        Ok(Jmp::Goto(UserProfile::new(self.user_id).into()))
     }
 }

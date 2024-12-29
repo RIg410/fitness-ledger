@@ -46,17 +46,15 @@ impl View for AddMember {
             {
                 if user.family.exists() {
                     msg.push_str("\n\nПользователь уже состоит в семье");
+                } else if user.id == self.id {
+                    msg.push_str("\n\nНельзя добавить самого себя");
                 } else {
-                    if user.id == self.id {
-                        msg.push_str("\n\nНельзя добавить самого себя");
-                    } else {
-                        msg.push_str(&format!(
-                            "\n\nПользователь найден: *{}*",
-                            escape(&user.name.first_name)
-                        ));
-                        keymap = keymap
-                            .append_row(Calldata::AddMember(user.id.bytes()).btn_row("Добавить"));
-                    }
+                    msg.push_str(&format!(
+                        "\n\nПользователь найден: *{}*",
+                        escape(&user.name.first_name)
+                    ));
+                    keymap = keymap
+                        .append_row(Calldata::AddMember(user.id.bytes()).btn_row("Добавить"));
                 }
             } else {
                 keymap = keymap.append_row(Calldata::CreateUser.btn_row("Создать пользователя"));
@@ -221,7 +219,7 @@ impl View for CreateUser {
             }
 
             let parts = text.split(" ").collect::<Vec<&str>>();
-            let name = parts.get(0).map(|s| s.to_string()).unwrap_or_default();
+            let name = parts.first().map(|s| s.to_string()).unwrap_or_default();
             let surname = parts.get(1).map(|s| s.to_string());
 
             Ok(CreateMemberConfirm::new(self.parent_id, name, surname).into())
@@ -259,7 +257,7 @@ impl View for CreateMemberConfirm {
         let msg = format!(
             "Вы уверены, что хотите добавить члена семьи {} {}?",
             escape(&self.name),
-            escape(&self.surname.as_deref().unwrap_or_default())
+            escape(self.surname.as_deref().unwrap_or_default())
         );
         let keymap = InlineKeyboardMarkup::default().append_row(vec![
             ConfirmCalldata::AddMember.button("✅ Добавить"),

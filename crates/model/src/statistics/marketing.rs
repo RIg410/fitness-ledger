@@ -41,6 +41,7 @@ impl Default for ComeFrom {
     }
 }
 
+#[derive(Default)]
 pub struct UsersStat {
     pub come_from: HashMap<ComeFrom, Vec<ObjectId>>,
     pub users_count: u64,
@@ -51,8 +52,8 @@ impl UsersStat {
     pub fn extend(&mut self, user: &User) {
         self.come_from
             .entry(user.come_from)
-            .or_insert_with(Vec::new)
-            .push(user.id.clone());
+            .or_default()
+            .push(user.id);
         self.users_count += 1;
 
         if user
@@ -61,17 +62,8 @@ impl UsersStat {
             .map(|p| p.has_subscription())
             .unwrap_or_default()
         {
-            self.users_without_subscriptions.push(user.id.clone());
+            self.users_without_subscriptions.push(user.id);
         }
     }
 }
 
-impl Default for UsersStat {
-    fn default() -> Self {
-        Self {
-            come_from: Default::default(),
-            users_count: 0,
-            users_without_subscriptions: Default::default(),
-        }
-    }
-}

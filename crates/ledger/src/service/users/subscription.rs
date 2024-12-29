@@ -14,7 +14,7 @@ impl Users {
         while let Some(user) = cursor.next(session).await {
             let mut user = user?;
 
-            let mut payer = if let Some(payer) = user.payer_mut().ok() {
+            let mut payer = if let Ok(payer) = user.payer_mut() {
                 payer
             } else {
                 continue;
@@ -26,7 +26,7 @@ impl Users {
                     end_date,
                 } = &mut sub.status
                 {
-                    *end_date = *end_date + chrono::Duration::days(days as i64);
+                    *end_date += chrono::Duration::days(days as i64);
                 }
             }
             self.store.update(session, &mut payer).await?;
@@ -60,7 +60,7 @@ impl Users {
                 if delta > 0 {
                     sub.balance += delta as u32;
                 } else {
-                    sub.balance = sub.balance.saturating_sub(delta.abs() as u32);
+                    sub.balance = sub.balance.saturating_sub(delta.unsigned_abs() as u32);
                 }
             });
         self.store.update(session, &mut payer).await?;
@@ -93,7 +93,7 @@ impl Users {
                 if delta > 0 {
                     sub.locked_balance += delta as u32;
                 } else {
-                    sub.locked_balance = sub.locked_balance.saturating_sub(delta.abs() as u32);
+                    sub.locked_balance = sub.locked_balance.saturating_sub(delta.unsigned_abs() as u32);
                 }
             });
         self.store.update(session, &mut payer).await?;
@@ -129,9 +129,9 @@ impl Users {
                 } = &mut sub.status
                 {
                     if delta > 0 {
-                        *end_date = *end_date + chrono::Duration::days(delta);
+                        *end_date += chrono::Duration::days(delta);
                     } else {
-                        *end_date = *end_date - chrono::Duration::days(delta.abs());
+                        *end_date -= chrono::Duration::days(delta.abs());
                     }
                 }
             });
@@ -147,7 +147,7 @@ impl Users {
             .await?
             .ok_or_else(|| eyre!("User not found"))?;
 
-        let mut payer = if let Some(payer) = user.payer_mut().ok() {
+        let mut payer = if let Ok(payer) = user.payer_mut() {
             payer
         } else {
             log::warn!("User {:?} has no payer", user);

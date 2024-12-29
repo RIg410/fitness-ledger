@@ -88,7 +88,7 @@ impl NotificationMask {
     pub fn to_nearest_time(&self, time: DateTime<Local>) -> DateTime<Local> {
         let mut time = time;
         for _ in 0..24 {
-            if self.get_hour(time.hour() as u32) {
+            if self.get_hour(time.hour()) {
                 return time;
             }
             time = (time + chrono::Duration::hours(1)).with_minute(0).unwrap();

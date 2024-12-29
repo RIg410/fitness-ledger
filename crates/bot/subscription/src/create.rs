@@ -382,7 +382,7 @@ impl View for CreateSubscription {
                 Ok(Jmp::Stay)
             }
             Callback::Couch(couch_id) => {
-                let couch_filter = couch_id.map(|id| ObjectId::from_bytes(id));
+                let couch_filter = couch_id.map(ObjectId::from_bytes);
                 self.subscription.subscription_type = SubscriptionType::Personal { couch_filter };
                 self.state = State::SetUnlimited;
                 Ok(Jmp::Stay)

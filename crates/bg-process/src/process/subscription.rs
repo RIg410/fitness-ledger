@@ -33,7 +33,7 @@ impl Task for SubscriptionBg {
         while let Some(user) = users.next(&mut session).await {
             let user = user?;
 
-            let payer = if let Some(payer) = user.payer().ok() {
+            let payer = if let Ok(payer) = user.payer() {
                 payer
             } else {
                 log::warn!("User {:?} has no payer", user);

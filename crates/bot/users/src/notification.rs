@@ -27,7 +27,7 @@ impl View for NotificationView {
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
-        let msg = escape(&"Настройка уведомлений.\nВы можите включить или отключить уведомления о предстоящих тренировках.  ❌-выключить\n  ✅-включить");
+        let msg = escape("Настройка уведомлений.\nВы можите включить или отключить уведомления о предстоящих тренировках.  ❌-выключить\n  ✅-включить");
 
         let mut keymap = InlineKeyboardMarkup::default();
         let settings = user.settings.notification;

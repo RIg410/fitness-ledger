@@ -128,40 +128,38 @@ pub async fn middleware(
             sleep(std::time::Duration::from_secs(1)).await;
             return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
         }
-    } else {
-        if let Ok(Query(params)) = Query::<BTreeMap<String, String>>::try_from_uri(request.uri()) {
-            match state.auth.validate(params) {
-                Ok(user_id) => match state.build(user_id).await {
-                    Ok(ctx) => {
-                        request.extensions_mut().insert(Arc::new(ctx));
-                        match state.jwt.make_jwt(Claims::new(user_id)) {
-                            Ok(jwt) => {
-                                request.extensions_mut().insert(jwt);
-                            }
-                            Err(err) => {
-                                warn!("Failed to make jwt: {}", err);
-                                sleep(std::time::Duration::from_secs(1)).await;
-                                return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
-                            }
+    } else if let Ok(Query(params)) = Query::<BTreeMap<String, String>>::try_from_uri(request.uri()) {
+        match state.auth.validate(params) {
+            Ok(user_id) => match state.build(user_id).await {
+                Ok(ctx) => {
+                    request.extensions_mut().insert(Arc::new(ctx));
+                    match state.jwt.make_jwt(Claims::new(user_id)) {
+                        Ok(jwt) => {
+                            request.extensions_mut().insert(jwt);
+                        }
+                        Err(err) => {
+                            warn!("Failed to make jwt: {}", err);
+                            sleep(std::time::Duration::from_secs(1)).await;
+                            return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
                         }
                     }
-                    Err(err) => {
-                        warn!("Failed to build context: {}", err);
-                        sleep(std::time::Duration::from_secs(1)).await;
-                        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
-                    }
-                },
+                }
                 Err(err) => {
-                    warn!("Failed to validate tg auth: {}", err);
+                    warn!("Failed to build context: {}", err);
                     sleep(std::time::Duration::from_secs(1)).await;
                     return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
                 }
+            },
+            Err(err) => {
+                warn!("Failed to validate tg auth: {}", err);
+                sleep(std::time::Duration::from_secs(1)).await;
+                return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
             }
-        } else {
-            warn!("No Authorization header:{:?}", request);
-            sleep(std::time::Duration::from_secs(1)).await;
-            return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
         }
+    } else {
+        warn!("No Authorization header:{:?}", request);
+        sleep(std::time::Duration::from_secs(1)).await;
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
     }
 
     next.run(request).await

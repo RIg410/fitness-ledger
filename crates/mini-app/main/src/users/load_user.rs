@@ -68,7 +68,7 @@ pub(crate) async fn get(
     let extension = ctx
         .ledger
         .users
-        .get_extension(&mut ctx.session, user.id.clone())
+        .get_extension(&mut ctx.session, user.id)
         .await
         .context("Failed to get user extension")
         .map_err(internal_error)?;

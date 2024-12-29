@@ -213,7 +213,7 @@ impl Deref for Payer<&mut User> {
     type Target = User;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 
@@ -304,7 +304,7 @@ mod tests {
             name: "".to_owned(),
             items: 0,
             days,
-            status: status,
+            status,
             price: Decimal::zero(),
             tp,
             balance: items,

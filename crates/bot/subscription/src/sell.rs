@@ -51,13 +51,13 @@ impl View for SellView {
                 if ctx
                     .ledger
                     .users
-                    .get_by_phone(&mut ctx.session, &phone)
+                    .get_by_phone(&mut ctx.session, phone)
                     .await?
                     .is_none()
                 {
                     text = format!(
                         "Пользователь с номером *{}* не найден\\. Создать нового пользователя?",
-                        fmt_phone(Some(&phone))
+                        fmt_phone(Some(phone))
                     );
                     keymap = keymap.append_row(SellViewCallback::CreateNewUser.btn_row("Создать"));
                 }
@@ -76,7 +76,7 @@ impl View for SellView {
             let query = "7".to_string() + &query[1..];
             self.state = SellViewState::FindByPhone(sanitize_phone(&query));
         } else if query.starts_with("+7") {
-            self.state = SellViewState::FindByPhone(sanitize_phone(&query));
+            self.state = SellViewState::FindByPhone(sanitize_phone(query));
         } else {
             ctx.send_msg("Номер телефона должен начинаться с 8 или \\+7")
                 .await?;
@@ -176,7 +176,7 @@ impl View for SetName {
         }
 
         let parts: Vec<_> = name.split(' ').collect();
-        let first_name = parts.get(0).unwrap_or(&"").to_string();
+        let first_name = parts.first().unwrap_or(&"").to_string();
         let last_name = parts.get(1).map(|s| s.to_string());
 
         Ok(Jmp::Next(
@@ -362,7 +362,7 @@ impl View for CreateUserAndSell {
                 }
 
                 if let Err(err) = result {
-                    Err(err.into())
+                    Err(err)
                 } else {
                     ctx.send_msg("🤑 Продано").await?;
                     ctx.reset_origin().await?;

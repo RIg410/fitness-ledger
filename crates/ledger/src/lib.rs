@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::{Local, Utc};
 use env::Env;
 use eyre::{eyre, Context as _, Result};
-use log::{error, warn};
+use log::error;
 use model::decimal::Decimal;
 use model::errors::LedgerError;
 use model::request::{RemindLater, Request, RequestHistoryRow};

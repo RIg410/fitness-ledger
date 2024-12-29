@@ -70,12 +70,12 @@ enum Callback {
 
 fn render_button(user: &User, view_rewards: bool) -> InlineKeyboardButton {
     if view_rewards {
-        return Callback::Select(user.id.bytes()).button(format!(
+        Callback::Select(user.id.bytes()).button(format!(
             "{} {} ({} p)",
             user.name.first_name,
             user.name.last_name.clone().unwrap_or_default(),
             user.employee.as_ref().map(|c| c.reward).unwrap_or_default()
-        ));
+        ))
     } else {
         Callback::Select(user.id.bytes()).button(format!(
             "{} {}",

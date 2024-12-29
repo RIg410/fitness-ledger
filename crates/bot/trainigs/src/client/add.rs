@@ -117,7 +117,7 @@ async fn render(
         for child_id in &user.family.children_ids {
             let child = ctx.ledger.get_user(&mut ctx.session, *child_id).await?;
             if child.phone.is_none() {
-                if ids.contains(&child_id) {
+                if ids.contains(child_id) {
                     continue;
                 }
                 ids.push(*child_id);

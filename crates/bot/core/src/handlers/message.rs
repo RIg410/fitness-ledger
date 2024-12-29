@@ -54,10 +54,8 @@ pub async fn message_handler(
                 {
                     error!("send message error :{:#}", err);
                 }
-            } else {
-                if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
-                    error!("send message error :{:#}", err);
-                }
+            } else if let Err(err) = ctx.send_msg(&escape(ERROR)).await {
+                error!("send message error :{:#}", err);
             }
             Ok(())
         }

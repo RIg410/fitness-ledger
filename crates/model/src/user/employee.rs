@@ -98,22 +98,18 @@ impl Employee {
         };
 
         for rate in self.rates.as_mut_slice() {
-            match rate {
-                Rate::Fix {
+            if let Rate::Fix {
                     amount,
                     last_payment_date,
                     next_payment_date,
                     interval,
-                } => {
-                    if date_time < *next_payment_date {
-                        continue;
-                    }
-                    reward.reward += *amount;
-                    *last_payment_date = *next_payment_date;
-                    *next_payment_date =
-                        *next_payment_date + chrono::Duration::from_std(*interval)?;
+                } = rate {
+                if date_time < *next_payment_date {
+                    continue;
                 }
-                _ => {}
+                reward.reward += *amount;
+                *last_payment_date = *next_payment_date;
+                *next_payment_date += chrono::Duration::from_std(*interval)?;
             }
         }
 

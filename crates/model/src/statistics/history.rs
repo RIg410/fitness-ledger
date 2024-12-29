@@ -31,9 +31,7 @@ impl SubscriptionsStatisticsCollector {
     }
 
     pub fn get_unresolved_presells(&self) -> Vec<String> {
-        self.presell_subs
-            .iter()
-            .map(|(phone, _)| phone.to_owned())
+        self.presell_subs.keys().map(|phone| phone.to_owned())
             .collect()
     }
 
@@ -130,7 +128,7 @@ impl SubscriptionsStatisticsCollector {
         }
 
         SubscriptionStatistics {
-            subs: self.subs.into_iter().map(|(_, stat)| stat).collect(),
+            subs: self.subs.into_values().collect(),
             test_subs_count: self
                 .by_users
                 .values()

@@ -31,7 +31,7 @@ impl TgAuth {
             .ok_or_else(|| eyre::eyre!("No auth date"))?;
         let auth_date = auth_date.parse::<i64>()?;
         let user = query.get("user").ok_or_else(|| eyre::eyre!("No user"))?;
-        let user: serde_json::Value = serde_json::from_str(&user)?;
+        let user: serde_json::Value = serde_json::from_str(user)?;
 
         let tg_id = user
             .get("id")

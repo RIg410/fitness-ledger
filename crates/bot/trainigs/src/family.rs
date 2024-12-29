@@ -104,18 +104,16 @@ fn make_row(
         } else {
             Callback::None.button("Отмена не возможна")
         }
+    } else if can_sign_in {
+        Callback::SingIn(user.id.bytes()).button("✅ Записаться")
     } else {
-        if can_sign_in {
-            Callback::SingIn(user.id.bytes()).button("✅ Записаться")
-        } else {
-            Callback::None.button("Запись закрыта")
-        }
+        Callback::None.button("Запись закрыта")
     };
 
     let name_btn = if signed {
         Callback::None.button(format!("✅{}", name))
     } else {
-        Callback::None.button(format!("{}", name))
+        Callback::None.button(name.to_string())
     };
 
     vec![name_btn, sign_callback]

@@ -137,7 +137,7 @@ impl View for SetDescription {
             RemindLaterView {
                 phone: self.phone.clone(),
                 come_from: self.come_from,
-                comment: comment,
+                comment,
                 first_name: self.first_name.clone(),
                 last_name: self.last_name.clone(),
             }
@@ -171,7 +171,7 @@ impl View for SetName {
         ctx.bot.delete_msg(msg.id).await?;
         let name = msg.text().unwrap_or_default();
         let parts: Vec<_> = name.split(' ').collect();
-        let first_name = parts.get(0).map(|s| s.to_string());
+        let first_name = parts.first().map(|s| s.to_string());
         let last_name = parts.get(1).map(|s| s.to_string());
         Ok(Jmp::Next(
             SetDescription {
@@ -206,7 +206,7 @@ impl View for RemindLaterView {
             CalldataYesNo::Yes.button("✅Да"),
             CalldataYesNo::No.button("❌Нет"),
         ]);
-        ctx.bot.edit_origin(&text, markup).await?;
+        ctx.bot.edit_origin(text, markup).await?;
         Ok(())
     }
 
@@ -274,7 +274,7 @@ impl View for SetRemindLater {
             .append_row(RememberLaterCalldata::new(chrono::Duration::days(30)).btn_row("месяц"));
         markup = markup
             .append_row(RememberLaterCalldata::new(chrono::Duration::days(90)).btn_row("3 месяца"));
-        ctx.bot.edit_origin(&text, markup).await?;
+        ctx.bot.edit_origin(text, markup).await?;
         Ok(())
     }
 
@@ -375,8 +375,8 @@ impl View for Confirm {
             Откуда пришел: *{}*\n\
             Комментарий: *{}*\n",
             fmt_phone(Some(&self.phone)),
-            escape(self.first_name.as_ref().map(|s| s.as_str()).unwrap_or("?")),
-            escape(self.last_name.as_ref().map(|s| s.as_str()).unwrap_or("?")),
+            escape(self.first_name.as_deref().unwrap_or("?")),
+            escape(self.last_name.as_deref().unwrap_or("?")),
             fmt_come_from(self.come_from),
             escape(&self.comment)
         );
@@ -458,7 +458,7 @@ impl View for SellSubscription {
             CalldataYesNo::Yes.button("✅Да"),
             CalldataYesNo::No.button("❌Нет"),
         ]);
-        ctx.bot.edit_origin(&text, markup).await?;
+        ctx.bot.edit_origin(text, markup).await?;
         Ok(())
     }
 
@@ -500,7 +500,7 @@ impl View for SelectSubscriptionsView {
             keymap = keymap.append_row(vec![SelectSubscriptionsCallback(subscription.id.bytes())
                 .button(subscription.name.clone())]);
         }
-        ctx.bot.edit_origin(&text, keymap).await?;
+        ctx.bot.edit_origin(text, keymap).await?;
         Ok(())
     }
 

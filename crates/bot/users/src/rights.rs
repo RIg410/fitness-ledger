@@ -14,7 +14,7 @@ pub struct UserRightsView {
 
 impl UserRightsView {
     pub fn new(id: ObjectId) -> UserRightsView {
-        UserRightsView { id: id }
+        UserRightsView { id }
     }
 }
 

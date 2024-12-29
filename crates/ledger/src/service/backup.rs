@@ -48,7 +48,7 @@ impl Backup {
         let mut file = zip.by_name(name)?;
         let mut buf = Vec::new();
         file.read_to_end(&mut buf)?;
-        Ok(bson::from_slice(&buf).context(name.to_owned())?)
+        bson::from_slice(&buf).context(name.to_owned())
     }
 
     #[tx]

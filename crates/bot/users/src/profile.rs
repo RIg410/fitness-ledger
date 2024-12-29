@@ -195,10 +195,8 @@ async fn render_user_profile(
         && user.freeze.is_none()
     {
         keymap = keymap.append_row(Callback::Freeze.btn_row("Заморозить ❄"));
-    } else {
-        if ctx.has_right(Rule::FreezeUsers) && user.freeze.is_some() {
-            keymap = keymap.append_row(Callback::UnFreeze.btn_row("Разморозить ❄"));
-        }
+    } else if ctx.has_right(Rule::FreezeUsers) && user.freeze.is_some() {
+        keymap = keymap.append_row(Callback::UnFreeze.btn_row("Разморозить ❄"));
     }
 
     if user.employee.is_some() {

@@ -47,7 +47,7 @@ impl View for Requests {
                 .await?;
             if let Some(request) = request.as_ref() {
                 self.1 = true;
-                text.push_str(&fmt_request(&request));
+                text.push_str(&fmt_request(request));
                 keymap = keymap.append_row(Calldata::Edit.btn_row("Изменить заявку"));
             } else {
                 self.1 = false;

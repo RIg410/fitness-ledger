@@ -12,6 +12,12 @@ use teloxide::types::{InlineKeyboardMarkup, Message};
 
 pub struct MakeEmployee {}
 
+impl Default for MakeEmployee {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MakeEmployee {
     pub fn new() -> Self {
         Self {}

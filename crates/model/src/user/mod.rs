@@ -122,9 +122,9 @@ impl User {
         }
 
         if let Some(payer) = self.family.payer.as_mut() {
-            return Ok(Payer::new(payer, false));
+            Ok(Payer::new(payer, false))
         } else {
-            return Err(eyre!("Payer not resolved"));
+            Err(eyre!("Payer not resolved"))
         }
     }
 
@@ -138,9 +138,9 @@ impl User {
         }
 
         if let Some(payer) = self.family.payer.as_ref() {
-            return Ok(Payer::new(payer, false));
+            Ok(Payer::new(payer, false))
         } else {
-            return Err(eyre!("Payer not resolved"));
+            Err(eyre!("Payer not resolved"))
         }
     }
 

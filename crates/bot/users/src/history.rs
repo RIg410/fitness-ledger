@@ -392,7 +392,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             )
         }
         model::history::Action::RemoveFamilyMember {} => {
-            let main_id = log.sub_actors.get(0);
+            let main_id = log.sub_actors.first();
             let member_id = log.sub_actors.get(1);
             let main = if let Some(id) = main_id {
                 ctx.ledger
@@ -422,7 +422,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
             )
         }
         model::history::Action::AddFamilyMember {} => {
-            let main_id = log.sub_actors.get(0);
+            let main_id = log.sub_actors.first();
             let member_id = log.sub_actors.get(1);
             let main = if let Some(id) = main_id {
                 ctx.ledger
