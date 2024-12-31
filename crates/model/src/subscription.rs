@@ -121,6 +121,19 @@ impl UserSubscription {
         }
     }
 
+
+    pub fn subscription_price(&self) -> Decimal {
+        if let Some(discount) = self.discount {
+            self.price * (Decimal::int(1) - discount)
+        } else {
+            self.price
+        }
+    }
+
+    pub fn items(&self) -> u32 {
+        self.items
+    }
+
     pub fn lock_balance(&mut self, training: &Training) -> bool {
         if self.unlimited {
             return true;

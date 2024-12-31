@@ -2,7 +2,7 @@ use bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{decimal::Decimal, training::TrainingId};
+use crate::{decimal::Decimal, training::TrainingId, user::employee::UserRewardContribution};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Reward {
@@ -21,7 +21,8 @@ pub enum RewardSource {
     Training {
         training_id: TrainingId,
         name: String,
-        details: Vec<(ObjectId, Decimal)>,
+        percent: Decimal,
+        user_originals: Vec<UserRewardContribution>,
     },
     Fixed {},
     Recalc {

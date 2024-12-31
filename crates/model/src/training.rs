@@ -202,6 +202,10 @@ impl Training {
     pub fn room(&self) -> ObjectId {
         self.room
     }
+
+    pub(crate) fn is_group(&self) -> bool {
+        self.tp.is_group()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]

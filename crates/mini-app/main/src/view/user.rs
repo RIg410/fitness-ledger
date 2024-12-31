@@ -182,13 +182,11 @@ impl From<Rate> for RateView {
         match rate {
             Rate::Fix {
                 amount,
-                last_payment_date,
                 next_payment_date,
                 interval,
             } => {
                 let fix = FixView {
                     amount,
-                    last_payment_date,
                     next_payment_date,
                     interval,
                 };
@@ -224,7 +222,6 @@ impl From<Rate> for RateView {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FixView {
     amount: Decimal,
-    last_payment_date: DateTime<Utc>,
     next_payment_date: DateTime<Utc>,
     interval: Duration,
 }

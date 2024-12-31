@@ -1,5 +1,6 @@
 use crate::{
     decimal::Decimal,
+    errors::LedgerError,
     reward::{Reward, RewardSource},
     training::Training,
 };
@@ -8,10 +9,7 @@ use chrono::{DateTime, Local, Utc};
 use eyre::{bail, Error};
 use serde::{Deserialize, Serialize};
 
-use super::{
-    rate::{EmployeeRole, Rate},
-    User,
-};
+use super::rate::{EmployeeRole, Rate};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Employee {
@@ -49,39 +47,73 @@ impl Employee {
     pub fn collect_training_rewards(
         &mut self,
         training: &Training,
-        users: &[&User],
-    ) -> Option<Reward> {
+        users: Vec<UserRewardContribution>,
+    ) -> Result<Option<Reward>, LedgerError> {
         if training.clients.is_empty() {
-            return None;
+            return Ok(None);
         }
 
-        // let mut reward = Reward {
-        //     id: ObjectId::new(),
-        //     employee: training.instructor,
-        //     created_at: Local::now().with_timezone(&Utc),
-        //     reward: Decimal::zero(),
-        //     source: RewardSource::Training {
-        //         training_id: training.id(),
-        //         name: training.name.clone(),
-        //         details: vec![],
-        //     },
-        // };
-        // for rate in &self.rates {
-        //     match rate {
-        //         Rate::FixByTraining { amount } => {
-        //             reward.reward += *amount;
-        //         }
-        //         _ => {}
-        //     }
-        // }
+        if training.clients.len() != users.len() {
+            return Err(LedgerError::WrongTrainingClients {
+                training_id: training.id(),
+            });
+        }
+        for user in &users {
+            if !training.clients.contains(&user.user) {
+                return Err(LedgerError::WrongTrainingClients {
+                    training_id: training.id(),
+                });
+            }
+        }
 
-        // if reward.reward.is_zero() {
-        //     None
-        // } else {
-        //     self.reward += reward.reward;
-        //     Some(reward)
-        // }
-        None
+        let sum = users.iter().map(|u| u.lesson_price).sum::<Decimal>();
+
+        let mut reward = Decimal::zero();
+        let mut percent = Decimal::zero();
+
+        for rate in self.rates.as_mut_slice() {
+            if training.is_group() {
+                if let Rate::GroupTraining {
+                    percent: rate_percent,
+                    min_reward,
+                } = rate
+                {
+                    reward = sum * *rate_percent;
+                    if reward < *min_reward {
+                        reward = *min_reward;
+                    }
+                    percent = *rate_percent;
+                    break;
+                }
+            } else {
+                if let Rate::PersonalTraining {
+                    percent: rate_percent,
+                } = rate
+                {
+                    reward = sum * *rate_percent;
+                    percent = *rate_percent;
+                    break;
+                }
+            }
+        }
+
+        Ok(if reward.is_zero() {
+            None
+        } else {
+            self.reward += reward;
+            Some(Reward {
+                id: ObjectId::new(),
+                employee: training.instructor,
+                created_at: Utc::now(),
+                reward,
+                source: RewardSource::Training {
+                    training_id: training.id(),
+                    name: training.name.clone(),
+                    user_originals: users,
+                    percent: percent,
+                },
+            })
+        })
     }
 
     pub fn collect_fix_rewards(
@@ -99,17 +131,17 @@ impl Employee {
 
         for rate in self.rates.as_mut_slice() {
             if let Rate::Fix {
-                    amount,
-                    last_payment_date,
-                    next_payment_date,
-                    interval,
-                } = rate {
+                amount,
+                next_payment_date,
+                interval,
+            } = rate
+            {
                 if date_time < *next_payment_date {
                     continue;
                 }
                 reward.reward += *amount;
-                *last_payment_date = *next_payment_date;
                 *next_payment_date += chrono::Duration::from_std(*interval)?;
+                break;
             }
         }
 
@@ -120,4 +152,12 @@ impl Employee {
             Ok(Some(reward))
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UserRewardContribution {
+    pub user: ObjectId,
+    pub lesson_price: Decimal,
+    pub subscription_price: Decimal,
+    pub lessons_count: u32,
 }

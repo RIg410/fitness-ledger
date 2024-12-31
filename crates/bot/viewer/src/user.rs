@@ -209,14 +209,12 @@ pub fn render_rate(rate: &Rate) -> String {
     match rate {
         Rate::Fix {
             amount,
-            last_payment_date,
             next_payment_date,
             interval,
         } => {
             format!(
-                "Фиксированная сумма : _{}_💰\n Последняя оплата : _{}\n Следующая оплата : _{}\n Интервал : _{}_",
+                "Фиксированная сумма : _{}_💰\n Следующая оплата : _{}\n Интервал : _{}_",
                 escape(&amount.to_string()),
-                fmt_date(&last_payment_date.with_timezone(&Local)),
                 fmt_date(&next_payment_date.with_timezone(&Local)),
                 interval.as_secs() / 60 / 60 / 24
             )

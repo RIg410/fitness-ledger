@@ -109,7 +109,8 @@ fn fmt_row(log: &Reward) -> String {
         RewardSource::Training {
             training_id,
             name,
-            details: _,
+            user_originals: _,
+            percent: _,
         } => {
             format!(
                 "*{}*\n начислено *{}* \\- тренировка '{}' \\- {}",

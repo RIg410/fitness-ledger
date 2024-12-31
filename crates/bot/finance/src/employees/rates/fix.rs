@@ -167,8 +167,6 @@ impl View for FixRateInterval {
                         self.old_rate,
                         Rate::Fix {
                             amount: self.amount,
-                            last_payment_date: (self.next_payment_date - chrono::Duration::days(1))
-                                .with_timezone(&Utc),
                             next_payment_date: self.next_payment_date.with_timezone(&Utc),
                             interval: chrono::Duration::days(amount as i64).to_std()?,
                         },

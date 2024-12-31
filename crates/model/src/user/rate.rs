@@ -17,8 +17,6 @@ pub enum Rate {
     Fix {
         amount: Decimal,
         #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
-        last_payment_date: DateTime<Utc>,
-        #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
         next_payment_date: DateTime<Utc>,
         interval: Duration,
     },

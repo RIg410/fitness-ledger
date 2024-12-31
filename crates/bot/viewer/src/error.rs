@@ -91,6 +91,7 @@ pub async fn bassness_error(ctx: &mut Context, err: &LedgerError) -> Result<Opti
             let user = user_name(ctx, *user_id).await?;
             format!("У пользователя {} нет тарифов", user)
         }
+        LedgerError::WrongTrainingClients { .. } => return Ok(None),
     })))
 }
 

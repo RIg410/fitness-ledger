@@ -2,10 +2,9 @@ use std::sync::Arc;
 
 use crate::{Ledger, Task};
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
+use chrono::Local;
 use eyre::Error;
-use model::{session::Session, user::employee::Employee};
-use mongodb::bson::oid::ObjectId;
+use model::session::Session;
 use tx_macro::tx;
 
 #[derive(Clone)]
@@ -20,15 +19,7 @@ impl Task for RewardsBg {
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;
-
-        let mut users = self.ledger.users.employees(&mut session).await?;
-
-        let now = Local::now();
-        for user in users.iter_mut() {
-            if let Some(employee) = user.employee.as_mut() {
-                let reward = employee.collect_fix_rewards(user.id, now)?;
-            }
-        }
+        self.process_rewards(&mut session).await?;
         Ok(())
     }
 }
@@ -39,24 +30,33 @@ impl RewardsBg {
     }
 
     #[tx]
-    async fn process_rewards(
-        &self,
-        session: &mut Session,
-        couch_id: ObjectId,
-        couch: &mut Employee,
-        now: DateTime<Local>,
-    ) -> Result<(), Error> {
-        // if let Some(reward) = couch.collect_monthly_rewards(couch_id, now)? {
-        // self.ledger.rewards.add_reward(session, reward).await?;
-        // self.ledger
-        //     .users
-        //     .update_employee_reward(session, couch_id, couch.reward)
-        //     .await?;
-        // self.ledger
-        //     .users
-        //     .update_couch_rate_tx_less(session, couch_id, couch.group_rate.clone())
-        //     .await?;
-        // }
+    async fn process_rewards(&self, session: &mut Session) -> Result<(), Error> {
+        let mut users = self
+            .ledger
+            .users
+            .employees_with_ready_fix_reward(&mut *session)
+            .await?;
+
+        let now = Local::now();
+        for user in users.iter_mut() {
+            if let Some(employee) = &mut user.employee {
+                if let Some(reward) = employee.collect_fix_rewards(user.id, now)? {
+                    self.ledger
+                        .rewards
+                        .add_reward(&mut *session, reward)
+                        .await?;
+                    self.ledger
+                        .users
+                        .update_employee_reward_and_rates(
+                            &mut *session,
+                            user.id,
+                            employee.reward,
+                            Some(employee.rates.clone()),
+                        )
+                        .await?;
+                }
+            }
+        }
         Ok(())
     }
 }

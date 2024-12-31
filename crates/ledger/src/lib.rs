@@ -525,7 +525,7 @@ impl Ledger {
         let reward = employee_info.recalc_reward(user.id, amount, comment);
         self.rewards.add_reward(session, reward).await?;
         self.users
-            .update_employee_reward(session, user.id, employee_info.reward)
+            .update_employee_reward_and_rates(session, user.id, employee_info.reward, None)
             .await?;
         Ok(())
     }
@@ -545,7 +545,7 @@ impl Ledger {
             .reward_employee(session, UserId::Id(couch_id), amount, &Local::now())
             .await?;
         self.users
-            .update_employee_reward(session, couch_id, employee_info.reward)
+            .update_employee_reward_and_rates(session, couch_id, employee_info.reward, None)
             .await?;
         Ok(())
     }
