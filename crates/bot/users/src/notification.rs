@@ -5,9 +5,13 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use model::user::extension::UserExtension;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::{types::{InlineKeyboardButton, InlineKeyboardMarkup}, utils::markdown::escape};
+use teloxide::{
+    types::{InlineKeyboardButton, InlineKeyboardMarkup},
+    utils::markdown::escape,
+};
 
 pub struct NotificationView {
     pub id: ObjectId,
@@ -26,44 +30,55 @@ impl View for NotificationView {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
-        let msg = escape("Настройка уведомлений.\nВы можите включить или отключить уведомления о предстоящих тренировках.  ❌-выключить\n  ✅-включить");
+        let user = ctx
+            .ledger
+            .users
+            .get_extension(&mut ctx.session, self.id)
+            .await?;
+        let msg = "Настройки уведомлений\\.\nОтметьте промежуток времени, в который вы хотите получать уведомления\\.\n ✅ - включено, ❌ - выключено";
 
         let mut keymap = InlineKeyboardMarkup::default();
-        let settings = user.settings.notification;
 
-        if settings.notify_by_day {
-            keymap = keymap.append_row(
-                Callback::ByDayOnOff(false).btn_row("🔕 Отключить уведомления за сутки"),
-            );
-        } else {
-            keymap = keymap
-                .append_row(Callback::ByDayOnOff(true).btn_row("🔔 Включить уведомления за сутки"));
-        }
-
-        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
-            "Уведомлять за несколько часов до тренировки",
-            "2",
-        )]);
-
-        let hours = settings.notify_by_n_hours.unwrap_or(0);
         keymap = keymap.append_row(vec![
-            InlineKeyboardButton::callback("Не уведомлять", "0"),
-            Callback::ByHoursOff.button(if hours == 0 { "✅" } else { "❌" }),
-        ]);
-        keymap = keymap.append_row(vec![
-            InlineKeyboardButton::callback("За час", "1"),
-            Callback::ByHoursOn(1).button(if hours == 1 { "✅" } else { "❌" }),
+            Callback::btn(&user, 0, "00 - 01"),
+            Callback::btn(&user, 1, "01 - 02"),
+            Callback::btn(&user, 2, "02 - 03"),
+            Callback::btn(&user, 3, "03 - 04"),
         ]);
 
         keymap = keymap.append_row(vec![
-            InlineKeyboardButton::callback("За 2 часа", "2"),
-            Callback::ByHoursOn(2).button(if hours == 2 { "✅" } else { "❌" }),
+            Callback::btn(&user, 4, "04 - 05"),
+            Callback::btn(&user, 5, "05 - 06"),
+            Callback::btn(&user, 6, "06 - 07"),
+            Callback::btn(&user, 7, "07 - 08"),
         ]);
 
         keymap = keymap.append_row(vec![
-            InlineKeyboardButton::callback("За 3 часа", "3"),
-            Callback::ByHoursOn(3).button(if hours == 3 { "✅" } else { "❌" }),
+            Callback::btn(&user, 8, "08 - 09"),
+            Callback::btn(&user, 9, "09 - 10"),
+            Callback::btn(&user, 10, "10 - 11"),
+            Callback::btn(&user, 11, "11 - 12"),
+        ]);
+
+        keymap = keymap.append_row(vec![
+            Callback::btn(&user, 12, "12 - 13"),
+            Callback::btn(&user, 13, "13 - 14"),
+            Callback::btn(&user, 14, "14 - 15"),
+            Callback::btn(&user, 15, "15 - 16"),
+        ]);
+
+        keymap = keymap.append_row(vec![
+            Callback::btn(&user, 16, "16 - 17"),
+            Callback::btn(&user, 17, "17 - 18"),
+            Callback::btn(&user, 18, "18 - 19"),
+            Callback::btn(&user, 19, "19 - 20"),
+        ]);
+
+        keymap = keymap.append_row(vec![
+            Callback::btn(&user, 20, "20 - 21"),
+            Callback::btn(&user, 21, "21 - 22"),
+            Callback::btn(&user, 22, "22 - 23"),
+            Callback::btn(&user, 23, "23 - 00"),
         ]);
 
         ctx.edit_origin(&msg, keymap).await?;
@@ -72,42 +87,8 @@ impl View for NotificationView {
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         match calldata!(data) {
-            Callback::ByDayOnOff(on) => {
-                let mut user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
-                user.settings.notification.notify_by_day = on;
-                ctx.ledger
-                    .users
-                    .update_notification_settings(
-                        &mut ctx.session,
-                        user.id,
-                        user.settings.notification,
-                    )
-                    .await?;
-            }
-            Callback::ByHoursOff => {
-                let mut user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
-                user.settings.notification.notify_by_n_hours = None;
-                ctx.ledger
-                    .users
-                    .update_notification_settings(
-                        &mut ctx.session,
-                        user.id,
-                        user.settings.notification,
-                    )
-                    .await?;
-            }
-            Callback::ByHoursOn(hours) => {
-                let mut user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
-                user.settings.notification.notify_by_n_hours = Some(hours);
-                ctx.ledger
-                    .users
-                    .update_notification_settings(
-                        &mut ctx.session,
-                        user.id,
-                        user.settings.notification,
-                    )
-                    .await?;
-            }
+            Callback::SetTime(hour) => {}
+            Callback::ResetTime(hour) => {}
         }
         Ok(Jmp::Stay)
     }
@@ -115,7 +96,22 @@ impl View for NotificationView {
 
 #[derive(Serialize, Deserialize)]
 enum Callback {
-    ByDayOnOff(bool),
-    ByHoursOff,
-    ByHoursOn(u8),
+    SetTime(u8),
+    ResetTime(u8),
+}
+
+impl Callback {
+    fn btn(extension: &UserExtension, hour: u8, text: &str) -> InlineKeyboardButton {
+        let is_enabled = extension.notification_mask.get_hour(hour as u32);
+        let text = if is_enabled {
+            format!("✅ {}", text)
+        } else {
+            format!("❌ {}", text)
+        };
+        if is_enabled {
+            Callback::ResetTime(hour).button(text)
+        } else {
+            Callback::SetTime(hour).button(text)
+        }
+    }
 }

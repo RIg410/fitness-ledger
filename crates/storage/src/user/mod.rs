@@ -11,7 +11,7 @@ use model::session::Session;
 use model::statistics::marketing::ComeFrom;
 use model::subscription::{Status, Subscription, UserSubscription};
 use model::user::extension::UserExtension;
-use model::user::{Freeze, Notification, User, UserName};
+use model::user::{Freeze, User, UserName};
 use mongodb::options::UpdateOptions;
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -466,24 +466,6 @@ impl UserStore {
             .find_one(doc! { "phone": phone })
             .session(&mut *session)
             .await?)
-    }
-
-
-    pub async fn update_notification_settings(
-        &self,
-        session: &mut Session,
-        id: ObjectId,
-        settings: Notification,
-    ) -> Result<(), Error> {
-        info!("Updating notification settings: {:?}", settings);
-        self.users
-            .update_one(
-                doc! { "_id": id },
-                doc! { "$set": { "settings.notification": to_document(&settings)? }, "$inc": { "version": 1 } },
-            )
-            .session(&mut *session)
-            .await?;
-        Ok(())
     }
 
     pub async fn update_come_from(
