@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
-use chrono::{Local, Utc};
+use chrono::Local;
 use env::Env;
 use eyre::{eyre, Context as _, Result};
 use log::error;
 use model::decimal::Decimal;
 use model::errors::LedgerError;
-use model::request::{RemindLater, Request, RequestHistoryRow};
 use model::session::Session;
-use model::statistics::marketing::ComeFrom;
 use model::training::{Training, TrainingId, TrainingStatus};
 use model::treasury::subs::UserId;
 use model::user::family::FindFor;
@@ -65,7 +63,7 @@ impl Ledger {
             users.clone(),
         );
         let rewards = Rewards::new(storage.rewards);
-        let requests = Requests::new(storage.requests);
+        let requests = Requests::new(storage.requests, users.clone());
 
         let statistics = statistics::Statistics::new(
             calendar.clone(),
@@ -99,52 +97,6 @@ impl Ledger {
             .ok_or_else(|| eyre!("User not found:{:?}", id))?;
         self.users.resolve_family(session, &mut user).await?;
         Ok(user)
-    }
-
-    #[tx]
-    pub async fn create_request(
-        &self,
-        session: &mut Session,
-        phone: String,
-        come_from: ComeFrom,
-        comment: String,
-        first_name: Option<String>,
-        last_name: Option<String>,
-        remember_later: Option<RemindLater>,
-    ) -> Result<()> {
-        let phone = sanitize_phone(&phone);
-        let user = self.users.get_by_phone(session, &phone).await?;
-        if let Some(user) = user {
-            self.users
-                .update_come_from(session, user.id, come_from)
-                .await?;
-        }
-        if let Some(mut request) = self.requests.get_by_phone(session, &phone).await? {
-            request.remind_later = remember_later;
-            request.history.push(RequestHistoryRow {
-                comment: request.comment.clone(),
-                date_time: request.created_at,
-            });
-            request.created_at = Utc::now();
-            request.comment = comment;
-            request.come_from = come_from;
-            self.requests.update(session, &request).await?;
-        } else {
-            self.requests
-                .create(
-                    session,
-                    Request::new(
-                        phone,
-                        comment,
-                        come_from,
-                        first_name,
-                        last_name,
-                        remember_later,
-                    ),
-                )
-                .await?;
-        }
-        Ok(())
     }
 
     #[tx]

@@ -42,4 +42,6 @@ pub enum LedgerError {
     RateTypeAlreadyExists { user_id: ObjectId, rate: Rate },
     #[error("Wrong numbers of users")]
     WrongTrainingClients { training_id: TrainingId },
+    #[error("Request not found")]
+    RequestNotFound { id: ObjectId },
 }

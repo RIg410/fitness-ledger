@@ -34,17 +34,9 @@ pub fn fmt_request(request: &Request) -> String {
         fmt_phone(Some(&request.phone)),
         fmt_come_from(request.come_from),
         escape(&request.comment),
-        escape(
-            request
-                .first_name.as_deref()
-                .unwrap_or("?")
-        ),
-        escape(
-            request
-                .last_name.as_deref()
-                .unwrap_or("?")
-        ),
-        fmt_dt(&request.created_at.with_timezone(&Local)),
+        escape(request.first_name.as_deref().unwrap_or("?")),
+        escape(request.last_name.as_deref().unwrap_or("?")),
+        fmt_dt(&request.modified_at.with_timezone(&Local)),
         remind_me,
         history
     )

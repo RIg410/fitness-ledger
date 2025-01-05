@@ -92,6 +92,7 @@ pub async fn bassness_error(ctx: &mut Context, err: &LedgerError) -> Result<Opti
             format!("У пользователя {} нет тарифов", user)
         }
         LedgerError::WrongTrainingClients { .. } => return Ok(None),
+        LedgerError::RequestNotFound { id } => format!("Заявка {} не найдена", id),
     })))
 }
 

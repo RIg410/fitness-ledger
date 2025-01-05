@@ -401,6 +401,7 @@ impl View for Confirm {
             CalldataYesNo::Yes => {
                 ctx.ensure(Rule::CreateRequest)?;
                 ctx.ledger
+                    .requests
                     .create_request(
                         &mut ctx.session,
                         self.phone.clone(),
@@ -433,7 +434,7 @@ impl View for Confirm {
 }
 
 #[derive(Serialize, Deserialize)]
-enum CalldataYesNo {
+pub enum CalldataYesNo {
     Yes,
     No,
 }
@@ -566,11 +567,13 @@ impl View for ConfirmSellSubscription {
         ]);
 
         if self.discount.is_none() {
-            markup = markup.append_row(vec![ConfirmSellSubscriptionCallback::AddFamilyDiscount
-                .button("👨‍👩‍👧‍👦 Добавить скидку 10%")]);
+            markup = markup
+                .append_row(vec![ConfirmSellSubscriptionCallback::AddFamilyDiscount
+                    .button("👨‍👩‍👧‍👦 Добавить скидку 10%")]);
         } else {
-            markup = markup.append_row(vec![ConfirmSellSubscriptionCallback::RemoveFamilyDiscount
-                .button("👨‍👩‍👧‍👦 Убрать скидку")]);
+            markup = markup
+                .append_row(vec![ConfirmSellSubscriptionCallback::RemoveFamilyDiscount
+                    .button("👨‍👩‍👧‍👦 Убрать скидку")]);
         }
 
         ctx.bot.edit_origin(&text, markup).await?;

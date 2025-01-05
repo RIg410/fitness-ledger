@@ -10,8 +10,12 @@ pub struct Request {
     pub id: ObjectId,
     pub phone: String,
     pub comment: String,
+    #[serde(rename = "created_at")]
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
-    pub created_at: DateTime<Utc>,
+    pub modified_at: DateTime<Utc>,
+    #[serde(default)]
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    created: DateTime<Utc>,
     pub come_from: ComeFrom,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
@@ -34,12 +38,13 @@ impl Request {
             id: ObjectId::new(),
             phone,
             comment,
-            created_at: Utc::now(),
+            modified_at: Utc::now(),
             come_from,
             first_name,
             last_name,
             history: vec![],
             remind_later,
+            created: Utc::now(),
         }
     }
 }

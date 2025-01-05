@@ -92,7 +92,7 @@ async fn inner_message_handler(
                     ctx.origin().invalidate();
                     widget.show(ctx).await?;
                     widget
-                },
+                }
                 _ => system_handler(),
             }
         } else {
@@ -119,6 +119,10 @@ async fn inner_message_handler(
         crate::widget::Jmp::Back => widget.take_back().unwrap_or_else(&system_handler),
         crate::widget::Jmp::Home => system_handler(),
         crate::widget::Jmp::Goto(new_widget) => new_widget,
+        crate::widget::Jmp::Back2 => {
+            let mut back = widget.take_back().unwrap_or_else(&system_handler);
+            back.take_back().unwrap_or_else(&system_handler)
+        }
     };
     ctx.set_system_go_back(!new_widget.is_back_main_view());
 

@@ -109,6 +109,7 @@ pub enum Jmp {
     Stay,
     Back,
     Home,
+    Back2,
 }
 
 impl<T: View + Send + Sync + 'static> From<T> for Jmp {

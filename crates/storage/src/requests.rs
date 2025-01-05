@@ -1,4 +1,4 @@
-use bson::doc;
+use bson::{doc, oid::ObjectId};
 use chrono::{DateTime, Local, Utc};
 use eyre::Error;
 use model::{request::Request, session::Session};
@@ -24,6 +24,15 @@ impl RequestStore {
             )
             .await?;
         Ok(RequestStore { store: reward })
+    }
+
+    pub async fn get(&self, session: &mut Session, id: ObjectId) -> Result<Option<Request>, Error> {
+        let request = self
+            .store
+            .find_one(doc! { "_id": id })
+            .session(&mut *session)
+            .await?;
+        Ok(request)
     }
 
     pub async fn update(&self, session: &mut Session, request: &Request) -> Result<(), Error> {

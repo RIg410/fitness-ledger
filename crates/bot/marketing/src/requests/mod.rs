@@ -7,19 +7,30 @@ use bot_core::{
 };
 use bot_viewer::{fmt_phone, request::fmt_request};
 use create::SetComeFrom;
+use edit::{add_comment::AddComment, change_source::ChangeComeFrom, notification::AddNotification};
 use history::RequestHistory;
 use model::{rights::Rule, user::sanitize_phone};
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
 mod create;
+mod edit;
 mod history;
 
-pub struct Requests(pub Option<String>, bool);
+pub struct Requests {
+    pub phone: Option<String>,
+    pub found: bool,
+    pub id: Option<ObjectId>,
+}
 
 impl Requests {
     pub fn new() -> Self {
-        Self(None, false)
+        Self {
+            phone: None,
+            found: false,
+            id: None,
+        }
     }
 }
 
@@ -34,23 +45,27 @@ impl View for Requests {
 
         let mut text = format!(
             "Заявки 🈸\nВведите номер телефона чтобы найти заявку: '{}'\n",
-            fmt_phone(Some(&self.0.clone().unwrap_or_default()))
+            fmt_phone(Some(&self.phone.clone().unwrap_or_default()))
         );
 
         let mut keymap: InlineKeyboardMarkup = InlineKeyboardMarkup::default();
 
-        if let Some(phone) = &self.0 {
+        if let Some(phone) = &self.phone {
             let request = ctx
                 .ledger
                 .requests
                 .get_by_phone(&mut ctx.session, &sanitize_phone(phone))
                 .await?;
             if let Some(request) = request.as_ref() {
-                self.1 = true;
+                self.id = Some(request.id.clone());
+                self.found = true;
                 text.push_str(&fmt_request(request));
-                keymap = keymap.append_row(Calldata::Edit.btn_row("Изменить заявку"));
+                keymap = keymap.append_row(Calldata::AddComment.btn_row("Добавить комментарий 📝"));
+                keymap = keymap.append_row(Calldata::ChangeSource.btn_row("Изменить источник 🔄"));
+                keymap = keymap.append_row(Calldata::Notification.btn_row("Напомнить 🛎"));
             } else {
-                self.1 = false;
+                self.found = false;
+                self.id = None;
                 text.push_str("Заявка не найдена");
             }
         }
@@ -75,10 +90,10 @@ impl View for Requests {
         ctx.delete_msg(msg.id).await?;
         if let Some(phone) = &msg.text() {
             if phone.len() > 5 {
-                self.0 = Some(phone.to_string());
+                self.phone = Some(phone.to_string());
             }
         } else {
-            self.0 = None;
+            self.phone = None;
         }
 
         Ok(Jmp::Stay)
@@ -88,9 +103,9 @@ impl View for Requests {
         match calldata!(data) {
             Calldata::Create => {
                 ctx.ensure(Rule::CreateRequest)?;
-                if self.0.as_ref().map(|p| p.len() > 5).unwrap_or_default() && !self.1 {
+                if self.phone.as_ref().map(|p| p.len() > 5).unwrap_or_default() && !self.found {
                     Ok(SetComeFrom {
-                        phone: self.0.clone().unwrap_or_default(),
+                        phone: self.phone.clone().unwrap_or_default(),
                     }
                     .into())
                 } else {
@@ -101,12 +116,32 @@ impl View for Requests {
                 ctx.ensure(Rule::RequestsHistory)?;
                 Ok(RequestHistory::new().into())
             }
-            Calldata::Edit => {
+            Calldata::AddComment => {
                 ctx.ensure(Rule::CreateRequest)?;
-                Ok(SetComeFrom {
-                    phone: self.0.clone().unwrap_or_default(),
+                if let Some(id) = self.id {
+                    Ok(AddComment { id }.into())
+                } else {
+                    ctx.bot.send_notification("Заявка не найдена").await?;
+                    Ok(Jmp::Stay)
                 }
-                .into())
+            }
+            Calldata::ChangeSource => {
+                ctx.ensure(Rule::CreateRequest)?;
+                if let Some(id) = self.id {
+                    Ok(ChangeComeFrom { id }.into())
+                } else {
+                    ctx.bot.send_notification("Заявка не найдена").await?;
+                    Ok(Jmp::Stay)
+                }
+            }
+            Calldata::Notification => {
+                ctx.ensure(Rule::CreateRequest)?;
+                if let Some(id) = self.id {
+                    Ok(AddNotification { id }.into())
+                } else {
+                    ctx.bot.send_notification("Заявка не найдена").await?;
+                    Ok(Jmp::Stay)
+                }
             }
         }
     }
@@ -115,6 +150,8 @@ impl View for Requests {
 #[derive(Serialize, Deserialize)]
 enum Calldata {
     Create,
-    Edit,
+    AddComment,
+    ChangeSource,
+    Notification,
     History,
 }
