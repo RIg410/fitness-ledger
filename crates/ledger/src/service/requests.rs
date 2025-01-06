@@ -39,9 +39,9 @@ impl Requests {
         if let Some(mut request) = self.requests.get(session, id).await? {
             request.history.push(RequestHistoryRow {
                 comment: request.comment.clone(),
-                date_time: request.modified_at,
+                date_time: request.modified,
             });
-            request.modified_at = Utc::now();
+            request.modified = Utc::now();
             request.comment = comment;
             request.come_from = come_from;
             self.requests.update(session, &request).await?;
@@ -71,9 +71,9 @@ impl Requests {
         if let Some(mut request) = self.requests.get(session, id).await? {
             request.history.push(RequestHistoryRow {
                 comment: request.comment.clone(),
-                date_time: request.modified_at,
+                date_time: request.modified,
             });
-            request.modified_at = Utc::now();
+            request.modified = Utc::now();
             request.comment = comment;
             self.requests.update(session, &request).await?;
         } else {
@@ -120,9 +120,9 @@ impl Requests {
             request.remind_later = remember_later;
             request.history.push(RequestHistoryRow {
                 comment: request.comment.clone(),
-                date_time: request.modified_at,
+                date_time: request.modified,
             });
-            request.modified_at = Utc::now();
+            request.modified = Utc::now();
             request.comment = comment;
             request.come_from = come_from;
             self.requests.update(session, &request).await?;

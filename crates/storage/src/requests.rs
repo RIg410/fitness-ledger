@@ -19,7 +19,7 @@ impl RequestStore {
         reward
             .create_index(
                 IndexModel::builder()
-                    .keys(doc! { "created_at": -1 })
+                    .keys(doc! { "created": -1 })
                     .build(),
             )
             .await?;
@@ -72,10 +72,10 @@ impl RequestStore {
     ) -> Result<SessionCursor<Request>, Error> {
         let mut query = doc! {};
         if let Some(from) = from {
-            query.insert("created_at", doc! { "$gte": from });
+            query.insert("created", doc! { "$gte": from });
         }
         if let Some(to) = to {
-            query.insert("created_at", doc! { "$lt": to });
+            query.insert("created", doc! { "$lt": to });
         }
         let cursor = self.store.find(query).session(&mut *session).await?;
         Ok(cursor)
@@ -112,7 +112,7 @@ impl RequestStore {
             .session(&mut *session)
             .skip(offset)
             .limit(limit)
-            .sort(doc! {"created_at": -1})
+            .sort(doc! {"created": -1})
             .await?;
 
         let mut requests = Vec::new();

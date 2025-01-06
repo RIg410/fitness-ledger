@@ -213,7 +213,7 @@ pub fn render_rate(rate: &Rate) -> String {
             interval,
         } => {
             format!(
-                "Фиксированная сумма : _{}_💰\n Следующая оплата : _{}\n Интервал : _{}_",
+                "Фиксированная сумма : _{}_💰\n Следующая оплата : _{}_\n Интервал : _{}_",
                 escape(&amount.to_string()),
                 fmt_date(&next_payment_date.with_timezone(&Local)),
                 interval.as_secs() / 60 / 60 / 24
