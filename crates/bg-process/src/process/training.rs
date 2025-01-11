@@ -72,7 +72,7 @@ impl TriningBg {
                 let mut user = self.ledger.get_user(session, *client).await?;
                 let mut payer = user.payer_mut()?;
                 if let Some(sub) = payer.find_subscription(FindFor::Charge, &training) {
-                    if !sub.change_locked_balance() {
+                    if !sub.change_locked_balance(&training) {
                         return Err(eyre!("Not enough balance:{}", user.id));
                     }
                     statistic.earned += sub.item_price();

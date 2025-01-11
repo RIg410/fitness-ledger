@@ -201,7 +201,7 @@ impl Ledger {
                 .find_subscription(FindFor::Lock, &training)
                 .ok_or_else(|| SignUpError::NotEnoughBalance)?;
 
-            if !subscription.lock_balance(&training) {
+            if !subscription.lock_balance() {
                 return Err(SignUpError::NotEnoughBalance);
             }
             self.users.update(session, &mut payer).await?;

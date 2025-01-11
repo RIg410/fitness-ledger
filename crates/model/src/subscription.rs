@@ -121,7 +121,6 @@ impl UserSubscription {
         }
     }
 
-
     pub fn subscription_price(&self) -> Decimal {
         if let Some(discount) = self.discount {
             self.price * (Decimal::int(1) - discount)
@@ -134,17 +133,13 @@ impl UserSubscription {
         self.items
     }
 
-    pub fn lock_balance(&mut self, training: &Training) -> bool {
+    pub fn lock_balance(&mut self) -> bool {
         if self.unlimited {
             return true;
         }
 
         if self.balance == 0 {
             return false;
-        }
-
-        if !self.is_active() {
-            self.activate(training);
         }
 
         self.balance -= 1;
@@ -166,13 +161,20 @@ impl UserSubscription {
         true
     }
 
-    pub fn change_locked_balance(&mut self) -> bool {
+    pub fn change_locked_balance(&mut self, training: &Training) -> bool {
         if self.unlimited {
+            if !self.is_active() {
+                self.activate(training);
+            }
             return true;
         }
 
         if self.locked_balance == 0 {
             return false;
+        }
+
+        if !self.is_active() {
+            self.activate(training);
         }
 
         self.locked_balance -= 1;
@@ -267,4 +269,3 @@ impl Default for SubscriptionType {
         }
     }
 }
-
