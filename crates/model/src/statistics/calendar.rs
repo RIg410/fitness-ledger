@@ -85,13 +85,22 @@ pub struct EntryInfo {
 
 impl EntryInfo {
     pub fn new(training: &Training) -> Self {
-        let stat = training.statistics.unwrap_or_default();
-        Self {
-            total_training: 1,
-            earn: stat.earned,
-            reward: stat.couch_rewards,
-            visit: training.clients.len() as u32,
-            without_clients: if training.clients.is_empty() { 1 } else { 0 },
+        if let Some(stat) = training.statistics.as_ref() {
+            Self {
+                total_training: 1,
+                earn: stat.earned,
+                reward: stat.couch_rewards,
+                visit: training.clients.len() as u32,
+                without_clients: if training.clients.is_empty() { 1 } else { 0 },
+            }
+        } else {
+            Self {
+                total_training: 1,
+                earn: Decimal::zero(),
+                reward: Decimal::zero(),
+                visit: training.clients.len() as u32,
+                without_clients: if training.clients.is_empty() { 1 } else { 0 },
+            }
         }
     }
 

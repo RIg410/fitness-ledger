@@ -9,14 +9,13 @@ use bot_trainigs::schedule::ScheduleTrainingPreset;
 use bot_trainigs::view::TrainingView;
 use bot_viewer::day::{fmt_dm, fmt_month, fmt_weekday};
 use bot_viewer::rooms::fmt_room_emoji;
-use bot_viewer::training::fmt_training_status;
+use bot_viewer::training::{fmt_statistics_summary, fmt_training_status};
 use bot_views::Filter;
 use chrono::{Datelike, Duration, Local, Weekday};
 use eyre::Error;
 use model::ids::{DayId, WeekId};
 use model::rights::Rule;
 use model::rooms::Room;
-use model::training::Statistics;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use std::vec;
@@ -41,7 +40,6 @@ impl CalendarView {
         }
     }
 }
-
 
 #[async_trait]
 impl View for CalendarView {
@@ -188,15 +186,7 @@ pub async fn render_week(
         .await?;
 
     if ctx.has_right(Rule::ViewFinance) {
-        let stat = day
-            .training
-            .iter()
-            .filter_map(|t| t.statistics)
-            .sum::<Statistics>();
-        msg.push_str(&escape(&format!(
-            "\n📊Заработано {}\n📊Награда инструктора {}",
-            stat.earned, stat.couch_rewards
-        )));
+        msg.push_str(&escape(&fmt_statistics_summary(&day.statistic())));
     }
 
     day.training.sort_by_key(|a| a.get_slot().start_at());

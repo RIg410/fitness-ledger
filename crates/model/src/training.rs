@@ -1,5 +1,3 @@
-use std::iter::Sum;
-
 use chrono::{DateTime, Datelike, Local, Timelike as _, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -10,6 +8,7 @@ use crate::{
     program::{Program, TrainingType},
     rooms::Room,
     slot::Slot,
+    user::employee::UserRewardContribution,
 };
 
 pub const CLOSE_SING_UP: u32 = 3 * 60; // 3 hours
@@ -259,19 +258,11 @@ impl Filter {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Statistics {
     pub earned: Decimal,
     pub couch_rewards: Decimal,
-}
-
-impl Sum<Statistics> for Statistics {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Statistics::default(), |acc, item| Statistics {
-            earned: acc.earned + item.earned,
-            couch_rewards: acc.couch_rewards + item.couch_rewards,
-        })
-    }
+    pub details: Vec<UserRewardContribution>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]

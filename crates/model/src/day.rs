@@ -1,4 +1,9 @@
-use crate::{ids::DayId, slot::Slot, training::Training};
+use crate::{
+    decimal::Decimal,
+    ids::DayId,
+    slot::Slot,
+    training::{Statistics, Training},
+};
 use chrono::{DateTime, Datelike, Local, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -86,9 +91,45 @@ impl Day {
 
         false
     }
+
+    pub fn statistic(&self) -> StatisticsSummary {
+        StatisticsSummary::new(self.training.iter().filter_map(|t| t.statistics.as_ref()))
+    }
 }
 
 pub struct Collision {
     pub day_id: DayId,
     pub training_id: ObjectId,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct StatisticsSummary {
+    pub earned: Decimal,
+    pub couch_rewards: Decimal,
+    pub training_count: u32,
+    pub training_without_rewards: u32,
+    pub clients_count: u32,
+    pub sub_avg: Decimal,
+}
+
+impl StatisticsSummary {
+    pub fn new<'s>(stat: impl Iterator<Item = &'s Statistics>) -> StatisticsSummary {
+        let mut stat = stat.fold(StatisticsSummary::default(), |mut acc, s| {
+            acc.earned += s.earned;
+            acc.couch_rewards += s.couch_rewards;
+            acc.training_count += 1;
+            acc.clients_count += s.details.len() as u32;
+            if s.details.is_empty() {
+                acc.training_without_rewards += 1;
+            }
+            acc
+        });
+
+        stat.sub_avg = if stat.clients_count == 0 {
+            Decimal::zero()
+        } else {
+            stat.earned / Decimal::int(stat.clients_count as i64)
+        };
+        stat
+    }
 }

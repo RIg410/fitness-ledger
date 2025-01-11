@@ -1,4 +1,4 @@
-use model::{program::TrainingType, training::TrainingStatus};
+use model::{day::StatisticsSummary, program::TrainingType, training::TrainingStatus};
 
 pub fn fmt_training_status(
     training: TrainingStatus,
@@ -70,4 +70,17 @@ pub fn fmt_training_type(tp: TrainingType) -> String {
             }
         ),
     }
+}
+
+
+pub fn fmt_statistics_summary(stat: &StatisticsSummary) -> String {
+    format!(
+        "📊Заработано {}\n📊Награда инструктора {}\n📊Количество тренировок:{}\n📊Количество тренировок без клиентов:{}\n📊Клиентов:{}\n📊Средняя цена занятия:{}",
+        stat.earned, 
+        stat.couch_rewards,
+        stat.training_count,
+        stat.training_without_rewards,
+        stat.clients_count,
+        stat.sub_avg
+    )
 }

@@ -82,6 +82,12 @@ impl TriningBg {
                         subscription_price: sub.subscription_price(),
                         lessons_count: sub.items(),
                     });
+                    statistic.details.push(UserRewardContribution {
+                        user: *client,
+                        lesson_price: sub.item_price(),
+                        subscription_price: sub.subscription_price(),
+                        lessons_count: sub.items(),
+                    });
                 } else {
                     return Err(eyre!("Subscription not found for user:{}", user.id));
                 }
