@@ -15,6 +15,7 @@ pub enum ComeFrom {
     DirectAdds {},
     VkAdds {},
     DoubleGIS {},
+    Avito {},
 }
 
 impl ComeFrom {
@@ -29,6 +30,7 @@ impl ComeFrom {
             ComeFrom::DirectAdds {},
             ComeFrom::VkAdds {},
             ComeFrom::DoubleGIS {},
+            ComeFrom::Avito {},
         ]
         .iter()
         .copied()
@@ -66,4 +68,3 @@ impl UsersStat {
         }
     }
 }
-
