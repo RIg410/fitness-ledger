@@ -75,7 +75,7 @@ pub fn fmt_training_type(tp: TrainingType) -> String {
 
 pub fn fmt_statistics_summary(stat: &StatisticsSummary) -> String {
     format!(
-        "📊Заработано {}\n📊Награда инструктора {}\n📊Количество тренировок:{}\n📊Количество тренировок без клиентов:{}\n📊Клиентов:{}\n📊Средняя цена занятия:{}",
+        "Статистика дня:\nЗаработано {}\nНаграда инструктора {}\nКоличество тренировок:{}\nКоличество тренировок без клиентов:{}\nКлиентов:{}\nСредняя цена занятия:{}",
         stat.earned, 
         stat.couch_rewards,
         stat.training_count,

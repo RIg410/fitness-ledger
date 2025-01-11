@@ -186,6 +186,7 @@ pub async fn render_week(
         .await?;
 
     if ctx.has_right(Rule::ViewFinance) {
+        msg.push('\n');
         msg.push_str(&escape(&fmt_statistics_summary(&day.statistic())));
     }
 

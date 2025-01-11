@@ -93,7 +93,11 @@ impl Day {
     }
 
     pub fn statistic(&self) -> StatisticsSummary {
-        StatisticsSummary::new(self.training.iter().filter_map(|t| t.statistics.as_ref()))
+        StatisticsSummary::new(
+            self.training
+                .iter()
+                .filter_map(|t| t.statistics.as_ref().map(|s| (s, t.clients.len() as u32))),
+        )
     }
 }
 
@@ -113,19 +117,22 @@ pub struct StatisticsSummary {
 }
 
 impl StatisticsSummary {
-    pub fn new<'s>(stat: impl Iterator<Item = &'s Statistics>) -> StatisticsSummary {
-        let mut stat = stat.fold(StatisticsSummary::default(), |mut acc, s| {
-            acc.earned += s.earned;
-            acc.couch_rewards += s.couch_rewards;
-            acc.training_count += 1;
-            acc.clients_count += s.details.len() as u32;
-            if s.details.is_empty() {
-                acc.training_without_rewards += 1;
-            }
-            acc
-        });
+    pub fn new<'s>(stat: impl Iterator<Item = (&'s Statistics, u32)>) -> StatisticsSummary {
+        let mut stat = stat.fold(
+            StatisticsSummary::default(),
+            |mut acc, (s, clients_count)| {
+                acc.earned += s.earned;
+                acc.couch_rewards += s.couch_rewards;
+                acc.training_count += 1;
+                acc.clients_count += clients_count;
+                if clients_count == 0 {
+                    acc.training_without_rewards += 1;
+                }
+                acc
+            },
+        );
 
-        stat.sub_avg = if stat.clients_count == 0 {
+        stat.sub_avg = if stat.clients_count == 0 || stat.earned.is_zero() {
             Decimal::zero()
         } else {
             stat.earned / Decimal::int(stat.clients_count as i64)

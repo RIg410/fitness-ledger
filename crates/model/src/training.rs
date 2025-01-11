@@ -8,7 +8,6 @@ use crate::{
     program::{Program, TrainingType},
     rooms::Room,
     slot::Slot,
-    user::employee::UserRewardContribution,
 };
 
 pub const CLOSE_SING_UP: u32 = 3 * 60; // 3 hours
@@ -262,7 +261,6 @@ impl Filter {
 pub struct Statistics {
     pub earned: Decimal,
     pub couch_rewards: Decimal,
-    pub details: Vec<UserRewardContribution>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
