@@ -1,5 +1,3 @@
-use crate::program::list::ProgramList;
-
 use super::{render_msg, set_date_time::render_time_slot_collision, ScheduleTrainingPreset};
 use async_trait::async_trait;
 use bot_core::{
@@ -100,7 +98,7 @@ impl View for Finish {
                 //no-op
             }
         }
-        Ok(Jmp::Goto(ProgramList::default().into()))
+        Ok(Jmp::BackSteps(7))
     }
 }
 

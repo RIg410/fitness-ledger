@@ -120,7 +120,7 @@ impl View for SetRemindLater {
                 )
                 .await?;
             ctx.bot.send_notification("Уведомление установлено").await?;
-            Ok(Jmp::Back2)
+            Ok(Jmp::BackSteps(2))
         } else {
             ctx.bot
                 .send_notification("Введите корректную дату *дд\\.мм\\.гггг чч\\:мм*")
@@ -146,7 +146,7 @@ impl View for SetRemindLater {
             )
             .await?;
         ctx.bot.send_notification("Уведомление установлено").await?;
-        Ok(Jmp::Back2)
+        Ok(Jmp::BackSteps(2))
     }
 }
 

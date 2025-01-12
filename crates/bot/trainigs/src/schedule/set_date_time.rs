@@ -9,7 +9,7 @@ use eyre::{Error, Result};
 use ledger::service::calendar::TimeSlotCollision;
 use log::warn;
 use mongodb::bson::oid::ObjectId;
-use teloxide::types::Message;
+use teloxide::{types::Message, utils::html::escape};
 
 #[derive(Default)]
 pub struct SetDateTime {
@@ -149,7 +149,7 @@ impl TimeParts {
 pub fn render_time_slot_collision(collision: &TimeSlotCollision) -> String {
     format!(
         "Это время уже занято другой тренировкой: {}\n\nДата:{}",
-        collision.name,
+        escape(&collision.name),
         collision.get_slot().start_at().format("%d\\.%m %H:%M")
     )
 }

@@ -119,9 +119,12 @@ async fn inner_message_handler(
         crate::widget::Jmp::Back => widget.take_back().unwrap_or_else(&system_handler),
         crate::widget::Jmp::Home => system_handler(),
         crate::widget::Jmp::Goto(new_widget) => new_widget,
-        crate::widget::Jmp::Back2 => {
-            let mut back = widget.take_back().unwrap_or_else(&system_handler);
-            back.take_back().unwrap_or_else(&system_handler)
+        crate::widget::Jmp::BackSteps(steps) => {
+            let mut back = widget;
+            for _ in 0..steps {
+                back = back.take_back().unwrap_or_else(&system_handler)
+            }
+            back
         }
     };
     ctx.set_system_go_back(!new_widget.is_back_main_view());
