@@ -125,6 +125,18 @@ impl TgBot {
             .id)
     }
 
+    pub async fn send_html_msg(&self, text: &str) -> Result<MessageId, eyre::Error> {
+        self.origin.invalidate();
+
+        Ok(self
+            .bot
+            .send_message(self.chat_id(), text)
+            .parse_mode(teloxide::types::ParseMode::Html)
+            .await
+            .context(format!("Failed to send message: {}", text))?
+            .id)
+    }
+
     pub async fn send_msg_with_markup(
         &self,
         text: &str,
