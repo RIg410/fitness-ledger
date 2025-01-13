@@ -16,6 +16,14 @@ impl Default for Range {
 }
 
 impl Range {
+    pub fn group_by(&self) -> GroupBy {
+        match self {
+            Range::Day(_) => GroupBy::Day,
+            Range::Week(_) => GroupBy::Week,
+            Range::Month(_) => GroupBy::Month,
+        }
+    }
+
     pub fn next(&self) -> Result<Self, Error> {
         fn inner(range: Range) -> Option<Range> {
             let base_date = range.base_date();
@@ -97,6 +105,13 @@ impl Range {
     pub fn is_month(&self) -> bool {
         matches!(self, Range::Month(_))
     }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Debug)]
+pub enum GroupBy {
+    Day,
+    Week,
+    Month,
 }
 
 #[cfg(test)]
