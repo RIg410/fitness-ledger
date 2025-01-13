@@ -39,7 +39,6 @@ impl View for FinanceView {
 
         if ctx.has_right(Rule::MakePayment) {
             keymap = keymap.append_row(Callback::Payment.btn_row("Оплатить 💳"));
-            // keymap = keymap.append_row(Callback::PayReward.btn_row("Ваплата ЗП 🎁"));
             keymap = keymap.append_row(Callback::PayRent.btn_row("Оплата аренды 🏠"));
             keymap = keymap.append_row(Callback::PayMarketing.btn_row("Оплата маркетинга 📈"));
 
@@ -73,10 +72,6 @@ impl View for FinanceView {
                 ctx.ensure(Rule::MakeDeposit)?;
                 Ok(TreasuryOp::new(Op::Deposit).into())
             }
-            // Callback::PayReward => {
-            //     ctx.ensure(Rule::MakePayment)?;
-            //     Ok(SelectCouch.into())
-            // }
             Callback::History => {
                 ctx.ensure(Rule::ViewFinance)?;
                 Ok(Jmp::Next(history_view()))
@@ -114,7 +109,6 @@ impl View for FinanceView {
 
 #[derive(Serialize, Deserialize)]
 enum Callback {
-    // PayReward,
     PayRent,
     PayMarketing,
     Payment,

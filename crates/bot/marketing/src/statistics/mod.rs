@@ -1,32 +1,22 @@
-use std::collections::HashMap;
-
 use async_trait::async_trait;
 use bot_core::{
-    callback_data::Calldata as _,
+    callback_data::{CallbackDateTime, Calldata as _},
     calldata,
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::{
-    day::{fmt_date, fmt_weekday},
-    fmt_phone,
-    user::{fmt_come_from, link_to_user},
-};
-use chrono::{Local, Weekday};
+use bot_viewer::day::fmt_dt;
+use chrono::Local;
 use eyre::Error;
 use eyre::Result;
-use itertools::Itertools;
-use model::{
-    rights::Rule,
-    statistics::{
-        calendar::{EntryInfo, TimeSlot, UserStat},
-        history::SubscriptionStatistics,
-    },
-};
-use mongodb::bson::oid::ObjectId;
+use model::{rights::Rule, statistics::range::Range};
 use serde::{Deserialize, Serialize};
-use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
-use time::range::Range;
+use teloxide::types::InlineKeyboardMarkup;
+
+mod budget;
+mod clients;
+mod instructors;
+mod marketing;
 
 pub struct StatisticsView {
     range: Range,
@@ -35,113 +25,12 @@ pub struct StatisticsView {
 impl Default for StatisticsView {
     fn default() -> Self {
         Self {
-            range: Range::Month(Local::now()),
+            range: Range::Day(Local::now()),
         }
     }
 }
 
-impl StatisticsView {
-    async fn print_training_statistics(&self, ctx: &mut Context) -> Result<()> {
-        let (from, to) = self.range.range();
-        let stat = ctx
-            .ledger
-            .statistics
-            .calendar(&mut ctx.session, from, to)
-            .await?;
-        ctx.send_notification("📊Статистика посещений:").await?;
-        by_program(ctx, stat.by_program).await?;
-        by_weekday(ctx, stat.by_weekday).await?;
-        by_instructor(ctx, stat.by_instructor).await?;
-        by_time_slot(ctx, stat.by_time_slot).await?;
-        Ok(())
-    }
-    async fn print_top_clients(&self, ctx: &mut Context) -> Result<()> {
-        let (from, to) = self.range.range();
-
-        let stat = ctx
-            .ledger
-            .statistics
-            .calendar(&mut ctx.session, from, to)
-            .await?;
-        ctx.send_notification("📊Статистика посещений:").await?;
-        user_stat(ctx, stat.users).await?;
-        Ok(())
-    }
-
-    async fn print_clients_with_only_test_sub(&self, ctx: &mut Context) -> Result<()> {
-        let (from, to) = self.range.range();
-
-        let stat = ctx
-            .ledger
-            .statistics
-            .subscriptions(&mut ctx.session, from, to)
-            .await?;
-        let mut msg = format!(
-            "📊Клиенты с пробными занятиями но без абонементов: {}",
-            stat.people_buys_only_test_sub.len()
-        );
-        if !stat.people_buys_only_test_sub.is_empty() {
-            for id in &stat.people_buys_only_test_sub {
-                let user = ctx.ledger.users.get(&mut ctx.session, *id).await?;
-                if let Some(user) = user {
-                    msg.push_str(&format!(
-                        "\n👤{} {}",
-                        link_to_user(&user),
-                        fmt_phone(user.phone.as_deref())
-                    ));
-                } else {
-                    msg.push_str(&format!("\n👤{}", id));
-                }
-            }
-        }
-        ctx.send_notification(&msg).await?;
-
-        Ok(())
-    }
-
-    async fn print_clients_with_no_subs(&self, ctx: &mut Context) -> Result<()> {
-        let (from, to) = self.range.range();
-
-        let stat = ctx
-            .ledger
-            .statistics
-            .subscriptions(&mut ctx.session, from, to)
-            .await?;
-
-        let mut msg = format!(
-            "\n\nКлиенты без абонементов {}:",
-            stat.people_without_subs.len()
-        );
-        if !stat.people_without_subs.is_empty() {
-            for id in &stat.people_without_subs {
-                let user = ctx.ledger.users.get(&mut ctx.session, *id).await?;
-                if let Some(user) = user {
-                    msg.push_str(&format!(
-                        "\n👤{} {}",
-                        link_to_user(&user),
-                        fmt_phone(user.phone.as_deref())
-                    ));
-                } else {
-                    msg.push_str(&format!("\n👤{}", id));
-                }
-            }
-        }
-        ctx.send_notification(&msg).await?;
-
-        Ok(())
-    }
-    async fn print_subscription_statistics(&self, ctx: &mut Context) -> Result<()> {
-        let (from, to) = self.range.range();
-
-        let stat = ctx
-            .ledger
-            .statistics
-            .subscriptions(&mut ctx.session, from, to)
-            .await?;
-        subscriptions(ctx, &stat).await?;
-        Ok(())
-    }
-}
+impl StatisticsView {}
 
 #[async_trait]
 impl View for StatisticsView {
@@ -151,34 +40,46 @@ impl View for StatisticsView {
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), Error> {
         ctx.ensure(Rule::ViewStatistics)?;
-        let keymap = InlineKeyboardMarkup::default()
-            .append_row(vec![
-                Calldata::PrevMonth.button("🔙"),
-                Calldata::Full.button("За все время"),
-                Calldata::NextMonth.button("🔜"),
-            ])
-            .append_row(Calldata::TrainingStat.btn_row("Статистика по тренировкам"))
-            .append_row(Calldata::ClientsTop.btn_row("ТОП девочек"))
-            .append_row(
-                Calldata::ClientsWithOnlyTestSub.btn_row("Клиенты с пробными но без абонементов"),
-            )
-            .append_row(Calldata::ClientsWithNoSubs.btn_row("Клиенты без абонементов"))
-            .append_row(Calldata::SubscriptionStatistics.btn_row("Статистика по абонементам"));
 
-        let (from, to) = self.range.range();
+        let now = Local::now();
+        let has_next = self.range.base_date() < now;
 
-        let msg = match self.range {
-            Range::Full => "📊Статистика за все время".to_string(),
-            _ => format!(
-                "📊Статистика с _{}_ по _{}_",
-                from.map(|f| f.format("%d\\.%m\\.%Y").to_string())
-                    .unwrap_or_else(|| "\\-".to_string()),
-                to.map(|f| f.format("%d\\.%m\\.%Y").to_string())
-                    .unwrap_or_else(|| "\\-".to_string())
-            ),
+        let navi = if has_next {
+            vec![Calldata::Prev.button("⬅️"), Calldata::Next.button("➡️")]
+        } else {
+            vec![Calldata::Prev.button("⬅️")]
         };
 
-        ctx.edit_origin(&msg, keymap).await?;
+        let keymap = InlineKeyboardMarkup::default()
+            .append_row(vec![
+                Calldata::Range(Range::Day(now).into()).button(if self.range.is_day() {
+                    "✅по дням"
+                } else {
+                    "по дням"
+                }),
+                Calldata::Range(Range::Week(now).into()).button(if self.range.is_week() {
+                    "✅по неделям"
+                } else {
+                    "по неделям"
+                }),
+                Calldata::Range(Range::Month(now).into()).button(if self.range.is_month() {
+                    "✅по месяцам"
+                } else {
+                    "по месяцам"
+                }),
+            ])
+            .append_row(navi)
+            .append_row(Calldata::Budget.btn_row("💰 Бюджет"))
+            .append_row(Calldata::Instructor.btn_row("👨‍🏫 Инструкторы"))
+            .append_row(Calldata::Clients.btn_row("👥 Клиенты"))
+            .append_row(Calldata::Marketing.btn_row("📈 Маркетинг"));
+
+        let (from, to) = self.range.range()?;
+        ctx.edit_origin(
+            &format!("📊 Статистика \nс *{}* по *{}*", fmt_dt(&from), fmt_dt(&to)),
+            keymap,
+        )
+        .await?;
 
         Ok(())
     }
@@ -187,37 +88,38 @@ impl View for StatisticsView {
         ctx.ensure(Rule::ViewStatistics)?;
 
         match calldata!(data) {
-            Calldata::NextMonth => {
-                if !self.range.is_month() {
-                    self.range = Range::Month(Local::now());
-                } else {
-                    self.range = __self.range.next_month();
+            Calldata::Budget => {
+                budget::send_statistic(ctx, self.range).await?;
+            }
+            Calldata::Instructor => {
+                instructors::send_statistic(ctx, self.range).await?;
+            }
+            Calldata::Clients => {
+                clients::send_statistic(ctx, self.range).await?;
+            }
+            Calldata::Marketing => {
+                marketing::send_statistic(ctx, self.range).await?;
+            }
+            Calldata::Range(range) => {
+                let range: Range = range.into();
+                let base_date = self.range.base_date();
+                match range {
+                    Range::Day(_) => {
+                        self.range = Range::Day(base_date);
+                    }
+                    Range::Week(_) => {
+                        self.range = Range::Week(base_date);
+                    }
+                    Range::Month(_) => {
+                        self.range = Range::Month(base_date);
+                    }
                 }
             }
-            Calldata::PrevMonth => {
-                if !self.range.is_month() {
-                    self.range = Range::Month(Local::now());
-                } else {
-                    self.range = __self.range.prev_month();
-                }
+            Calldata::Next => {
+                self.range = self.range.next()?;
             }
-            Calldata::Full => {
-                self.range = Range::Full;
-            }
-            Calldata::TrainingStat => {
-                self.print_training_statistics(ctx).await?;
-            }
-            Calldata::ClientsTop => {
-                self.print_top_clients(ctx).await?;
-            }
-            Calldata::ClientsWithOnlyTestSub => {
-                self.print_clients_with_only_test_sub(ctx).await?;
-            }
-            Calldata::ClientsWithNoSubs => {
-                self.print_clients_with_no_subs(ctx).await?;
-            }
-            Calldata::SubscriptionStatistics => {
-                self.print_subscription_statistics(ctx).await?;
+            Calldata::Prev => {
+                self.range = self.range.prev()?;
             }
         }
         Ok(Jmp::Stay)
@@ -226,299 +128,38 @@ impl View for StatisticsView {
 
 #[derive(Serialize, Deserialize)]
 enum Calldata {
-    NextMonth,
-    PrevMonth,
-    Full,
-    TrainingStat,
-    ClientsTop,
-    ClientsWithOnlyTestSub,
-    ClientsWithNoSubs,
-    SubscriptionStatistics,
+    Budget,
+    Instructor,
+    Clients,
+    Marketing,
+    Range(RangeCalldata),
+    Next,
+    Prev,
 }
 
-async fn subscriptions(ctx: &mut Context, stat: &SubscriptionStatistics) -> Result<(), Error> {
-    let mut msg = "📊Статистика по абонементам".to_string();
-    msg.push_str(&format!(
-        "\nc _{}_ по _{}_:",
-        fmt_date(&stat.from),
-        fmt_date(&stat.to)
-    ));
+#[derive(Serialize, Deserialize)]
+enum RangeCalldata {
+    Day(CallbackDateTime),
+    Week(CallbackDateTime),
+    Month(CallbackDateTime),
+}
 
-    msg.push_str(&format!(
-        "\n\nВсего продано абонементов: *{}* на сумму *{}*",
-        stat.subs_count,
-        escape(&stat.total_subs_sum.to_string())
-    ));
-
-    for sub in &stat.subs {
-        msg.push_str(&format!(
-            "\n\n\n📚{}:\nВсего продано: *{}* на сумму *{}*",
-            escape(&sub.name),
-            sub.total,
-            escape(&sub.sum.to_string())
-        ));
-    }
-
-    msg.push_str(&format!(
-        "\n\n\nПродано пробных занятий: *{}* из них купили абонимент: *{}*",
-        stat.test_subs_count, stat.users_buy_test_sub_and_stay,
-    ));
-
-    if !stat.come_from.is_empty() {
-        msg.push_str("\n\nОткуда пришли:");
-        for (come_from, stat) in &stat.come_from {
-            msg.push_str(&format!(
-                "\n\n📚{}:\nВсего пользователей: *{}* на сумму *{}*\nзаявки:*{}*\nкупили тестовое:*{}*\nкупили абонемент:*{}*",
-                fmt_come_from(*come_from),
-                stat.total_users,
-                escape(&stat.sum.to_string()),
-                stat.requests,
-                stat.buy_test_subs,
-                stat.buy_subs,
-            ));
+impl From<Range> for RangeCalldata {
+    fn from(value: Range) -> Self {
+        match value {
+            Range::Day(date) => RangeCalldata::Day(CallbackDateTime::from(date)),
+            Range::Week(date) => RangeCalldata::Week(CallbackDateTime::from(date)),
+            Range::Month(date) => RangeCalldata::Month(CallbackDateTime::from(date)),
         }
     }
-
-    msg.push_str(&format!("\n👥Всего клиентов: *{}*", stat.total_users));
-    msg.push_str(&format!(
-        "\nКлиентов с абонементами: *{}*",
-        stat.total_users as usize - stat.people_without_subs.len()
-    ));
-    ctx.send_notification(&msg).await?;
-    Ok(())
 }
 
-async fn user_stat(ctx: &mut Context, users: HashMap<ObjectId, UserStat>) -> Result<(), Error> {
-    if users.is_empty() {
-        return Ok(());
-    }
-    let mut msg = "📊Статистика по клиентам \\(ТОП 10\\):".to_string();
-    let mut users: Vec<(ObjectId, UserStat)> = users.into_iter().collect();
-    users.sort_by(|a, b| b.1.total.cmp(&a.1.total));
-
-    for idx in 0..users.len().min(10) {
-        let (id, stat) = &users[idx];
-        let user_name = user_name(ctx, *id).await?;
-        msg.push_str(&format!(
-            "\n\n\n👤{}:\n📅Посещено тренировок: _{}_\nПо дням: {}\nПо инструкторам:{}\nПо времени:{}\nПо программе:{}",
-            escape(&user_name),
-            stat.total,
-            user_by_day(&stat.weekdays, stat.total),
-            user_by_instructor(ctx, &stat.instructors, stat.total).await?,
-            user_by_time_slot(&stat.time_slots, stat.total),
-            user_by_program(ctx, &stat.programs, stat.total).await?
-        ));
-    }
-
-    ctx.send_notification(&msg).await?;
-    Ok(())
-}
-
-async fn user_by_program(
-    ctx: &mut Context,
-    program: &HashMap<ObjectId, u32>,
-    total: u32,
-) -> Result<String, Error> {
-    let mut program: Vec<(ObjectId, u32)> = program.iter().map(|f| (*f.0, *f.1)).collect();
-    program.sort_by(|a, b| b.1.cmp(&a.1));
-    let mut msg = "".to_string();
-    for (id, count) in program {
-        let name = program_name(ctx, id).await?;
-        msg.push_str(&format!(
-            "\n 📚{}:_{}%_",
-            escape(&name),
-            (count as f64 / total as f64 * 100.0).round()
-        ));
-    }
-    Ok(msg)
-}
-
-fn user_by_time_slot(time_slot: &HashMap<TimeSlot, u32>, total: u32) -> String {
-    let mut time_slot: Vec<(TimeSlot, u32)> = time_slot.iter().map(|f| (*f.0, *f.1)).collect();
-    time_slot.sort_by(|a, b| b.1.cmp(&a.1));
-    time_slot
-        .into_iter()
-        .map(|(day, count)| {
-            format!(
-                "\n *{}*:_{}%_",
-                day,
-                (count as f64 / total as f64 * 100.0).round()
-            )
-        })
-        .join(", ")
-}
-
-fn user_by_day(weekdays: &HashMap<Weekday, u32>, total: u32) -> String {
-    let mut days: Vec<(Weekday, u32)> = weekdays.iter().map(|f| (*f.0, *f.1)).collect();
-    days.sort_by(|a, b| b.1.cmp(&a.1));
-    days.into_iter()
-        .map(|(day, count)| {
-            format!(
-                "\n *{}*:_{}%_",
-                fmt_weekday(day),
-                (count as f64 / total as f64 * 100.0).round()
-            )
-        })
-        .join(", ")
-}
-
-async fn user_by_instructor(
-    ctx: &mut Context,
-    instructors: &HashMap<ObjectId, u32>,
-    total: u32,
-) -> Result<String, Error> {
-    let mut instructors: Vec<(ObjectId, u32)> = instructors.iter().map(|f| (*f.0, *f.1)).collect();
-    instructors.sort_by(|a, b| b.1.cmp(&a.1));
-    let mut msg = "".to_string();
-    for (id, count) in instructors {
-        let name = instructor_name(ctx, id).await?;
-        msg.push_str(&format!(
-            "\n 👤{}:_{}%_",
-            escape(&name),
-            (count as f64 / total as f64 * 100.0).round()
-        ));
-    }
-    Ok(msg)
-}
-
-async fn by_time_slot(ctx: &mut Context, stat: HashMap<TimeSlot, EntryInfo>) -> Result<(), Error> {
-    if stat.is_empty() {
-        return Ok(());
-    }
-    let mut msg = "📊Статистика по времени:".to_string();
-    let mut stat: Vec<(TimeSlot, EntryInfo, f64)> = stat
-        .into_iter()
-        .map(|(id, info)| {
-            let avg = info.avg_visits();
-            (id, info, avg)
-        })
-        .collect();
-
-    stat.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
-    for (slot, info, avg) in stat {
-        msg.push_str(&format!(
-            "\n\n\n🕒{}:\n{}\nСредняя посещаемость:{}",
-            slot,
-            print_entry_info(&info),
-            avg.round()
-        ));
-    }
-    ctx.send_notification(&msg).await?;
-    Ok(())
-}
-
-async fn by_instructor(ctx: &mut Context, stat: HashMap<ObjectId, EntryInfo>) -> Result<(), Error> {
-    if stat.is_empty() {
-        return Ok(());
-    }
-    let mut msg = "📊Статистика по инструкторам:".to_string();
-    let mut stat: Vec<(ObjectId, EntryInfo, f64)> = stat
-        .into_iter()
-        .map(|(id, info)| {
-            let avg = info.avg_visits();
-            (id, info, avg)
-        })
-        .collect();
-
-    stat.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
-    for (id, info, avg) in stat {
-        let name = instructor_name(ctx, id).await?;
-        msg.push_str(&format!(
-            "\n\n\n👤{}:\n{}\nСредняя посещаемость:{}",
-            escape(&name),
-            print_entry_info(&info),
-            avg.round()
-        ));
-    }
-    ctx.send_notification(&msg).await?;
-    Ok(())
-}
-
-async fn by_program(ctx: &mut Context, stat: HashMap<ObjectId, EntryInfo>) -> Result<(), Error> {
-    if stat.is_empty() {
-        return Ok(());
-    }
-    let mut msg = "📊Статистика по программам:".to_string();
-    let mut stat: Vec<(ObjectId, EntryInfo, f64)> = stat
-        .into_iter()
-        .map(|(id, info)| {
-            let avg = info.avg_visits();
-            (id, info, avg)
-        })
-        .collect();
-
-    stat.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
-    for (id, info, avg) in stat {
-        let program = program_name(ctx, id).await?;
-        msg.push_str(&format!(
-            "\n\n\n📚{}:\n{}\nСредняя посещаемость:{}",
-            escape(&program),
-            print_entry_info(&info),
-            avg.round()
-        ));
-    }
-    ctx.send_notification(&msg).await?;
-    Ok(())
-}
-
-async fn by_weekday(
-    ctx: &mut Context,
-    by_weekday: HashMap<Weekday, EntryInfo>,
-) -> Result<(), Error> {
-    if by_weekday.is_empty() {
-        return Ok(());
-    }
-
-    let mut msg = "📊Статистика по дням недели:".to_string();
-    let mut by_weekday: Vec<(Weekday, EntryInfo, f64)> = by_weekday
-        .into_iter()
-        .map(|(id, info)| {
-            let avg = info.avg_visits();
-            (id, info, avg)
-        })
-        .collect();
-
-    by_weekday.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
-    for (weekday, info, avg) in by_weekday {
-        msg.push_str(&format!(
-            "\n\n\n📅{}:\n{}\nСредняя посещаемость:{}",
-            fmt_weekday(weekday),
-            print_entry_info(&info),
-            avg.round()
-        ));
-    }
-    ctx.send_notification(&msg).await?;
-    Ok(())
-}
-
-fn print_entry_info(entry_info: &EntryInfo) -> String {
-    format!(
-        "📅Всего тренировок: _{}_\n💰Заработано: _{}_\n🎁Награда инструкторов: _{}_\n👥Посещений: _{}_\n🚫Тренеровок без клиентов: _{}_",
-        entry_info.total_training,
-        escape(&entry_info.earn.to_string()),
-        escape(&entry_info.reward.to_string()),
-        entry_info.visit,
-        entry_info.without_clients
-    )
-}
-
-async fn program_name(ctx: &mut Context, id: ObjectId) -> Result<String, Error> {
-    let program = ctx.ledger.programs.get_by_id(&mut ctx.session, id).await?;
-    Ok(program.map(|p| p.name).unwrap_or_else(|| id.to_string()))
-}
-
-async fn instructor_name(ctx: &mut Context, id: ObjectId) -> Result<String, Error> {
-    let user = ctx.ledger.users.get(&mut ctx.session, id).await?;
-    Ok(user
-        .map(|u| u.name.first_name)
-        .unwrap_or_else(|| id.to_string()))
-}
-
-async fn user_name(ctx: &mut Context, id: ObjectId) -> Result<String, Error> {
-    let user = ctx.ledger.users.get(&mut ctx.session, id).await?;
-    if let Some(user) = user {
-        Ok(user.name.to_string())
-    } else {
-        Ok(id.to_string())
+impl From<RangeCalldata> for Range {
+    fn from(value: RangeCalldata) -> Self {
+        match value {
+            RangeCalldata::Day(date) => Range::Day(date.into()),
+            RangeCalldata::Week(date) => Range::Week(date.into()),
+            RangeCalldata::Month(date) => Range::Month(date.into()),
+        }
     }
 }
