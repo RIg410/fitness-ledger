@@ -1,6 +1,8 @@
 use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
+use crate::decimal::Decimal;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Program {
     #[serde(rename = "_id")]
@@ -40,7 +42,7 @@ impl Default for Program {
 pub enum TrainingType {
     Group { is_free: bool },
     Personal { is_free: bool },
-    Event { is_free: bool },
+    SubRent { is_free: bool, price: Decimal },
 }
 
 impl TrainingType {
@@ -48,7 +50,10 @@ impl TrainingType {
         match self {
             TrainingType::Group { is_free: ref mut f } => *f = is_free,
             TrainingType::Personal { is_free: ref mut f } => *f = is_free,
-            TrainingType::Event { is_free: ref mut f } => *f = is_free,
+            TrainingType::SubRent {
+                is_free: ref mut f,
+                price: _,
+            } => *f = is_free,
         }
     }
 
@@ -60,15 +65,15 @@ impl TrainingType {
         matches!(self, TrainingType::Personal { .. })
     }
 
-    pub fn is_event(&self) -> bool {
-        matches!(self, TrainingType::Event { .. })
+    pub fn is_sub_rent(&self) -> bool {
+        matches!(self, TrainingType::SubRent { .. })
     }
 
     pub fn is_free(&self) -> bool {
         match self {
             TrainingType::Group { is_free } => *is_free,
             TrainingType::Personal { is_free } => *is_free,
-            TrainingType::Event { is_free } => *is_free,
+            TrainingType::SubRent { is_free, price: _ } => *is_free,
         }
     }
 

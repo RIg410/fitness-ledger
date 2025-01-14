@@ -101,6 +101,7 @@ pub enum Rule {
     FreeSell,
 
     //Finance
+    SubRent,
     ViewFinance,
     MakePayment,
     MakeDeposit,

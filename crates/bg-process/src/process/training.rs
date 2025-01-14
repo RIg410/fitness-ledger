@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use eyre::{bail, eyre, Error, Result};
 use log::{error, info};
 use model::{
+    program::TrainingType,
     session::Session,
     training::{Statistics, Training, TrainingStatus},
     user::{employee::UserRewardContribution, family::FindFor},
@@ -37,7 +38,14 @@ impl Task for TriningBg {
                     TrainingStatus::OpenToSignup { .. }
                     | TrainingStatus::ClosedToSignup
                     | TrainingStatus::InProgress => continue,
-                    TrainingStatus::Finished => self.process_finished(&mut session, training).await,
+                    TrainingStatus::Finished => match training.tp {
+                        TrainingType::Group { .. } | TrainingType::Personal { .. } => {
+                            self.process_finished_training(&mut session, training).await
+                        }
+                        TrainingType::SubRent { .. } => {
+                            self.process_finished_sub_rent(&mut session, training).await
+                        }
+                    },
                     TrainingStatus::Cancelled => {
                         if training.get_slot().start_at() < now {
                             self.process_canceled(&mut session, training).await
@@ -61,7 +69,40 @@ impl TriningBg {
     }
 
     #[tx]
-    async fn process_finished(&self, session: &mut Session, training: Training) -> Result<()> {
+    async fn process_finished_sub_rent(
+        &self,
+        session: &mut Session,
+        training: Training,
+    ) -> Result<()> {
+        info!("Finalize sub rent:{:?}", training);
+        let mut statistic = Statistics::default();
+        let (is_free, price) = match training.tp {
+            TrainingType::SubRent { is_free, price } => (is_free, price),
+            _ => bail!("Invalid training type"),
+        };
+
+        if !is_free {
+            statistic.earned += price;
+            self.ledger.treasury.take_sub_rent(session, price).await?;
+        }
+
+        self.ledger
+            .calendar
+            .finalized(session, training.id(), statistic)
+            .await?;
+        self.ledger
+            .history
+            .process_finished(session, &training)
+            .await?;
+        Ok(())
+    }
+
+    #[tx]
+    async fn process_finished_training(
+        &self,
+        session: &mut Session,
+        training: Training,
+    ) -> Result<()> {
         info!("Finalize training:{:?}", training);
 
         let mut statistic = Statistics::default();

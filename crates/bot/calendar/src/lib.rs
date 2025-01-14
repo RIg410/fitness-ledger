@@ -4,8 +4,6 @@ use bot_core::calldata;
 use bot_core::context::Context;
 use bot_core::widget::{Jmp, View};
 use bot_trainigs::list::TrainingList;
-use bot_trainigs::program::list::ProgramList;
-use bot_trainigs::schedule::ScheduleTrainingPreset;
 use bot_trainigs::view::TrainingView;
 use bot_viewer::day::{fmt_dm, fmt_month, fmt_weekday};
 use bot_viewer::rooms::fmt_room_emoji;
@@ -21,6 +19,11 @@ use serde::{Deserialize, Serialize};
 use std::vec;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 use teloxide::utils::markdown::escape;
+
+mod schedule;
+// mod personal;
+// mod sub_rent;
+// mod place;
 
 #[derive(Default)]
 pub struct CalendarView {
@@ -74,10 +77,11 @@ impl View for CalendarView {
                 Ok(Jmp::Stay)
             }
             Callback::SelectTraining(id) => Ok(TrainingView::new(id.into()).into()),
-            Callback::AddTraining => {
+            Callback::Schedule => {
                 ctx.ensure(Rule::EditSchedule)?;
-                let preset = ScheduleTrainingPreset::with_day(self.selected_day.local());
-                Ok(ProgramList::new(preset).into())
+                Ok(
+                    schedule::ScheduleView::new(self.selected_day.local()).into(),
+                )
             }
             Callback::MyTrainings => {
                 if ctx.me.employee.is_some() {
@@ -192,6 +196,17 @@ pub async fn render_week(
 
     day.training.sort_by_key(|a| a.get_slot().start_at());
     for training in &day.training {
+        if training.tp.is_sub_rent() && !ctx.is_employee() {
+            continue;
+        }
+
+        if training.tp.is_personal() {
+            let client_id = training.clients.get(0).copied().unwrap_or_default();
+            if !(ctx.is_employee() || client_id == ctx.me.id) {
+                continue;
+            }
+        }
+
         if let Some(proto_id) = &filter.proto_id {
             if training.proto_id != *proto_id {
                 continue;
@@ -225,7 +240,7 @@ pub async fn render_week(
     buttons = buttons.append_row(Callback::MyTrainings.btn_row("🫶🏻 Мои тренировки"));
 
     if ctx.has_right(Rule::EditSchedule) {
-        buttons = buttons.append_row(Callback::AddTraining.btn_row("📝  запланировать тренировку"));
+        buttons = buttons.append_row(Callback::Schedule.btn_row("📝  запланировать"));
     }
 
     Ok((msg, buttons))
@@ -248,7 +263,7 @@ enum Callback {
     GoToWeek(CallbackDateTime),
     SelectDay(CallbackDateTime),
     SelectTraining(TrainingIdCallback),
-    AddTraining,
+    Schedule,
     MyTrainings,
     SelectRoom([u8; 12]),
 }

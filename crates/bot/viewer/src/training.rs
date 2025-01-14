@@ -61,8 +61,8 @@ pub fn fmt_training_type(tp: TrainingType) -> String {
                 ""
             }
         ),
-        TrainingType::Event { is_free } => format!(
-            "Событие {}",
+        TrainingType::SubRent { is_free, price: _ } => format!(
+            "Субаренда {}",
             if is_free {
                 "\\(бесплатная\\)"
             } else {

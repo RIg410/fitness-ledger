@@ -2,7 +2,6 @@ pub mod history;
 pub mod in_out;
 pub mod marketing;
 pub mod operation;
-pub mod pay_rent;
 pub mod stat;
 pub mod sub_rent;
 pub mod employees;
@@ -39,7 +38,6 @@ impl View for FinanceView {
 
         if ctx.has_right(Rule::MakePayment) {
             keymap = keymap.append_row(Callback::Payment.btn_row("Оплатить 💳"));
-            keymap = keymap.append_row(Callback::PayRent.btn_row("Оплата аренды 🏠"));
             keymap = keymap.append_row(Callback::PayMarketing.btn_row("Оплата маркетинга 📈"));
 
             keymap = keymap.append_row(Callback::SubRent.btn_row("Субаренда 🏠"));
@@ -87,10 +85,6 @@ impl View for FinanceView {
                 ))
                 .into())
             }
-            Callback::PayRent => {
-                ctx.ensure(Rule::MakePayment)?;
-                Ok(pay_rent::PayRent.into())
-            }
             Callback::PayMarketing => {
                 ctx.ensure(Rule::MakePayment)?;
                 Ok(marketing::PayRent.into())
@@ -109,7 +103,6 @@ impl View for FinanceView {
 
 #[derive(Serialize, Deserialize)]
 enum Callback {
-    PayRent,
     PayMarketing,
     Payment,
 
