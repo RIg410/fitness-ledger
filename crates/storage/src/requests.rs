@@ -1,4 +1,4 @@
-use bson::{doc, oid::ObjectId};
+use bson::{doc, oid::ObjectId, Regex};
 use chrono::{DateTime, Local, Utc};
 use eyre::Error;
 use model::{request::Request, session::Session};
@@ -17,13 +17,45 @@ impl RequestStore {
             .create_index(IndexModel::builder().keys(doc! { "phone": 1 }).build())
             .await?;
         reward
-            .create_index(
-                IndexModel::builder()
-                    .keys(doc! { "created": -1 })
-                    .build(),
-            )
+            .create_index(IndexModel::builder().keys(doc! { "created": -1 }).build())
             .await?;
         Ok(RequestStore { store: reward })
+    }
+
+    pub async fn find_by_words(
+        &self,
+        session: &mut Session,
+        words: Vec<&str>,
+    ) -> Result<Vec<Request>, Error> {
+        let pattern = format!("({})", words.join("|"));
+
+        let query = doc! {
+            "$or": [
+                { "comment": {
+                    "$regex": Regex {
+                        pattern: pattern.clone(),
+                        options: String::from("i"),
+                    }
+                }},
+                { "history": {
+                    "$elemMatch": {
+                        "comment": {
+                            "$regex": Regex {
+                                pattern: pattern,
+                                options: String::from("i"),
+                            }
+                        }
+                    }
+                }}
+            ]
+        };
+
+        let mut cursor = self.store.find(query).session(&mut *session).await?;
+        let mut requests = Vec::new();
+        while let Some(request) = cursor.next(&mut *session).await {
+            requests.push(request?);
+        }
+        Ok(requests)
     }
 
     pub async fn get(&self, session: &mut Session, id: ObjectId) -> Result<Option<Request>, Error> {
