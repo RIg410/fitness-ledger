@@ -8,9 +8,7 @@ use bot_core::{
 use model::user::extension::UserExtension;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    types::{InlineKeyboardButton, InlineKeyboardMarkup},
-};
+use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 pub struct NotificationView {
     pub id: ObjectId,

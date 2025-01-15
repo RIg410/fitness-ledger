@@ -1,6 +1,5 @@
 use super::{calendar::Calendar, history::History, requests::Requests, users::Users};
 
-
 pub struct Statistics {
     calendar: Calendar,
     history: History,
