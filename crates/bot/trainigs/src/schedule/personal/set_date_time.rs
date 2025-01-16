@@ -11,7 +11,7 @@ use log::warn;
 use model::slot::Slot;
 use teloxide::{
     types::{InlineKeyboardMarkup, Message},
-    utils::html::escape,
+    utils::markdown::escape,
 };
 
 #[derive(Default)]
@@ -33,9 +33,9 @@ impl View for SetDateTime {
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let request = if self.preset.day.is_none() {
-            "На какой день назначить тренировку? _дд\\.мм_"
+            "На какой день назначить тренировку? дд\\.мм"
         } else {
-            "На какое время назначить тренировку? _чч\\:мм_"
+            "На какое время назначить тренировку? чч\\:мм"
         };
 
         let msg = render_msg(ctx, &self.preset, request).await?;

@@ -54,7 +54,7 @@ impl View for Stat {
         writeln!(&mut text, "*Поступления*:")?;
         writeln!(
             &mut text,
-            "Проданно абониментов:_{}_ на сумму _{}_",
+            "Проданно абонементов:_{}_ на сумму _{}_",
             stat.income.subscriptions.count,
             escape(&stat.income.subscriptions.sum.to_string())
         )?;

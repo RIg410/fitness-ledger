@@ -11,7 +11,7 @@ use log::warn;
 use model::slot::Slot;
 use teloxide::{
     types::{InlineKeyboardMarkup, Message},
-    utils::html::escape,
+    utils::markdown::escape,
 };
 
 #[derive(Default)]
@@ -40,9 +40,9 @@ impl View for SetDateTime {
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
 
         let request = if self.preset.day.is_none() {
-            "На какой день назначить тренировку? _дд\\.мм_"
+            "На какой день назначить тренировку? дд\\.мм"
         } else {
-            "На какое время назначить тренировку? _чч\\:мм_"
+            "На какое время назначить тренировку? чч\\:мм"
         };
 
         let msg = render_msg(ctx, &training, &self.preset, request).await?;
@@ -102,7 +102,7 @@ impl View for SetDateTime {
                     .check_time_slot(&mut ctx.session, slot, preset.is_one_time.unwrap_or(true))
                     .await?
                 {
-                    ctx.send_msg(&render_time_slot_collision(&collision))
+                    ctx.send_notification(&render_time_slot_collision(&collision))
                         .await?;
                     preset.date_time = None;
                 } else {
@@ -110,7 +110,8 @@ impl View for SetDateTime {
                 }
                 return Ok(preset.into_next_view().into());
             } else {
-                ctx.send_msg("Неверный формат времени\\. _чч\\:мм_").await?;
+                ctx.send_notification("Неверный формат времени\\. _чч\\:мм_")
+                    .await?;
             }
         }
         Ok(Jmp::Stay)
