@@ -78,7 +78,37 @@ impl Training {
         }
     }
 
-    pub fn with_program(
+    pub fn new_personal(
+        start_at: DateTime<Local>,
+        room: ObjectId,
+        instructor: ObjectId,
+        client: ObjectId,
+        duration_min: u32,
+        name: String,
+        instructor_description: String,
+    ) -> Training {
+        Training {
+            id: ObjectId::new(),
+            proto_id: ObjectId::from_bytes([0; 12]),
+            name,
+            description: instructor_description,
+            start_at: start_at.with_timezone(&Utc),
+            duration_min,
+            instructor,
+            clients: vec![client],
+            capacity: 1,
+            is_one_time: true,
+            is_canceled: false,
+            is_processed: false,
+            statistics: None,
+            notified: Default::default(),
+            keep_open: false,
+            tp: TrainingType::Personal { is_free: false },
+            room,
+        }
+    }
+
+    pub fn new_group(
         program: Program,
         start_at: DateTime<Local>,
         instructor: ObjectId,

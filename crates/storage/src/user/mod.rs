@@ -41,6 +41,23 @@ impl UserStore {
         })
     }
 
+    pub async fn find_user_for_personal_training(
+        &self,
+        session: &mut Session,
+        instructor_id: ObjectId,
+    ) -> Result<Vec<User>> {
+        let filter = doc! {
+            "subscriptions": {
+                "$elemMatch": {
+                    "couch_filter": instructor_id
+                }
+            }
+        };
+
+        let mut cursor = self.users.find(filter).session(&mut *session).await?;
+        Ok(cursor.stream(&mut *session).try_collect().await?)
+    }
+
     pub async fn find_users_with_right(
         &self,
         session: &mut Session,

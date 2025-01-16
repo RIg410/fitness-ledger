@@ -1,28 +1,27 @@
-use super::{render_msg, ScheduleTrainingPreset};
+use super::{render_msg, PersonalTrainingPreset, DURATION};
 use async_trait::async_trait;
 use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use chrono::{DateTime, Datelike as _, Local, TimeZone, Timelike};
+use chrono::{DateTime, Datelike as _, Local, TimeZone, Timelike, Utc};
 use eyre::{Error, Result};
 use ledger::service::calendar::TimeSlotCollision;
 use log::warn;
-use mongodb::bson::oid::ObjectId;
-use teloxide::{types::Message, utils::html::escape};
+use model::slot::Slot;
+use teloxide::{
+    types::{InlineKeyboardMarkup, Message},
+    utils::html::escape,
+};
 
 #[derive(Default)]
 pub struct SetDateTime {
-    id: ObjectId,
-    preset: Option<ScheduleTrainingPreset>,
+    preset: PersonalTrainingPreset,
 }
 
 impl SetDateTime {
-    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
-        Self {
-            id,
-            preset: Some(preset),
-        }
+    pub fn new(preset: PersonalTrainingPreset) -> Self {
+        Self { preset }
     }
 }
 
@@ -33,22 +32,16 @@ impl View for SetDateTime {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let training = ctx
-            .ledger
-            .programs
-            .get_by_id(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;
-        ctx.send_msg(&msg).await?;
-
-        if self.preset.as_ref().unwrap().day.is_none() {
-            ctx.send_msg("На какой день назначить тренировку? _дд\\.мм_")
-                .await?;
+        let request = if self.preset.day.is_none() {
+            "На какой день назначить тренировку? _дд\\.мм_"
         } else {
-            ctx.send_msg("На какое время назначить тренировку? _чч\\:мм_")
-                .await?;
-        }
+            "На какое время назначить тренировку? _чч\\:мм_"
+        };
+
+        let msg = render_msg(ctx, &self.preset, request).await?;
+        ctx.edit_origin(&msg, InlineKeyboardMarkup::default())
+            .await?;
+
         Ok(())
     }
 
@@ -68,30 +61,30 @@ impl View for SetDateTime {
             }
         };
 
-        if self.preset.as_ref().unwrap().day.is_none() {
+        if self.preset.day.is_none() {
             if let Ok(day) = parts.to_date() {
-                let mut preset = self.preset.take().unwrap();
+                let mut preset = self.preset;
                 preset.day = Some(day);
-                return Ok(preset.into_next_view(self.id).into());
+                return Ok(preset.into_next_view().into());
             } else {
                 ctx.send_msg("Неверный формат даты\\. _дд\\.мм_").await?;
             }
         } else {
-            let mut preset = self.preset.take().unwrap();
+            let mut preset = self.preset;
             let day = preset.day.unwrap();
             let date_time = day.with_hour(parts.0).and_then(|d| d.with_minute(parts.1));
 
             if let Some(date_time) = date_time {
+                let slot = Slot::new(
+                    date_time.with_timezone(&Utc),
+                    DURATION,
+                    preset.room.unwrap(),
+                );
+
                 if let Some(collision) = ctx
                     .ledger
                     .calendar
-                    .check_time_slot(
-                        &mut ctx.session,
-                        self.id,
-                        date_time,
-                        preset.room.unwrap(),
-                        preset.is_one_time.unwrap_or(true),
-                    )
+                    .check_time_slot(&mut ctx.session, slot, true)
                     .await?
                 {
                     ctx.send_msg(&render_time_slot_collision(&collision))
@@ -100,7 +93,7 @@ impl View for SetDateTime {
                 } else {
                     preset.date_time = Some(date_time);
                 }
-                return Ok(preset.into_next_view(self.id).into());
+                return Ok(preset.into_next_view().into());
             } else {
                 ctx.send_msg("Неверный формат времени\\. _чч\\:мм_").await?;
             }

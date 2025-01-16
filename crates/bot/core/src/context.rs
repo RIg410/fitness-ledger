@@ -40,6 +40,13 @@ impl Context {
         self.me.employee.is_some()
     }
 
+    pub fn is_couch(&self) -> bool {
+        match &self.me.employee {
+            Some(employee) => employee.is_couch(),
+            None => false,
+        }
+    }
+
     pub fn is_active(&self) -> bool {
         self.me.is_active
     }

@@ -30,13 +30,13 @@ pub async fn fmt_subscription_type(
             msg
         }
         SubscriptionType::Personal { couch_filter } => {
-            if let Some(filter) = couch_filter {
-                let user = ctx.ledger.users.get(&mut ctx.session, *filter).await?;
-                if let Some(user) = user {
-                    format!("Персональные занятия с {}", escape(&user.name.first_name))
-                } else {
-                    "Персональные занятия".to_string()
-                }
+            let user = ctx
+                .ledger
+                .users
+                .get(&mut ctx.session, *couch_filter)
+                .await?;
+            if let Some(user) = user {
+                format!("Персональные занятия с {}", escape(&user.name.first_name))
             } else {
                 "Персональные занятия".to_string()
             }

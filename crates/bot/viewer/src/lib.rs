@@ -1,12 +1,12 @@
 use teloxide::utils::markdown::escape;
 
 pub mod day;
+pub mod error;
 pub mod request;
+pub mod rooms;
 pub mod subscription;
 pub mod training;
 pub mod user;
-pub mod rooms;
-pub mod error;
 
 pub fn fmt_phone(phone: Option<&str>) -> String {
     if let Some(phone) = phone {
@@ -25,6 +25,26 @@ pub fn fmt_phone(phone: Option<&str>) -> String {
         result
     } else {
         "Не указан".to_string()
+    }
+}
+
+pub fn fmt_phone_escape_less(phone: Option<&str>) -> String {
+    if let Some(phone) = phone {
+        if phone.len() != 11 {
+            return phone.to_string();
+        }
+        let mut result = String::with_capacity(16);
+        result.push_str("+7 (");
+        result.push_str(&phone[1..4]);
+        result.push_str(") ");
+        result.push_str(&phone[4..7]);
+        result.push_str("-");
+        result.push_str(&phone[7..9]);
+        result.push_str("-");
+        result.push_str(&phone[9..11]);
+        result
+    } else {
+        "-".to_string()
     }
 }
 

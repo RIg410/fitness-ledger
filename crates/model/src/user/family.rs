@@ -97,11 +97,7 @@ impl Payer<&mut User> {
                 }
                 SubscriptionType::Personal { couch_filter } => {
                     if training.tp.is_personal() {
-                        if let Some(couch) = couch_filter {
-                            training.instructor == *couch
-                        } else {
-                            true
-                        }
+                        training.instructor == *couch_filter
                     } else {
                         false
                     }
@@ -194,11 +190,7 @@ impl<'u> Payer<&User> {
                 }
                 subscription::SubscriptionType::Personal { couch_filter } => {
                     if training.tp.is_personal() {
-                        if let Some(couch) = couch_filter {
-                            training.instructor == *couch
-                        } else {
-                            true
-                        }
+                        training.instructor == *couch_filter
                     } else {
                         false
                     }

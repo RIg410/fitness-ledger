@@ -9,22 +9,17 @@ use bot_core::{
 use bot_viewer::rooms::fmt_room;
 use eyre::Result;
 use model::rooms::Room;
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
 #[derive(Default)]
 pub struct SetRoom {
-    id: ObjectId,
-    preset: Option<ScheduleTrainingPreset>,
+    preset: ScheduleTrainingPreset,
 }
 
 impl SetRoom {
-    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
-        Self {
-            id,
-            preset: Some(preset),
-        }
+    pub fn new(preset: ScheduleTrainingPreset) -> Self {
+        Self { preset }
     }
 }
 
@@ -38,29 +33,32 @@ impl View for SetRoom {
         let training = ctx
             .ledger
             .programs
-            .get_by_id(&mut ctx.session, self.id)
+            .get_by_id(&mut ctx.session, self.preset.program_id()?)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;
-        ctx.send_msg(&msg).await?;
-        let msg = "В каком зале будет тренировка?".to_string();
+        let msg = render_msg(
+            ctx,
+            &training,
+            &self.preset,
+            "В каком зале будет тренировка?",
+        )
+        .await?;
         let mut keymap = InlineKeyboardMarkup::default();
         keymap.inline_keyboard.push(vec![
             Callback::SelectRoom(Room::Adult).button(fmt_room(Room::Adult)),
             Callback::SelectRoom(Room::Child).button(fmt_room(Room::Child)),
         ]);
-        ctx.send_msg_with_markup(&msg, keymap).await?;
+        ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
 
     async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::SelectRoom(room) => {
-                self.preset.as_mut().unwrap().room = Some(room.id());
+                self.preset.room = Some(room.id());
             }
         };
-        let preset = self.preset.take().unwrap();
-        Ok(preset.into_next_view(self.id).into())
+        Ok(self.preset.into_next_view().into())
     }
 }
 

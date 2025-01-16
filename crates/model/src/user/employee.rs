@@ -152,6 +152,10 @@ impl Employee {
             Ok(Some(reward))
         }
     }
+
+    pub fn is_couch(&self) -> bool {
+        self.role == EmployeeRole::Couch
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

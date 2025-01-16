@@ -1,3 +1,5 @@
+use super::{create::CreateProgram, view::ProgramView};
+use crate::schedule::group::ScheduleTrainingPreset;
 use async_trait::async_trait;
 use bot_core::{
     callback_data::Calldata as _,
@@ -10,10 +12,6 @@ use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
-
-use crate::schedule::ScheduleTrainingPreset;
-
-use super::{create::CreateProgram, view::ProgramView};
 
 #[derive(Default)]
 pub struct ProgramList {

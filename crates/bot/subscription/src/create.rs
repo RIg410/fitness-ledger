@@ -224,12 +224,10 @@ impl View for CreateSubscription {
                 text.push_str("*Выберите инструктора*");
                 let couch_list = ctx.ledger.users.instructors(&mut ctx.session).await?;
                 for couch in couch_list {
-                    keymap =
-                        keymap
-                            .append_row(vec![Callback::Couch(Some(couch.id.bytes()))
-                                .button(&couch.name.first_name)]);
+                    keymap = keymap.append_row(vec![
+                        Callback::Couch(couch.id.bytes()).button(&couch.name.first_name)
+                    ]);
                 }
-                keymap = keymap.append_row(vec![Callback::Couch(None).button("Без инструктора")]);
             }
         }
 
@@ -370,8 +368,9 @@ impl View for CreateSubscription {
                     };
                     self.state = State::SetUnlimited;
                 } else {
-                    self.subscription.subscription_type =
-                        SubscriptionType::Personal { couch_filter: None };
+                    self.subscription.subscription_type = SubscriptionType::Personal {
+                        couch_filter: ObjectId::from_bytes(Default::default()),
+                    };
                     self.state = State::SubscriptionTypeFilter;
                 }
                 Ok(Jmp::Stay)
@@ -382,8 +381,9 @@ impl View for CreateSubscription {
                 Ok(Jmp::Stay)
             }
             Callback::Couch(couch_id) => {
-                let couch_filter = couch_id.map(ObjectId::from_bytes);
-                self.subscription.subscription_type = SubscriptionType::Personal { couch_filter };
+                self.subscription.subscription_type = SubscriptionType::Personal {
+                    couch_filter: ObjectId::from_bytes(couch_id),
+                };
                 self.state = State::SetUnlimited;
                 Ok(Jmp::Stay)
             }
@@ -412,6 +412,6 @@ enum Callback {
     Cancel,
     CanUserBuy(bool),
     Group(bool),
-    Couch(Option<[u8; 12]>),
+    Couch([u8; 12]),
     Unlimited(bool),
 }

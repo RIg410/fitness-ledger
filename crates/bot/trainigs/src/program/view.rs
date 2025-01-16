@@ -1,4 +1,4 @@
-use crate::{list::TrainingList, schedule::ScheduleTrainingPreset};
+use crate::{list::TrainingList, schedule::group::ScheduleTrainingPreset};
 
 use super::edit::EditProgram;
 use async_trait::async_trait;
@@ -31,8 +31,9 @@ impl ProgramView {
 
     async fn schedule(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::EditSchedule)?;
-        let preset = self.preset.clone();
-        let view = preset.into_next_view(self.id);
+        let mut preset = self.preset.clone();
+        preset.program_id = Some(self.id);
+        let view = preset.into_next_view();
         Ok(view.into())
     }
 

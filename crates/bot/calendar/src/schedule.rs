@@ -5,7 +5,10 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_trainigs::{program::list::ProgramList, schedule::ScheduleTrainingPreset};
+use bot_trainigs::{
+    program::list::ProgramList,
+    schedule::{group::ScheduleTrainingPreset, personal::PersonalTrainingPreset},
+};
 use bot_viewer::day::fmt_date;
 use chrono::{DateTime, Local};
 use eyre::Error;
@@ -49,9 +52,13 @@ impl View for ScheduleView {
                 Ok(ProgramList::new(preset).into())
             }
             Callback::Personal => {
-                // ctx.ensure(Rule::EditSchedule)?;
-                // Ok(Jmp::to("PersonalView"))
-                todo!()
+                let preset = if ctx.is_couch() {
+                    PersonalTrainingPreset::with_day_and_instructor(self.date_time, ctx.me.id)
+                } else {
+                    PersonalTrainingPreset::with_day(self.date_time)
+                };
+
+                Ok(Jmp::Next(preset.into_next_view()))
             }
             Callback::SubRent => {
                 // ctx.ensure(Rule::EditSchedule)?;

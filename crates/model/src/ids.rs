@@ -56,7 +56,7 @@ pub struct DayId(DateTime<Utc>);
 
 impl DayId {
     #[allow(deprecated)]
-    pub fn new(date_time: DateTime<Local>) -> Self {
+    fn new(date_time: DateTime<Local>) -> Self {
         DayId(at_midnight(date_time).with_timezone(&Utc))
     }
 

@@ -3,8 +3,9 @@ use std::fmt::Debug;
 use bson::oid::ObjectId;
 use chrono::{DateTime, Local, Timelike, Utc};
 
-use crate::training::TrainingId;
+use crate::{ids::DayId, training::TrainingId};
 
+#[derive(Clone, PartialEq, Eq, Copy)]
 pub struct Slot {
     room: ObjectId,
     start_at: DateTime<Utc>,
@@ -76,6 +77,10 @@ impl Slot {
         }
 
         false
+    }
+
+    pub fn day_id(&self) -> crate::ids::DayId {
+        DayId::from(self.start_at())
     }
 
     pub fn with_day(&self, day_id: crate::ids::DayId) -> Slot {

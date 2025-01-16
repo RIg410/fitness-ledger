@@ -248,7 +248,7 @@ pub enum SubscriptionType {
         program_filter: Vec<ObjectId>,
     },
     Personal {
-        couch_filter: Option<ObjectId>,
+        couch_filter: ObjectId,
     },
 }
 

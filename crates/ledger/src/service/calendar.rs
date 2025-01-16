@@ -1,8 +1,9 @@
-use std::{ops::Deref, sync::Arc};
+use std::{ops::Deref, sync::Arc, time::Duration};
 
 use chrono::{DateTime, Local, Utc};
 use eyre::{Error, Result};
 use model::{
+    errors::LedgerError,
     ids::DayId,
     session::Session,
     slot::Slot,
@@ -151,10 +152,60 @@ impl Calendar {
     }
 
     #[tx]
-    pub async fn schedule(
+    pub async fn schedule_personal_training(
         &self,
         session: &mut Session,
-        object_id: ObjectId,
+        client: ObjectId,
+        instructor: ObjectId,
+        start_at: DateTime<Local>,
+        duration_min: u32,
+        room: ObjectId,
+    ) -> Result<(), ScheduleError> {
+        let instructor = self
+            .users
+            .get(session, instructor)
+            .await?
+            .ok_or(ScheduleError::InstructorNotFound)?;
+        if !instructor.is_couch() {
+            return Err(ScheduleError::InstructorHasNoRights);
+        }
+        let client = self
+            .users
+            .get(session, client)
+            .await?
+            .ok_or(ScheduleError::ClientNotFound)?;
+
+        let day_id = DayId::from(start_at);
+        let slot = Slot::new(start_at.with_timezone(&Utc), duration_min, room);
+        let collision = self.check_time_slot(session, slot, true).await?;
+        if let Some(collision) = collision {
+            return Err(ScheduleError::TimeSlotCollision(collision));
+        }
+
+        let name = format!("персональная:{}/{}", client.name, instructor.name);
+        let description = instructor
+            .employee
+            .map(|e| e.description.clone())
+            .unwrap_or_default();
+        let training = Training::new_personal(
+            start_at,
+            room,
+            instructor.id,
+            client.id,
+            duration_min,
+            name,
+            description,
+        );
+
+        self.calendar.add_training(session, &training).await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn schedule_group(
+        &self,
+        session: &mut Session,
+        program_id: ObjectId,
         start_at: DateTime<Local>,
         room: ObjectId,
         instructor: ObjectId,
@@ -162,7 +213,7 @@ impl Calendar {
     ) -> Result<(), ScheduleError> {
         let program = self
             .programs
-            .get_by_id(session, object_id)
+            .get_by_id(session, program_id)
             .await?
             .ok_or(ScheduleError::ProgramNotFound)?;
 
@@ -171,33 +222,22 @@ impl Calendar {
             .get(session, instructor)
             .await?
             .ok_or(ScheduleError::InstructorNotFound)?;
-        if instructor.employee.is_none() {
+        if !instructor.is_couch() {
             return Err(ScheduleError::InstructorHasNoRights);
-        }
-        let collision = self
-            .check_time_slot(session, program.id, start_at, room, is_one_time)
-            .await?;
-        if let Some(collision) = collision {
-            return Err(ScheduleError::TimeSlotCollision(collision));
         }
 
         let day_id = DayId::from(start_at);
         let slot = Slot::new(start_at.with_timezone(&Utc), program.duration_min, room);
-        let day = self.get_day(session, day_id).await?;
-        for training in day.training {
-            if training.get_slot().has_conflict(&slot) {
-                return Err(ScheduleError::TimeSlotCollision(TimeSlotCollision(
-                    training,
-                )));
-            }
+        let collision = self.check_time_slot(session, slot, is_one_time).await?;
+        if let Some(collision) = collision {
+            return Err(ScheduleError::TimeSlotCollision(collision));
         }
-        let mut training =
-            Training::with_program(program, start_at, instructor.id, is_one_time, room);
+
+        let mut training = Training::new_group(program, start_at, instructor.id, is_one_time, room);
         if !training.status(Local::now()).can_sign_in() {
             return Err(ScheduleError::TooCloseToStart);
         }
 
-        //self.logs.schedule(session, &training).await;
         self.calendar.add_training(session, &training).await?;
 
         if !is_one_time {
@@ -205,14 +245,6 @@ impl Calendar {
             while let Some(day) = cursor.next(session).await {
                 let day = day?;
                 training = Training::with_day_and_training(day.day_id(), training);
-                let slot = slot.with_day(day.day_id());
-                for training in day.training {
-                    if training.get_slot().has_conflict(&slot) {
-                        return Err(ScheduleError::TimeSlotCollision(TimeSlotCollision(
-                            training,
-                        )));
-                    }
-                }
                 self.calendar.add_training(session, &training).await?;
             }
         }
@@ -220,22 +252,31 @@ impl Calendar {
         Ok(())
     }
 
+    // pub async fn check_time_slot_for_program(
+    //     &self,
+    //     session: &mut Session,
+    //     program_id: ObjectId,
+    //     start_at: DateTime<Local>,
+    //     room: ObjectId,
+    //     is_one_time: bool,
+    // ) -> Result<Option<TimeSlotCollision>> {
+    //     let program = self
+    //         .programs
+    //         .get_by_id(session, program_id)
+    //         .await?
+    //         .ok_or_else(|| eyre::eyre!("Program not found:{}", program_id))?;
+
+    //     let slot = Slot::new(start_at.with_timezone(&Utc), program.duration_min, room);
+    //     self.check_time_slot(session, slot, is_one_time).await
+    // }
+
     pub async fn check_time_slot(
         &self,
         session: &mut Session,
-        program_id: ObjectId,
-        start_at: DateTime<Local>,
-        room: ObjectId,
+        slot: Slot,
         is_one_time: bool,
     ) -> Result<Option<TimeSlotCollision>> {
-        let program = self
-            .programs
-            .get_by_id(session, program_id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Program not found:{}", program_id))?;
-
-        let day_id = DayId::from(start_at);
-        let slot = Slot::new(start_at.with_timezone(&Utc), program.duration_min, room);
+        let day_id = slot.day_id();
         let day = self.get_day(session, day_id).await?;
         for training in day.training {
             if training.get_slot().has_conflict(&slot) {
@@ -317,6 +358,8 @@ pub enum ScheduleError {
     ProgramNotFound,
     #[error("Instructor not found")]
     InstructorNotFound,
+    #[error("Client not found")]
+    ClientNotFound,
     #[error("Instructor has no rights")]
     InstructorHasNoRights,
     #[error("Too close to start")]

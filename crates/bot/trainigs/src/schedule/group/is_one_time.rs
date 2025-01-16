@@ -7,22 +7,17 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use eyre::Result;
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
 #[derive(Default)]
 pub struct SetOneTime {
-    id: ObjectId,
-    preset: Option<ScheduleTrainingPreset>,
+    preset: ScheduleTrainingPreset,
 }
 
 impl SetOneTime {
-    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
-        Self {
-            id,
-            preset: Some(preset),
-        }
+    pub fn new(preset: ScheduleTrainingPreset) -> Self {
+        Self { preset }
     }
 }
 
@@ -31,37 +26,40 @@ impl View for SetOneTime {
     fn name(&self) -> &'static str {
         "SetOneTime"
     }
-    
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let training = ctx
             .ledger
             .programs
-            .get_by_id(&mut ctx.session, self.id)
+            .get_by_id(&mut ctx.session, self.preset.program_id()?)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;
-        ctx.send_msg(&msg).await?;
-        let msg = "Это разовая тренировка или регулярная?".to_string();
+        let msg = render_msg(
+            ctx,
+            &training,
+            &self.preset,
+            "Это разовая тренировка или регулярная?",
+        )
+        .await?;
         let mut keymap = InlineKeyboardMarkup::default();
         keymap.inline_keyboard.push(vec![
             Callback::OneTime.button("разовая"),
             Callback::Regular.button("регулярная"),
         ]);
-        ctx.send_msg_with_markup(&msg, keymap).await?;
+        ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
 
     async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::OneTime => {
-                self.preset.as_mut().unwrap().is_one_time = Some(true);
+                self.preset.is_one_time = Some(true);
             }
             Callback::Regular => {
-                self.preset.as_mut().unwrap().is_one_time = Some(false);
+                self.preset.is_one_time = Some(false);
             }
         };
-        let preset = self.preset.take().unwrap();
-        Ok(preset.into_next_view(self.id).into())
+        Ok(self.preset.into_next_view().into())
     }
 }
 

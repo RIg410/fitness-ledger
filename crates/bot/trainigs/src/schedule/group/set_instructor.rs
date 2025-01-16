@@ -1,4 +1,4 @@
-use super::ScheduleTrainingPreset;
+use super::{render_msg, ScheduleTrainingPreset};
 use async_trait::async_trait;
 use bot_core::{
     callback_data::Calldata,
@@ -10,23 +10,16 @@ use eyre::Result;
 use model::{program::Program, user::User};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    types::{InlineKeyboardButton, InlineKeyboardMarkup},
-    utils::markdown::escape,
-};
+use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 #[derive(Default)]
 pub struct SetInstructor {
-    id: ObjectId,
-    preset: Option<ScheduleTrainingPreset>,
+    preset: ScheduleTrainingPreset,
 }
 
 impl SetInstructor {
-    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
-        Self {
-            id,
-            preset: Some(preset),
-        }
+    pub fn new(preset: ScheduleTrainingPreset) -> Self {
+        Self { preset }
     }
 }
 
@@ -40,11 +33,11 @@ impl View for SetInstructor {
         let training = ctx
             .ledger
             .programs
-            .get_by_id(&mut ctx.session, self.id)
+            .get_by_id(&mut ctx.session, self.preset.program_id()?)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let (msg, keymap) = render(ctx, &training).await?;
-        ctx.send_msg_with_markup(&msg, keymap).await?;
+        let (msg, keymap) = render(ctx, &training, &self.preset).await?;
+        ctx.edit_origin(&msg, keymap).await?;
         Ok(())
     }
 
@@ -57,19 +50,18 @@ impl View for SetInstructor {
                     .get(&mut ctx.session, ObjectId::from_bytes(instructor_id))
                     .await?
                     .ok_or_else(|| eyre::eyre!("Instructor not found"))?;
-                let mut preset = self.preset.take().unwrap();
-                preset.instructor = Some(instructor.id);
-                return Ok(preset.into_next_view(self.id).into());
+                self.preset.instructor = Some(instructor.id);
+                return Ok(self.preset.into_next_view().into());
             }
         }
     }
 }
 
-async fn render(ctx: &mut Context, training: &Program) -> Result<(String, InlineKeyboardMarkup)> {
-    let msg = format!(
-        "🫰Выберите инструктора для тренировки *{}*",
-        escape(&training.name)
-    );
+async fn render(
+    ctx: &mut Context,
+    training: &Program,
+    preset: &ScheduleTrainingPreset,
+) -> Result<(String, InlineKeyboardMarkup)> {
     let mut keymap = InlineKeyboardMarkup::default();
 
     let instructors = ctx.ledger.users.instructors(&mut ctx.session).await?;
@@ -78,6 +70,7 @@ async fn render(ctx: &mut Context, training: &Program) -> Result<(String, Inline
             .inline_keyboard
             .push(vec![make_instructor_button(&instructor)]);
     }
+    let msg = render_msg(ctx, training, preset, "🫰Выберите инструктора?").await?;
     Ok((msg, keymap))
 }
 

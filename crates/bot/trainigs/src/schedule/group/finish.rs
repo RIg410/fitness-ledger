@@ -9,22 +9,17 @@ use bot_core::{
 use eyre::Result;
 use ledger::service::calendar::ScheduleError;
 use model::rights::Rule;
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
 #[derive(Default)]
 pub struct Finish {
-    id: ObjectId,
-    preset: Option<ScheduleTrainingPreset>,
+    preset: ScheduleTrainingPreset,
 }
 
 impl Finish {
-    pub fn new(id: ObjectId, preset: ScheduleTrainingPreset) -> Self {
-        Self {
-            id,
-            preset: Some(preset),
-        }
+    pub fn new(preset: ScheduleTrainingPreset) -> Self {
+        Self { preset }
     }
 }
 
@@ -38,17 +33,15 @@ impl View for Finish {
         let training = ctx
             .ledger
             .programs
-            .get_by_id(&mut ctx.session, self.id)
+            .get_by_id(&mut ctx.session, self.preset.program_id()?)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        let msg = render_msg(ctx, &training, self.preset.as_ref().unwrap()).await?;
-        ctx.send_msg(&msg).await?;
-        let msg = "Все верно?".to_string();
+        let msg = render_msg(ctx, &training, &self.preset, "Все верно?").await?;
         let keymap = vec![vec![
             Callback::Yes.button("✅ Сохранить"),
             Callback::No.button("❌ Отмена"),
         ]];
-        ctx.send_msg_with_markup(&msg, InlineKeyboardMarkup::new(keymap))
+        ctx.edit_origin(&msg, InlineKeyboardMarkup::new(keymap))
             .await?;
         Ok(())
     }
@@ -57,10 +50,7 @@ impl View for Finish {
         match calldata!(data) {
             Callback::Yes => {
                 ctx.ensure(Rule::EditSchedule)?;
-                let preset = self
-                    .preset
-                    .take()
-                    .ok_or_else(|| eyre::eyre!("Preset is missing"))?;
+                let preset = self.preset;
                 let date_time = preset
                     .date_time
                     .ok_or_else(|| eyre::eyre!("DateTime is missing"))?;
@@ -76,9 +66,9 @@ impl View for Finish {
                 match ctx
                     .ledger
                     .calendar
-                    .schedule(
+                    .schedule_group(
                         &mut ctx.session,
-                        self.id,
+                        preset.program_id()?,
                         date_time,
                         room,
                         instructor,
@@ -120,5 +110,6 @@ fn error_msg(err: &ScheduleError) -> String {
         ScheduleError::TooCloseToStart => {
             "Нельзя добавить тренировку менее чем за 3 часа".to_string()
         }
+        ScheduleError::ClientNotFound => "Клиент не найден".to_string(),
     }
 }
