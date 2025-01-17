@@ -114,17 +114,15 @@ impl Calendar {
     pub async fn delete_training(
         &self,
         session: &mut Session,
-        training: &Training,
+        id: TrainingId,
         all: bool,
     ) -> Result<()> {
-        if let Some(training) = self.get_training_by_id(session, training.id()).await? {
+        if let Some(training) = self.get_training_by_id(session, id).await? {
             if !training.clients.is_empty() {
                 return Err(eyre::eyre!("Training has clients"));
             }
 
-            self.calendar
-                .delete_training(session, training.id())
-                .await?;
+            self.calendar.delete_training(session, id).await?;
 
             let day_id = DayId::from(training.get_slot().start_at());
             if all {
@@ -136,14 +134,12 @@ impl Calendar {
                         if !training.clients.is_empty() {
                             return Err(eyre::eyre!("Training has clients"));
                         }
-                        self.calendar
-                            .delete_training(session, training.id())
-                            .await?;
+                        self.calendar.delete_training(session, id).await?;
                     }
                 }
             }
         } else {
-            return Err(eyre::eyre!("Training not found:{}", training.id));
+            return Err(eyre::eyre!("Training not found:{:?}", id));
         }
 
         Ok(())
@@ -249,24 +245,6 @@ impl Calendar {
 
         Ok(())
     }
-
-    // pub async fn check_time_slot_for_program(
-    //     &self,
-    //     session: &mut Session,
-    //     program_id: ObjectId,
-    //     start_at: DateTime<Local>,
-    //     room: ObjectId,
-    //     is_one_time: bool,
-    // ) -> Result<Option<TimeSlotCollision>> {
-    //     let program = self
-    //         .programs
-    //         .get_by_id(session, program_id)
-    //         .await?
-    //         .ok_or_else(|| eyre::eyre!("Program not found:{}", program_id))?;
-
-    //     let slot = Slot::new(start_at.with_timezone(&Utc), program.duration_min, room);
-    //     self.check_time_slot(session, slot, is_one_time).await
-    // }
 
     pub async fn check_time_slot(
         &self,

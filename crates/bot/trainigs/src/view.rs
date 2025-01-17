@@ -60,7 +60,7 @@ impl TrainingView {
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         ctx.ledger
             .calendar
-            .delete_training(&mut ctx.session, &training, all)
+            .delete_training(&mut ctx.session, training.id(), all)
             .await?;
         Ok(Jmp::Back)
     }
