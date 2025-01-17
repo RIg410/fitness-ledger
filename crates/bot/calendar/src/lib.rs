@@ -78,10 +78,14 @@ impl View for CalendarView {
             }
             Callback::SelectTraining(id) => Ok(TrainingView::new(id.into()).into()),
             Callback::Schedule => {
-                ctx.ensure(Rule::EditSchedule)?;
-                Ok(
-                    schedule::ScheduleView::new(self.selected_day.local()).into(),
-                )
+                if ctx.has_right(Rule::ScheduleGroupTraining)
+                    || ctx.has_right(Rule::ScheduleSubRent)
+                    || ctx.has_right(Rule::SchedulePersonalTraining)
+                {
+                    Ok(schedule::ScheduleView::new(self.selected_day.local()).into())
+                } else {
+                    Ok(Jmp::Stay)
+                }
             }
             Callback::MyTrainings => {
                 if ctx.me.employee.is_some() {
@@ -196,11 +200,12 @@ pub async fn render_week(
 
     day.training.sort_by_key(|a| a.get_slot().start_at());
     for training in &day.training {
-        if training.tp.is_sub_rent() && !ctx.is_employee() {
+        if !ctx.has_right(Rule::ViewAllTrainings) && training.tp.is_sub_rent() && !ctx.is_employee()
+        {
             continue;
         }
 
-        if training.tp.is_personal() {
+        if !ctx.has_right(Rule::ViewAllTrainings) && training.tp.is_personal() {
             let client_id = training.clients.get(0).copied().unwrap_or_default();
             if !(ctx.is_employee() || client_id == ctx.me.id) {
                 continue;
@@ -239,7 +244,10 @@ pub async fn render_week(
 
     buttons = buttons.append_row(Callback::MyTrainings.btn_row("🫶🏻 Мои тренировки"));
 
-    if ctx.has_right(Rule::EditSchedule) {
+    if ctx.has_right(Rule::ScheduleGroupTraining)
+        || ctx.has_right(Rule::ScheduleSubRent)
+        || ctx.has_right(Rule::SchedulePersonalTraining)
+    {
         buttons = buttons.append_row(Callback::Schedule.btn_row("📝  запланировать"));
     }
 

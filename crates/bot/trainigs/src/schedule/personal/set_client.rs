@@ -57,14 +57,20 @@ async fn render(
     ctx: &mut Context,
     instructor: ObjectId,
 ) -> Result<(&'static str, InlineKeyboardMarkup)> {
-    let msg = "🫰Выберите инструктора";
     let mut keymap = InlineKeyboardMarkup::default();
 
     let clients = ctx
         .ledger
         .users
-        .find_user_for_personal_training(&mut ctx.session, instructor)
+        .find_users_for_personal_training(&mut ctx.session, instructor)
         .await?;
+
+    let msg = if clients.is_empty() {
+        "🤷‍♂️Нет клиентов с подходящим абонементом"
+    } else {
+        "🫰Выберите клиента"
+    };
+
     for client in clients {
         keymap
             .inline_keyboard

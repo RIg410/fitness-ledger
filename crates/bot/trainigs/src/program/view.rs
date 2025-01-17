@@ -30,7 +30,7 @@ impl ProgramView {
     }
 
     async fn schedule(&mut self, ctx: &mut Context) -> Result<Jmp> {
-        ctx.ensure(Rule::EditSchedule)?;
+        ctx.ensure(Rule::ScheduleGroupTraining)?;
         let mut preset = self.preset.clone();
         preset.program_id = Some(self.id);
         let view = preset.into_next_view();
@@ -117,7 +117,7 @@ async fn render(ctx: &Context, training: &Program) -> Result<(String, InlineKeyb
     );
 
     let mut keymap = Vec::new();
-    if ctx.has_right(Rule::EditSchedule) {
+    if ctx.has_right(Rule::ScheduleGroupTraining) {
         keymap.push(vec![Callback::Schedule.button("📅Запланировать")]);
     }
 

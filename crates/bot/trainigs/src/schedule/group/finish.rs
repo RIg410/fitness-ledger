@@ -1,4 +1,6 @@
-use super::{render_msg, set_date_time::render_time_slot_collision, ScheduleTrainingPreset};
+use crate::schedule::render_time_slot_collision;
+
+use super::{render_msg, ScheduleTrainingPreset};
 use async_trait::async_trait;
 use bot_core::{
     callback_data::Calldata as _,
@@ -49,7 +51,7 @@ impl View for Finish {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::Yes => {
-                ctx.ensure(Rule::EditSchedule)?;
+                ctx.ensure(Rule::ScheduleGroupTraining)?;
                 let preset = self.preset;
                 let date_time = preset
                     .date_time

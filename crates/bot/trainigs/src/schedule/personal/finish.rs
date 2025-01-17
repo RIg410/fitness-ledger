@@ -11,9 +11,9 @@ use model::rights::Rule;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
-use super::{
-    render_msg, set_date_time::render_time_slot_collision, PersonalTrainingPreset, DURATION,
-};
+use crate::schedule::render_time_slot_collision;
+
+use super::{render_msg, PersonalTrainingPreset, DURATION};
 
 #[derive(Default)]
 pub struct Finish {
@@ -46,7 +46,7 @@ impl View for Finish {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
         match calldata!(data) {
             Callback::Yes => {
-                ctx.ensure(Rule::EditSchedule)?;
+                ctx.ensure(Rule::SchedulePersonalTraining)?;
                 let preset = self.preset;
                 let date_time = preset
                     .date_time
@@ -61,7 +61,6 @@ impl View for Finish {
 
                 match ctx
                     .ledger
-                    .calendar
                     .schedule_personal_training(
                         &mut ctx.session,
                         client,
@@ -84,7 +83,12 @@ impl View for Finish {
                 //no-op
             }
         }
-        Ok(Jmp::BackSteps(8))
+
+        if ctx.is_couch() && !ctx.has_right(Rule::SelectPersonalInstructor) {
+            Ok(Jmp::BackSteps(7))
+        } else {
+            Ok(Jmp::BackSteps(6))
+        }
     }
 }
 

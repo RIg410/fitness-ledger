@@ -87,12 +87,22 @@ pub enum Rule {
 
     // Training
     EditTraining,
-    CancelTraining,
     CreateTraining,
-    EditSchedule,
     EditTrainingClientsList,
     SetKeepOpen,
     SetFree,
+
+    #[deprecated]
+    EditSchedule,
+    // Calendar
+    CancelTraining,
+    RemoveTraining,
+    EditTrainingCouch,
+    ScheduleGroupTraining,
+    SchedulePersonalTraining,
+    ScheduleSubRent,
+    SelectPersonalInstructor,
+    ViewAllTrainings,
 
     // Subscription
     CreateSubscription,

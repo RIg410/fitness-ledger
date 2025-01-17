@@ -41,7 +41,7 @@ impl UserStore {
         })
     }
 
-    pub async fn find_user_for_personal_training(
+    pub async fn find_users_for_personal_training(
         &self,
         session: &mut Session,
         instructor_id: ObjectId,
@@ -49,13 +49,23 @@ impl UserStore {
         let filter = doc! {
             "subscriptions": {
                 "$elemMatch": {
-                    "couch_filter": instructor_id
+                    "tp.Personal.couch_filter": instructor_id
                 }
             }
         };
 
         let mut cursor = self.users.find(filter).session(&mut *session).await?;
-        Ok(cursor.stream(&mut *session).try_collect().await?)
+
+        let mut users = vec![];
+        while let Some(user) = cursor.next(&mut *session).await {
+            let mut user = user?;
+            self.resolve_family(&mut *session, &mut user).await?;
+            if !user.family.children.is_empty() {
+                users.extend(user.family.children.clone());
+            }
+            users.push(user);
+        }
+        Ok(users)
     }
 
     pub async fn find_users_with_right(

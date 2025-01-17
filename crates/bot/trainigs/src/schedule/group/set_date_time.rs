@@ -1,3 +1,5 @@
+use crate::schedule::render_time_slot_collision;
+
 use super::{render_msg, ScheduleTrainingPreset};
 use async_trait::async_trait;
 use bot_core::{
@@ -6,13 +8,9 @@ use bot_core::{
 };
 use chrono::{DateTime, Datelike as _, Local, TimeZone, Timelike, Utc};
 use eyre::{Error, Result};
-use ledger::service::calendar::TimeSlotCollision;
 use log::warn;
 use model::slot::Slot;
-use teloxide::{
-    types::{InlineKeyboardMarkup, Message},
-    utils::markdown::escape,
-};
+use teloxide::types::{InlineKeyboardMarkup, Message};
 
 #[derive(Default)]
 pub struct SetDateTime {
@@ -153,12 +151,4 @@ impl TimeParts {
             .single()
             .ok_or_else(|| eyre::eyre!("Invalid time"))
     }
-}
-
-pub fn render_time_slot_collision(collision: &TimeSlotCollision) -> String {
-    format!(
-        "Это время уже занято другой тренировкой: {}\n\nДата:{}",
-        escape(&collision.name),
-        collision.get_slot().start_at().format("%d\\.%m %H:%M")
-    )
 }

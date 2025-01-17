@@ -33,13 +33,16 @@ impl View for ScheduleView {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), Error> {
-        ctx.ensure(Rule::EditSchedule)?;
         let txt = format!("Запланировать на *{}*", fmt_date(&self.date_time));
-        let mut keymap = InlineKeyboardMarkup::default()
-            .append_row(Callback::Group.btn_row("Групповое занятие 🧘"))
-            .append_row(Callback::Personal.btn_row("Персональное занятие 🏋️"));
+        let mut keymap = InlineKeyboardMarkup::default();
 
-        if ctx.has_right(Rule::SubRent) {
+        if ctx.has_right(Rule::ScheduleGroupTraining) {
+            keymap = keymap.append_row(Callback::Group.btn_row("Групповое занятие 🧘"));
+        }
+        if ctx.has_right(Rule::SchedulePersonalTraining) {
+            keymap = keymap.append_row(Callback::Personal.btn_row("Персональное занятие 🏋️"));
+        }
+        if ctx.has_right(Rule::ScheduleSubRent) {
             keymap = keymap.append_row(Callback::SubRent.btn_row("Субаренда 💰"));
         }
         ctx.edit_origin(&txt, keymap).await?;
@@ -48,11 +51,13 @@ impl View for ScheduleView {
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         match calldata!(data) {
             Callback::Group => {
+                ctx.ensure(Rule::ScheduleGroupTraining)?;
                 let preset = ScheduleTrainingPreset::with_day(self.date_time);
                 Ok(ProgramList::new(preset).into())
             }
             Callback::Personal => {
-                let preset = if ctx.is_couch() {
+                ctx.ensure(Rule::SchedulePersonalTraining)?;
+                let preset = if ctx.is_couch() && !ctx.has_right(Rule::SelectPersonalInstructor) {
                     PersonalTrainingPreset::with_day_and_instructor(self.date_time, ctx.me.id)
                 } else {
                     PersonalTrainingPreset::with_day(self.date_time)
@@ -61,6 +66,7 @@ impl View for ScheduleView {
                 Ok(Jmp::Next(preset.into_next_view()))
             }
             Callback::SubRent => {
+                ctx.ensure(Rule::ScheduleSubRent)?;
                 // ctx.ensure(Rule::EditSchedule)?;
                 // Ok(Jmp::to("SubRentView"))
                 todo!()

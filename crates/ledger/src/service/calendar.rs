@@ -1,9 +1,8 @@
-use std::{ops::Deref, sync::Arc, time::Duration};
+use std::{ops::Deref, sync::Arc};
 
 use chrono::{DateTime, Local, Utc};
 use eyre::{Error, Result};
 use model::{
-    errors::LedgerError,
     ids::DayId,
     session::Session,
     slot::Slot,
@@ -127,7 +126,6 @@ impl Calendar {
                 .delete_training(session, training.id())
                 .await?;
 
-            // self.logs.delete_training(session, &training, all).await;
             let day_id = DayId::from(training.get_slot().start_at());
             if all {
                 let mut cursor = self.calendar.week_days_after(session, day_id).await?;
@@ -151,8 +149,7 @@ impl Calendar {
         Ok(())
     }
 
-    #[tx]
-    pub async fn schedule_personal_training(
+    pub(crate) async fn schedule_personal_training(
         &self,
         session: &mut Session,
         client: ObjectId,
@@ -160,7 +157,7 @@ impl Calendar {
         start_at: DateTime<Local>,
         duration_min: u32,
         room: ObjectId,
-    ) -> Result<(), ScheduleError> {
+    ) -> Result<TrainingId, ScheduleError> {
         let instructor = self
             .users
             .get(session, instructor)
@@ -175,14 +172,16 @@ impl Calendar {
             .await?
             .ok_or(ScheduleError::ClientNotFound)?;
 
-        let day_id = DayId::from(start_at);
         let slot = Slot::new(start_at.with_timezone(&Utc), duration_min, room);
         let collision = self.check_time_slot(session, slot, true).await?;
         if let Some(collision) = collision {
             return Err(ScheduleError::TimeSlotCollision(collision));
         }
 
-        let name = format!("персональная:{}/{}", client.name, instructor.name);
+        let name = format!(
+            "Инди:{}/{}",
+            client.name.first_name, instructor.name.first_name
+        );
         let description = instructor
             .employee
             .map(|e| e.description.clone())
@@ -191,14 +190,13 @@ impl Calendar {
             start_at,
             room,
             instructor.id,
-            client.id,
             duration_min,
             name,
             description,
         );
 
         self.calendar.add_training(session, &training).await?;
-        Ok(())
+        Ok(training.id())
     }
 
     #[tx]

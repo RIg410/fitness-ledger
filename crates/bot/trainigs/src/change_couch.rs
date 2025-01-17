@@ -26,7 +26,7 @@ impl ChangeCouch {
     }
 
     async fn change_couch(&self, ctx: &mut Context, id: ObjectId) -> Result<()> {
-        ctx.ensure(Rule::EditSchedule)?;
+        ctx.ensure(Rule::EditTrainingCouch)?;
         let training = ctx
             .ledger
             .calendar

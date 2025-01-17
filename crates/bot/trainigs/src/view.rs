@@ -51,7 +51,7 @@ impl TrainingView {
     }
 
     async fn delete_training(&mut self, ctx: &mut Context, all: bool) -> Result<Jmp> {
-        ctx.ensure(Rule::EditSchedule)?;
+        ctx.ensure(Rule::RemoveTraining)?;
         let training = ctx
             .ledger
             .calendar
@@ -88,7 +88,7 @@ impl TrainingView {
     }
 
     async fn change_couch(&mut self, ctx: &mut Context, all: bool) -> Result<Jmp> {
-        ctx.ensure(Rule::EditSchedule)?;
+        ctx.ensure(Rule::EditTrainingCouch)?;
         Ok(ChangeCouch::new(self.id, all).into())
     }
 
@@ -175,7 +175,9 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
     let cap = if is_client {
         format!(
             "*Свободных мест*: _{}_",
-            training.capacity.saturating_sub(training.clients.len() as u32)
+            training
+                .capacity
+                .saturating_sub(training.clients.len() as u32)
         )
     } else {
         format!(
@@ -256,7 +258,7 @@ _{}_                                                                 \n
     }
     keymap = keymap.append_row(row);
 
-    if ctx.has_right(Rule::EditSchedule) {
+    if ctx.has_right(Rule::RemoveTraining) {
         keymap = keymap.append_row(vec![
             Callback::Delete(false).button("🗑️ Удалить эту тренировку")
         ]);
@@ -265,6 +267,9 @@ _{}_                                                                 \n
                 Callback::Delete(true).button("🗑️ Удалить все последующие")
             ]);
         }
+    }
+
+    if ctx.has_right(Rule::EditTrainingCouch) {
         keymap = keymap.append_row(vec![
             Callback::ChangeCouchOne.button("🔄 Заменить инструктора")
         ]);

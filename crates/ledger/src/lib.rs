@@ -290,6 +290,12 @@ impl Ledger {
                 training.name.clone(),
             )
             .await?;
+
+        if training.tp.is_personal() {
+            self.calendar
+                .delete_training_txless(session, training, false)
+                .await?;
+        }
         Ok(())
     }
 
