@@ -5,7 +5,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::error::notify;
+// use bot_viewer::error::notify;
 use model::user::{rate::EmployeeRole, sanitize_phone};
 use mongodb::bson::oid::ObjectId;
 use teloxide::types::{InlineKeyboardMarkup, Message};
@@ -132,22 +132,33 @@ impl View for EmployeeRoleView {
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         let role: EmployeeRole = calldata!(data);
-        notify(
-            "Ошибка добавления сотрудника",
-            ctx.ledger
-                .users
-                .make_user_employee(
-                    &mut ctx.session,
-                    self.user_id,
-                    self.description.clone(),
-                    vec![],
-                    role,
-                )
-                .await,
-            "Сотрудник добавлен",
-            ctx,
-        )
-        .await?;
+        ctx.ledger
+            .users
+            .make_user_employee(
+                &mut ctx.session,
+                self.user_id,
+                self.description.clone(),
+                vec![],
+                role,
+            )
+            .await?;
+        ctx.send_notification("Сотрудник добавлен").await?;
+        // notify(
+        //     "Ошибка добавления сотрудника",
+        //     ctx.ledger
+        //         .users
+        //         .make_user_employee(
+        //             &mut ctx.session,
+        //             self.user_id,
+        //             self.description.clone(),
+        //             vec![],
+        //             role,
+        //         )
+        //         .await,
+        //     "Сотрудник добавлен",
+        //     ctx,
+        // )
+        // .await?;
 
         Ok(Jmp::Home)
     }

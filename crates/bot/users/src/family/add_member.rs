@@ -3,9 +3,10 @@ use bot_core::{
     callback_data::Calldata as _,
     calldata,
     context::Context,
+    err::bassness_error,
     widget::{Jmp, View},
 };
-use bot_viewer::{error::bassness_error, fmt_phone};
+use bot_viewer::fmt_phone;
 use model::{rights::Rule, user::sanitize_phone};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -53,8 +54,8 @@ impl View for AddMember {
                         "\n\nПользователь найден: *{}*",
                         escape(&user.name.first_name)
                     ));
-                    keymap = keymap
-                        .append_row(Calldata::AddMember(user.id.bytes()).btn_row("Добавить"));
+                    keymap =
+                        keymap.append_row(Calldata::AddMember(user.id.bytes()).btn_row("Добавить"));
                 }
             } else {
                 keymap = keymap.append_row(Calldata::CreateUser.btn_row("Создать пользователя"));
@@ -148,25 +149,12 @@ impl View for AddMemberConfirm {
 
         match calldata!(data) {
             ConfirmCalldata::AddMember => {
-                let result = ctx
-                    .ledger
+                ctx.ledger
                     .users
                     .add_family_member(&mut ctx.session, self.parent_id, self.child_id)
-                    .await;
-                match result {
-                    Ok(_) => {
-                        ctx.send_notification("Член семьи добавлен").await?;
-                        Ok(Jmp::Back)
-                    }
-                    Err(err) => {
-                        if let Some(msg) = bassness_error(ctx, &err).await? {
-                            ctx.send_notification(&msg).await?;
-                            Ok(Jmp::Back)
-                        } else {
-                            Err(err.into())
-                        }
-                    }
-                }
+                    .await?;
+                ctx.send_notification("Член семьи добавлен").await?;
+                Ok(Jmp::Back)
             }
             ConfirmCalldata::Cancel => Ok(Jmp::Back),
         }

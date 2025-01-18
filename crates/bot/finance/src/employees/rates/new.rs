@@ -8,7 +8,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::{error::notify, user::render_rate};
+use bot_viewer::user::render_rate;
 use eyre::Result;
 use model::{rights::Rule, user::rate::Rate};
 use mongodb::bson::oid::ObjectId;
@@ -112,18 +112,18 @@ impl View for ConfirmCreationRate {
 
         match calldata!(data) {
             ConfirmCallback::Yes => {
-                let result = if let Some(old) = &self.old_data {
+                if let Some(old) = &self.old_data {
                     ctx.ledger
                         .users
                         .update_rate(&mut ctx.session, self.employee_id, *old, self.new_data)
-                        .await
+                        .await?;
                 } else {
                     ctx.ledger
                         .users
                         .add_rate(&mut ctx.session, self.employee_id, self.new_data)
-                        .await
+                        .await?;
                 };
-                notify("Ошибка создания тарифа", result, "Тариф создан", ctx).await?;
+                ctx.send_notification("Тариф создан").await?;
                 Ok(Jmp::Goto(EmployeeProfile::new(self.employee_id).into()))
             }
             ConfirmCallback::No => Ok(Jmp::Stay),

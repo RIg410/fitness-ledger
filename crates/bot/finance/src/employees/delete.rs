@@ -5,7 +5,6 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::error::notify;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -46,15 +45,10 @@ impl View for DeleteEmployeeConfirm {
         ctx.ensure(Rule::EditEmployee)?;
         match calldata!(callback) {
             CallbackQuery::Yes => {
-                notify(
-                    "Ошибка удаления сотрудника",
-                    ctx.ledger
-                        .delete_employee(&mut ctx.session, self.user_id)
-                        .await,
-                    "Сотрудник удален",
-                    ctx,
-                )
-                .await?;
+                ctx.ledger
+                    .delete_employee(&mut ctx.session, self.user_id)
+                    .await?;
+                ctx.send_notification("Сотрудник удален").await?;
                 Ok(Jmp::Back)
             }
             CallbackQuery::No => Ok(Jmp::Back),

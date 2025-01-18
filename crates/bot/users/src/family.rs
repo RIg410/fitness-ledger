@@ -1,12 +1,8 @@
 use crate::profile::UserProfile;
 use async_trait::async_trait;
 use bot_core::{
-    callback_data::Calldata as _,
-    calldata,
-    context::Context,
-    widget::{Jmp, View},
+    callback_data::Calldata as _, calldata, context::Context, err::bassness_error, widget::{Jmp, View}
 };
-use bot_viewer::error::bassness_error;
 use eyre::Result;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;

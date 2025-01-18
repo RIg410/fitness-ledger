@@ -3,6 +3,7 @@ use std::sync::Arc;
 use super::build_context;
 use crate::{
     context::Context,
+    err::handle_result,
     state::{State, StateHolder},
     widget::Widget,
     BACK_NAME, ERROR,
@@ -110,7 +111,8 @@ async fn inner_message_handler(
         widget
     };
 
-    let mut new_widget = match widget.handle_message(ctx, &msg).await? {
+    let result = widget.handle_message(ctx, &msg).await;
+    let mut new_widget = match handle_result(ctx, result).await? {
         crate::widget::Jmp::Next(mut new_widget) => {
             new_widget.set_back(widget);
             new_widget

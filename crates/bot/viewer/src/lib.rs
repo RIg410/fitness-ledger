@@ -1,7 +1,6 @@
 use teloxide::utils::markdown::escape;
 
 pub mod day;
-pub mod error;
 pub mod request;
 pub mod rooms;
 pub mod subscription;

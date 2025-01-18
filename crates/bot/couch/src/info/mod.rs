@@ -8,7 +8,7 @@ use bot_core::{
     widget::Widget,
 };
 use bot_trainigs::view::TrainingView;
-use bot_viewer::{day::fmt_weekday, error::notify, training::fmt_training_status};
+use bot_viewer::{day::fmt_weekday, training::fmt_training_status};
 use chrono::{DateTime, Datelike, Local};
 use eyre::{Error, Result};
 use model::{rights::Rule, training::Training};
@@ -45,13 +45,10 @@ impl CouchInfo {
         state: &mut State,
     ) -> Result<Dispatch<State>> {
         ctx.ensure(Rule::EditCouch)?;
-        notify(
-            "Ошибка удаления тренера",
-            ctx.ledger.delete_employee(&mut ctx.session, state.id).await,
-            "Тренер удален",
-            ctx,
-        )
-        .await?;
+        ctx.ledger
+            .delete_employee(&mut ctx.session, state.id)
+            .await?;
+        ctx.send_notification("🗑️ Удалено").await?;
         Ok(Dispatch::None)
     }
 }
