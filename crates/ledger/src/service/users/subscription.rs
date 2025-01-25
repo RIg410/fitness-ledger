@@ -2,7 +2,7 @@ use super::Users;
 use chrono::Utc;
 use eyre::{eyre, Result};
 use log::info;
-use model::session::Session;
+use model::{session::Session, subscription::UserSubscription};
 use mongodb::bson::oid::ObjectId;
 use tx_macro::tx;
 
@@ -140,7 +140,7 @@ impl Users {
     }
 
     #[tx]
-    pub async fn expire_subscription(&self, session: &mut Session, id: ObjectId) -> Result<bool> {
+    pub async fn expire_subscription(&self, session: &mut Session, id: ObjectId) -> Result<Vec<UserSubscription>> {
         let mut user = self
             .store
             .get(session, id)
@@ -158,17 +158,12 @@ impl Users {
 
         let expired = payer.expire(now);
 
-        let mut expired_sub = false;
-        for subscription in expired {
-            if !subscription.is_empty() {
-                expired_sub = true;
-            }
-
+        for subscription in &expired {
             self.logs
-                .expire_subscription(session, id, subscription)
+                .expire_subscription(session, id, subscription.clone())
                 .await?;
         }
         self.store.update(session, &mut payer).await?;
-        Ok(expired_sub)
+        Ok(expired)
     }
 }

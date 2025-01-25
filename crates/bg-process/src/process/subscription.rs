@@ -7,7 +7,7 @@ use bot_viewer::{fmt_phone, user::tg_link};
 use chrono::Utc;
 use eyre::{Error, Result};
 use model::rights::Rule;
-use teloxide::types::ChatId;
+use teloxide::{types::ChatId, utils::markdown::escape};
 
 #[derive(Clone)]
 pub struct SubscriptionBg {
@@ -28,7 +28,12 @@ impl Task for SubscriptionBg {
             .users
             .find_users_with_active_subs(&mut session)
             .await?;
-        let mut to_notify = vec![];
+
+        let notification_listener = self
+            .ledger
+            .users
+            .find_users_with_right(&mut session, Rule::ReceiveNotificationsAboutSubscriptions)
+            .await?;
 
         while let Some(user) = users.next(&mut session).await {
             let user = user?;
@@ -50,34 +55,22 @@ impl Task for SubscriptionBg {
                     .users
                     .expire_subscription(&mut session, user.id)
                     .await?;
-                if expired {
-                    log::info!("User {:?} has expired subscription", user);
-                    to_notify.push((user.tg_id, user.name.first_name, user.phone));
+                for sub in expired {
+                    for user in notification_listener.iter() {
+                        self.bot
+                            .send_notification_to(
+                                ChatId(user.tg_id),
+                                &format!(
+                                    "У пользователя {}\\({}\\) сгорел абонемент: {}\\. Сгорело {}\\.",
+                                    tg_link(user.tg_id, user.name.tg_user_name.as_deref()),
+                                    fmt_phone(user.phone.as_deref()),
+                                    escape(sub.name.as_str()),
+                                    sub.balance,
+                                ),
+                            )
+                            .await?;
+                    }
                 }
-            }
-        }
-
-        if to_notify.is_empty() {
-            return Ok(());
-        }
-
-        let notification_listener = self
-            .ledger
-            .users
-            .find_users_with_right(&mut session, Rule::ReceiveNotificationsAboutSubscriptions)
-            .await?;
-        for (id, name, phone) in to_notify {
-            for user in notification_listener.iter() {
-                self.bot
-                    .send_notification_to(
-                        ChatId(user.tg_id),
-                        &format!(
-                            "У пользователя {}\\({}\\) сгорел абонемент",
-                            tg_link(id, Some(name.as_str())),
-                            fmt_phone(phone.as_deref())
-                        ),
-                    )
-                    .await?;
             }
         }
 
