@@ -7,13 +7,13 @@ use log::error;
 use model::decimal::Decimal;
 use model::errors::LedgerError;
 use model::session::Session;
-use model::training::{Training, TrainingId, TrainingStatus};
+use model::training::TrainingStatus;
 use model::treasury::subs::UserId;
 use model::user::family::FindFor;
 use model::user::{sanitize_phone, User};
 use mongodb::bson::oid::ObjectId;
 use service::backup::Backup;
-use service::calendar::{Calendar, SignOutError};
+use service::calendar::Calendar;
 use service::history::{self, History};
 use service::programs::Programs;
 use service::requests::Requests;
@@ -151,7 +151,6 @@ impl Ledger {
         self.users.block_user(session, user_id, is_active).await?;
         Ok(())
     }
-
 
     #[tx]
     pub async fn sell_subscription(

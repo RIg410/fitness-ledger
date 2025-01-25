@@ -8,7 +8,6 @@ use bot_core::{
 use bot_viewer::day::fmt_dt;
 use chrono::Local;
 use eyre::{bail, Result};
-use ledger::service::calendar::SignOutError;
 use model::{rights::Rule, training::TrainingId};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -54,27 +53,27 @@ impl ClientsList {
             .ledger
             .sign_out(&mut ctx.session, training.id(), id, true)
             .await;
-        match result {
-            Ok(_) => {}
-            Err(SignOutError::TrainingNotFound) => {
-                bail!("Training not found");
-            }
-            Err(SignOutError::TrainingNotOpenToSignOut) => {
-                ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
-                    .await?;
-            }
-            Err(SignOutError::NotEnoughReservedBalance) => {
-                ctx.send_notification("Не удалось удалить клиента\\. Нет резерва")
-                    .await?;
-            }
-            Err(SignOutError::UserNotFound) => {
-                bail!("User not found");
-            }
-            Err(SignOutError::ClientNotSignedUp) => {
-                ctx.send_notification("Уже удален)").await?;
-            }
-            Err(SignOutError::Common(err)) => return Err(err),
-        }
+        // match result {
+        //     Ok(_) => {}
+        //     Err(SignOutError::TrainingNotFound) => {
+        //         bail!("Training not found");
+        //     }
+        //     Err(SignOutError::TrainingNotOpenToSignOut) => {
+        //         ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
+        //             .await?;
+        //     }
+        //     Err(SignOutError::NotEnoughReservedBalance) => {
+        //         ctx.send_notification("Не удалось удалить клиента\\. Нет резерва")
+        //             .await?;
+        //     }
+        //     Err(SignOutError::UserNotFound) => {
+        //         bail!("User not found");
+        //     }
+        //     Err(SignOutError::ClientNotSignedUp) => {
+        //         ctx.send_notification("Уже удален)").await?;
+        //     }
+        //     Err(SignOutError::Common(err)) => return Err(err),
+        // }
 
         Ok(Jmp::Stay)
     }

@@ -3,6 +3,7 @@ use std::{ops::Deref, sync::Arc};
 use chrono::{DateTime, Local, Utc};
 use eyre::{Error, Result};
 use model::{
+    errors::LedgerError,
     ids::DayId,
     session::Session,
     slot::Slot,
@@ -10,7 +11,6 @@ use model::{
 };
 use mongodb::bson::oid::ObjectId;
 use storage::calendar::CalendarStore;
-use thiserror::Error;
 use tx_macro::tx;
 
 use super::{programs::Programs, users::Users};
@@ -116,10 +116,10 @@ impl Calendar {
         session: &mut Session,
         id: TrainingId,
         all: bool,
-    ) -> Result<()> {
+    ) -> Result<(), LedgerError> {
         if let Some(training) = self.get_training_by_id(session, id).await? {
             if !training.clients.is_empty() {
-                return Err(eyre::eyre!("Training has clients"));
+                return Err(LedgerError::TrainingHasClients(id));
             }
 
             self.calendar.delete_training(session, id).await?;
@@ -132,14 +132,14 @@ impl Calendar {
                     let training = day.training.iter().find(|slot| slot.id == training.id);
                     if let Some(training) = training {
                         if !training.clients.is_empty() {
-                            return Err(eyre::eyre!("Training has clients"));
+                            return Err(LedgerError::TrainingHasClients(id));
                         }
                         self.calendar.delete_training(session, id).await?;
                     }
                 }
             }
         } else {
-            return Err(eyre::eyre!("Training not found:{:?}", id));
+            return Err(LedgerError::TrainingNotFound(id));
         }
 
         Ok(())
@@ -153,25 +153,25 @@ impl Calendar {
         start_at: DateTime<Local>,
         duration_min: u32,
         room: ObjectId,
-    ) -> Result<TrainingId, ScheduleError> {
+    ) -> Result<TrainingId, LedgerError> {
         let instructor = self
             .users
             .get(session, instructor)
             .await?
-            .ok_or(ScheduleError::InstructorNotFound)?;
+            .ok_or_else(|| LedgerError::InstructorNotFound(instructor))?;
         if !instructor.is_couch() {
-            return Err(ScheduleError::InstructorHasNoRights);
+            return Err(LedgerError::InstructorHasNoRights(instructor.id));
         }
         let client = self
             .users
             .get(session, client)
             .await?
-            .ok_or(ScheduleError::ClientNotFound)?;
+            .ok_or(LedgerError::ClientNotFound(client))?;
 
         let slot = Slot::new(start_at.with_timezone(&Utc), duration_min, room);
         let collision = self.check_time_slot(session, slot, true).await?;
         if let Some(collision) = collision {
-            return Err(ScheduleError::TimeSlotCollision(collision));
+            return Err(LedgerError::TimeSlotCollision(collision));
         }
 
         let name = format!(
@@ -204,32 +204,32 @@ impl Calendar {
         room: ObjectId,
         instructor: ObjectId,
         is_one_time: bool,
-    ) -> Result<(), ScheduleError> {
+    ) -> Result<(), LedgerError> {
         let program = self
             .programs
             .get_by_id(session, program_id)
             .await?
-            .ok_or(ScheduleError::ProgramNotFound)?;
+            .ok_or_else(|| LedgerError::ProgramNotFound(program_id))?;
 
         let instructor = self
             .users
             .get(session, instructor)
             .await?
-            .ok_or(ScheduleError::InstructorNotFound)?;
+            .ok_or_else(|| LedgerError::InstructorNotFound(instructor))?;
         if !instructor.is_couch() {
-            return Err(ScheduleError::InstructorHasNoRights);
+            return Err(LedgerError::InstructorHasNoRights(instructor.id));
         }
 
         let day_id = DayId::from(start_at);
         let slot = Slot::new(start_at.with_timezone(&Utc), program.duration_min, room);
         let collision = self.check_time_slot(session, slot, is_one_time).await?;
         if let Some(collision) = collision {
-            return Err(ScheduleError::TimeSlotCollision(collision));
+            return Err(LedgerError::TimeSlotCollision(collision));
         }
 
         let mut training = Training::new_group(program, start_at, instructor.id, is_one_time, room);
         if !training.status(Local::now()).can_sign_in() {
-            return Err(ScheduleError::TooCloseToStart);
+            return Err(LedgerError::TooCloseToStart { start_at });
         }
 
         self.calendar.add_training(session, &training).await?;
@@ -251,12 +251,12 @@ impl Calendar {
         session: &mut Session,
         slot: Slot,
         is_one_time: bool,
-    ) -> Result<Option<TimeSlotCollision>> {
+    ) -> Result<Option<Training>> {
         let day_id = slot.day_id();
         let day = self.get_day(session, day_id).await?;
         for training in day.training {
             if training.get_slot().has_conflict(&slot) {
-                return Ok(Some(TimeSlotCollision(training)));
+                return Ok(Some(training));
             }
         }
 
@@ -267,7 +267,7 @@ impl Calendar {
                 let slot = slot.with_day(day.day_id());
                 for training in day.training {
                     if training.get_slot().has_conflict(&slot) {
-                        return Ok(Some(TimeSlotCollision(training)));
+                        return Ok(Some(training));
                     }
                 }
             }
@@ -314,68 +314,5 @@ impl Deref for Calendar {
 
     fn deref(&self) -> &Self::Target {
         &self.calendar
-    }
-}
-
-#[derive(Debug)]
-pub struct TimeSlotCollision(Training);
-
-impl Deref for TimeSlotCollision {
-    type Target = Training;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum ScheduleError {
-    #[error("Program not found")]
-    ProgramNotFound,
-    #[error("Instructor not found")]
-    InstructorNotFound,
-    #[error("Client not found")]
-    ClientNotFound,
-    #[error("Instructor has no rights")]
-    InstructorHasNoRights,
-    #[error("Too close to start")]
-    TooCloseToStart,
-    #[error("Time slot collision:{0:?}")]
-    TimeSlotCollision(TimeSlotCollision),
-    #[error("Common error:{0}")]
-    Common(#[from] eyre::Error),
-}
-
-impl From<TimeSlotCollision> for ScheduleError {
-    fn from(e: TimeSlotCollision) -> Self {
-        ScheduleError::TimeSlotCollision(e)
-    }
-}
-
-impl From<mongodb::error::Error> for ScheduleError {
-    fn from(e: mongodb::error::Error) -> Self {
-        ScheduleError::Common(e.into())
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum SignOutError {
-    #[error("Training not found")]
-    TrainingNotFound,
-    #[error("Training is not open to sign out")]
-    TrainingNotOpenToSignOut,
-    #[error("Client not signed up")]
-    ClientNotSignedUp,
-    #[error("Common error:{0}")]
-    Common(#[from] eyre::Error),
-    #[error("Not enough reserved balance")]
-    NotEnoughReservedBalance,
-    #[error("User not found")]
-    UserNotFound,
-}
-
-impl From<mongodb::error::Error> for SignOutError {
-    fn from(e: mongodb::error::Error) -> Self {
-        SignOutError::Common(e.into())
     }
 }

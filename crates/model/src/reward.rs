@@ -1,3 +1,5 @@
+use std::default;
+
 use bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -21,7 +23,9 @@ pub enum RewardSource {
     Training {
         training_id: TrainingId,
         name: String,
+        #[serde(default)]
         percent: Decimal,
+        #[serde(default)]
         user_originals: Vec<UserRewardContribution>,
     },
     Fixed {},

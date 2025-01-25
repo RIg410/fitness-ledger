@@ -1,4 +1,4 @@
-use crate::schedule::render_time_slot_collision;
+// use crate::schedule::render_time_slot_collision;
 
 use super::{render_msg, ScheduleTrainingPreset};
 use async_trait::async_trait;
@@ -9,7 +9,6 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use eyre::Result;
-use ledger::service::calendar::ScheduleError;
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
@@ -82,7 +81,8 @@ impl View for Finish {
                         ctx.send_msg("Тренировка успешно добавлена ✅").await?;
                     }
                     Err(err) => {
-                        ctx.send_msg(&error_msg(&err)).await?;
+                        // ctx.send_msg(&error_msg(&err)).await?;
+                        todo!()
                     }
                 }
             }
@@ -100,18 +100,18 @@ pub enum Callback {
     No,
 }
 
-fn error_msg(err: &ScheduleError) -> String {
-    match err {
-        ScheduleError::ProgramNotFound => "Тренировка не найдена".to_string(),
-        ScheduleError::InstructorNotFound => "Инструктор не найден".to_string(),
-        ScheduleError::InstructorHasNoRights => {
-            "Инструктор не имеет прав на проведение тренировок".to_string()
-        }
-        ScheduleError::TimeSlotCollision(collision) => render_time_slot_collision(collision),
-        ScheduleError::Common(err) => escape(&format!("Ошибка: {:#}", err)),
-        ScheduleError::TooCloseToStart => {
-            "Нельзя добавить тренировку менее чем за 3 часа".to_string()
-        }
-        ScheduleError::ClientNotFound => "Клиент не найден".to_string(),
-    }
-}
+// fn error_msg(err: &ScheduleError) -> String {
+//     match err {
+//         ScheduleError::ProgramNotFound => "Тренировка не найдена".to_string(),
+//         ScheduleError::InstructorNotFound => "Инструктор не найден".to_string(),
+//         ScheduleError::InstructorHasNoRights => {
+//             "Инструктор не имеет прав на проведение тренировок".to_string()
+//         }
+//         ScheduleError::TimeSlotCollision(collision) => render_time_slot_collision(collision),
+//         ScheduleError::Common(err) => escape(&format!("Ошибка: {:#}", err)),
+//         ScheduleError::TooCloseToStart => {
+//             "Нельзя добавить тренировку менее чем за 3 часа".to_string()
+//         }
+//         ScheduleError::ClientNotFound => "Клиент не найден".to_string(),
+//     }
+// }

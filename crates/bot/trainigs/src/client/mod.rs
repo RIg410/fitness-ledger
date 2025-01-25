@@ -6,7 +6,7 @@ use bot_core::{
 };
 use bot_viewer::user::render_profile_msg;
 use eyre::{bail, Result};
-use ledger::{service::calendar::SignOutError, SignUpError};
+use ledger::{SignUpError};
 use model::{rights::Rule, training::{Training, TrainingId}};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -52,35 +52,35 @@ impl ClientView {
             .ledger
             .sign_up(&mut ctx.session, training.id(), self.id, true)
             .await;
-        match result {
-            Ok(_) => {
-                ctx.send_notification("Добавлен").await?;
-            }
-            Err(SignUpError::TrainingIsFull) => {
-                ctx.send_notification("Тренировка заполнена").await?;
-            }
-            Err(SignUpError::ClientAlreadySignedUp) => {
-                ctx.send_notification("Уже добавлен").await?;
-            }
-            Err(SignUpError::TrainingNotFound) => {
-                bail!("Training not found");
-            }
-            Err(SignUpError::TrainingNotOpenToSignUp(_)) => {
-                ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
-                    .await?;
-            }
-            Err(SignUpError::UserNotFound) => {
-                bail!("User not found");
-            }
-            Err(SignUpError::Common(err)) => return Err(err),
-            Err(SignUpError::NotEnoughBalance) => {
-                ctx.send_notification("Не хватает баланса").await?;
-            }
-            Err(SignUpError::UserIsCouch) => {
-                ctx.send_notification("Тренер не может записаться на тренировку")
-                    .await?;
-            }
-        }
+        // match result {
+        //     Ok(_) => {
+        //         ctx.send_notification("Добавлен").await?;
+        //     }
+        //     Err(SignUpError::TrainingIsFull) => {
+        //         ctx.send_notification("Тренировка заполнена").await?;
+        //     }
+        //     Err(SignUpError::ClientAlreadySignedUp) => {
+        //         ctx.send_notification("Уже добавлен").await?;
+        //     }
+        //     Err(SignUpError::TrainingNotFound) => {
+        //         bail!("Training not found");
+        //     }
+        //     Err(SignUpError::TrainingNotOpenToSignUp(_)) => {
+        //         ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
+        //             .await?;
+        //     }
+        //     Err(SignUpError::UserNotFound) => {
+        //         bail!("User not found");
+        //     }
+        //     Err(SignUpError::Common(err)) => return Err(err),
+        //     Err(SignUpError::NotEnoughBalance) => {
+        //         ctx.send_notification("Не хватает баланса").await?;
+        //     }
+        //     Err(SignUpError::UserIsCouch) => {
+        //         ctx.send_notification("Тренер не может записаться на тренировку")
+        //             .await?;
+        //     }
+        // }
         Ok(())
     }
 
@@ -97,27 +97,27 @@ impl ClientView {
             .sign_out(&mut ctx.session, training.id(), self.id, true)
             .await;
 
-        match result {
-            Ok(_) => {}
-            Err(SignOutError::TrainingNotFound) => {
-                bail!("Training not found");
-            }
-            Err(SignOutError::TrainingNotOpenToSignOut) => {
-                ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
-                    .await?;
-            }
-            Err(SignOutError::NotEnoughReservedBalance) => {
-                ctx.send_notification("Не удалось удалить клиента\\. Нет резерва")
-                    .await?;
-            }
-            Err(SignOutError::UserNotFound) => {
-                bail!("User not found");
-            }
-            Err(SignOutError::ClientNotSignedUp) => {
-                ctx.send_notification("Уже удален)").await?;
-            }
-            Err(SignOutError::Common(err)) => return Err(err),
-        }
+        // match result {
+        //     Ok(_) => {}
+        //     Err(SignOutError::TrainingNotFound) => {
+        //         bail!("Training not found");
+        //     }
+        //     Err(SignOutError::TrainingNotOpenToSignOut) => {
+        //         ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
+        //             .await?;
+        //     }
+        //     Err(SignOutError::NotEnoughReservedBalance) => {
+        //         ctx.send_notification("Не удалось удалить клиента\\. Нет резерва")
+        //             .await?;
+        //     }
+        //     Err(SignOutError::UserNotFound) => {
+        //         bail!("User not found");
+        //     }
+        //     Err(SignOutError::ClientNotSignedUp) => {
+        //         ctx.send_notification("Уже удален)").await?;
+        //     }
+        //     Err(SignOutError::Common(err)) => return Err(err),
+        // }
         Ok(())
     }
 }

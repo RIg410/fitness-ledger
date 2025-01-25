@@ -186,7 +186,7 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
             training.capacity
         )
     };
-
+    
     let now = Local::now();
     let tr_status = training.status(now);
     let slot = training.get_slot();
