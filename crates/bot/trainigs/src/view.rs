@@ -52,12 +52,17 @@ impl TrainingView {
 
     async fn delete_training(&mut self, ctx: &mut Context, all: bool) -> Result<Jmp> {
         ctx.ensure(Rule::RemoveTraining)?;
+
         let training = ctx
             .ledger
             .calendar
             .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        if !training.is_group() {
+            bail!("Can't delete personal training");
+        }
+
         ctx.ledger
             .calendar
             .delete_training(&mut ctx.session, training.id(), all)
@@ -73,6 +78,10 @@ impl TrainingView {
             .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        if !training.is_group() {
+            bail!("Can't delete personal training");
+        }
+
         ctx.ledger
             .calendar
             .restore_training(&mut ctx.session, &training)
@@ -100,6 +109,9 @@ impl TrainingView {
             .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        if !training.is_group() {
+            bail!("Can't delete personal training");
+        }
         ctx.ledger
             .calendar
             .set_keep_open(&mut ctx.session, training.id(), keep_open)
@@ -116,7 +128,9 @@ impl TrainingView {
             .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-
+        if !training.is_group() {
+            bail!("Can't delete personal training");
+        }
         if !training.clients.is_empty() {
             ctx.send_msg("Нельзя изменить статус тренировки, на которую записаны клиенты")
                 .await?;
@@ -186,7 +200,7 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
             training.capacity
         )
     };
-    
+
     let now = Local::now();
     let tr_status = training.status(now);
     let slot = training.get_slot();
@@ -241,7 +255,7 @@ _{}_                                                                 \n
     }
 
     let mut row = vec![];
-    if ctx.has_right(Rule::CancelTraining) {
+    if ctx.has_right(Rule::CancelTraining) || ctx.me.id == training.instructor {
         if tr_status.can_be_canceled() {
             row.push(Callback::Cancel.button("⛔ Отменить"));
         }
@@ -249,57 +263,67 @@ _{}_                                                                 \n
             row.push(Callback::UnCancel.button("🔓 Вернуть"));
         }
     }
-    if ctx.has_right(Rule::SetKeepOpen) {
-        if training.keep_open {
-            row.push(Callback::KeepOpen(false).button("🔒 Закрыть для записи"));
-        } else {
-            row.push(Callback::KeepOpen(true).button("🔓 Открыть для записи"));
+    if training.is_group() {
+        if ctx.has_right(Rule::SetKeepOpen) {
+            if training.keep_open {
+                row.push(Callback::KeepOpen(false).button("🔒 Закрыть для записи"));
+            } else {
+                row.push(Callback::KeepOpen(true).button("🔓 Открыть для записи"));
+            }
         }
     }
     keymap = keymap.append_row(row);
 
-    if ctx.has_right(Rule::RemoveTraining) {
-        keymap = keymap.append_row(vec![
-            Callback::Delete(false).button("🗑️ Удалить эту тренировку")
-        ]);
-        if !training.is_one_time {
+    if training.is_group() {
+        if ctx.has_right(Rule::RemoveTraining) {
             keymap = keymap.append_row(vec![
-                Callback::Delete(true).button("🗑️ Удалить все последующие")
+                Callback::Delete(false).button("🗑️ Удалить эту тренировку")
+            ]);
+            if !training.is_one_time {
+                keymap = keymap.append_row(vec![
+                    Callback::Delete(true).button("🗑️ Удалить все последующие")
+                ]);
+            }
+        }
+        if ctx.has_right(Rule::EditTrainingCouch) {
+            keymap = keymap.append_row(vec![
+                Callback::ChangeCouchOne.button("🔄 Заменить инструктора")
+            ]);
+            keymap = keymap.append_row(vec![
+                Callback::ChangeCouchAll.button("🔄 Заменить инструктора на все")
             ]);
         }
-    }
 
-    if ctx.has_right(Rule::EditTrainingCouch) {
-        keymap = keymap.append_row(vec![
-            Callback::ChangeCouchOne.button("🔄 Заменить инструктора")
-        ]);
-        keymap = keymap.append_row(vec![
-            Callback::ChangeCouchAll.button("🔄 Заменить инструктора на все")
-        ]);
-    }
-
-    if ctx.has_right(Rule::SetFree) {
-        if training.tp.is_free() {
-            keymap = keymap.append_row(vec![Callback::SetFree(false).button("Сделать платной")]);
-        } else {
-            keymap = keymap.append_row(vec![Callback::SetFree(true).button("Сделать бесплатной")]);
-        }
-    }
-
-    if is_client {
-        if ctx.me.family.children_ids.is_empty() {
-            if signed {
-                if tr_status.can_sign_out() {
-                    keymap =
-                        keymap.append_row(vec![Callback::SignOut.button("❌ Отменить запись")]);
-                }
-            } else if tr_status.can_sign_in() {
-                keymap = keymap.append_row(vec![Callback::SignUp.button("✔️ Записаться")]);
+        if ctx.has_right(Rule::SetFree) {
+            if training.tp.is_free() {
+                keymap =
+                    keymap.append_row(vec![Callback::SetFree(false).button("Сделать платной")]);
+            } else {
+                keymap =
+                    keymap.append_row(vec![Callback::SetFree(true).button("Сделать бесплатной")]);
             }
-        } else {
-            keymap = keymap.append_row(vec![Callback::OpenSignInView.button("👨‍👩‍👧‍👦 Запись")]);
+        }
+
+        if is_client {
+            if ctx.me.family.children_ids.is_empty() {
+                if signed {
+                    if tr_status.can_sign_out() {
+                        keymap =
+                            keymap.append_row(vec![Callback::SignOut.button("❌ Отменить запись")]);
+                    }
+                } else if tr_status.can_sign_in() {
+                    keymap = keymap.append_row(vec![Callback::SignUp.button("✔️ Записаться")]);
+                }
+            } else {
+                keymap = keymap.append_row(vec![Callback::OpenSignInView.button("👨‍👩‍👧‍👦 Запись")]);
+            }
         }
     }
+
+    if training.is_personal() && signed {
+        keymap = keymap.append_row(vec![Callback::SignOut.button("❌ Отменить запись")]);
+    }
+
     Ok((msg, keymap))
 }
 
@@ -367,8 +391,11 @@ impl ConfirmCancelTraining {
                     .await?;
             }
         }
-
-        Ok(Jmp::Stay)
+        if training.is_group() {
+            Ok(Jmp::Back)
+        } else {
+            Ok(Jmp::BackSteps(2))
+        }
     }
 }
 
@@ -400,11 +427,10 @@ impl View for ConfirmCancelTraining {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp> {
-        match calldata!(data) {
+        Ok(match calldata!(data) {
             CancelCallback::Cancel => self.cancel_training(ctx).await?,
-            CancelCallback::Stay => Jmp::Stay,
-        };
-        Ok(Jmp::Back)
+            CancelCallback::Stay => Jmp::Back,
+        })
     }
 }
 
@@ -425,7 +451,9 @@ pub async fn sign_up(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> Re
         ctx.send_msg("Запись на тренировку закрыта💔").await?;
         return Ok(Jmp::Stay);
     }
-
+    if !training.is_group() {
+        bail!("Can't delete personal training");
+    }
     if training.is_full() {
         ctx.send_msg("Мест нет🥺").await?;
         return Ok(Jmp::Stay);
@@ -511,5 +539,33 @@ pub async fn sign_out(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> R
         .sign_out(&mut ctx.session, training.id(), user_id, false)
         .await?;
 
-    Ok(Jmp::Stay)
+    if training.is_group() {
+        Ok(Jmp::Stay)
+    } else {
+        let instructor = ctx
+            .ledger
+            .get_user(&mut ctx.session, training.instructor)
+            .await?;
+        let result = ctx
+            .bot
+            .send_notification_to(
+                ChatId(instructor.tg_id),
+                &format!(
+                    "Клиент {} {} отменил запись на персональную тренировку {}",
+                    escape(&ctx.me.name.first_name),
+                    fmt_phone(ctx.me.phone.as_deref()),
+                    fmt_dt(&training.get_slot().start_at())
+                ),
+            )
+            .await;
+        if result.is_err() {
+            log::error!(
+                "Failed to send notification to {}: {}",
+                instructor.tg_id,
+                result.err().unwrap()
+            );
+        }
+
+        Ok(Jmp::Back)
+    }
 }

@@ -49,32 +49,10 @@ impl ClientsList {
                 .await?;
             return Ok(Jmp::Stay);
         }
-        let result = ctx
-            .ledger
+        ctx.ledger
             .sign_out(&mut ctx.session, training.id(), id, true)
-            .await;
-        // match result {
-        //     Ok(_) => {}
-        //     Err(SignOutError::TrainingNotFound) => {
-        //         bail!("Training not found");
-        //     }
-        //     Err(SignOutError::TrainingNotOpenToSignOut) => {
-        //         ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
-        //             .await?;
-        //     }
-        //     Err(SignOutError::NotEnoughReservedBalance) => {
-        //         ctx.send_notification("Не удалось удалить клиента\\. Нет резерва")
-        //             .await?;
-        //     }
-        //     Err(SignOutError::UserNotFound) => {
-        //         bail!("User not found");
-        //     }
-        //     Err(SignOutError::ClientNotSignedUp) => {
-        //         ctx.send_notification("Уже удален)").await?;
-        //     }
-        //     Err(SignOutError::Common(err)) => return Err(err),
-        // }
-
+            .await?;
+        ctx.send_notification("Клиент удален из тренировки").await?;
         Ok(Jmp::Stay)
     }
 }
@@ -121,13 +99,17 @@ impl View for ClientsList {
             let mut row = Vec::with_capacity(2);
             row.push(Callback::SelectClient(user.id.bytes()).button(format!("👤 {}", user_name)));
             if ctx.has_right(Rule::EditTrainingClientsList) && !training.is_processed {
-                row.push(Callback::DeleteClient(user.id.bytes()).button("❌"))
+                if training.is_group() {
+                    row.push(Callback::DeleteClient(user.id.bytes()).button("❌"));
+                }
             }
             keymap = keymap.append_row(row);
         }
 
-        if ctx.has_right(Rule::EditTrainingClientsList) && !training.is_processed {
-            keymap = keymap.append_row(vec![Callback::AddClient.button("Добавить 👤")]);
+        if training.is_group() {
+            if ctx.has_right(Rule::EditTrainingClientsList) && !training.is_processed {
+                keymap = keymap.append_row(vec![Callback::AddClient.button("Добавить 👤")]);
+            }
         }
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())

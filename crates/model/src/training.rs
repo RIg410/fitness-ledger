@@ -230,8 +230,12 @@ impl Training {
         self.room
     }
 
-    pub(crate) fn is_group(&self) -> bool {
+    pub fn is_group(&self) -> bool {
         self.tp.is_group()
+    }
+
+    pub fn is_personal(&self) -> bool {
+        self.tp.is_personal()
     }
 }
 

@@ -1,4 +1,4 @@
-// use crate::schedule::render_time_slot_collision;
+use crate::schedule::render_time_slot_collision;
 
 use super::{render_msg, PersonalTrainingPreset, DURATION};
 use async_trait::async_trait;
@@ -86,9 +86,8 @@ impl View for SetDateTime {
                     .check_time_slot(&mut ctx.session, slot, true)
                     .await?
                 {
-                    // ctx.send_msg(&render_time_slot_collision(&collision))
-                    //     .await?;
-                    todo!();
+                    ctx.send_msg(&render_time_slot_collision(&collision))
+                        .await?;
                     preset.date_time = None;
                 } else {
                     preset.date_time = Some(date_time);

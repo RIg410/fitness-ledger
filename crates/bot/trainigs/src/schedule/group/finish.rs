@@ -1,5 +1,3 @@
-// use crate::schedule::render_time_slot_collision;
-
 use super::{render_msg, ScheduleTrainingPreset};
 use async_trait::async_trait;
 use bot_core::{
@@ -11,7 +9,7 @@ use bot_core::{
 use eyre::Result;
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
-use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
+use teloxide::types::InlineKeyboardMarkup;
 
 #[derive(Default)]
 pub struct Finish {
@@ -64,8 +62,7 @@ impl View for Finish {
 
                 let room = preset.room.ok_or_else(|| eyre::eyre!("Room is missing"))?;
 
-                match ctx
-                    .ledger
+                ctx.ledger
                     .calendar
                     .schedule_group(
                         &mut ctx.session,
@@ -75,16 +72,8 @@ impl View for Finish {
                         instructor,
                         is_one_time,
                     )
-                    .await
-                {
-                    Ok(_) => {
-                        ctx.send_msg("Тренировка успешно добавлена ✅").await?;
-                    }
-                    Err(err) => {
-                        // ctx.send_msg(&error_msg(&err)).await?;
-                        todo!()
-                    }
-                }
+                    .await?;
+                ctx.send_msg("Тренировка успешно добавлена ✅").await?;
             }
             Callback::No => {
                 //no-op
@@ -99,19 +88,3 @@ pub enum Callback {
     Yes,
     No,
 }
-
-// fn error_msg(err: &ScheduleError) -> String {
-//     match err {
-//         ScheduleError::ProgramNotFound => "Тренировка не найдена".to_string(),
-//         ScheduleError::InstructorNotFound => "Инструктор не найден".to_string(),
-//         ScheduleError::InstructorHasNoRights => {
-//             "Инструктор не имеет прав на проведение тренировок".to_string()
-//         }
-//         ScheduleError::TimeSlotCollision(collision) => render_time_slot_collision(collision),
-//         ScheduleError::Common(err) => escape(&format!("Ошибка: {:#}", err)),
-//         ScheduleError::TooCloseToStart => {
-//             "Нельзя добавить тренировку менее чем за 3 часа".to_string()
-//         }
-//         ScheduleError::ClientNotFound => "Клиент не найден".to_string(),
-//     }
-// }

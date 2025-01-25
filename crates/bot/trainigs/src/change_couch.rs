@@ -6,7 +6,7 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::day::fmt_dt;
-use eyre::Result;
+use eyre::{bail, Result};
 use model::{rights::Rule, training::TrainingId, user::User};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -33,6 +33,11 @@ impl ChangeCouch {
             .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
+        
+        if !training.is_group() {
+            bail!("Can't delete personal training");
+        }
+
         if training.is_processed {
             ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
                 .await?;
