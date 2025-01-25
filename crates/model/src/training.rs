@@ -329,4 +329,8 @@ impl TrainingId {
     pub fn day_id(&self) -> DayId {
         DayId::from(self.start_at)
     }
+
+    pub fn start_at(&self) -> DateTime<Local> {
+        self.start_at.with_timezone(&Local)
+    }
 }

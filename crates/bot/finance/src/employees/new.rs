@@ -143,23 +143,6 @@ impl View for EmployeeRoleView {
             )
             .await?;
         ctx.send_notification("Сотрудник добавлен").await?;
-        // notify(
-        //     "Ошибка добавления сотрудника",
-        //     ctx.ledger
-        //         .users
-        //         .make_user_employee(
-        //             &mut ctx.session,
-        //             self.user_id,
-        //             self.description.clone(),
-        //             vec![],
-        //             role,
-        //         )
-        //         .await,
-        //     "Сотрудник добавлен",
-        //     ctx,
-        // )
-        // .await?;
-
         Ok(Jmp::Home)
     }
 }

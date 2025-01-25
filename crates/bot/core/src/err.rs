@@ -1,7 +1,6 @@
 use crate::{context::Context, widget::Jmp};
-use chrono::Local;
 use eyre::{Error, Result};
-use model::{errors::LedgerError, user::rate::Rate};
+use model::{errors::LedgerError, training::TrainingId, user::rate::Rate};
 use mongodb::bson::oid::ObjectId;
 use teloxide::utils::markdown::escape;
 
@@ -120,27 +119,61 @@ pub async fn bassness_error(ctx: &mut Context, err: &LedgerError) -> Result<Opti
                 training.get_slot().start_at().format("%d\\.%m\\.%Y %H:%M")
             )
         }
-        LedgerError::TrainingNotOpenToSignUp(training_id, training_status) => {
-            // format!(
-            //     "Ошибка:*Тренировка {} в {} закрыта для записи*",
-            //     escape(&training_id),
-            //     training_id
-            //         .start_at
-            //         .with_timezone(&Local)
-            //         .get_slot()
-            //         .start_at()
-            //         .format("%d\\.%m\\.%Y %H:%M")
-            // )
-            todo!()
+        LedgerError::TrainingNotOpenToSignUp(training_id, _) => {
+            format!(
+                "Ошибка:*Тренировка {} в {} закрыта для записи*",
+                training_name(ctx, training_id).await?,
+                training_id.start_at().format("%d\\.%m\\.%Y %H:%M")
+            )
         }
-        LedgerError::ClientAlreadySignedUp(object_id, training_id) => todo!(),
-        LedgerError::TrainingIsFull(training_id) => todo!(),
-        LedgerError::NotEnoughBalance(object_id) => todo!(),
-        LedgerError::TrainingNotFound(training_id) => todo!(),
-        LedgerError::TrainingNotOpenToSignOut(training_id) => todo!(),
-        LedgerError::ClientNotSignedUp(object_id, training_id) => todo!(),
-        LedgerError::NotEnoughReservedBalance(object_id) => todo!(),
-        LedgerError::TrainingHasClients(training_id) => todo!(),
+        LedgerError::ClientAlreadySignedUp(object_id, training_id) => {
+            format!(
+                "Ошибка:*Клиент {} уже записан на тренировку {}*",
+                user_name(ctx, *object_id).await?,
+                training_name(ctx, training_id).await?
+            )
+        }
+        LedgerError::TrainingIsFull(training_id) => {
+            format!(
+                "Ошибка:*На тренировке {} в {} нет свободных мест*",
+                training_name(ctx, training_id).await?,
+                training_id.start_at().format("%d\\.%m\\.%Y %H:%M")
+            )
+        }
+        LedgerError::NotEnoughBalance(_) => "Ошибка:*Нет подходящего абонемента*".to_string(),
+        LedgerError::TrainingNotFound(training_id) => {
+            format!(
+                "Ошибка:*Тренировка {} не найдена*",
+                training_id.start_at().format("%d\\.%m\\.%Y %H:%M")
+            )
+        }
+        LedgerError::TrainingNotOpenToSignOut(training_id) => {
+            format!(
+                "Ошибка:*Тренировка {} в {} закрыта для отмены записи*",
+                training_name(ctx, training_id).await?,
+                training_id.start_at().format("%d\\.%m\\.%Y %H:%M")
+            )
+        },
+        LedgerError::ClientNotSignedUp(object_id, training_id) => {
+            format!(
+                "Ошибка:*Клиент {} не записан на тренировку {}*",
+                user_name(ctx, *object_id).await?,
+                training_name(ctx, training_id).await?
+            )
+        },
+        LedgerError::NotEnoughReservedBalance(object_id) => {
+            format!(
+                "Ошибка:*У пользователя {} недостаточно зарезервированных средств*",
+                user_name(ctx, *object_id).await?
+            )
+        },
+        LedgerError::TrainingHasClients(training_id) => {
+            format!(
+                "Ошибка:*Тренировка {} в {} имеет записанных клиентов*",
+                training_name(ctx, training_id).await?,
+                training_id.start_at().format("%d\\.%m\\.%Y %H:%M")
+            )
+        },
     }))
 }
 
@@ -149,6 +182,17 @@ async fn user_name(ctx: &mut Context, user_id: ObjectId) -> Result<String> {
     Ok(user
         .map(|u| escape(&u.name.first_name))
         .unwrap_or_else(|| obj_id(&user_id)))
+}
+
+async fn training_name(ctx: &mut Context, training_id: &TrainingId) -> Result<String> {
+    let training = ctx
+        .ledger
+        .calendar
+        .get_training_by_id(&mut ctx.session, *training_id)
+        .await?;
+    Ok(training
+        .map(|t| escape(&t.name))
+        .unwrap_or_else(|| "Тренировка не найдена".to_string()))
 }
 
 fn rate_name(rate: &Rate) -> &'static str {
