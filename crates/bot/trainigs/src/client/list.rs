@@ -46,13 +46,13 @@ impl ClientsList {
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
         if training.is_processed {
             ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
-                .await?;
+                .await;
             return Ok(Jmp::Stay);
         }
         ctx.ledger
             .sign_out(&mut ctx.session, training.id(), id, true)
             .await?;
-        ctx.send_notification("Клиент удален из тренировки").await?;
+        ctx.send_notification("Клиент удален из тренировки").await;
         Ok(Jmp::Stay)
     }
 }

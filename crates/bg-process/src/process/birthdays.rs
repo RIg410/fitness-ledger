@@ -48,7 +48,7 @@ impl BirthdaysNotifier {
         request: &mut Request,
     ) -> Result<(), Error> {
         let msg = format!("Напоминание по заявке\n{}", fmt_request(request));
-        let id = self.bot.send_notification_to(ChatId(user), &msg).await?;
+        let id = self.bot.send_notification_to(ChatId(user), &msg).await;
         self.bot.pin_message(ChatId(user), id).await?;
         request.remind_later = None;
         Ok(())

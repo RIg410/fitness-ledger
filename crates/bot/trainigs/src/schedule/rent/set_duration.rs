@@ -45,7 +45,7 @@ impl View for SetDuration {
             Ok(duration) => Duration::minutes(i64::from(duration)),
             Err(_) => {
                 ctx.send_notification("Неверный формат продолжительности\\.")
-                    .await?;
+                    .await;
                 return Ok(Jmp::Stay);
             }
         };

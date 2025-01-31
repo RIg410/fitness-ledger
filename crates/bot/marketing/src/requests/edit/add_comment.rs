@@ -38,7 +38,7 @@ impl View for AddComment {
             .requests
             .add_comment(&mut ctx.session, self.id, comment)
             .await?;
-        ctx.bot.send_notification("Комментарий добавлен").await?;
+        ctx.bot.send_notification("Комментарий добавлен").await;
         Ok(Jmp::Back)
     }
 }

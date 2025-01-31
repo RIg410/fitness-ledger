@@ -47,7 +47,7 @@ impl View for GroupRateMin {
                     GroupRatePercent::new(self.old_rate, self.user_id, amount).into(),
                 ))
             } else {
-                ctx.send_notification("Неверный формат суммы").await?;
+                ctx.send_notification("Неверный формат суммы").await;
                 Ok(Jmp::Stay)
             }
         } else {
@@ -95,7 +95,7 @@ impl View for GroupRatePercent {
             if let Ok(percent) = text.parse::<Decimal>() {
                 if percent < Decimal::int(0) || percent > Decimal::int(100) {
                     ctx.send_notification("Процент должен быть от 0 до 100")
-                        .await?;
+                        .await;
                     return Ok(Jmp::Stay);
                 }
 
@@ -112,7 +112,7 @@ impl View for GroupRatePercent {
                 ))
             } else {
                 ctx.send_notification("Неверный формат процента от дохода")
-                    .await?;
+                    .await;
                 Ok(Jmp::Stay)
             }
         } else {

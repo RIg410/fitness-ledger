@@ -123,7 +123,7 @@ impl View for ConfirmCreationRate {
                         .add_rate(&mut ctx.session, self.employee_id, self.new_data)
                         .await?;
                 };
-                ctx.send_notification("Тариф создан").await?;
+                ctx.send_notification("Тариф создан").await;
                 Ok(Jmp::Goto(EmployeeProfile::new(self.employee_id).into()))
             }
             ConfirmCallback::No => Ok(Jmp::Stay),

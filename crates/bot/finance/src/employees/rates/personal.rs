@@ -45,7 +45,7 @@ impl View for PersonalRate {
             if let Ok(percent) = text.parse::<Decimal>() {
                 if percent < Decimal::int(0) || percent > Decimal::int(100) {
                     ctx.send_notification("Процент должен быть от 0 до 100")
-                        .await?;
+                        .await;
                     return Ok(Jmp::Stay);
                 }
 
@@ -61,7 +61,7 @@ impl View for PersonalRate {
                 ))
             } else {
                 ctx.send_notification("Неверный формат процента от дохода")
-                    .await?;
+                    .await;
                 Ok(Jmp::Stay)
             }
         } else {

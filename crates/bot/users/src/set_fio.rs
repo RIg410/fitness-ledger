@@ -34,7 +34,7 @@ impl View for SetFio {
             .split(" ")
             .collect::<Vec<_>>();
         if parts.len() != 2 {
-            ctx.send_notification("Введите имя и фамилию").await?;
+            ctx.send_notification("Введите имя и фамилию").await;
             return Ok(Jmp::Stay);
         }
 

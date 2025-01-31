@@ -47,7 +47,7 @@ impl ClientView {
 
         if training.is_processed {
             ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
-                .await?;
+                .await;
             return Ok(());
         }
         ctx.ledger
@@ -61,7 +61,7 @@ impl ClientView {
 
         if training.is_processed {
             ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
-                .await?;
+                .await;
             return Ok(());
         }
         ctx.ledger

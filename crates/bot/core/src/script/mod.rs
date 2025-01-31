@@ -179,7 +179,7 @@ where
                         }
                     },
                     ListId::No => {
-                        ctx.send_notification("❌ Отменено").await?;
+                        ctx.send_notification("❌ Отменено").await;
                         return Ok(Jmp::Back);
                     }
                     _ => return Ok(Jmp::Stay),

@@ -21,7 +21,7 @@ impl Ledger {
                 .await?;
         }
         let training = self.calendar.cancel_training(session, training).await?;
-        if training.tp.is_personal() {
+        if training.tp.is_personal() || training.tp.is_sub_rent() {
             self.calendar
                 .delete_training_txless(session, training.id(), false)
                 .await?;

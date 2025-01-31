@@ -68,7 +68,7 @@ impl Task for SubscriptionBg {
                                     sub.balance,
                                 ),
                             )
-                            .await?;
+                            .await;
                     }
                 }
             }

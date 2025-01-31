@@ -312,7 +312,7 @@ impl View for SetRemindLater {
         } else {
             ctx.bot
                 .send_notification("Введите корректную дату *дд\\.мм\\.гггг чч\\:мм*")
-                .await?;
+                .await;
             Ok(Jmp::Stay)
         }
     }

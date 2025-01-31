@@ -55,7 +55,7 @@ impl TrainingNotifier {
                 if receiver.settings.notification.notify_by_day {
                     self.bot
                         .send_notification_to(ChatId(receiver.tg_id), msg)
-                        .await?;
+                        .await;
                     return Ok(true);
                 }
             } else {
@@ -64,7 +64,7 @@ impl TrainingNotifier {
                     if now + chrono::Duration::hours(hours as i64) > start_at {
                         self.bot
                             .send_notification_to(ChatId(receiver.tg_id), msg)
-                            .await?;
+                            .await;
                         return Ok(true);
                     }
                 }

@@ -48,7 +48,7 @@ impl View for DeleteEmployeeConfirm {
                 ctx.ledger
                     .delete_employee(&mut ctx.session, self.user_id)
                     .await?;
-                ctx.send_notification("Сотрудник удален").await?;
+                ctx.send_notification("Сотрудник удален").await;
                 Ok(Jmp::Back)
             }
             CallbackQuery::No => Ok(Jmp::Back),

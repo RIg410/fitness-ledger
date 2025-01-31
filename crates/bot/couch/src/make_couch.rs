@@ -64,7 +64,7 @@ impl StageYesNo<State> for Confirm {
             )
             .await?;
         ctx.send_notification("Инструктор успешно создан 🎉")
-            .await?;
+            .await;
         Ok(Dispatch::WidgetBack)
     }
 
@@ -147,7 +147,7 @@ impl StageList<State> for UserList {
         let id = id.as_object_id().ok_or_else(|| eyre::eyre!("Invalid id"))?;
         let user = ctx.ledger.get_user(&mut ctx.session, id).await?;
         if user.employee.is_some() {
-            ctx.send_notification("Пользователь уже инструктор").await?;
+            ctx.send_notification("Пользователь уже инструктор").await;
             Ok(Dispatch::None)
         } else {
             state.user = Some(user);

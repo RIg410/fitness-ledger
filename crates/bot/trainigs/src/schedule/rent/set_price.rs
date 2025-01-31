@@ -45,7 +45,7 @@ impl View for SetPrice {
             Ok(price) => price,
             Err(_) => {
                 ctx.send_notification("Неверный формат стоимости\\.")
-                    .await?;
+                    .await;
                 return Ok(Jmp::Stay);
             }
         };

@@ -1,5 +1,4 @@
-use std::vec;
-
+use crate::{client::list::ClientsList, edit::EditTraining, family::FamilySignIn};
 use async_trait::async_trait;
 use bot_core::{
     callback_data::Calldata as _,
@@ -17,12 +16,11 @@ use model::{
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use std::vec;
 use teloxide::{
     types::{ChatId, InlineKeyboardMarkup},
     utils::markdown::escape,
 };
-
-use crate::{change_couch::ChangeCouch, client::list::ClientsList, family::FamilySignIn};
 
 pub struct TrainingView {
     id: TrainingId,
@@ -50,26 +48,6 @@ impl TrainingView {
         Ok(Jmp::Stay)
     }
 
-    async fn delete_training(&mut self, ctx: &mut Context, all: bool) -> Result<Jmp> {
-        ctx.ensure(Rule::RemoveTraining)?;
-
-        let training = ctx
-            .ledger
-            .calendar
-            .get_training_by_id(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        if !training.is_group() {
-            bail!("Can't delete personal training");
-        }
-
-        ctx.ledger
-            .calendar
-            .delete_training(&mut ctx.session, training.id(), all)
-            .await?;
-        Ok(Jmp::Back)
-    }
-
     async fn restore_training(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::CancelTraining)?;
         let training = ctx
@@ -95,57 +73,6 @@ impl TrainingView {
         }
         Ok(ClientsList::new(self.id).into())
     }
-
-    async fn change_couch(&mut self, ctx: &mut Context, all: bool) -> Result<Jmp> {
-        ctx.ensure(Rule::EditTrainingCouch)?;
-        Ok(ChangeCouch::new(self.id, all).into())
-    }
-
-    async fn keep_open(&mut self, ctx: &mut Context, keep_open: bool) -> Result<Jmp> {
-        ctx.ensure(Rule::SetKeepOpen)?;
-        let training = ctx
-            .ledger
-            .calendar
-            .get_training_by_id(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        if !training.is_group() {
-            bail!("Can't delete personal training");
-        }
-        ctx.ledger
-            .calendar
-            .set_keep_open(&mut ctx.session, training.id(), keep_open)
-            .await?;
-        Ok(Jmp::Stay)
-    }
-
-    async fn set_free(&mut self, ctx: &mut Context, free: bool) -> Result<Jmp> {
-        ctx.ensure(Rule::SetFree)?;
-
-        let training = ctx
-            .ledger
-            .calendar
-            .get_training_by_id(&mut ctx.session, self.id)
-            .await?
-            .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        if !training.is_group() {
-            bail!("Can't delete personal training");
-        }
-        if !training.clients.is_empty() {
-            ctx.send_msg("Нельзя изменить статус тренировки, на которую записаны клиенты")
-                .await?;
-            return Ok(Jmp::Stay);
-        }
-
-        let mut tp = training.tp;
-        tp.set_is_free(free);
-
-        ctx.ledger
-            .calendar
-            .set_training_type(&mut ctx.session, training.id(), tp)
-            .await?;
-        Ok(Jmp::Stay)
-    }
 }
 
 #[async_trait]
@@ -170,16 +97,12 @@ impl View for TrainingView {
         match calldata!(data) {
             Callback::CouchInfo => self.couch_info(ctx).await,
             Callback::Cancel => return Ok(Jmp::Next(ConfirmCancelTraining::new(self.id).into())),
-            Callback::Delete(all) => self.delete_training(ctx, all).await,
             Callback::UnCancel => self.restore_training(ctx).await,
             Callback::SignUp => sign_up(ctx, self.id, ctx.me.id).await,
             Callback::SignOut => sign_out(ctx, self.id, ctx.me.id).await,
             Callback::ClientList => self.client_list(ctx).await,
-            Callback::ChangeCouchOne => self.change_couch(ctx, false).await,
-            Callback::ChangeCouchAll => self.change_couch(ctx, true).await,
-            Callback::KeepOpen(keep_open) => self.keep_open(ctx, keep_open).await,
-            Callback::SetFree(free) => self.set_free(ctx, free).await,
             Callback::OpenSignInView => Ok(Jmp::Next(FamilySignIn::new(self.id).into())),
+            Callback::Edit => Ok(EditTraining::new(self.id).into()),
         }
     }
 }
@@ -220,18 +143,25 @@ async fn render(ctx: &mut Context, training: &Training) -> Result<(String, Inlin
         })
         .unwrap_or_default();
 
+    let tp = match training.tp {
+        model::program::TrainingType::Group { .. } => "групповая тренировка",
+        model::program::TrainingType::Personal { .. } => "персональная тренировка",
+        model::program::TrainingType::SubRent { .. } => "аренда",
+    };
+
     let msg = format!(
         "
-💪 *Тренировка*: _{}_
+💪 *{}*: _{}_
 📅 *Дата*: _{}_
 🧘 *Инструктор*: {}
 💁{}
 ⏱*Продолжительность*: _{}_мин
-_{}_                                                                 \n
+_{}_                            \n
 [Описание]({})
 {}
 {}
 ",
+        tp,
         escape(&training.name),
         fmt_dt(&slot.start_at()),
         couch,
@@ -266,45 +196,11 @@ _{}_                                                                 \n
             row.push(Callback::UnCancel.button("🔓 Вернуть"));
         }
     }
-    if training.is_group() {
-        if ctx.has_right(Rule::SetKeepOpen) {
-            if training.keep_open {
-                row.push(Callback::KeepOpen(false).button("🔒 Закрыть для записи"));
-            } else {
-                row.push(Callback::KeepOpen(true).button("🔓 Открыть для записи"));
-            }
-        }
-    }
     keymap = keymap.append_row(row);
 
     if training.is_group() {
-        if ctx.has_right(Rule::RemoveTraining) {
-            keymap = keymap.append_row(vec![
-                Callback::Delete(false).button("🗑️ Удалить эту тренировку")
-            ]);
-            if !training.is_one_time {
-                keymap = keymap.append_row(vec![
-                    Callback::Delete(true).button("🗑️ Удалить все последующие")
-                ]);
-            }
-        }
-        if ctx.has_right(Rule::EditTrainingCouch) {
-            keymap = keymap.append_row(vec![
-                Callback::ChangeCouchOne.button("🔄 Заменить инструктора")
-            ]);
-            keymap = keymap.append_row(vec![
-                Callback::ChangeCouchAll.button("🔄 Заменить инструктора на все")
-            ]);
-        }
-
-        if ctx.has_right(Rule::SetFree) {
-            if training.tp.is_free() {
-                keymap =
-                    keymap.append_row(vec![Callback::SetFree(false).button("Сделать платной")]);
-            } else {
-                keymap =
-                    keymap.append_row(vec![Callback::SetFree(true).button("Сделать бесплатной")]);
-            }
+        if !EditTraining::hidden(ctx)? && !training.is_processed {
+            keymap = keymap.append_row(vec![Callback::Edit.button("🔄 Редактировать")]);
         }
 
         if is_client {
@@ -333,17 +229,13 @@ _{}_                                                                 \n
 #[derive(Serialize, Deserialize)]
 enum Callback {
     CouchInfo,
-    ChangeCouchOne,
-    ChangeCouchAll,
-    Delete(bool),
     Cancel,
     ClientList,
     UnCancel,
     SignUp,
     SignOut,
-    KeepOpen(bool),
-    SetFree(bool),
     OpenSignInView,
+    Edit,
 }
 
 fn status(status: TrainingStatus, is_full: bool) -> &'static str {
@@ -391,7 +283,7 @@ impl ConfirmCancelTraining {
             if let Ok(user) = ctx.ledger.get_user(&mut ctx.session, client).await {
                 ctx.bot
                     .send_notification_to(ChatId(user.tg_id), &msg)
-                    .await?;
+                    .await;
             }
         }
         if training.is_group() {
@@ -415,8 +307,16 @@ impl View for ConfirmCancelTraining {
             .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
+
+        let tp = match training.tp {
+            model::program::TrainingType::Group { .. } => "групповую тренировку",
+            model::program::TrainingType::Personal { .. } => "персональную тренировку",
+            model::program::TrainingType::SubRent { .. } => "аренду",
+        };
+
         let msg = format!(
-            "Вы уверены, что хотите отменить тренировку '{}' в {}?",
+            "Вы уверены, что хотите отменить {} '{}' в {}?",
+            tp,
             escape(&training.name),
             fmt_dt(&training.get_slot().start_at())
         );
@@ -505,8 +405,7 @@ pub async fn sign_up(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> Re
                 .await
             {
                 for user in users {
-                    let res = ctx
-                        .bot
+                    ctx.bot
                         .send_notification_to(
                             ChatId(user.tg_id),
                             &format!(
@@ -516,12 +415,9 @@ pub async fn sign_up(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> Re
                             ),
                         )
                         .await;
-                    if let Err(e) = res {
-                        log::error!("Failed to send notification to {}: {}", user.tg_id, e);
-                    }
                 }
             }
-            ctx.send_notification(msg).await?;
+            ctx.send_notification(msg).await;
         }
     }
     Ok(Jmp::Stay)
@@ -549,7 +445,7 @@ pub async fn sign_out(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> R
             .ledger
             .get_user(&mut ctx.session, training.instructor)
             .await?;
-        let result = ctx
+        ctx
             .bot
             .send_notification_to(
                 ChatId(instructor.tg_id),
@@ -561,14 +457,6 @@ pub async fn sign_out(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> R
                 ),
             )
             .await;
-        if result.is_err() {
-            log::error!(
-                "Failed to send notification to {}: {}",
-                instructor.tg_id,
-                result.err().unwrap()
-            );
-        }
-
         Ok(Jmp::Back)
     }
 }

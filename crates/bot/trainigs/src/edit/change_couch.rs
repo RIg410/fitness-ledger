@@ -40,7 +40,7 @@ impl ChangeCouch {
 
         if training.is_processed {
             ctx.send_notification("Тренировка завершена\\. *Редактирование запрещено\\.*")
-                .await?;
+                .await;
             return Ok(());
         }
         let old_couch = training.instructor;
@@ -50,7 +50,7 @@ impl ChangeCouch {
             .change_couch(&mut ctx.session, training.id(), id, self.all)
             .await?;
 
-        ctx.send_notification("Тренер успешно изменен").await?;
+        ctx.send_notification("Тренер успешно изменен").await;
         let old_couch = ctx.ledger.get_user(&mut ctx.session, old_couch).await?;
         let new_couch = ctx.ledger.get_user(&mut ctx.session, new_couch).await?;
         let msg = format!(
@@ -61,12 +61,12 @@ impl ChangeCouch {
             fmt_dt(&training.get_slot().start_at())
         );
         ctx.send_notification_to(ChatId(old_couch.tg_id), &msg)
-            .await?;
+            .await;
         ctx.send_notification_to(ChatId(new_couch.tg_id), &msg)
-            .await?;
+            .await;
         for client in training.clients.iter() {
             let client = ctx.ledger.get_user(&mut ctx.session, *client).await?;
-            ctx.send_notification_to(ChatId(client.tg_id), &msg).await?;
+            ctx.send_notification_to(ChatId(client.tg_id), &msg).await;
         }
 
         Ok(())

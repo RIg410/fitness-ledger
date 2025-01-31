@@ -68,10 +68,10 @@ impl View for Confirm {
                     .extend_subscriptions(&mut ctx.session, self.days)
                     .await?;
                 ctx.send_notification(&format!("Подписка продлена на {} дней", self.days))
-                    .await?;
+                    .await;
             }
             Calldata::No => {
-                ctx.send_notification("Отменено").await?;
+                ctx.send_notification("Отменено").await;
             }
         }
         Ok(Jmp::Stay)

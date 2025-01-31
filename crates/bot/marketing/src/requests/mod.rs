@@ -121,7 +121,7 @@ impl View for Requests {
                 if let Some(id) = self.id {
                     Ok(AddComment { id }.into())
                 } else {
-                    ctx.bot.send_notification("Заявка не найдена").await?;
+                    ctx.bot.send_notification("Заявка не найдена").await;
                     Ok(Jmp::Stay)
                 }
             }
@@ -130,7 +130,7 @@ impl View for Requests {
                 if let Some(id) = self.id {
                     Ok(ChangeComeFrom { id }.into())
                 } else {
-                    ctx.bot.send_notification("Заявка не найдена").await?;
+                    ctx.bot.send_notification("Заявка не найдена").await;
                     Ok(Jmp::Stay)
                 }
             }
@@ -139,7 +139,7 @@ impl View for Requests {
                 if let Some(id) = self.id {
                     Ok(AddNotification { id }.into())
                 } else {
-                    ctx.bot.send_notification("Заявка не найдена").await?;
+                    ctx.bot.send_notification("Заявка не найдена").await;
                     Ok(Jmp::Stay)
                 }
             }

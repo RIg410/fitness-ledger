@@ -22,7 +22,7 @@ impl View for SetPhone {
     fn name(&self) -> &'static str {
         "SetPhone"
     }
-    
+
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         ctx.edit_origin("Введите телефон", InlineKeyboardMarkup::default())
             .await?;
@@ -32,7 +32,7 @@ impl View for SetPhone {
     async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
         let text = message.text().unwrap_or_default();
         if text.is_empty() {
-            ctx.send_notification("Введите телефон").await?;
+            ctx.send_notification("Введите телефон").await;
             return Ok(Jmp::Stay);
         }
 

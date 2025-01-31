@@ -47,7 +47,7 @@ impl View for FixRateAmount {
                     FixRateDate::new(self.old_rate, self.user_id, amount).into(),
                 ))
             } else {
-                ctx.send_notification("Неверный формат суммы").await?;
+                ctx.send_notification("Неверный формат суммы").await;
                 Ok(Jmp::Stay)
             }
         } else {
@@ -111,7 +111,7 @@ impl View for FixRateDate {
             )),
             Err(_) => {
                 ctx.send_notification("Введите дату в формате ДД\\.ММ\\.ГГГГ")
-                    .await?;
+                    .await;
                 Ok(Jmp::Stay)
             }
         }
@@ -175,7 +175,7 @@ impl View for FixRateInterval {
                     .into(),
                 ))
             } else {
-                ctx.send_notification("Неверный формат интервала").await?;
+                ctx.send_notification("Неверный формат интервала").await;
                 Ok(Jmp::Stay)
             }
         } else {

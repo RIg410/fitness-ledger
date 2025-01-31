@@ -153,7 +153,7 @@ impl View for AddMemberConfirm {
                     .users
                     .add_family_member(&mut ctx.session, self.parent_id, self.child_id)
                     .await?;
-                ctx.send_notification("Член семьи добавлен").await?;
+                ctx.send_notification("Член семьи добавлен").await;
                 Ok(Jmp::Back)
             }
             ConfirmCalldata::Cancel => Ok(Jmp::Back),
@@ -273,12 +273,12 @@ impl View for CreateMemberConfirm {
                     .await;
                 match result {
                     Ok(_) => {
-                        ctx.send_notification("Член семьи добавлен").await?;
+                        ctx.send_notification("Член семьи добавлен").await;
                         Ok(Jmp::Back)
                     }
                     Err(err) => {
                         if let Some(msg) = bassness_error(ctx, &err).await? {
-                            ctx.send_notification(&msg).await?;
+                            ctx.send_notification(&msg).await;
                             Ok(Jmp::Back)
                         } else {
                             Err(err.into())

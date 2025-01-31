@@ -10,7 +10,7 @@ pub async fn handle_result(ctx: &mut Context, result: Result<Jmp, Error>) -> Res
         Err(err) => {
             let ledger_err = err.downcast::<LedgerError>()?;
             if let Some(notification) = bassness_error(ctx, &ledger_err).await? {
-                ctx.send_notification(&notification).await?;
+                ctx.send_notification(&notification).await;
                 Ok(Jmp::Stay)
             } else {
                 Err(Error::new(ledger_err))

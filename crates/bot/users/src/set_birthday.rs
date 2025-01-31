@@ -58,14 +58,14 @@ impl View for SetBirthday {
                 if let Err(err) = result {
                     warn!("Failed to set birthday: {}", err);
                     ctx.send_notification("Не удалось установить дату рождения")
-                        .await?;
+                        .await;
                 }
                 ctx.delete_msg(message.id).await?;
                 Ok(Jmp::Back)
             }
             Err(_) => {
                 ctx.send_notification("Введите дату в формате ДД\\.ММ\\.ГГГГ")
-                    .await?;
+                    .await;
                 Ok(Jmp::Stay)
             }
         }

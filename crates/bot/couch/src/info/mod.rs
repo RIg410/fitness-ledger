@@ -48,7 +48,7 @@ impl CouchInfo {
         ctx.ledger
             .delete_employee(&mut ctx.session, state.id)
             .await?;
-        ctx.send_notification("🗑️ Удалено").await?;
+        ctx.send_notification("🗑️ Удалено").await;
         Ok(Dispatch::None)
     }
 }

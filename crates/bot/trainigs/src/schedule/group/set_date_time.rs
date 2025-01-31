@@ -101,7 +101,7 @@ impl View for SetDateTime {
                     .await?
                 {
                     ctx.send_notification(&render_time_slot_collision(&collision))
-                        .await?;
+                        .await;
                     preset.date_time = None;
                 } else {
                     preset.date_time = Some(date_time);
@@ -109,7 +109,7 @@ impl View for SetDateTime {
                 return Ok(preset.into_next_view().into());
             } else {
                 ctx.send_notification("Неверный формат времени\\. _чч\\:мм_")
-                    .await?;
+                    .await;
             }
         }
         Ok(Jmp::Stay)

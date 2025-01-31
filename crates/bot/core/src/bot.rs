@@ -44,10 +44,15 @@ impl TgBot {
         Ok(())
     }
 
-    pub async fn send_notification(&mut self, err: &str) -> Result<(), Error> {
-        self.send_msg(err).await?;
-        self.reset_origin().await?;
-        Ok(())
+    pub async fn send_notification(&mut self, msg: &str) {
+        log::info!("Sending notification: {}", msg);
+        if let Err(err) = self.send_msg(msg).await {
+            log::error!("Failed to send notification: {}. Msg:[{}]", err, msg);
+        }
+
+        if let Err(err) = self.reset_origin().await {
+            log::error!("Failed to reset origin: {}.Msg:[{}]", err, msg);
+        }
     }
 
     pub async fn remove_origin(&mut self) -> Result<(), Error> {
@@ -199,23 +204,27 @@ impl TgBot {
         Ok(())
     }
 
-    pub async fn send_notification_to(
-        &self,
-        chat_id: ChatId,
-        text: &str,
-    ) -> Result<MessageId, RequestError> {
+    pub async fn send_notification_to(&self, chat_id: ChatId, text: &str) -> MessageId {
         if chat_id.0 == -1 {
-            return Ok(MessageId(0));
+            return MessageId(0);
         }
-        let id = self
+        let result = self
             .bot
             .send_message(chat_id, text)
             .parse_mode(ParseMode::MarkdownV2)
-            .await?
-            .id;
+            .await;
+
+        let id = match result {
+            Ok(msg) => msg.id,
+            Err(err) => {
+                log::error!("Failed to send notification: {}. Msg:[{}]", err, text);
+                return MessageId(0);
+            }
+        };
+
         let tkn = self.tokens.get_token(chat_id);
         tkn.invalidate();
-        Ok(id)
+        id
     }
     pub fn env(&self) -> &Env {
         &self.env

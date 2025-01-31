@@ -182,7 +182,7 @@ impl View for DeleteRateConfirm {
                         .await?;
                     Ok(Jmp::Back)
                 } else {
-                    ctx.send_notification("Тариф был изменен").await?;
+                    ctx.send_notification("Тариф был изменен").await;
                     Ok(Jmp::Back)
                 }
             }

@@ -46,7 +46,7 @@ impl View for MakeEmployee {
         let phone = if let Some(phone) = message.text() {
             sanitize_phone(phone)
         } else {
-            ctx.send_notification("Номер телефона не найден").await?;
+            ctx.send_notification("Номер телефона не найден").await;
             return Ok(Jmp::Stay);
         };
 
@@ -59,13 +59,13 @@ impl View for MakeEmployee {
         Ok(if let Some(user) = user {
             if user.employee.is_some() {
                 ctx.send_notification("Пользователь уже является сотрудником")
-                    .await?;
+                    .await;
                 Jmp::Stay
             } else {
                 Jmp::Next(EmployeeDescription { user_id: user.id }.into())
             }
         } else {
-            ctx.send_notification("Пользователь не найден").await?;
+            ctx.send_notification("Пользователь не найден").await;
             Jmp::Stay
         })
     }
@@ -103,7 +103,7 @@ impl View for EmployeeDescription {
                 .into(),
             )
         } else {
-            ctx.send_notification("Описание не найдено").await?;
+            ctx.send_notification("Описание не найдено").await;
             Jmp::Stay
         })
     }
@@ -142,7 +142,7 @@ impl View for EmployeeRoleView {
                 role,
             )
             .await?;
-        ctx.send_notification("Сотрудник добавлен").await?;
+        ctx.send_notification("Сотрудник добавлен").await;
         Ok(Jmp::Home)
     }
 }

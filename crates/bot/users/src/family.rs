@@ -30,7 +30,7 @@ impl View for FamilyView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         if !(ctx.has_right(Rule::ViewFamily) || (ctx.me.id == self.id && ctx.me.has_family())) {
             ctx.send_notification("У вас нет прав на просмотр семьи")
-                .await?;
+                .await;
             return Ok(());
         }
 
@@ -136,12 +136,12 @@ impl View for ConfirmRemoveChild {
                     .await;
                 match result {
                     Ok(_) => {
-                        ctx.send_notification("Член семьи удален").await?;
+                        ctx.send_notification("Член семьи удален").await;
                         Ok(Jmp::Back)
                     }
                     Err(err) => {
                         if let Some(msg) = bassness_error(ctx, &err).await? {
-                            ctx.send_notification(&msg).await?;
+                            ctx.send_notification(&msg).await;
                             Ok(Jmp::Back)
                         } else {
                             Err(err.into())
