@@ -1,0 +1,137 @@
+use crate::schedule::render_time_slot_collision;
+
+use super::{render_msg, RentPreset};
+use async_trait::async_trait;
+use bot_core::{
+    context::Context,
+    widget::{Jmp, View},
+};
+use chrono::{DateTime, Datelike as _, Local, TimeZone, Timelike, Utc};
+use eyre::{Error, Result};
+use log::warn;
+use model::slot::Slot;
+use teloxide::types::{InlineKeyboardMarkup, Message};
+
+#[derive(Default)]
+pub struct SetDateTime {
+    preset: RentPreset,
+}
+
+impl SetDateTime {
+    pub fn new(preset: RentPreset) -> Self {
+        Self { preset }
+    }
+}
+
+#[async_trait]
+impl View for SetDateTime {
+    fn name(&self) -> &'static str {
+        "SetDateTime"
+    }
+
+    async fn show(&mut self, ctx: &mut Context) -> Result<()> {
+        let request = if self.preset.day.is_none() {
+            "На какой день назначить тренировку? дд\\.мм"
+        } else {
+            "На какое время назначить тренировку? чч\\:мм"
+        };
+
+        let msg = render_msg(ctx, &self.preset, request).await?;
+        ctx.edit_origin(&msg, InlineKeyboardMarkup::default())
+            .await?;
+
+        Ok(())
+    }
+
+    async fn handle_message(&mut self, ctx: &mut Context, message: &Message) -> Result<Jmp> {
+        ctx.delete_msg(message.id).await?;
+        let msg = if let Some(msg) = message.text() {
+            msg
+        } else {
+            return Ok(Jmp::Stay);
+        };
+
+        let parts = match TimeParts::try_from(msg) {
+            Ok(parts) => parts,
+            Err(err) => {
+                warn!("Invalid time format: {}", err);
+                ctx.send_msg("Неверный формат времени\\.").await?;
+                return Ok(Jmp::Stay);
+            }
+        };
+
+        if self.preset.day.is_none() {
+            if let Ok(day) = parts.to_date() {
+                let mut preset = self.preset.clone();
+                preset.day = Some(day);
+                return Ok(preset.into_next_view().into());
+            } else {
+                ctx.send_msg("Неверный формат даты\\. _дд\\.мм_").await?;
+            }
+        } else {
+            let mut preset = self.preset.clone();
+            let day = preset.day.unwrap();
+            let date_time = day.with_hour(parts.0).and_then(|d| d.with_minute(parts.1));
+            let room = preset.room.unwrap_or_default();
+            let duration = preset.duration.unwrap_or_default().num_minutes() as u32;
+
+            if let Some(date_time) = date_time {
+                let slot = Slot::new(date_time.with_timezone(&Utc), duration, room);
+
+                if let Some(collision) = ctx
+                    .ledger
+                    .calendar
+                    .check_time_slot(&mut ctx.session, slot, true)
+                    .await?
+                {
+                    ctx.send_msg(&render_time_slot_collision(&collision))
+                        .await?;
+                    preset.date_time = None;
+                } else {
+                    preset.date_time = Some(date_time);
+                }
+                return Ok(preset.into_next_view().into());
+            } else {
+                ctx.send_msg("Неверный формат времени\\. _чч\\:мм_").await?;
+            }
+        }
+        Ok(Jmp::Stay)
+    }
+}
+
+struct TimeParts(u32, u32);
+
+impl TryFrom<&str> for TimeParts {
+    type Error = eyre::Error;
+
+    fn try_from(value: &str) -> Result<Self> {
+        let parts = if value.contains(":") {
+            value.split(':').collect::<Vec<_>>()
+        } else {
+            value.split('.').collect::<Vec<_>>()
+        };
+        if parts.len() != 2 {
+            return Err(eyre::eyre!("Invalid time format"));
+        }
+        let hour = parts[0].parse::<u32>()?;
+        let minute = parts[1].parse::<u32>()?;
+        Ok(Self(hour, minute))
+    }
+}
+
+impl TimeParts {
+    pub fn to_date(&self) -> Result<DateTime<Local>, Error> {
+        let year = chrono::Local::now().naive_local().year_ce().1;
+        Local
+            .with_ymd_and_hms(
+                year as i32,
+                self.0.saturating_sub(1),
+                self.1.saturating_sub(1),
+                0,
+                0,
+                0,
+            )
+            .single()
+            .ok_or_else(|| eyre::eyre!("Invalid time"))
+    }
+}

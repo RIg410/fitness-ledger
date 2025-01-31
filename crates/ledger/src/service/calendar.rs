@@ -3,6 +3,7 @@ use std::{ops::Deref, sync::Arc};
 use chrono::{DateTime, Local, Utc};
 use eyre::{Error, Result};
 use model::{
+    decimal::Decimal,
     errors::LedgerError,
     ids::DayId,
     session::Session,
@@ -142,6 +143,30 @@ impl Calendar {
             return Err(LedgerError::TrainingNotFound(id));
         }
 
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn schedule_rent(
+        &self,
+        session: &mut Session,
+        start_at: DateTime<Local>,
+        duration_min: u32,
+        room: ObjectId,
+        price: Decimal,
+        renter: String,
+    ) -> Result<(), LedgerError> {
+        let slot = Slot::new(start_at.with_timezone(&Utc), duration_min, room);
+        let collision = self.check_time_slot(session, slot, true).await?;
+        if let Some(collision) = collision {
+            return Err(LedgerError::TimeSlotCollision(collision));
+        }
+
+        let name = format!("{}-{}", renter, duration_min);
+        let description = format!("Аренда для {}", renter);
+        let training = Training::new_rent(start_at, room, duration_min, name, description, price);
+
+        self.calendar.add_training(session, &training).await?;
         Ok(())
     }
 

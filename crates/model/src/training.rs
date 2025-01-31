@@ -78,6 +78,38 @@ impl Training {
         }
     }
 
+    pub fn new_rent(
+        start_at: DateTime<Local>,
+        room: ObjectId,
+        duration_min: u32,
+        name: String,
+        description: String,
+        price: Decimal,
+    ) -> Training {
+        Training {
+            id: ObjectId::new(),
+            proto_id: ObjectId::from_bytes([0; 12]),
+            name,
+            description,
+            start_at: start_at.with_timezone(&Utc),
+            duration_min,
+            instructor: ObjectId::from_bytes([0; 12]),
+            clients: vec![],
+            capacity: 0,
+            is_one_time: true,
+            is_canceled: false,
+            is_processed: false,
+            statistics: None,
+            notified: Default::default(),
+            keep_open: false,
+            tp: TrainingType::SubRent {
+                is_free: false,
+                price,
+            },
+            room,
+        }
+    }
+
     pub fn new_personal(
         start_at: DateTime<Local>,
         room: ObjectId,

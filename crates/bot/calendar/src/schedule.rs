@@ -7,7 +7,7 @@ use bot_core::{
 };
 use bot_trainigs::{
     program::list::ProgramList,
-    schedule::{group::ScheduleTrainingPreset, personal::PersonalTrainingPreset},
+    schedule::{group::ScheduleTrainingPreset, personal::PersonalTrainingPreset, rent::RentPreset},
 };
 use bot_viewer::day::fmt_date;
 use chrono::{DateTime, Local};
@@ -67,9 +67,8 @@ impl View for ScheduleView {
             }
             Callback::SubRent => {
                 ctx.ensure(Rule::ScheduleSubRent)?;
-                // ctx.ensure(Rule::EditSchedule)?;
-                // Ok(Jmp::to("SubRentView"))
-                todo!()
+                let preset = RentPreset::with_day(self.date_time);
+                Ok(Jmp::Next(preset.into_next_view()))
             }
         }
     }

@@ -1,6 +1,7 @@
 use crate::Ledger;
 use chrono::{DateTime, Local};
 use model::{
+    decimal::Decimal,
     errors::LedgerError,
     session::Session,
     training::{Training, TrainingId},
