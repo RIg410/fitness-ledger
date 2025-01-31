@@ -81,7 +81,7 @@ pub fn make_list_item(idx: usize, event: &TreasuryEvent) -> ListItem {
         model::treasury::Event::Income(income) => {
             format!("{} 📈{}", idx, escape(&income.description))
         }
-        model::treasury::Event::SubRent => {
+        model::treasury::Event::SubRent { .. } => {
             format!("📈{} Суб аренда", idx)
         }
         model::treasury::Event::Rent => {

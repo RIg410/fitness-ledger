@@ -336,11 +336,11 @@ impl CalendarStore {
         &self,
         session: &mut Session,
         id: TrainingId,
-        statistics: Statistics,
+        statistics: &Statistics,
     ) -> Result<()> {
         info!("Finalized: {:?}", id);
         let update = doc! {
-            "$set": { "training.$.is_finished": true, "training.$.statistics": to_document(&statistics)? },
+            "$set": { "training.$.is_finished": true, "training.$.statistics": to_document(statistics)? },
             "$inc": { "version": 1 }
         };
         let result = self

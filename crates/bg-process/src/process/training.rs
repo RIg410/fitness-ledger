@@ -81,19 +81,23 @@ impl TriningBg {
             _ => bail!("Invalid training type"),
         };
 
-        if !is_free {
-            statistic.earned += price;
-            self.ledger.treasury.take_sub_rent(session, price).await?;
-        }
-
         self.ledger
             .calendar
-            .finalized(session, training.id(), statistic)
+            .finalized(session, training.id(), &statistic)
             .await?;
         self.ledger
             .history
             .process_finished(session, &training)
             .await?;
+
+        if !is_free {
+            statistic.earned += price;
+            self.ledger
+                .treasury
+                .take_sub_rent(session, price, training.description)
+                .await?;
+        }
+
         Ok(())
     }
 
@@ -149,7 +153,7 @@ impl TriningBg {
         }
         self.ledger
             .calendar
-            .finalized(session, training.id(), statistic)
+            .finalized(session, training.id(), &statistic)
             .await?;
         self.ledger
             .history
@@ -164,7 +168,7 @@ impl TriningBg {
 
         self.ledger
             .calendar
-            .finalized(session, training.id(), Statistics::default())
+            .finalized(session, training.id(), &Statistics::default())
             .await?;
         self.ledger
             .history

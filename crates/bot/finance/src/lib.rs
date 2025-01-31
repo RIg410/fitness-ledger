@@ -3,7 +3,6 @@ pub mod in_out;
 pub mod marketing;
 pub mod operation;
 pub mod stat;
-pub mod sub_rent;
 pub mod employees;
 
 use async_trait::async_trait;
@@ -39,8 +38,6 @@ impl View for FinanceView {
         if ctx.has_right(Rule::MakePayment) {
             keymap = keymap.append_row(Callback::Payment.btn_row("Оплатить 💳"));
             keymap = keymap.append_row(Callback::PayMarketing.btn_row("Оплата маркетинга 📈"));
-
-            keymap = keymap.append_row(Callback::SubRent.btn_row("Субаренда 🏠"));
         }
 
         if ctx.has_right(Rule::MakeDeposit) {
@@ -89,10 +86,6 @@ impl View for FinanceView {
                 ctx.ensure(Rule::MakePayment)?;
                 Ok(marketing::PayRent.into())
             }
-            Callback::SubRent => {
-                ctx.ensure(Rule::MakePayment)?;
-                Ok(sub_rent::TakeSubRent.into())
-            }
             Callback::EmployeeList => {
                 ctx.ensure(Rule::ViewEmployees)?;
                 Ok(EmployeeList::new().into())
@@ -107,7 +100,6 @@ enum Callback {
     Payment,
 
     Deposit,
-    SubRent,
 
     History,
     StatByMonth,

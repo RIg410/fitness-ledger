@@ -248,9 +248,12 @@ _{}_                                                                 \n
     );
 
     let mut keymap = InlineKeyboardMarkup::default();
-    keymap = keymap.append_row(vec![Callback::CouchInfo.button("🧘 Об инструкторе")]);
+    if training.is_group() || training.is_personal() {
+        keymap = keymap.append_row(vec![Callback::CouchInfo.button("🧘 Об инструкторе")]);
+    }
 
-    if ctx.has_right(Rule::EditTrainingClientsList) {
+    if ctx.has_right(Rule::EditTrainingClientsList) && training.is_group() || training.is_personal()
+    {
         keymap = keymap.append_row(vec![Callback::ClientList.button("🗒 Список клиентов")]);
     }
 

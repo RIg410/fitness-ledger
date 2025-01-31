@@ -139,15 +139,22 @@ impl Treasury {
     }
 
     #[tx]
-    pub async fn take_sub_rent(&self, session: &mut Session, amount: Decimal) -> Result<(), Error> {
+    pub async fn take_sub_rent(
+        &self,
+        session: &mut Session,
+        amount: Decimal,
+        description: String,
+    ) -> Result<(), Error> {
         let dt = Local::now();
         self.logs
-            .payment(session, amount, "Субаренда".to_string(), &dt)
+            .payment(session, amount, format!("Субаренда:{}", description), &dt)
             .await?;
         let event = TreasuryEvent {
             id: ObjectId::new(),
             date_time: dt.with_timezone(&Utc),
-            event: Event::SubRent,
+            event: Event::SubRent {
+                description: description.clone(),
+            },
             debit: amount,
             credit: Decimal::zero(),
             actor: session.actor(),
@@ -237,7 +244,7 @@ impl Treasury {
                 Event::Income(_) => {
                     income.other.add(tx.debit);
                 }
-                Event::SubRent => {
+                Event::SubRent { .. } => {
                     outcome.sub_rent.add(tx.debit);
                 }
                 Event::Rent => {

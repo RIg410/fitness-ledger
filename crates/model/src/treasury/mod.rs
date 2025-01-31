@@ -35,7 +35,10 @@ pub enum Event {
     // income
     SellSubscription(SellSubscription),
     Income(Income),
-    SubRent,
+    SubRent {
+        #[serde(default)]
+        description: String,
+    },
     // outcome
     Rent,
     Outcome(Outcome),
