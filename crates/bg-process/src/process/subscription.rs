@@ -6,7 +6,7 @@ use bot_core::{bot::TgBot, CommonLocation};
 use bot_viewer::{fmt_phone, user::tg_link};
 use chrono::Utc;
 use eyre::{Error, Result};
-use model::{rights::Rule, user::extension};
+use model::rights::Rule;
 use teloxide::{
     types::{ChatId, InlineKeyboardMarkup},
     utils::markdown::escape,
