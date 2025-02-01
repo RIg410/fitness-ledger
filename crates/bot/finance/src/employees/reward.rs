@@ -31,8 +31,14 @@ impl View for PayReward {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let msg = "Введите сумму";
-        ctx.edit_origin(msg, InlineKeyboardMarkup::default())
+        let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
+        let reward = user.employee.map(|e| e.reward).unwrap_or_default();
+
+        let msg = format!(
+            "Доступно для вывода:{}\nВведите сумму:",
+            escape(&reward.to_string())
+        );
+        ctx.edit_origin(&msg, InlineKeyboardMarkup::default())
             .await?;
         Ok(())
     }
@@ -111,7 +117,7 @@ impl View for ConfirmSum {
                     .pay_reward(&mut ctx.session, self.id, self.sum)
                     .await?;
                 ctx.send_msg("Операция выполнена").await?;
-                Ok(Jmp::Back)
+                Ok(Jmp::BackSteps(2))
             }
             ConfirmCallback::Cancel => Ok(Jmp::Back),
         }
