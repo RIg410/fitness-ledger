@@ -19,6 +19,8 @@ use super::User;
 pub struct Family {
     #[serde(default)]
     pub payer_id: Option<ObjectId>,
+    #[serde(default)]
+    pub is_individual: bool,
     #[serde(skip)]
     pub payer: Option<Box<User>>,
     #[serde(default)]

@@ -113,6 +113,10 @@ impl User {
     }
 
     pub fn payer_mut(&mut self) -> Result<Payer<&mut User>> {
+        if self.family.is_individual {
+            return Ok(Payer::new(self, true));
+        }
+
         if !self.subscriptions.is_empty() {
             return Ok(Payer::new(self, true));
         }
@@ -129,6 +133,10 @@ impl User {
     }
 
     pub fn payer(&self) -> Result<Payer<&User>> {
+        if self.family.is_individual {
+            return Ok(Payer::new(self, true));
+        }
+        
         if !self.subscriptions.is_empty() {
             return Ok(Payer::new(self, true));
         }

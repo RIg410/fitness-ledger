@@ -1,7 +1,11 @@
 use crate::profile::UserProfile;
 use async_trait::async_trait;
 use bot_core::{
-    callback_data::Calldata as _, calldata, context::Context, err::bassness_error, widget::{Jmp, View}
+    callback_data::Calldata as _,
+    calldata,
+    context::Context,
+    err::bassness_error,
+    widget::{Jmp, View},
 };
 use eyre::Result;
 use model::rights::Rule;
@@ -56,11 +60,25 @@ impl View for FamilyView {
         if !family.children.is_empty() {
             msg.push_str("Члены семьи:\n");
             for child in family.children.iter() {
-                msg.push_str(&format!("👤 *{}*\n", escape(&child.name.first_name)));
+                msg.push_str(&format!(
+                    "👤 *{}* {}\n",
+                    escape(&child.name.first_name),
+                    if child.family.is_individual {
+                        "Независимый"
+                    } else {
+                        "Общие абонементы"
+                    }
+                ));
                 if ctx.has_right(Rule::EditFamily) {
                     keymap = keymap.append_row(vec![
                         Calldata::GoToProfile(child.id.bytes())
                             .button(format!("👤 {}", child.name.first_name)),
+                        Calldata::SetIndividual(child.id.bytes(), !child.family.is_individual)
+                            .button(if !child.family.is_individual {
+                                "👤"
+                            } else {
+                                "👥"
+                            }),
                         Calldata::RemoveChild(child.id.bytes()).button("❌"),
                     ]);
                 }
@@ -86,6 +104,17 @@ impl View for FamilyView {
             }
             .into()),
             Calldata::AddChild => Ok(add_member::AddMember::new(self.id).into()),
+            Calldata::SetIndividual(id, is_individual) => {
+                ctx.ledger
+                    .users
+                    .set_individual_family_member(
+                        &mut ctx.session,
+                        ObjectId::from_bytes(id),
+                        is_individual,
+                    )
+                    .await?;
+                Ok(Jmp::Stay)
+            }
         }
     }
 }
@@ -94,6 +123,7 @@ impl View for FamilyView {
 enum Calldata {
     GoToProfile([u8; 12]),
     RemoveChild([u8; 12]),
+    SetIndividual([u8; 12], bool),
     AddChild,
 }
 

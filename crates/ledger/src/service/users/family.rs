@@ -12,6 +12,23 @@ use super::Users;
 
 impl Users {
     #[tx]
+    pub async fn set_individual_family_member(
+        &self,
+        session: &mut Session,
+        member_id: ObjectId,
+        is_individual: bool,
+    ) -> Result<(), LedgerError> {
+        let mut user = self
+            .store
+            .get(session, member_id)
+            .await?
+            .ok_or_else(|| LedgerError::UserNotFound(member_id))?;
+        user.family.is_individual = is_individual;
+        self.store.update(session, &mut user).await?;
+        Ok(())
+    }
+
+    #[tx]
     pub async fn remove_family_member(
         &self,
         session: &mut Session,
