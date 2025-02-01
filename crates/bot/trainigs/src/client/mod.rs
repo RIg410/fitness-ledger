@@ -3,8 +3,12 @@ use bot_core::{
     callback_data::Calldata as _,
     context::Context,
     widget::{Jmp, View},
+    CommonLocation,
 };
-use bot_viewer::user::render_profile_msg;
+use bot_viewer::{
+    fmt_phone,
+    user::{link_to_user, render_profile_msg},
+};
 use eyre::Result;
 use model::{
     rights::Rule,
@@ -12,7 +16,10 @@ use model::{
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::types::InlineKeyboardMarkup;
+use teloxide::{
+    types::{ChatId, InlineKeyboardMarkup},
+    utils::markdown::escape,
+};
 
 pub mod add;
 pub mod list;
@@ -53,6 +60,45 @@ impl ClientView {
         ctx.ledger
             .sign_up(&mut ctx.session, training.id(), self.id, true)
             .await?;
+
+        let user = ctx.ledger.get_user(&mut ctx.session, self.id).await?;
+
+        ctx.send_notification(&format!(
+            "{} добавлен в тренировку",
+            escape(&user.name.first_name)
+        ))
+        .await;
+
+        let payer = user.payer()?;
+        let balance = payer.available_balance_for_training(&training);
+        if balance <= 1 {
+            if let Ok(users) = ctx
+                .ledger
+                .users
+                .find_users_with_right(
+                    &mut ctx.session,
+                    Rule::ReceiveNotificationsAboutSubscriptions,
+                )
+                .await
+            {
+                for user in users {
+                    ctx.bot
+                        .notify_with_markup(
+                            ChatId(user.tg_id),
+                            &format!(
+                                "У {} {} заканчивается абонемент\\.",
+                                link_to_user(payer.as_ref()),
+                                fmt_phone(payer.as_ref().phone.as_deref())
+                            ),
+                            InlineKeyboardMarkup::default().append_row(vec![
+                                CommonLocation::Profile(payer.as_ref().id).button(),
+                            ]),
+                        )
+                        .await;
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -112,6 +158,7 @@ impl View for ClientView {
             Callback::AddClient => {
                 if let Reason::AddClient = self.reason {
                     self.add_client(ctx).await?;
+                    return Ok(Jmp::BackSteps(2));
                 } else {
                     return Ok(Jmp::Stay);
                 }

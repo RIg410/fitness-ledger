@@ -2,12 +2,15 @@ use std::sync::Arc;
 
 use crate::{Ledger, Task};
 use async_trait::async_trait;
-use bot_core::bot::TgBot;
+use bot_core::{bot::TgBot, CommonLocation};
 use bot_viewer::{fmt_phone, user::tg_link};
 use chrono::Utc;
 use eyre::{Error, Result};
-use model::rights::Rule;
-use teloxide::{types::ChatId, utils::markdown::escape};
+use model::{rights::Rule, user::extension};
+use teloxide::{
+    types::{ChatId, InlineKeyboardMarkup},
+    utils::markdown::escape,
+};
 
 #[derive(Clone)]
 pub struct SubscriptionBg {
@@ -37,6 +40,11 @@ impl Task for SubscriptionBg {
 
         while let Some(user) = users.next(&mut session).await {
             let user = user?;
+            let extension = self
+                .ledger
+                .users
+                .get_extension(&mut session, user.id)
+                .await?;
 
             let payer = if let Ok(payer) = user.payer() {
                 payer
@@ -56,10 +64,10 @@ impl Task for SubscriptionBg {
                     .expire_subscription(&mut session, user.id)
                     .await?;
                 for sub in expired {
-                    for user in notification_listener.iter() {
+                    for listener in notification_listener.iter() {
                         self.bot
-                            .send_notification_to(
-                                ChatId(user.tg_id),
+                            .notify_with_markup(
+                                ChatId(listener.tg_id),
                                 &format!(
                                     "У пользователя {}\\({}\\) сгорел абонемент: {}\\. Сгорело {}\\.",
                                     tg_link(user.tg_id, user.name.tg_user_name.as_deref()),
@@ -67,8 +75,15 @@ impl Task for SubscriptionBg {
                                     escape(sub.name.as_str()),
                                     sub.balance,
                                 ),
+                                InlineKeyboardMarkup::default().append_row(vec![CommonLocation::Profile(user.id).button()]),
                             )
                             .await;
+
+                        if extension.birthday.is_none() {
+                            self.bot
+                                .notify(ChatId(listener.tg_id), "У пользователя нет даты рождения")
+                                .await;
+                        }
                     }
                 }
             }

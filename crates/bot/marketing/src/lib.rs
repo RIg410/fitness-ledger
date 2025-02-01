@@ -8,7 +8,7 @@ use bot_core::{
 use serde::{Deserialize, Serialize};
 use teloxide::types::InlineKeyboardMarkup;
 
-mod requests;
+pub mod requests;
 mod statistics;
 
 #[derive(Default)]
@@ -40,7 +40,7 @@ impl View for Marketing {
         match calldata!(data) {
             Calldata::Request => {
                 ctx.ensure(model::rights::Rule::ViewMarketingInfo)?;
-                Ok(requests::Requests::new().into())
+                Ok(requests::Requests::default().into())
             }
             Calldata::Statistics => {
                 ctx.ensure(model::rights::Rule::ViewStatistics)?;

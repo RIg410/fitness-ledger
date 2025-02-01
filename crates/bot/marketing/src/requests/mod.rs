@@ -25,7 +25,13 @@ pub struct Requests {
 }
 
 impl Requests {
-    pub fn new() -> Self {
+    pub fn new(phone: Option<String>, found: bool, id: Option<ObjectId>) -> Self {
+        Self { phone, found, id }
+    }
+}
+
+impl Default for Requests {
+    fn default() -> Self {
         Self {
             phone: None,
             found: false,
@@ -67,6 +73,14 @@ impl View for Requests {
                 self.found = false;
                 self.id = None;
                 text.push_str("Заявка не найдена");
+            }
+        } else {
+            if let Some(id) = self.id {
+                let request = ctx.ledger.requests.get(&mut ctx.session, id).await?;
+                if let Some(request) = request {
+                    self.phone = Some(request.phone);
+                    return self.show(ctx).await;
+                }
             }
         }
 

@@ -1,8 +1,10 @@
 use async_trait::async_trait;
 use bot_calendar::CalendarView;
 use bot_core::{
+    callback_data::Calldata,
     context::Context,
     widget::{Jmp, View},
+    CommonLocation,
 };
 use bot_couch::list::CouchingList;
 use bot_finance::FinanceView;
@@ -20,7 +22,7 @@ use teloxide::{
 
 use crate::system::SystemView;
 
-use super::signup::SignUpView;
+use super::{common_location::handle_common_location, signup::SignUpView};
 
 pub struct MainMenuView;
 
@@ -83,7 +85,7 @@ impl MainMenuView {
                     };
 
                     txt.push_str(&format!(
-                        "\n👥 Групповые занятия: *{}*{}",
+                        "\n👥 Групповые занятия: *{}*{}\n",
                         group_balance.balance, lock
                     ));
                 }
@@ -169,6 +171,12 @@ impl View for MainMenuView {
     async fn handle_callback(&mut self, ctx: &mut Context, msg: &str) -> Result<Jmp, eyre::Error> {
         if !ctx.is_real_user {
             return Ok(SignUpView::default().into());
+        }
+
+        if CommonLocation::is_cmd(msg) {
+            if let Some(location) = CommonLocation::from_data(msg) {
+                return handle_common_location(ctx, location).await;
+            }
         }
 
         let command = if let Some(command) = MainMenuItem::try_from(msg).ok() {

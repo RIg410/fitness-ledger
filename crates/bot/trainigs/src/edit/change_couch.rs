@@ -33,7 +33,7 @@ impl ChangeCouch {
             .get_training_by_id(&mut ctx.session, self.id)
             .await?
             .ok_or_else(|| eyre::eyre!("Training not found"))?;
-        
+
         if !training.is_group() {
             bail!("Can't delete personal training");
         }
@@ -60,13 +60,11 @@ impl ChangeCouch {
             escape(&training.name),
             fmt_dt(&training.get_slot().start_at())
         );
-        ctx.send_notification_to(ChatId(old_couch.tg_id), &msg)
-            .await;
-        ctx.send_notification_to(ChatId(new_couch.tg_id), &msg)
-            .await;
+        ctx.notify(ChatId(old_couch.tg_id), &msg).await;
+        ctx.notify(ChatId(new_couch.tg_id), &msg).await;
         for client in training.clients.iter() {
             let client = ctx.ledger.get_user(&mut ctx.session, *client).await?;
-            ctx.send_notification_to(ChatId(client.tg_id), &msg).await;
+            ctx.notify(ChatId(client.tg_id), &msg).await;
         }
 
         Ok(())

@@ -209,6 +209,18 @@ impl Deref for Payer<&mut User> {
     }
 }
 
+impl AsRef<User> for Payer<&mut User> {
+    fn as_ref(&self) -> &User {
+        self.0
+    }
+}
+
+impl AsRef<User> for Payer<&User> {
+    fn as_ref(&self) -> &User {
+        self.0
+    }
+}
+
 impl DerefMut for Payer<&mut User> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0

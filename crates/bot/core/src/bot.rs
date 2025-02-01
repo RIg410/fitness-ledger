@@ -204,7 +204,7 @@ impl TgBot {
         Ok(())
     }
 
-    pub async fn send_notification_to(&self, chat_id: ChatId, text: &str) -> MessageId {
+    pub async fn notify(&self, chat_id: ChatId, text: &str) -> MessageId {
         if chat_id.0 == -1 {
             return MessageId(0);
         }
@@ -226,6 +226,31 @@ impl TgBot {
         tkn.invalidate();
         id
     }
+
+    pub async fn notify_with_markup(&self, chat_id: ChatId, text: &str, markup: InlineKeyboardMarkup) -> MessageId {
+        if chat_id.0 == -1 {
+            return MessageId(0);
+        }
+        let result = self
+            .bot
+            .send_message(chat_id, text)
+            .parse_mode(ParseMode::MarkdownV2)
+            .reply_markup(markup)
+            .await;
+
+        let id = match result {
+            Ok(msg) => msg.id,
+            Err(err) => {
+                log::error!("Failed to send notification: {}. Msg:[{}]", err, text);
+                return MessageId(0);
+            }
+        };
+
+        let tkn = self.tokens.get_token(chat_id);
+        tkn.invalidate();
+        id
+    }
+
     pub fn env(&self) -> &Env {
         &self.env
     }

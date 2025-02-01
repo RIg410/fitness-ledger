@@ -1,13 +1,13 @@
 use crate::Task;
 use async_trait::async_trait;
-use bot_core::bot::TgBot;
+use bot_core::{bot::TgBot, CommonLocation};
 use bot_viewer::request::fmt_request;
 use chrono::Local;
 use eyre::Error;
 use ledger::Ledger;
 use model::{request::Request, session::Session};
 use std::sync::Arc;
-use teloxide::types::ChatId;
+use teloxide::types::{ChatId, InlineKeyboardMarkup};
 use tx_macro::tx;
 
 #[derive(Clone)]
@@ -55,7 +55,15 @@ impl RequestNotifier {
         request: &mut Request,
     ) -> Result<(), Error> {
         let msg = format!("Напоминание по заявке\n{}", fmt_request(request));
-        let id = self.bot.send_notification_to(ChatId(user), &msg).await;
+        let id = self
+            .bot
+            .notify_with_markup(
+                ChatId(user),
+                &msg,
+                InlineKeyboardMarkup::default()
+                    .append_row(vec![CommonLocation::Request(request.id).button()]),
+            )
+            .await;
         self.bot.pin_message(ChatId(user), id).await?;
         request.remind_later = None;
         ledger.requests.update(&mut *session, request).await?;

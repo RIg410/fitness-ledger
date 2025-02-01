@@ -5,6 +5,7 @@ use bot_core::{
     calldata,
     context::Context,
     widget::{Jmp, View},
+    CommonLocation,
 };
 use bot_viewer::{day::fmt_dt, fmt_phone, training::fmt_training_type, user::link_to_user};
 use chrono::Local;
@@ -281,9 +282,7 @@ impl ConfirmCancelTraining {
         );
         for client in to_notify {
             if let Ok(user) = ctx.ledger.get_user(&mut ctx.session, client).await {
-                ctx.bot
-                    .send_notification_to(ChatId(user.tg_id), &msg)
-                    .await;
+                ctx.bot.notify(ChatId(user.tg_id), &msg).await;
             }
         }
         if training.is_group() {
@@ -391,7 +390,7 @@ pub async fn sign_up(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> Re
         .await?;
 
     if training.tp.is_not_free() {
-        let payer = ctx.me.payer()?;
+        let payer = user.payer()?;
         let balance = payer.available_balance_for_training(&training);
         if balance <= 1 {
             let msg = "Ваш абонемент заканчивается🥺";
@@ -406,13 +405,15 @@ pub async fn sign_up(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> Re
             {
                 for user in users {
                     ctx.bot
-                        .send_notification_to(
+                        .notify_with_markup(
                             ChatId(user.tg_id),
                             &format!(
                                 "У {} {} заканчивается абонемент\\.",
                                 link_to_user(&ctx.me),
                                 fmt_phone(ctx.me.phone.as_deref())
                             ),
+                            InlineKeyboardMarkup::default()
+                                .append_row(vec![CommonLocation::Profile(ctx.me.id).button()]),
                         )
                         .await;
                 }
@@ -445,9 +446,8 @@ pub async fn sign_out(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> R
             .ledger
             .get_user(&mut ctx.session, training.instructor)
             .await?;
-        ctx
-            .bot
-            .send_notification_to(
+        ctx.bot
+            .notify(
                 ChatId(instructor.tg_id),
                 &format!(
                     "Клиент {} {} отменил запись на персональную тренировку {}",
