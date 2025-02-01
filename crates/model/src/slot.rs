@@ -51,6 +51,10 @@ impl Slot {
         self.room
     }
 
+    pub fn duration_min(&self) -> u32 {
+        self.duration_min
+    }
+
     pub fn has_conflict(&self, other: &Slot) -> bool {
         if self.room != other.room {
             return false;

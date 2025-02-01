@@ -6,14 +6,15 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::day::fmt_dt;
-use change_couch::ChangeCouch;
+use couch::ChangeCouch;
 use eyre::{bail, Result};
 use model::{rights::Rule, training::TrainingId};
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 
-pub mod change_couch;
+pub mod couch;
 pub mod name;
+pub mod time;
 
 pub struct EditTraining {
     id: TrainingId,
@@ -127,6 +128,18 @@ impl View for EditTraining {
 
         let mut keymap = InlineKeyboardMarkup::default();
 
+        if ctx.has_right(Rule::EditTraining) {
+            keymap = keymap.append_row(vec![Callback::ChangeName.button("🔄 Изменить название")]);
+        }
+        if ctx.has_right(Rule::ChangeTrainingSlot) {
+            keymap = keymap.append_row(vec![
+                Callback::ChangeStartAt(false).button("🕒 Изменить время")
+            ]);
+            keymap = keymap.append_row(vec![
+                Callback::ChangeStartAt(true).button("🕒 Изменить время для всех")
+            ]);
+        }
+
         if ctx.has_right(Rule::SetKeepOpen) {
             if training.keep_open {
                 keymap = keymap.append_row(vec![
@@ -177,6 +190,20 @@ impl View for EditTraining {
             Callback::Delete(all) => self.delete_training(ctx, all).await,
             Callback::KeepOpen(keep_open) => self.keep_open(ctx, keep_open).await,
             Callback::SetFree(free) => self.set_free(ctx, free).await,
+            Callback::ChangeName => {
+                if ctx.has_right(Rule::EditTraining) {
+                    Ok(name::ChangeName::new(self.id).into())
+                } else {
+                    Ok(Jmp::Stay)
+                }
+            }
+            Callback::ChangeStartAt(all) => {
+                if ctx.has_right(Rule::ChangeTrainingSlot) {
+                    Ok(time::ChangeTime::new(self.id, all).into())
+                } else {
+                    Ok(Jmp::Stay)
+                }
+            }
         }
     }
 }
@@ -187,4 +214,6 @@ enum Callback {
     Delete(bool),
     KeepOpen(bool),
     SetFree(bool),
+    ChangeStartAt(bool),
+    ChangeName,
 }

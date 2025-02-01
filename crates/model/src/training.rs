@@ -205,6 +205,12 @@ impl Training {
         Slot::new(self.start_at, self.duration_min, self.room)
     }
 
+    pub fn set_slot(&mut self, slot: Slot) {
+        self.start_at = slot.start_at().with_timezone(&Utc);
+        self.room = slot.room();
+        self.duration_min = slot.duration_min();
+    }
+
     pub fn status(&self, now: DateTime<Local>) -> TrainingStatus {
         if self.is_canceled {
             TrainingStatus::Cancelled

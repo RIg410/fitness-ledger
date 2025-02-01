@@ -116,7 +116,7 @@ impl View for SetDateTime {
     }
 }
 
-struct TimeParts(u32, u32);
+pub struct TimeParts(pub u32, pub u32);
 
 impl TryFrom<&str> for TimeParts {
     type Error = eyre::Error;

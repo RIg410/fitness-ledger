@@ -103,6 +103,7 @@ pub enum Rule {
     ScheduleSubRent,
     SelectPersonalInstructor,
     ViewAllTrainings,
+    ChangeTrainingSlot,
 
     // Subscription
     CreateSubscription,

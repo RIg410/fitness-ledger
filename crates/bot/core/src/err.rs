@@ -1,4 +1,5 @@
 use crate::{context::Context, widget::Jmp};
+use chrono::Local;
 use eyre::{Error, Result};
 use model::{errors::LedgerError, training::TrainingId, user::rate::Rate};
 use mongodb::bson::oid::ObjectId;
@@ -153,27 +154,41 @@ pub async fn bassness_error(ctx: &mut Context, err: &LedgerError) -> Result<Opti
                 training_name(ctx, training_id).await?,
                 training_id.start_at().format("%d\\.%m\\.%Y %H:%M")
             )
-        },
+        }
         LedgerError::ClientNotSignedUp(object_id, training_id) => {
             format!(
                 "Ошибка:*Клиент {} не записан на тренировку {}*",
                 user_name(ctx, *object_id).await?,
                 training_name(ctx, training_id).await?
             )
-        },
+        }
         LedgerError::NotEnoughReservedBalance(object_id) => {
             format!(
                 "Ошибка:*У пользователя {} недостаточно зарезервированных средств*",
                 user_name(ctx, *object_id).await?
             )
-        },
+        }
         LedgerError::TrainingHasClients(training_id) => {
             format!(
                 "Ошибка:*Тренировка {} в {} имеет записанных клиентов*",
                 training_name(ctx, training_id).await?,
                 training_id.start_at().format("%d\\.%m\\.%Y %H:%M")
             )
-        },
+        }
+        LedgerError::DayIdMismatch { old, new } => {
+            format!(
+                "Ошибка:*День {} не совпадает с днем {}*",
+                old.id().with_timezone(&Local).format("%d\\.%m\\.%Y"),
+                new.id().with_timezone(&Local).format("%d\\.%m\\.%Y")
+            )
+        }
+        LedgerError::TrainingIsProcessed(training_id) => {
+            format!(
+                "Ошибка:*Тренировка {} в {} уже обработана*",
+                training_name(ctx, training_id).await?,
+                training_id.start_at().format("%d\\.%m\\.%Y %H:%M")
+            )
+        }
     }))
 }
 

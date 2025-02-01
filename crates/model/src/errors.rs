@@ -3,6 +3,7 @@ use chrono::Local;
 use thiserror::Error;
 
 use crate::{
+    ids::DayId,
     training::{Training, TrainingId, TrainingStatus},
     user::rate::Rate,
 };
@@ -32,6 +33,7 @@ pub enum LedgerError {
         user_id: ObjectId,
         member_id: ObjectId,
     },
+    
     #[error("User already employee")]
     UserAlreadyEmployee { user_id: ObjectId },
     #[error("User not employee")]
@@ -64,7 +66,10 @@ pub enum LedgerError {
     TooCloseToStart { start_at: chrono::DateTime<Local> },
     #[error("Time slot collision:{0:?}")]
     TimeSlotCollision(Training),
-
+    #[error("Day id mismatch")]
+    DayIdMismatch { old: DayId, new: DayId },
+    #[error("Training is processed")]
+    TrainingIsProcessed(TrainingId),
     //signin
     #[error("Training not open to sign up")]
     TrainingNotOpenToSignUp(TrainingId, TrainingStatus),
@@ -74,7 +79,6 @@ pub enum LedgerError {
     TrainingIsFull(TrainingId),
     #[error("Not enough balance:{0:?}")]
     NotEnoughBalance(ObjectId),
-
 
     //signout
     #[error("Training not found:{0:?}")]

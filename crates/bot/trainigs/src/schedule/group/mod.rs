@@ -12,7 +12,7 @@ use teloxide::utils::markdown::escape;
 
 mod finish;
 mod is_one_time;
-mod set_date_time;
+pub mod set_date_time;
 mod set_instructor;
 mod set_room;
 

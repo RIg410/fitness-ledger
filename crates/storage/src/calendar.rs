@@ -232,10 +232,13 @@ impl CalendarStore {
         info!("Delete training: {:?}", id);
 
         let update = doc! { "$pull": { "training": { "start_at": id.start_at, "room": id.room } }, "$inc": { "version": 1 } };
-        self.store
+        let update = self.store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;
+        if update.modified_count != 1 {
+            return Err(eyre::eyre!("Training not found"));
+        }
         Ok(())
     }
 
@@ -445,6 +448,28 @@ impl CalendarStore {
             .array_filters([doc! { "elem.proto_id": program_id }])
             .session(&mut *session)
             .await?;
+        Ok(())
+    }
+
+    pub async fn change_name(
+        &self,
+        session: &mut Session,
+        id: TrainingId,
+        name: &str,
+    ) -> Result<(), eyre::Error> {
+        info!("Change name: {:?} {}", id, name);
+        let update = doc! {
+            "$set": { "training.$.name": name },
+            "$inc": { "version": 1 }
+        };
+        let result = self
+            .store
+            .update_one(training_filter(id), update)
+            .session(&mut *session)
+            .await?;
+        if result.modified_count != 1 {
+            return Err(eyre::eyre!("Training not found"));
+        }
         Ok(())
     }
 

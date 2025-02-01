@@ -81,6 +81,78 @@ impl Calendar {
     }
 
     #[tx]
+    pub async fn update_training_name(
+        &self,
+        session: &mut Session,
+        id: TrainingId,
+        name: &str,
+    ) -> Result<(), Error> {
+        self.calendar.change_name(session, id, name).await?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn change_slot(
+        &self,
+        session: &mut Session,
+        id: TrainingId,
+        new_slot: Slot,
+        all: bool,
+    ) -> Result<(), LedgerError> {
+        if id.day_id() != new_slot.day_id() {
+            return Err(LedgerError::DayIdMismatch {
+                old: id.day_id(),
+                new: new_slot.day_id(),
+            });
+        }
+
+        let mut training = self
+            .get_training_by_id(session, id)
+            .await?
+            .ok_or(LedgerError::TrainingNotFound(id))?;
+
+        if training.is_processed {
+            return Err(LedgerError::TrainingIsProcessed(training.id()));
+        }
+
+        training.set_slot(new_slot);
+        self.calendar.delete_training(session, id).await?;
+        let collision = self.check_time_slot(session, new_slot, true).await?;
+        if let Some(collision) = collision {
+            return Err(LedgerError::TimeSlotCollision(collision));
+        }
+        self.calendar.add_training(session, &training).await?;
+
+        let day_id = DayId::from(training.get_slot().start_at());
+        if all {
+            let mut cursor = self.calendar.week_days_after(session, day_id).await?;
+            while let Some(day) = cursor.next(session).await {
+                let mut day = day?;
+                let training = day.training.iter_mut().find(|slot| slot.id == training.id);
+                if let Some(training) = training {
+                    if training.is_processed {
+                        return Err(LedgerError::TrainingIsProcessed(training.id()));
+                    }
+                    self.calendar
+                        .delete_training(session, training.id())
+                        .await?;
+
+                    let new_slot = new_slot.with_day(training.day_id());
+                    training.set_slot(new_slot);
+
+                    let collision = self.check_time_slot(session, new_slot, true).await?;
+                    if let Some(collision) = dbg!(collision) {
+                        return Err(LedgerError::TimeSlotCollision(collision));
+                    }
+                    self.calendar.add_training(session, training).await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    #[tx]
     pub async fn change_couch(
         &self,
         session: &mut Session,
@@ -163,7 +235,10 @@ impl Calendar {
         }
 
         let name = format!("аренда:{}-{}", renter, duration_min);
-        let description = format!("арендатор: {}; продолжительность: {};", renter, duration_min);
+        let description = format!(
+            "арендатор: {}; продолжительность: {};",
+            renter, duration_min
+        );
         let training = Training::new_rent(start_at, room, duration_min, name, description, price);
 
         self.calendar.add_training(session, &training).await?;
