@@ -16,6 +16,8 @@ pub enum ComeFrom {
     VkAdds {},
     DoubleGIS {},
     Avito {},
+    Recommendation {},
+    Other {},
 }
 
 impl ComeFrom {
@@ -31,6 +33,8 @@ impl ComeFrom {
             ComeFrom::VkAdds {},
             ComeFrom::DoubleGIS {},
             ComeFrom::Avito {},
+            ComeFrom::Recommendation {},
+            ComeFrom::Other {},
         ]
         .iter()
         .copied()

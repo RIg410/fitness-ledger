@@ -307,5 +307,7 @@ pub fn fmt_come_from(from: ComeFrom) -> &'static str {
         ComeFrom::VkAdds {} => "Таргет ВКонтакте",
         ComeFrom::YandexDirect {} => "Яндекс Директ",
         ComeFrom::Avito {} => "Авито",
+        ComeFrom::Recommendation {  } => "Рекомендация",
+        ComeFrom::Other {  } => "Другое",
     }
 }
