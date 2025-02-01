@@ -1,5 +1,3 @@
-use std::default;
-
 use bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
