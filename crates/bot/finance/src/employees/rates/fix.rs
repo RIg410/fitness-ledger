@@ -3,9 +3,12 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use chrono::{DateTime, Local, TimeZone as _, Utc};
+use chrono::{Local, TimeZone as _, Utc};
 use eyre::{Error, Result};
-use model::{decimal::Decimal, user::rate::Rate};
+use model::{
+    decimal::Decimal,
+    user::rate::{Interval, Rate},
+};
 use mongodb::bson::oid::ObjectId;
 use teloxide::types::{InlineKeyboardMarkup, Message};
 
@@ -107,79 +110,22 @@ impl View for FixRateDate {
             });
         match date {
             Ok(date) => Ok(Jmp::Next(
-                FixRateInterval::new(self.old_rate, self.user_id, self.amount, date).into(),
+                ConfirmCreationRate::new(
+                    self.old_rate,
+                    Rate::Fix {
+                        amount: self.amount,
+                        next_payment_date: date.with_timezone(&Utc),
+                        reward_interval: Interval::Month { num: 1 },
+                    },
+                    self.user_id,
+                )
+                .into(),
             )),
             Err(_) => {
                 ctx.send_notification("Введите дату в формате ДД\\.ММ\\.ГГГГ")
                     .await;
                 Ok(Jmp::Stay)
             }
-        }
-    }
-}
-
-pub struct FixRateInterval {
-    amount: Decimal,
-    next_payment_date: DateTime<Local>,
-    old_rate: Option<Rate>,
-    user_id: ObjectId,
-}
-
-impl FixRateInterval {
-    pub fn new(
-        old_rate: Option<Rate>,
-        user_id: ObjectId,
-        amount: Decimal,
-        next_payment_date: DateTime<Local>,
-    ) -> FixRateInterval {
-        FixRateInterval {
-            old_rate,
-            next_payment_date,
-            user_id,
-            amount,
-        }
-    }
-}
-
-#[async_trait]
-impl View for FixRateInterval {
-    fn name(&self) -> &'static str {
-        "FixRateInterval"
-    }
-
-    async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let msg = "Введите интервал между платежами в днях:";
-        ctx.edit_origin(msg, InlineKeyboardMarkup::default())
-            .await?;
-        Ok(())
-    }
-
-    async fn handle_message(
-        &mut self,
-        ctx: &mut Context,
-        msg: &Message,
-    ) -> Result<Jmp, eyre::Error> {
-        ctx.delete_msg(msg.id).await?;
-        if let Some(text) = msg.text() {
-            if let Ok(amount) = text.parse::<u32>() {
-                Ok(Jmp::Next(
-                    ConfirmCreationRate::new(
-                        self.old_rate,
-                        Rate::Fix {
-                            amount: self.amount,
-                            next_payment_date: self.next_payment_date.with_timezone(&Utc),
-                            interval: chrono::Duration::days(amount as i64).to_std()?,
-                        },
-                        self.user_id,
-                    )
-                    .into(),
-                ))
-            } else {
-                ctx.send_notification("Неверный формат интервала").await;
-                Ok(Jmp::Stay)
-            }
-        } else {
-            Ok(Jmp::Stay)
         }
     }
 }

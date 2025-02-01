@@ -16,7 +16,7 @@ impl UserStore {
         session: &mut Session,
     ) -> Result<Vec<User>> {
         let filter = doc! {
-            "employee.rates.next_payment_date": { "$lte": chrono::Utc::now() }
+            "employee.rates": { "$elemMatch": { "Fix.next_payment_date": { "$lte": chrono::Utc::now() } } }
         };
         let mut cursor = self.users.find(filter).session(&mut *session).await?;
         Ok(cursor.stream(&mut *session).try_collect().await?)
@@ -29,13 +29,18 @@ impl UserStore {
         reward: model::decimal::Decimal,
         update_rates: Option<Vec<Rate>>,
     ) -> std::result::Result<(), Error> {
-        info!("Updating couch reward: {:?}", id);
+        info!(
+            "Updating couch reward: {:?} {:?} {:?}",
+            id, reward, update_rates
+        );
 
         let update = if let Some(rates) = update_rates {
             doc! {
-                "$set": { "employee.reward":  reward.inner() },
                 "$inc": { "version": 1 },
-                "$set": { "employee.rates": to_bson(&rates)? }
+                "$set": { 
+                    "employee.rates": to_bson(&rates)?,
+                     "employee.reward":  reward.inner() 
+                }
             }
         } else {
             doc! {

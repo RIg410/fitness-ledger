@@ -133,14 +133,14 @@ impl Employee {
             if let Rate::Fix {
                 amount,
                 next_payment_date,
-                interval,
+                reward_interval: interval,
             } = rate
             {
                 if date_time < *next_payment_date {
                     continue;
                 }
                 reward.reward += *amount;
-                *next_payment_date += chrono::Duration::from_std(*interval)?;
+                *next_payment_date = interval.next_date(*next_payment_date);
                 break;
             }
         }

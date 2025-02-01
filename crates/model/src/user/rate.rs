@@ -1,9 +1,11 @@
-use std::time::Duration;
-
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use std::{
+    default,
+    fmt::{self, Display, Formatter},
+};
 
 use crate::decimal::Decimal;
+use chrono::{DateTime, Months, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum EmployeeRole {
@@ -18,7 +20,8 @@ pub enum Rate {
         amount: Decimal,
         #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
         next_payment_date: DateTime<Utc>,
-        interval: Duration,
+        #[serde(default)]
+        reward_interval: Interval,
     },
     GroupTraining {
         percent: Decimal,
@@ -27,6 +30,33 @@ pub enum Rate {
     PersonalTraining {
         percent: Decimal,
     },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum Interval {
+    Month { num: u32 },
+}
+
+impl Display for Interval {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Interval::Month { num } => write!(f, "{} (месяц)", num),
+        }
+    }
+}
+
+impl Default for Interval {
+    fn default() -> Self {
+        Interval::Month { num: 1 }
+    }
+}
+
+impl Interval {
+    pub fn next_date(&self, date: DateTime<Utc>) -> DateTime<Utc> {
+        match self {
+            Interval::Month { num } => date.checked_add_months(Months::new(*num)).unwrap(),
+        }
+    }
 }
 
 impl Rate {

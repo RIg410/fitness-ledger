@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use chrono::{DateTime, Utc};
 use eyre::Error;
 use model::{
@@ -11,7 +9,7 @@ use model::{
         employee::Employee,
         extension::Birthday,
         family::Family,
-        rate::{EmployeeRole, Rate},
+        rate::{EmployeeRole, Interval, Rate},
         Freeze, User, UserName,
     },
 };
@@ -183,7 +181,7 @@ impl From<Rate> for RateView {
             Rate::Fix {
                 amount,
                 next_payment_date,
-                interval,
+                reward_interval: interval,
             } => {
                 let fix = FixView {
                     amount,
@@ -223,7 +221,7 @@ impl From<Rate> for RateView {
 pub struct FixView {
     amount: Decimal,
     next_payment_date: DateTime<Utc>,
-    interval: Duration,
+    interval: Interval,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

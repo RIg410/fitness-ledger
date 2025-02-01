@@ -210,13 +210,13 @@ pub fn render_rate(rate: &Rate) -> String {
         Rate::Fix {
             amount,
             next_payment_date,
-            interval,
+            reward_interval: interval,
         } => {
             format!(
                 "Фиксированная сумма : _{}_💰\n Следующая оплата : _{}_\n Интервал : _{}_",
                 escape(&amount.to_string()),
                 fmt_date(&next_payment_date.with_timezone(&Local)),
-                interval.as_secs() / 60 / 60 / 24
+                escape(&interval.to_string())
             )
         }
         Rate::GroupTraining {
@@ -306,6 +306,6 @@ pub fn fmt_come_from(from: ComeFrom) -> &'static str {
         ComeFrom::DirectAdds {} => "Прямые рекламные объявления",
         ComeFrom::VkAdds {} => "Таргет ВКонтакте",
         ComeFrom::YandexDirect {} => "Яндекс Директ",
-        ComeFrom::Avito {  } => "Авито",
+        ComeFrom::Avito {} => "Авито",
     }
 }

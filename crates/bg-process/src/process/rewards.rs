@@ -31,16 +31,19 @@ impl RewardsBg {
 
     #[tx]
     async fn process_rewards(&self, session: &mut Session) -> Result<(), Error> {
+        log::info!("Processing rewards");
         let mut users = self
             .ledger
             .users
             .employees_with_ready_fix_reward(&mut *session)
             .await?;
-
+        log::info!("Found {} users", users.len());
         let now = Local::now();
         for user in users.iter_mut() {
             if let Some(employee) = &mut user.employee {
                 if let Some(reward) = employee.collect_fix_rewards(user.id, now)? {
+                    log::info!("Added reward: {:?}", reward);
+
                     self.ledger
                         .rewards
                         .add_reward(&mut *session, reward)
