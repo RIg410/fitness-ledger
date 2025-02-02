@@ -1,14 +1,17 @@
 use crate::Task;
 use async_trait::async_trait;
-use bot_core::bot::TgBot;
-use bot_viewer::request::fmt_request;
+use bot_core::{bot::TgBot, CommonLocation};
+use bot_viewer::fmt_phone;
 use chrono::{Datelike as _, Local};
 use eyre::Error;
 use ledger::Ledger;
-use model::{request::Request, session::Session};
+use log::info;
+use model::{rights::Rule, user::User};
 use std::sync::Arc;
-use teloxide::types::ChatId;
-use tx_macro::tx;
+use teloxide::{
+    types::{ChatId, InlineKeyboardMarkup},
+    utils::markdown::escape,
+};
 
 #[derive(Clone)]
 pub struct BirthdaysNotifier {
@@ -24,12 +27,23 @@ impl Task for BirthdaysNotifier {
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;
         let now = Local::now();
-        let _users = self
+        let users = self
             .ledger
             .users
             .find_by_birthday(&mut session, now.day(), now.month())
             .await?;
-            
+
+        let notification_listener = self
+            .ledger
+            .users
+            .find_users_with_right(&mut session, Rule::ReceiveNotificationsAboutBirthdays)
+            .await?;
+
+        for user in users {
+            info!("Birthday notification for {}", user.id);
+            self.notify(&user, &notification_listener).await?;
+        }
+
         Ok(())
     }
 }
@@ -39,18 +53,21 @@ impl BirthdaysNotifier {
         BirthdaysNotifier { ledger, bot }
     }
 
-    #[tx]
-    async fn notify(
-        &self,
-        ledger: &Ledger,
-        session: &mut Session,
-        user: i64,
-        request: &mut Request,
-    ) -> Result<(), Error> {
-        let msg = format!("Напоминание по заявке\n{}", fmt_request(request));
-        let id = self.bot.notify(ChatId(user), &msg).await;
-        self.bot.pin_message(ChatId(user), id).await?;
-        request.remind_later = None;
+    async fn notify(&self, user: &User, notification_listener: &[User]) -> Result<(), Error> {
+        let msg = format!(
+            "Сегодня день рождения у {} {}",
+            escape(&user.name.first_name),
+            fmt_phone(user.phone.as_deref())
+        );
+        let keymap = InlineKeyboardMarkup::default()
+            .append_row(vec![CommonLocation::Profile(user.id).button()]);
+
+        for listener in notification_listener.iter() {
+            self.bot
+                .notify_with_markup(ChatId(listener.tg_id), &msg, keymap.clone())
+                .await;
+        }
+
         Ok(())
     }
 }

@@ -144,7 +144,9 @@ pub enum Rule {
     CreateRequest,
     RequestsHistory,
 
+    //notifications
     ReceiveNotificationsAboutSubscriptions,
+    ReceiveNotificationsAboutBirthdays,
 
     // experimental
     MiniApp,

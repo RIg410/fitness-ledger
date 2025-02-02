@@ -533,11 +533,10 @@ impl UserStore {
         month: u32,
     ) -> Result<Vec<User>> {
         let filter = doc! {
-            "extension.birthday": { "$exists": true },
-            "extension.birthday.day": day,
-            "extension.birthday.month": month,
+            "birthday": { "$exists": true },
+            "birthday.day": day,
+            "birthday.month": month,
         };
-
         let mut cursor = self.extensions.find(filter).session(&mut *session).await?;
         let mut users = vec![];
         while let Some(ext) = cursor.next(&mut *session).await {
