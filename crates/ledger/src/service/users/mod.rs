@@ -5,7 +5,7 @@ use log::info;
 use model::{
     rights::{Rights, Rule},
     session::Session,
-    statistics::marketing::ComeFrom,
+    statistics::source::Source,
     user::{
         extension::{Birthday, UserExtension},
         sanitize_phone, User, UserName,
@@ -39,7 +39,7 @@ impl Users {
         tg_id: i64,
         name: UserName,
         phone: String,
-        come_from: ComeFrom,
+        come_from: Source,
     ) -> Result<ObjectId> {
         let phone = sanitize_phone(&phone);
         let is_first_user = self.store.count(session).await? == 0;
@@ -84,7 +84,7 @@ impl Users {
         phone: String,
         first_name: String,
         last_name: Option<String>,
-        come_from: ComeFrom,
+        come_from: Source,
     ) -> Result<User> {
         let phone = sanitize_phone(&phone);
 

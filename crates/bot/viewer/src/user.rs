@@ -7,7 +7,6 @@ use model::user::employee::Employee;
 use model::user::rate::Rate;
 use model::{
     rights::Rule,
-    statistics::marketing::ComeFrom,
     subscription::{Status, UserSubscription},
     user::{extension::UserExtension, User},
 };
@@ -82,7 +81,7 @@ pub async fn render_profile_msg(
 
     let mut msg = user_base_info(&user, &extension);
     if ctx.has_right(Rule::ViewMarketingInfo) {
-        msg.push_str(&format!("Источник : _{}_\n", fmt_come_from(user.come_from)));
+        msg.push_str(&format!("Источник : _{}_\n", user.come_from.name()));
     }
 
     if let Some(employee) = user.employee.as_ref() {
@@ -293,21 +292,4 @@ pub fn tg_link(tg: i64, name: Option<&str>) -> String {
         escape(name.unwrap_or("профиль")),
         tg
     )
-}
-
-pub fn fmt_come_from(from: ComeFrom) -> &'static str {
-    match from {
-        ComeFrom::Unknown {} => "Неизвестно",
-        ComeFrom::DoubleGIS {} => "2ГИС",
-        ComeFrom::Website {} => "Сайт",
-        ComeFrom::Instagram {} => "Инстаграм",
-        ComeFrom::VK {} => "ВКонтакте",
-        ComeFrom::YandexMap {} => "Яндекс Карты",
-        ComeFrom::DirectAdds {} => "Прямые рекламные объявления",
-        ComeFrom::VkAdds {} => "Таргет ВКонтакте",
-        ComeFrom::YandexDirect {} => "Яндекс Директ",
-        ComeFrom::Avito {} => "Авито",
-        ComeFrom::Recommendation {  } => "Рекомендация",
-        ComeFrom::Other {  } => "Другое",
-    }
 }

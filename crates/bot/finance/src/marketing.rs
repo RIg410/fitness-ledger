@@ -5,9 +5,8 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::user::fmt_come_from;
 use eyre::Result;
-use model::{decimal::Decimal, rights::Rule, statistics::marketing::ComeFrom};
+use model::{decimal::Decimal, rights::Rule, statistics::source::Source};
 use serde::{Deserialize, Serialize};
 use teloxide::{
     types::{InlineKeyboardMarkup, Message},
@@ -70,8 +69,8 @@ impl View for ComeFromType {
 
         let mut keymap = InlineKeyboardMarkup::default();
 
-        for cf in ComeFrom::iter() {
-            keymap = keymap.append_row(cf.btn_row(fmt_come_from(cf)));
+        for cf in Source::iter() {
+            keymap = keymap.append_row(cf.btn_row(cf.name()));
         }
 
         ctx.edit_origin(&msg, keymap).await?;
@@ -79,7 +78,7 @@ impl View for ComeFromType {
     }
 
     async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Jmp> {
-        let come_from: ComeFrom = calldata!(data);
+        let come_from: Source = calldata!(data);
         Ok(Jmp::Next(
             Confirm {
                 amount: self.amount,
@@ -92,7 +91,7 @@ impl View for ComeFromType {
 
 struct Confirm {
     amount: Decimal,
-    come_from: ComeFrom,
+    come_from: Source,
 }
 
 #[async_trait]

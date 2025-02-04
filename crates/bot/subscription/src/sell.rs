@@ -3,10 +3,10 @@ use crate::SubscriptionView;
 use super::{confirm::ConfirmSell, View};
 use async_trait::async_trait;
 use bot_core::{callback_data::Calldata as _, calldata, context::Context, widget::Jmp};
-use bot_viewer::{fmt_phone, user::fmt_come_from};
+use bot_viewer::fmt_phone;
 use eyre::Result;
 use model::{
-    decimal::Decimal, request::Request, rights::Rule, statistics::marketing::ComeFrom,
+    decimal::Decimal, request::Request, rights::Rule, statistics::source::Source,
     user::sanitize_phone,
 };
 use mongodb::bson::oid::ObjectId;
@@ -216,8 +216,8 @@ impl View for SelectComeFrom {
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let mut markup = InlineKeyboardMarkup::default();
-        for come_from in ComeFrom::iter() {
-            markup = markup.append_row(come_from.btn_row(fmt_come_from(come_from)));
+        for come_from in Source::iter() {
+            markup = markup.append_row(come_from.btn_row(come_from.name()));
         }
         ctx.edit_origin("Выберите откуда пришел пользователь:", markup)
             .await?;
@@ -245,7 +245,7 @@ pub struct CreateUserAndSell {
     phone: String,
     first_name: String,
     last_name: Option<String>,
-    come_from: ComeFrom,
+    come_from: Source,
     discount: Option<Decimal>,
 }
 
@@ -255,7 +255,7 @@ impl CreateUserAndSell {
         phone: String,
         first_name: String,
         last_name: Option<String>,
-        come_from: ComeFrom,
+        come_from: Source,
     ) -> CreateUserAndSell {
         CreateUserAndSell {
             sub_id,
@@ -300,7 +300,7 @@ impl View for CreateUserAndSell {
             escape(&self.first_name),
             escape(&self.last_name.clone().unwrap_or_else(|| "-".to_string())),
             fmt_phone(Some(&self.phone)),
-            fmt_come_from(self.come_from),
+            self.come_from.name(),
             self.discount
                 .map(|d| d.to_string().replace(".", ","))
                 .unwrap_or_else(|| "нет".to_string())

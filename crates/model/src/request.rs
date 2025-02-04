@@ -2,7 +2,7 @@ use bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::statistics::marketing::ComeFrom;
+use crate::statistics::source::Source;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Request {
@@ -14,7 +14,7 @@ pub struct Request {
     pub modified: DateTime<Utc>,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub created: DateTime<Utc>,
-    pub come_from: ComeFrom,
+    pub come_from: Source,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
     #[serde(default)]
@@ -27,7 +27,7 @@ impl Request {
     pub fn new(
         phone: String,
         comment: String,
-        come_from: ComeFrom,
+        come_from: Source,
         first_name: Option<String>,
         last_name: Option<String>,
         remind_later: Option<RemindLater>,

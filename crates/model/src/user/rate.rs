@@ -1,7 +1,4 @@
-use std::{
-    default,
-    fmt::{self, Display, Formatter},
-};
+use std::fmt::{self, Display, Formatter};
 
 use crate::decimal::Decimal;
 use chrono::{DateTime, Months, Utc};

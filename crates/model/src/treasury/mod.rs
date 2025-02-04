@@ -3,7 +3,7 @@ pub mod income;
 pub mod outcome;
 pub mod subs;
 
-use crate::{decimal::Decimal, statistics::marketing::ComeFrom};
+use crate::{decimal::Decimal, statistics::source::Source};
 use bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
 use income::Income;
@@ -40,8 +40,8 @@ pub enum Event {
         description: String,
     },
     // outcome
-    Rent,
+    Rent {},
     Outcome(Outcome),
     Reward(UserId),
-    Marketing(ComeFrom),
+    Marketing(Source),
 }

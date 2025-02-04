@@ -5,7 +5,6 @@ use teloxide::utils::markdown::escape;
 use crate::{
     day::{fmt_date, fmt_dt},
     fmt_phone,
-    user::fmt_come_from,
 };
 
 pub fn fmt_request(request: &Request) -> String {
@@ -32,7 +31,7 @@ pub fn fmt_request(request: &Request) -> String {
         Дата: _{}_\n{}\
         История: {}",
         fmt_phone(Some(&request.phone)),
-        fmt_come_from(request.come_from),
+        request.come_from.name(),
         escape(&request.comment),
         escape(request.first_name.as_deref().unwrap_or("?")),
         escape(request.last_name.as_deref().unwrap_or("?")),

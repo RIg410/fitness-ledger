@@ -96,7 +96,7 @@ impl RequestStore {
         Ok(request)
     }
 
-    pub async fn cursor(
+    pub async fn find_range(
         &self,
         session: &mut Session,
         from: Option<DateTime<Local>>,

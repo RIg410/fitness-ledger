@@ -5,7 +5,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::{day::fmt_dt, user::fmt_come_from};
+use bot_viewer::day::fmt_dt;
 use chrono::Local;
 use eyre::eyre;
 use model::{rights::Rule, treasury::TreasuryEvent};
@@ -116,15 +116,11 @@ async fn render_event(ctx: &mut Context, event: &TreasuryEvent) -> Result<String
         model::treasury::Event::SubRent { .. } => {
             format!("🏠 Субаренда: {} руб.", event.sum())
         }
-        model::treasury::Event::Rent => {
+        model::treasury::Event::Rent { .. } => {
             format!("🏠 Аренда: {} руб.", event.sum())
         }
         model::treasury::Event::Marketing(come_from) => {
-            format!(
-                "📊 Маркетинг: {} руб. ({})",
-                event.sum(),
-                fmt_come_from(*come_from)
-            )
+            format!("📊 Маркетинг: {} руб. ({})", event.sum(), come_from.name())
         }
     };
 

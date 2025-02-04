@@ -7,8 +7,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::user::fmt_come_from;
-use model::statistics::marketing::ComeFrom;
+use model::statistics::source::Source;
 use mongodb::bson::oid::ObjectId;
 use teloxide::types::InlineKeyboardMarkup;
 
@@ -26,8 +25,8 @@ impl View for ChangeComeFrom {
         let text = "Откуда пришел клиент?";
 
         let mut markup = InlineKeyboardMarkup::default();
-        for come_from in ComeFrom::iter() {
-            markup = markup.append_row(come_from.btn_row(fmt_come_from(come_from)));
+        for come_from in Source::iter() {
+            markup = markup.append_row(come_from.btn_row(come_from.name()));
         }
 
         ctx.bot.edit_origin(text, markup).await?;
@@ -35,7 +34,7 @@ impl View for ChangeComeFrom {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
-        let come_from: ComeFrom = calldata!(data);
+        let come_from: Source = calldata!(data);
         let request = ctx.ledger.requests.get(&mut ctx.session, self.id).await?;
         let old_come_from = if let Some(request) = request {
             request.come_from
@@ -46,8 +45,8 @@ impl View for ChangeComeFrom {
 
         let comment = format!(
             "Изменен источник с {} на {}",
-            fmt_come_from(old_come_from),
-            fmt_come_from(come_from)
+            old_come_from.name(),
+            come_from.name()
         );
 
         ctx.ledger

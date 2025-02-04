@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use ai::Ai;
 use chrono::Local;
 use env::Env;
 use eyre::{eyre, Context as _, Result};
@@ -70,6 +71,8 @@ impl Ledger {
             history.clone(),
             users.clone(),
             requests.clone(),
+            Ai::new(env.ai_base_url().to_owned(), env.ai_api_key().to_owned()),
+            treasury.clone(),
         );
 
         Ledger {
@@ -194,7 +197,7 @@ impl Ledger {
         phone: String,
         first_name: String,
         last_name: Option<String>,
-        come_from: model::statistics::marketing::ComeFrom,
+        come_from: model::statistics::source::Source,
         discount: Option<Decimal>,
     ) -> Result<()> {
         let phone = sanitize_phone(&phone);

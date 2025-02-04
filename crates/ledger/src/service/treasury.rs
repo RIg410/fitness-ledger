@@ -3,7 +3,7 @@ use eyre::Error;
 use model::{
     decimal::Decimal,
     session::Session,
-    statistics::marketing::ComeFrom,
+    statistics::source::Source,
     subscription::Subscription,
     treasury::{
         aggregate::{AggIncome, AggOutcome, TreasuryAggregate},
@@ -21,6 +21,7 @@ use std::{ops::Deref, sync::Arc};
 
 use super::history::History;
 
+#[derive(Clone)]
 pub struct Treasury {
     store: Arc<TreasuryStore>,
     logs: History,
@@ -104,7 +105,7 @@ impl Treasury {
         let event = TreasuryEvent {
             id: ObjectId::new(),
             date_time: dt.with_timezone(&Utc),
-            event: Event::Rent,
+            event: Event::Rent {},
             debit: Decimal::zero(),
             credit: amount,
             actor: session.actor(),
@@ -119,7 +120,7 @@ impl Treasury {
         &self,
         session: &mut Session,
         amount: Decimal,
-        come_from: ComeFrom,
+        come_from: Source,
     ) -> Result<(), Error> {
         let dt = Local::now();
         self.logs
@@ -247,7 +248,7 @@ impl Treasury {
                 Event::SubRent { .. } => {
                     outcome.sub_rent.add(tx.debit);
                 }
-                Event::Rent => {
+                Event::Rent { .. } => {
                     outcome.sub_rent.add(tx.credit);
                 }
                 Event::Marketing(come_from) => {

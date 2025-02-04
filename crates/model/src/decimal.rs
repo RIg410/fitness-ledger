@@ -32,8 +32,8 @@ impl Decimal {
         self.0
     }
 
-    pub fn to_price(&self) -> u32 {
-        self.0 as u32 * 10
+    pub fn int_part(&self) -> i64 {
+        self.0 / 10i64.pow(DECIMALS as u32)
     }
 }
 

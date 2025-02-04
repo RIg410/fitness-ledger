@@ -23,3 +23,6 @@ yookassa.workspace = true
 env.workspace = true
 serde.workspace = true
 bson.workspace = true
+ai.workspace = true
+arc-swap.workspace = true
+csv.workspace = true

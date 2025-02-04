@@ -25,3 +25,4 @@ strum.workspace = true
 teloxide.workspace = true
 time.workspace = true
 graph.workspace = true
+ai.workspace = true

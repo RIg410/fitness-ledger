@@ -5,7 +5,6 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::user::fmt_come_from;
 use chrono::Local;
 use eyre::Result;
 use model::rights::Rule;
@@ -84,7 +83,7 @@ impl View for Stat {
                 writeln!(
                     &mut text,
                     "_{}_: _{}_",
-                    fmt_come_from(*come_from),
+                    come_from.name(),
                     escape(&sum.sum.to_string())
                 )
             })?;

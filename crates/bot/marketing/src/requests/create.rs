@@ -6,10 +6,10 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::{day::fmt_dt, fmt_phone, user::fmt_come_from};
+use bot_viewer::{day::fmt_dt, fmt_phone};
 use chrono::{Local, NaiveDateTime, TimeZone as _};
 use model::{
-    decimal::Decimal, request::RemindLater, rights::Rule, statistics::marketing::ComeFrom,
+    decimal::Decimal, request::RemindLater, rights::Rule, statistics::source::Source,
     user::sanitize_phone,
 };
 use mongodb::bson::oid::ObjectId;
@@ -68,8 +68,8 @@ impl View for SetComeFrom {
         let text = "Откуда пришел клиент?";
 
         let mut markup = InlineKeyboardMarkup::default();
-        for come_from in ComeFrom::iter() {
-            markup = markup.append_row(come_from.btn_row(fmt_come_from(come_from)));
+        for come_from in Source::iter() {
+            markup = markup.append_row(come_from.btn_row(come_from.name()));
         }
 
         ctx.bot.edit_origin(text, markup).await?;
@@ -77,7 +77,7 @@ impl View for SetComeFrom {
     }
 
     async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
-        let come_from: ComeFrom = calldata!(data);
+        let come_from: Source = calldata!(data);
 
         let request = ctx
             .ledger
@@ -108,7 +108,7 @@ impl View for SetComeFrom {
 
 pub struct SetDescription {
     phone: String,
-    come_from: ComeFrom,
+    come_from: Source,
     first_name: Option<String>,
     last_name: Option<String>,
 }
@@ -148,7 +148,7 @@ impl View for SetDescription {
 
 pub struct SetName {
     phone: String,
-    come_from: ComeFrom,
+    come_from: Source,
 }
 
 #[async_trait]
@@ -187,7 +187,7 @@ impl View for SetName {
 
 pub struct RemindLaterView {
     phone: String,
-    come_from: ComeFrom,
+    come_from: Source,
     comment: String,
     first_name: Option<String>,
     last_name: Option<String>,
@@ -239,7 +239,7 @@ impl View for RemindLaterView {
 
 pub struct SetRemindLater {
     phone: String,
-    come_from: ComeFrom,
+    come_from: Source,
     comment: String,
     first_name: Option<String>,
     last_name: Option<String>,
@@ -354,7 +354,7 @@ impl RememberLaterCalldata {
 
 pub struct Confirm {
     phone: String,
-    come_from: ComeFrom,
+    come_from: Source,
     comment: String,
     first_name: Option<String>,
     last_name: Option<String>,
@@ -377,7 +377,7 @@ impl View for Confirm {
             fmt_phone(Some(&self.phone)),
             escape(self.first_name.as_deref().unwrap_or("?")),
             escape(self.last_name.as_deref().unwrap_or("?")),
-            fmt_come_from(self.come_from),
+            self.come_from.name(),
             escape(&self.comment)
         );
         if let Some(rl) = self.remind_later.as_ref() {
@@ -441,7 +441,7 @@ pub enum CalldataYesNo {
 
 pub struct SellSubscription {
     pub phone: String,
-    pub come_from: ComeFrom,
+    pub come_from: Source,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
 }
@@ -481,7 +481,7 @@ impl View for SellSubscription {
 
 pub struct SelectSubscriptionsView {
     pub phone: String,
-    pub come_from: ComeFrom,
+    pub come_from: Source,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
 }
@@ -528,7 +528,7 @@ struct SelectSubscriptionsCallback([u8; 12]);
 
 pub struct ConfirmSellSubscription {
     pub phone: String,
-    pub come_from: ComeFrom,
+    pub come_from: Source,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
     pub subscription_id: ObjectId,

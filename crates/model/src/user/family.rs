@@ -256,7 +256,7 @@ mod tests {
         decimal::Decimal,
         program::TrainingType,
         rights::Rights,
-        statistics::marketing::ComeFrom,
+        statistics::source::Source,
         subscription::{Status, SubscriptionType, UserSubscription},
         training::Training,
         user::UserName,
@@ -282,7 +282,7 @@ mod tests {
             version: 0,
             created_at: Default::default(),
             settings: Default::default(),
-            come_from: ComeFrom::default(),
+            come_from: Source::default(),
             family: Default::default(),
             employee: Default::default(),
         }

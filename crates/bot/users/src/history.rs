@@ -11,7 +11,7 @@ use eyre::Result;
 use model::{
     history::HistoryRow,
     rights::{Rights, Rule},
-    statistics::marketing::ComeFrom,
+    statistics::source::Source,
     user::{User, UserName},
 };
 use mongodb::bson::oid::ObjectId;
@@ -96,7 +96,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 },
                 Rights::customer(),
                 None,
-                ComeFrom::Unknown {},
+                Source::Unknown {},
             ),
             false,
         )
@@ -383,7 +383,7 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 subscription.balance
             )
         }
-        model::history::Action::BuySub { subscription } => {
+        model::history::Action::BuySub { subscription, discount } => {
             format!(
                 "Вы купили абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_",
                 escape(&subscription.name),

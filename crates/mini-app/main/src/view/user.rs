@@ -3,7 +3,7 @@ use eyre::Error;
 use model::{
     decimal::Decimal,
     rights::Rights,
-    statistics::marketing::ComeFrom,
+    statistics::source::Source,
     subscription::UserSubscription,
     user::{
         employee::Employee,
@@ -50,7 +50,7 @@ pub struct UserView {
     pub freeze_days: u32,
     pub created_at: DateTime<Utc>,
     pub employee: Option<EmployeeView>,
-    pub come_from: ComeFrom,
+    pub come_from: Source,
     pub family: FamilyView,
     pub birthday: Option<Birthday>,
 }

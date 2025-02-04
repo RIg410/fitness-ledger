@@ -155,6 +155,9 @@ pub enum Rule {
     // program
     ViewHiddenPrograms,
     HistoryViewer,
+
+    //ai
+    AIStatistic,
 }
 
 impl Rule {

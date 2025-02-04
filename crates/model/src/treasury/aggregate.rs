@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-use crate::{decimal::Decimal, statistics::marketing::ComeFrom};
+use crate::{decimal::Decimal, statistics::source::Source};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TreasuryAggregate {
@@ -25,7 +25,7 @@ pub struct AggIncome {
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct AggOutcome {
     pub rewards: Agg,
-    pub marketing: HashMap<ComeFrom, Agg>,
+    pub marketing: HashMap<Source, Agg>,
     pub sub_rent: Agg,
 
     pub other: Agg,

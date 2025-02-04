@@ -20,7 +20,8 @@ members = [
   "crates/env",
   "crates/payment/yookassa",
   "crates/time",
-  "crates/graph",
+  "crates/graph", 
+  "crates/ai",
 ]
 
 resolver = "2"
@@ -41,6 +42,7 @@ bot-viewer = {path = "crates/bot/viewer"}
 bot-views = {path = "crates/bot/views"}
 graph = {path = "crates/graph"}
 time = {path = "crates/time"}
+ai = {path = "crates/ai"}
 
 mini-app-main = {path = "crates/mini-app/main"}
 
@@ -91,3 +93,5 @@ tokio-cron-scheduler = {version = "0.13.0", features = ["english"]}
 url = "2"
 uuid = "1.11.0"
 zip = "2.2.0"
+arc-swap = "1.7.1"
+csv = "1.3.1"

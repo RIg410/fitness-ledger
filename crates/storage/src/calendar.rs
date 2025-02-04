@@ -11,7 +11,7 @@ use model::{
 };
 use mongodb::{
     bson::{doc, oid::ObjectId},
-    options::{FindOneOptions, IndexOptions, UpdateOptions},
+    options::{FindOneOptions, FindOptions, IndexOptions, UpdateOptions},
     Collection, Database, IndexModel, SessionCursor,
 };
 
@@ -72,7 +72,15 @@ impl CalendarStore {
             },
             (None, None) => doc! {},
         };
-        Ok(self.store.find(filter).session(&mut *session).await?)
+        let find_options = FindOptions::builder()
+            .sort(doc! { "date_time": 1 })
+            .build();
+        Ok(self
+            .store
+            .find(filter)
+            .session(&mut *session)
+            .with_options(find_options)
+            .await?)
     }
 
     pub async fn cursor(
@@ -232,7 +240,8 @@ impl CalendarStore {
         info!("Delete training: {:?}", id);
 
         let update = doc! { "$pull": { "training": { "start_at": id.start_at, "room": id.room } }, "$inc": { "version": 1 } };
-        let update = self.store
+        let update = self
+            .store
             .update_one(training_filter(id), update)
             .session(&mut *session)
             .await?;

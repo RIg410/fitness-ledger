@@ -8,7 +8,7 @@ use model::errors::LedgerError;
 use model::request::Request;
 use model::request::RequestHistoryRow;
 use model::user::sanitize_phone;
-use model::{request::RemindLater, session::Session, statistics::marketing::ComeFrom};
+use model::{request::RemindLater, session::Session, statistics::source::Source};
 use storage::requests::RequestStore;
 use tx_macro::tx;
 
@@ -33,7 +33,7 @@ impl Requests {
         &self,
         session: &mut Session,
         id: ObjectId,
-        come_from: ComeFrom,
+        come_from: Source,
         comment: String,
     ) -> Result<(), LedgerError> {
         if let Some(mut request) = self.requests.get(session, id).await? {
@@ -103,7 +103,7 @@ impl Requests {
         &self,
         session: &mut Session,
         phone: String,
-        come_from: ComeFrom,
+        come_from: Source,
         comment: String,
         first_name: Option<String>,
         last_name: Option<String>,
@@ -144,7 +144,7 @@ impl Requests {
         Ok(())
     }
 
-    pub async fn come_from(&self, session: &mut Session, phone: &str) -> Result<ComeFrom, Error> {
+    pub async fn come_from(&self, session: &mut Session, phone: &str) -> Result<Source, Error> {
         let phone = model::user::sanitize_phone(phone);
         self.requests
             .get_by_phone(session, &phone)

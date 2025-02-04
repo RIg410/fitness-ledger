@@ -17,6 +17,8 @@ pub struct EnvInner {
     yookassa_shop_id: String,
     bot_url: String,
     jwt_secret: String,
+    ai_base_url: String,
+    ai_api_key: String,
 }
 
 impl Env {
@@ -52,6 +54,14 @@ impl Env {
         &self.0.jwt_secret
     }
 
+    pub fn ai_base_url(&self) -> &str {
+        &self.0.ai_base_url
+    }
+
+    pub fn ai_api_key(&self) -> &str {
+        &self.0.ai_api_key
+    }
+
     pub fn load() -> Result<Env, Error> {
         if dotenv().ok().is_none() {
             log::info!("dotenv not found");
@@ -73,6 +83,8 @@ impl Env {
                     .map(char::from)
                     .collect()
             }),
+            ai_base_url: var("AI_BASE_URL").context("AI_BASE_URL is not set")?,
+            ai_api_key: var("AI_API_KEY").context("AI_API_KEY is not set")?,
         })))
     }
 }

@@ -8,7 +8,7 @@ use log::info;
 use model::decimal::Decimal;
 use model::rights::{self, Rule};
 use model::session::Session;
-use model::statistics::marketing::ComeFrom;
+use model::statistics::source::Source;
 use model::subscription::{Status, Subscription, UserSubscription};
 use model::user::extension::UserExtension;
 use model::user::{Freeze, User, UserName};
@@ -499,7 +499,7 @@ impl UserStore {
         &self,
         session: &mut Session,
         id: ObjectId,
-        come_from: ComeFrom,
+        come_from: Source,
     ) -> Result<(), Error> {
         info!("Updating come_from: {:?}", come_from);
         self.users

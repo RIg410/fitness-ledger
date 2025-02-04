@@ -1,3 +1,4 @@
+use ai::AiModel;
 use async_trait::async_trait;
 use bot_core::{
     callback_data::{CallbackDateTime, Calldata as _},
@@ -17,6 +18,7 @@ mod budget;
 mod clients;
 mod instructors;
 mod marketing;
+mod view_ai;
 
 pub struct StatisticsView {
     range: Range,
@@ -50,7 +52,7 @@ impl View for StatisticsView {
             vec![Calldata::Prev.button("⬅️")]
         };
 
-        let keymap = InlineKeyboardMarkup::default()
+        let mut keymap = InlineKeyboardMarkup::default()
             .append_row(vec![
                 Calldata::Range(Range::Day(now).into()).button(if self.range.is_day() {
                     "✅по дням"
@@ -73,6 +75,10 @@ impl View for StatisticsView {
             .append_row(Calldata::Instructor.btn_row("👨‍🏫 Инструкторы"))
             .append_row(Calldata::Clients.btn_row("👥 Клиенты"))
             .append_row(Calldata::Marketing.btn_row("📈 Маркетинг"));
+
+        if ctx.has_right(Rule::AIStatistic) {
+            keymap = keymap.append_row(Calldata::AI.btn_row("🤖 AI"));
+        }
 
         let (from, to) = self.range.range()?;
         ctx.edit_origin(
@@ -121,6 +127,11 @@ impl View for StatisticsView {
             Calldata::Prev => {
                 self.range = self.range.prev()?;
             }
+            Calldata::AI => {
+                ctx.ensure(Rule::AIStatistic)?;
+                let view = view_ai::AiView::new(AiModel::Gpt4oMini);
+                return Ok(view.into());
+            }
         }
         Ok(Jmp::Stay)
     }
@@ -132,6 +143,7 @@ enum Calldata {
     Instructor,
     Clients,
     Marketing,
+    AI,
     Range(RangeCalldata),
     Next,
     Prev,

@@ -119,7 +119,14 @@ impl History {
         session: &mut Session,
         subscription: Subscription,
     ) -> Result<()> {
-        let entry = HistoryRow::new(session.actor(), Action::BuySub { subscription });
+        let entry = HistoryRow::with_sub_actors(
+            session.actor(),
+            vec![session.actor()],
+            Action::BuySub {
+                subscription,
+                discount: None,
+            },
+        );
         self.store.store(session, entry).await
     }
 

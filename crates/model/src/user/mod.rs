@@ -4,7 +4,7 @@ use eyre::Result;
 use std::fmt::{Display, Formatter};
 
 use super::rights::Rights;
-use crate::{statistics::marketing::ComeFrom, subscription::UserSubscription};
+use crate::{statistics::source::Source, subscription::UserSubscription};
 use chrono::{DateTime, TimeZone as _, Utc};
 use family::{Family, Payer};
 use mongodb::bson::doc;
@@ -42,7 +42,7 @@ pub struct User {
     #[serde(default)]
     pub settings: UserSettings,
     #[serde(default)]
-    pub come_from: ComeFrom,
+    pub come_from: Source,
     #[serde(default)]
     pub family: Family,
 }
@@ -59,7 +59,7 @@ impl User {
         name: UserName,
         rights: Rights,
         phone: Option<String>,
-        come_from: ComeFrom,
+        come_from: Source,
     ) -> User {
         User {
             id: ObjectId::new(),
@@ -106,7 +106,7 @@ impl User {
             freeze: None,
             created_at: Utc::now(),
             settings: UserSettings::default(),
-            come_from: ComeFrom::default(),
+            come_from: Source::default(),
             family: Family::default(),
             employee: Default::default(),
         }

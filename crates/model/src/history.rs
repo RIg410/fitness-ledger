@@ -104,6 +104,8 @@ pub enum Action {
     },
     BuySub {
         subscription: Subscription,
+        #[serde(default)]
+        discount: Option<Decimal>,
     },
     RemoveFamilyMember {},
     AddFamilyMember {},
