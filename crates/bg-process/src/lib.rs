@@ -27,7 +27,9 @@ pub async fn start(ledger: Arc<Ledger>, bot: BotApp) -> Result<(), Error> {
     ));
     let sched = JobScheduler::new().await?;
 
-    sched.add(TriningBg::new(ledger.clone()).to_job()?).await?;
+    sched
+        .add(TriningBg::new(ledger.clone(), bot.clone()).to_job()?)
+        .await?;
     sched.add(FreezeBg::new(ledger.clone()).to_job()?).await?;
     sched
         .add(SubscriptionBg::new(ledger.clone(), bot.clone()).to_job()?)

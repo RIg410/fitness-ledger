@@ -7,7 +7,7 @@ use bot_core::{
     widget::{Jmp, View},
     CommonLocation,
 };
-use bot_viewer::{day::fmt_dt, fmt_phone, training::fmt_training_type, user::link_to_user};
+use bot_viewer::{day::fmt_dt, fmt_phone, training::fmt_training_type};
 use chrono::Local;
 use eyre::{bail, Result};
 use model::{
@@ -388,39 +388,6 @@ pub async fn sign_up(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> Re
     ctx.ledger
         .sign_up(&mut ctx.session, id, user.id, false)
         .await?;
-
-    if training.tp.is_not_free() {
-        let payer = user.payer()?;
-        let balance = payer.available_balance_for_training(&training);
-        if balance <= 1 {
-            let msg = "Ваш абонемент заканчивается🥺";
-            if let Ok(users) = ctx
-                .ledger
-                .users
-                .find_users_with_right(
-                    &mut ctx.session,
-                    Rule::ReceiveNotificationsAboutSubscriptions,
-                )
-                .await
-            {
-                for user in users {
-                    ctx.bot
-                        .notify_with_markup(
-                            ChatId(user.tg_id),
-                            &format!(
-                                "У {} {} заканчивается абонемент\\.",
-                                link_to_user(&ctx.me),
-                                fmt_phone(ctx.me.phone.as_deref())
-                            ),
-                            InlineKeyboardMarkup::default()
-                                .append_row(vec![CommonLocation::Profile(ctx.me.id).button()]),
-                        )
-                        .await;
-                }
-            }
-            ctx.send_notification(msg).await;
-        }
-    }
     Ok(Jmp::Stay)
 }
 
