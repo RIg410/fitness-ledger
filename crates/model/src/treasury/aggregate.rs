@@ -26,8 +26,7 @@ pub struct AggIncome {
 pub struct AggOutcome {
     pub rewards: Agg,
     pub marketing: HashMap<Source, Agg>,
-    pub sub_rent: Agg,
-
+    pub rent: Agg,
     pub other: Agg,
 }
 

@@ -6,9 +6,7 @@ use eyre::{Context, Error};
 use ledger::Ledger;
 use log::info;
 use process::{
-    birthdays::BirthdaysNotifier, freeze::FreezeBg, notifier::TrainingNotifier,
-    requests::RequestNotifier, rewards::RewardsBg, subscription::SubscriptionBg,
-    training::TriningBg, user_sync::UserNameSync,
+    birthdays::BirthdaysNotifier, freeze::FreezeBg, motivation::MotivationNotifier, notifier::TrainingNotifier, requests::RequestNotifier, rewards::RewardsBg, subscription::SubscriptionBg, training::TriningBg, user_sync::UserNameSync
 };
 
 use teloxide::types::{ChatId, MessageId};
@@ -46,6 +44,7 @@ pub async fn start(ledger: Arc<Ledger>, bot: BotApp) -> Result<(), Error> {
     sched
         .add(BirthdaysNotifier::new(ledger.clone(), bot.clone()).to_job()?)
         .await?;
+    sched.add(MotivationNotifier::new(ledger.clone(), bot.clone()).to_job()?).await?;
     sched.start().await?;
     Ok(())
 }

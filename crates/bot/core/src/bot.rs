@@ -204,7 +204,7 @@ impl TgBot {
         Ok(())
     }
 
-    pub async fn notify(&self, chat_id: ChatId, text: &str) -> MessageId {
+    pub async fn notify(&self, chat_id: ChatId, text: &str, notify: bool) -> MessageId {
         if chat_id.0 == -1 {
             return MessageId(0);
         }
@@ -212,6 +212,7 @@ impl TgBot {
             .bot
             .send_message(chat_id, text)
             .parse_mode(ParseMode::MarkdownV2)
+            .disable_notification(!notify)
             .await;
 
         let id = match result {
@@ -227,7 +228,12 @@ impl TgBot {
         id
     }
 
-    pub async fn notify_with_markup(&self, chat_id: ChatId, text: &str, markup: InlineKeyboardMarkup) -> MessageId {
+    pub async fn notify_with_markup(
+        &self,
+        chat_id: ChatId,
+        text: &str,
+        markup: InlineKeyboardMarkup,
+    ) -> MessageId {
         if chat_id.0 == -1 {
             return MessageId(0);
         }

@@ -94,7 +94,7 @@ impl TriningBg {
             statistic.earned += price;
             self.ledger
                 .treasury
-                .take_sub_rent(session, price, training.description)
+                .sub_rent(session, price, training.description)
                 .await?;
         }
 

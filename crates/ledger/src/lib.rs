@@ -44,6 +44,7 @@ pub struct Ledger {
     pub backup: backup::Backup,
     pub requests: Requests,
     pub yookassa: yookassa::Yookassa,
+    pub ai: Ai,
 }
 
 impl Ledger {
@@ -66,13 +67,14 @@ impl Ledger {
         let rewards = Rewards::new(storage.rewards);
         let requests = Requests::new(storage.requests, users.clone());
 
+        let ai = Ai::new(env.ai_base_url().to_owned(), env.ai_api_key().to_owned());
         let statistics = statistics::Statistics::new(
             calendar.clone(),
             history.clone(),
             users.clone(),
             requests.clone(),
-            Ai::new(env.ai_base_url().to_owned(), env.ai_api_key().to_owned()),
             treasury.clone(),
+            ai.clone(),
         );
 
         Ledger {
@@ -88,6 +90,7 @@ impl Ledger {
             backup,
             requests,
             yookassa: yookassa::Yookassa::new(&env),
+            ai,
         }
     }
 

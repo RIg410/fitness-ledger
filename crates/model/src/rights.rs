@@ -84,6 +84,7 @@ pub enum Rule {
     EditMarketingInfo,
     EditFamily,
     ViewFamily,
+    EditAiPrompt,
 
     // Training
     EditTraining,
@@ -147,6 +148,7 @@ pub enum Rule {
     //notifications
     ReceiveNotificationsAboutSubscriptions,
     ReceiveNotificationsAboutBirthdays,
+    ReceiveAiNotifications,
 
     // experimental
     MiniApp,

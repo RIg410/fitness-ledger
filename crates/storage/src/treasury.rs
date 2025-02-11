@@ -1,4 +1,4 @@
-use bson::{doc, Bson};
+use bson::doc;
 use chrono::{DateTime, Local, Utc};
 use eyre::Error;
 use model::{session::Session, treasury::TreasuryEvent};
@@ -8,7 +8,6 @@ const COLLECTION: &str = "treasury";
 
 pub struct TreasuryStore {
     store: Collection<TreasuryEvent>,
-    call: Collection<Bson>,
 }
 
 impl TreasuryStore {
@@ -19,10 +18,7 @@ impl TreasuryStore {
             .options(IndexOptions::builder().unique(true).build())
             .build();
         store.create_index(index).await?;
-        Ok(TreasuryStore {
-            store,
-            call: db.collection(COLLECTION),
-        })
+        Ok(TreasuryStore { store })
     }
 
     pub async fn insert(&self, session: &mut Session, event: TreasuryEvent) -> Result<(), Error> {
@@ -125,16 +121,7 @@ impl TreasuryStore {
             .await?;
         let mut events = Vec::new();
 
-        let mut cursor_1 = self
-            .call
-            .find(filter)
-            .sort(doc! { "date_time": -1 })
-            .session(&mut *session)
-            .await?;
-
         while let Some(event) = cursor.next(&mut *session).await {
-            let val = cursor_1.next(&mut *session).await;
-            dbg!(val);
             events.push(event?);
         }
         Ok(events)

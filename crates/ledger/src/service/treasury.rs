@@ -67,6 +67,7 @@ impl Treasury {
             debit,
             credit: Decimal::zero(),
             actor: session.actor(),
+            description: None,
         };
         self.store.insert(session, event).await?;
         Ok(())
@@ -90,6 +91,7 @@ impl Treasury {
             debit: Decimal::zero(),
             credit: amount,
             actor: session.actor(),
+            description: None,
         };
 
         self.store.insert(session, event).await?;
@@ -109,6 +111,7 @@ impl Treasury {
             debit: Decimal::zero(),
             credit: amount,
             actor: session.actor(),
+            description: None,
         };
 
         self.store.insert(session, event).await?;
@@ -133,6 +136,7 @@ impl Treasury {
             debit: Decimal::zero(),
             credit: amount,
             actor: session.actor(),
+            description: None,
         };
 
         self.store.insert(session, event).await?;
@@ -140,7 +144,7 @@ impl Treasury {
     }
 
     #[tx]
-    pub async fn take_sub_rent(
+    pub async fn sub_rent(
         &self,
         session: &mut Session,
         amount: Decimal,
@@ -153,12 +157,11 @@ impl Treasury {
         let event = TreasuryEvent {
             id: ObjectId::new(),
             date_time: dt.with_timezone(&Utc),
-            event: Event::SubRent {
-                description: description.clone(),
-            },
+            event: Event::SubRent,
             debit: amount,
             credit: Decimal::zero(),
             actor: session.actor(),
+            description: Some(description),
         };
 
         self.store.insert(session, event).await?;
@@ -183,6 +186,7 @@ impl Treasury {
             debit: amount,
             credit: Decimal::zero(),
             actor: session.actor(),
+            description: None,
         };
 
         self.store.insert(session, event).await?;
@@ -203,6 +207,7 @@ impl Treasury {
             debit: Decimal::zero(),
             credit: amount,
             actor: session.actor(),
+            description: None,
         };
 
         self.store.insert(session, event).await?;
@@ -246,10 +251,10 @@ impl Treasury {
                     income.other.add(tx.debit);
                 }
                 Event::SubRent { .. } => {
-                    outcome.sub_rent.add(tx.debit);
+                    income.sub_rent.add(tx.debit);
                 }
                 Event::Rent { .. } => {
-                    outcome.sub_rent.add(tx.credit);
+                    outcome.rent.add(tx.credit);
                 }
                 Event::Marketing(come_from) => {
                     outcome

@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use eyre::Result;
 use model::statistics::{
     day::{TrainingStat, TrainingType},
-    month::{MarketingStat, MonthStatistics, SubscriptionStat, TreasuryIO},
+    month::{MarketingStat, MonthStatistics, SubscriptionStat, TreasuryIO}, training::TrainingsStat,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -19,11 +19,7 @@ pub fn render_statistic(state: &HashMap<NaiveDate, MonthStatistics>) -> Result<S
     let mut treasury = TreasuryIOWriter::new(employees)?;
 
     for (month, month_stats) in state.iter() {
-        for day in month_stats.days.iter() {
-            for training in day.trainings.iter() {
-                trainigs.write(training)?;
-            }
-        }
+        trainigs.write(&month_stats.training)?;
         marketing.write(month, &month_stats.marketing)?;
         subscriptions.write(month, &month_stats.subscriptions)?;
         treasury.write(month, &month_stats.treasury)?;
@@ -34,9 +30,10 @@ pub fn render_statistic(state: &HashMap<NaiveDate, MonthStatistics>) -> Result<S
     let subscriptions_db = subscriptions.finish()?;
     let treasury_db = treasury.finish()?;
 
+    let now = chrono::Local::now();
     Ok(format!(
-        "training database:\n{}application database:\n{}subscription sales database:\n{}:cost and income base\n{}",
-        trainings_db, marketing_db, subscriptions_db, treasury_db
+        "training database:\n{}application database:\n{}subscription sales database:\n{}:cost and income base\n{}\nnow:{}",
+        trainings_db, marketing_db, subscriptions_db, treasury_db, now.format("%Y-%m-%d %H:%M")
     ))
 }
 
@@ -192,30 +189,50 @@ impl TrainingWriter {
             "debited from clients' subscriptions",
             "instructor reward",
         ])?;
+        /*
+        
+pub struct TrainingsStat {
+    pub trainings: HashMap<String, TrainingStat>,
+    pub instructors: HashMap<String, InstructorsStat>,
+}
+
+pub struct TrainingStat {
+    pub trainings_count: u64,
+    pub total_clients: u64,
+    pub total_earned: i64,
+}
+
+pub struct InstructorsStat {
+    pub total_trainings: u64,
+    pub total_clients: u64,
+    pub total_earned: i64,
+}
+
+         */
         Ok(Self { wtr })
     }
 
-    pub fn write(&mut self, training: &TrainingStat) -> Result<()> {
-        let tp = match training.tp {
-            TrainingType::Group => "group",
-            TrainingType::Personal => "personal",
-            TrainingType::Rent => "sub rent",
-        };
-        let instructor = training
-            .instructor
-            .as_ref()
-            .map(|instructor| instructor.clone())
-            .unwrap_or_else(|| "-".to_string());
-        self.wtr.write_record(&[
-            training.name.clone(),
-            training.start_at.format("%Y-%m-%d %H:%M").to_string(),
-            training.clients.to_string(),
-            instructor,
-            tp.to_string(),
-            training.room.clone(),
-            training.earned.to_string(),
-            training.paid.to_string(),
-        ])?;
+    pub fn write(&mut self, training: &TrainingsStat) -> Result<()> {
+        // let tp = match training.tp {
+        //     TrainingType::Group => "group",
+        //     TrainingType::Personal => "personal",
+        //     TrainingType::Rent => "sub rent",
+        // };
+        // let instructor = training
+        //     .instructor
+        //     .as_ref()
+        //     .map(|instructor| instructor.clone())
+        //     .unwrap_or_else(|| "-".to_string());
+        // self.wtr.write_record(&[
+        //     training.name.clone(),
+        //     training.start_at.format("%Y-%m-%d %H:%M").to_string(),
+        //     training.clients.to_string(),
+        //     instructor,
+        //     tp.to_string(),
+        //     training.room.clone(),
+        //     training.earned.to_string(),
+        //     training.paid.to_string(),
+        // ])?;
 
         Ok(())
     }

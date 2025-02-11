@@ -1,6 +1,6 @@
 use crate::service::{calendar::Calendar, users::Users};
 use chrono::NaiveDate;
-use eyre::Error;
+use eyre::{bail, Error};
 use model::{
     rooms::Room,
     session::Session,
@@ -82,10 +82,11 @@ pub async fn load_calendar(
         }
 
         day_training.sort_by(|a, b| a.start_at.cmp(&b.start_at));
-        month.days.push(DayStat {
-            dt: day.day_date(),
-            trainings: day_training,
-        });
+        // month.days.push(DayStat {
+        //     dt: day.day_date(),
+        //     trainings: day_training,
+        // });
+        bail!("unimplemented")
     }
 
     Ok(monthes)

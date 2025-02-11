@@ -10,6 +10,7 @@ pub struct UserExtension {
     pub birthday: Option<Birthday>,
     #[serde(default)]
     pub notification_mask: NotificationMask,
+    pub ai_message_prompt: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

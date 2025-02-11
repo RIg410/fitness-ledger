@@ -1,12 +1,10 @@
+use super::{source::Source, training::TrainingsStat};
+use crate::user::rate::EmployeeRole;
 use bson::oid::ObjectId;
-
-use crate::user::{employee::Employee, rate::EmployeeRole};
-
-use super::{day::DayStat, source::Source};
 use std::collections::HashMap;
 
 pub struct MonthStatistics {
-    pub days: Vec<DayStat>,
+    pub training: TrainingsStat,
     pub marketing: MarketingStat,
     pub subscriptions: Vec<SubscriptionStat>,
     pub treasury: TreasuryIO,
@@ -15,7 +13,6 @@ pub struct MonthStatistics {
 impl Default for MonthStatistics {
     fn default() -> Self {
         MonthStatistics {
-            days: vec![],
             marketing: MarketingStat {
                 source: HashMap::new(),
             },
@@ -27,6 +24,10 @@ impl Default for MonthStatistics {
                 sub_rent: 0,
                 other_expense: 0,
                 sell_subscriptions: 0,
+            },
+            training: TrainingsStat {
+                trainings: HashMap::new(),
+                instructors: HashMap::new(),
             },
         }
     }

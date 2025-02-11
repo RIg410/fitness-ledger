@@ -22,3 +22,5 @@ teloxide.workspace = true
 tokio-cron-scheduler.workspace = true
 tokio.workspace = true
 tx_macro.workspace = true
+ai.workspace = true
+

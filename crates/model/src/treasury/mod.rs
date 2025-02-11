@@ -22,6 +22,8 @@ pub struct TreasuryEvent {
     pub event: Event,
     pub debit: Decimal,
     pub credit: Decimal,
+    #[serde(default)]
+    pub description: Option<String>,
 }
 
 impl TreasuryEvent {
@@ -35,12 +37,9 @@ pub enum Event {
     // income
     SellSubscription(SellSubscription),
     Income(Income),
-    SubRent {
-        #[serde(default)]
-        description: String,
-    },
+    SubRent,
     // outcome
-    Rent {},
+    Rent,
     Outcome(Outcome),
     Reward(UserId),
     Marketing(Source),

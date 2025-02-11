@@ -281,6 +281,7 @@ dependencies = [
 name = "bg-process"
 version = "0.1.0"
 dependencies = [
+ "ai",
  "async-trait",
  "bot-core",
  "bot-main",
