@@ -25,6 +25,8 @@ services:
       YOOKASSA_TOKEN: $YOOKASSA_TOKEN
       YOOKASSA_SHOP_ID: $YOOKASSA_SHOP_ID
       BOT_URL: $BOT_URL
+      AI_BASE_URL: $AI_BASE_URL
+      AI_API_KEY: $AI_API_KEY
   nginx:
       image: nginx:latest
       container_name: nginx
