@@ -4,7 +4,7 @@ use bot_core::bot::TgBot;
 use eyre::Error;
 use ledger::Ledger;
 use model::rights::Rule;
-use teloxide::types::ChatId;
+use teloxide::{types::ChatId, utils::markdown::escape};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -22,7 +22,7 @@ impl MotivationNotifier {
 #[async_trait]
 impl Task for MotivationNotifier {
     const NAME: &'static str = "motivation-notifier";
-    const CRON: &'static str = "every 2 minutes";
+    const CRON: &'static str = "every 1 day at 9:12";
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;
@@ -47,7 +47,7 @@ impl Task for MotivationNotifier {
                     .await
                 {
                     self.bot
-                        .notify(ChatId(user.tg_id), &format!("{}", response.response), false)
+                        .notify(ChatId(user.tg_id), &escape(&response.response), false)
                         .await;
                 }
             }
