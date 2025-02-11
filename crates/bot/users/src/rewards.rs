@@ -9,6 +9,7 @@ use bot_viewer::day::fmt_dt;
 use chrono::Local;
 use eyre::Result;
 use model::{
+    decimal::Decimal,
     reward::{Reward, RewardSource},
     rights::Rule,
 };
@@ -50,7 +51,7 @@ impl View for RewardsList {
             .await?;
         let mut msg = "*История начислений:*".to_string();
         for log in &logs {
-            msg.push_str(&format!("\n\n📌{}", fmt_row(log)));
+            msg.push_str(&format!("\n\n📌{}", fmt_row(log, ctx).await?));
         }
         let mut keymap = vec![];
         if self.offset > 0 {
@@ -89,8 +90,8 @@ enum Calldata {
     Recalculate,
 }
 
-fn fmt_row(log: &Reward) -> String {
-    match &log.source {
+async fn fmt_row(log: &Reward, ctx: &mut Context) -> Result<String> {
+    Ok(match &log.source {
         RewardSource::Recalc { comment } => {
             format!(
                 "*{}*\n начислено *{}* \\- _перерасчет_ \\- {}",
@@ -109,16 +110,29 @@ fn fmt_row(log: &Reward) -> String {
         RewardSource::Training {
             training_id,
             name,
-            user_originals: _,
-            percent: _,
+            user_originals,
+            percent,
         } => {
-            format!(
-                "*{}*\n начислено *{}* \\- тренировка '{}' \\- {}",
+            let mut from_users = String::new();
+            for rew in user_originals {
+                let user = ctx.ledger.get_user(&mut ctx.session, rew.user).await?;
+                from_users.push_str(&escape(&format!(
+                    "- {} цена занятий :{}. {}% = {}\n",
+                    user.name.first_name,
+                    rew.lesson_price,
+                    *percent * Decimal::int(100),
+                    rew.lesson_price * *percent
+                )));
+            }
+
+           format!(
+                "*{}*\n начислено *{}* \\- тренировка '{}' \\- {}\nКлиенты:\n {}",
                 fmt_dt(&log.created_at.with_timezone(&Local)),
                 escape(&log.reward.to_string()),
                 escape(name),
                 fmt_dt(&training_id.start_at.with_timezone(&Local)),
+                from_users
             )
         }
-    }
+    })
 }
