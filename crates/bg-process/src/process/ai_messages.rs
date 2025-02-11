@@ -28,7 +28,7 @@ impl MotivationNotifier {
 #[async_trait]
 impl Task for MotivationNotifier {
     const NAME: &'static str = "motivation-notifier";
-    const CRON: &'static str = "every 1 day at 12:12";
+    const CRON: &'static str = "every 1 day at 9:12";
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;

@@ -7,8 +7,7 @@ use bot_core::{
 };
 use bot_trainigs::list::TrainingList;
 use bot_users::{
-    history::HistoryList, rewards::RewardsList, rights::UserRightsView, set_birthday::SetBirthday,
-    set_fio::SetFio, set_phone::SetPhone,
+    history::HistoryList, rewards::RewardsList, rights::UserRightsView, set_ai_prompt::SetAiPrompt, set_birthday::SetBirthday, set_fio::SetFio, set_phone::SetPhone
 };
 use bot_viewer::user::render_profile_msg;
 use eyre::Error;
@@ -109,6 +108,11 @@ impl EmployeeProfile {
             Ok(Jmp::Stay)
         }
     }
+
+    async fn edit_ai_prompt(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
+        ctx.ensure(Rule::EditAiPrompt)?;
+        Ok(SetAiPrompt::new(self.id).into())
+    }
 }
 
 #[async_trait]
@@ -145,6 +149,7 @@ impl View for EmployeeProfile {
             Callback::DeleteEmployee => self.delete_employee(ctx).await,
             Callback::PayReward => self.pay_reward(ctx).await,
             Callback::Rates => self.rates_list(ctx).await,
+            Callback::EditAiPrompt => self.edit_ai_prompt(ctx).await,
         }
     }
 }
@@ -197,6 +202,10 @@ async fn render_user_profile(
         keymap = keymap.append_row(Callback::DeleteEmployee.btn_row("Удалить сотрудника ❌"));
     }
 
+    if ctx.has_right(Rule::EditAiPrompt) {
+        keymap = keymap.append_row(Callback::EditAiPrompt.btn_row("Редактировать промпт 🤖"));
+    }
+
     Ok((msg, keymap))
 }
 
@@ -211,6 +220,7 @@ pub enum Callback {
     HistoryList,
     RewardsList,
     DeleteEmployee,
+    EditAiPrompt,
     PayReward,
     Rates,
 }

@@ -28,6 +28,7 @@ pub mod rights;
 pub mod set_birthday;
 pub mod set_fio;
 pub mod set_phone;
+pub mod set_ai_prompt;
 pub mod subscriptions;
 
 pub const LIMIT: u64 = 7;

@@ -588,6 +588,7 @@ impl UserStore {
                 id,
                 birthday: None,
                 notification_mask: Default::default(),
+                ai_message_prompt: None,
             }))
     }
 

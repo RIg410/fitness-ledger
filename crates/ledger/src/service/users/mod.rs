@@ -71,6 +71,7 @@ impl Users {
                         id,
                         birthday: None,
                         notification_mask: Default::default(),
+                        ai_message_prompt: None,
                     },
                 )
                 .await?;
@@ -115,6 +116,7 @@ impl Users {
                     birthday: None,
                     id: user.id,
                     notification_mask: Default::default(),
+                    ai_message_prompt: None,
                 },
             )
             .await?;
@@ -156,6 +158,23 @@ impl Users {
             .update_extension(session, user)
             .await
             .map_err(SetDateError::Common)?;
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn set_ai_prompt(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        prompt: Option<String>,
+    ) -> Result<()> {
+        let mut user = self
+            .store
+            .get_extension(session, id)
+            .await
+            .map_err(SetDateError::Common)?;
+        user.ai_message_prompt = prompt;
+        self.store.update_extension(session, user).await?;
         Ok(())
     }
 
