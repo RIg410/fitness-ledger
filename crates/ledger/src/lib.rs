@@ -73,8 +73,8 @@ impl Ledger {
             history.clone(),
             users.clone(),
             requests.clone(),
-            treasury.clone(),
             ai.clone(),
+            treasury.clone(),
         );
 
         Ledger {

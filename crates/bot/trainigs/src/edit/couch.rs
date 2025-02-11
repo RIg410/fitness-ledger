@@ -60,11 +60,11 @@ impl ChangeCouch {
             escape(&training.name),
             fmt_dt(&training.get_slot().start_at())
         );
-        ctx.notify(ChatId(old_couch.tg_id), &msg).await;
-        ctx.notify(ChatId(new_couch.tg_id), &msg).await;
+        ctx.notify(ChatId(old_couch.tg_id), &msg, true).await;
+        ctx.notify(ChatId(new_couch.tg_id), &msg, true).await;
         for client in training.clients.iter() {
             let client = ctx.ledger.get_user(&mut ctx.session, *client).await?;
-            ctx.notify(ChatId(client.tg_id), &msg).await;
+            ctx.notify(ChatId(client.tg_id), &msg, true).await;
         }
 
         Ok(())

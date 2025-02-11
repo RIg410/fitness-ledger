@@ -282,7 +282,7 @@ impl ConfirmCancelTraining {
         );
         for client in to_notify {
             if let Ok(user) = ctx.ledger.get_user(&mut ctx.session, client).await {
-                ctx.bot.notify(ChatId(user.tg_id), &msg).await;
+                ctx.bot.notify(ChatId(user.tg_id), &msg, true).await;
             }
         }
         if training.is_group() {
@@ -455,6 +455,7 @@ pub async fn sign_out(ctx: &mut Context, id: TrainingId, user_id: ObjectId) -> R
                     fmt_phone(ctx.me.phone.as_deref()),
                     fmt_dt(&training.get_slot().start_at())
                 ),
+                true,
             )
             .await;
         Ok(Jmp::Back)

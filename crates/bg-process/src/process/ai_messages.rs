@@ -1,17 +1,11 @@
 use crate::Task;
 use async_trait::async_trait;
-use bot_core::{bot::TgBot, CommonLocation};
-use bot_viewer::fmt_phone;
-use chrono::{Datelike as _, Local};
+use bot_core::bot::TgBot;
 use eyre::Error;
 use ledger::Ledger;
-use log::info;
-use model::{rights::Rule, user::User};
+use model::rights::Rule;
+use teloxide::types::ChatId;
 use std::sync::Arc;
-use teloxide::{
-    types::{ChatId, InlineKeyboardMarkup},
-    utils::markdown::escape,
-};
 
 #[derive(Clone)]
 pub struct MotivationNotifier {
@@ -28,7 +22,7 @@ impl MotivationNotifier {
 #[async_trait]
 impl Task for MotivationNotifier {
     const NAME: &'static str = "motivation-notifier";
-    const CRON: &'static str = "every 1 day at 9:12";
+    const CRON: &'static str = "every 2 minutes";
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;

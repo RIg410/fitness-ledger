@@ -58,7 +58,7 @@ impl View for AiView {
         Ok(Jmp::Stay)
     }
 
-    async fn handle_callback(&mut self, ctx: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
+    async fn handle_callback(&mut self, _: &mut Context, data: &str) -> Result<Jmp, eyre::Error> {
         match calldata!(data) {
             Callback::SetModel(model) => {
                 self.model = model;

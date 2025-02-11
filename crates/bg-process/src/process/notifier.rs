@@ -54,7 +54,7 @@ impl TrainingNotifier {
             if by_day {
                 if receiver.settings.notification.notify_by_day {
                     self.bot
-                        .notify(ChatId(receiver.tg_id), msg)
+                        .notify(ChatId(receiver.tg_id), msg, true)
                         .await;
                     return Ok(true);
                 }
@@ -63,7 +63,7 @@ impl TrainingNotifier {
                 if let Some(hours) = receiver.settings.notification.notify_by_n_hours {
                     if now + chrono::Duration::hours(hours as i64) > start_at {
                         self.bot
-                            .notify(ChatId(receiver.tg_id), msg)
+                            .notify(ChatId(receiver.tg_id), msg, true)
                             .await;
                         return Ok(true);
                     }

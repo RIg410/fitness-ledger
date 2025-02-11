@@ -4,9 +4,11 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use eyre::Result;
-use ledger::service::statistics::prompt;
 use mongodb::bson::oid::ObjectId;
-use teloxide::types::{InlineKeyboardMarkup, Message};
+use teloxide::{
+    types::{InlineKeyboardMarkup, Message},
+    utils::markdown::escape,
+};
 
 pub struct SetAiPrompt {
     id: ObjectId,
@@ -31,7 +33,7 @@ impl View for SetAiPrompt {
             .get_extension(&mut ctx.session, self.id)
             .await?;
         let msg = if let Some(prompt) = ext.ai_message_prompt {
-            format!("Текущий запрос: {}\\. Введите промпт", escape(prompt))
+            format!("Текущий запрос: {}\\. Введите промпт", escape(&prompt))
         } else {
             "Запрос не установлен\\. Введите промпт".to_string()
         };
@@ -47,10 +49,7 @@ impl View for SetAiPrompt {
         let prompt = message.text().unwrap_or_default().to_string();
         let prompt = if prompt == "-" { None } else { Some(prompt) };
 
-        ctx.ledger
-            .users
-            .set_ai_message_prompt(&mut ctx.session, self.id, prompt)
-            .await?;
+        ctx.ledger.users.set_ai_prompt(&mut ctx.session, self.id, prompt).await?;
 
         Ok(Jmp::Stay)
     }

@@ -7,6 +7,7 @@ mod model;
 pub use model::Model as AiModel;
 pub use model::Context as AiContext;
 
+#[derive(Clone)]
 pub struct Ai {
     pub base_url: String,
     pub api_key: String,
