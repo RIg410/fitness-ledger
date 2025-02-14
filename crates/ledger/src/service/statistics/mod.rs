@@ -53,7 +53,7 @@ impl Statistics {
     async fn reload_statistics(&self, session: &mut Session) -> Result<Arc<CacheEntry>, Error> {
         let start = Instant::now();
         info!("Reloading statistics...");
-        let mut months = load_calendar(&self.calendar, &self.users, session).await?;
+        let mut months = load_calendar(&self.calendar, session).await?;
 
         for (month, stat) in months.iter_mut() {
             load_requests_and_history(
@@ -80,9 +80,14 @@ impl Statistics {
         prompt: String,
     ) -> Result<String, Error> {
         let system_prompt = if let Some(entry) = self.cache.get_value() {
-            make_prompt(&entry.value)?
+            make_prompt(&entry.value, &self.users, session).await?
         } else {
-            make_prompt(&self.reload_statistics(session).await?.value)?
+            make_prompt(
+                &self.reload_statistics(session).await?.value,
+                &self.users,
+                session,
+            )
+            .await?
         };
         let ctx = AiContext::with_system_prompt(system_prompt);
 

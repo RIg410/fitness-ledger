@@ -1,5 +1,8 @@
 use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::fmt::Display;
+use std::fmt::Formatter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum Room {
@@ -24,5 +27,11 @@ impl From<ObjectId> for Room {
             b"child0000000" => Room::Child,
             _ => Room::default(),
         }
+    }
+}
+
+impl Display for Room {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }

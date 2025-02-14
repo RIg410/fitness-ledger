@@ -160,6 +160,7 @@ pub enum Rule {
 
     //ai
     AIStatistic,
+    SelectModel,
 }
 
 impl Rule {

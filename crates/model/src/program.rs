@@ -38,7 +38,7 @@ impl Default for Program {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Hash, Eq)]
 pub enum TrainingType {
     Group { is_free: bool },
     Personal { is_free: bool },

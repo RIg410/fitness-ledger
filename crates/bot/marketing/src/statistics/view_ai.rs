@@ -6,8 +6,12 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
+use model::rights::Rule;
 use serde::{Deserialize, Serialize};
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
+use teloxide::{
+    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    utils::markdown::escape,
+};
 
 pub struct AiView {
     model: AiModel,
@@ -28,15 +32,17 @@ impl View for AiView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
         let msg = "Я ваш помощник по маркетингу\\. Чем могу помочь?";
         let mut keymap = InlineKeyboardMarkup::default();
-        keymap = keymap.append_row(vec![
-            model_btn(AiModel::Gpt4oMini, self.model),
-            model_btn(AiModel::Gpt4o, self.model),
-        ]);
-        keymap = keymap.append_row(vec![
-            model_btn(AiModel::Claude3Haiku, self.model),
-            model_btn(AiModel::Claude3Opus, self.model),
-            model_btn(AiModel::Claude3Sonnet, self.model),
-        ]);
+        if ctx.has_right(Rule::SelectModel) {
+            keymap = keymap.append_row(vec![
+                model_btn(AiModel::Gpt4oMini, self.model),
+                model_btn(AiModel::Gpt4o, self.model),
+            ]);
+            keymap = keymap.append_row(vec![
+                model_btn(AiModel::Claude3Haiku, self.model),
+                model_btn(AiModel::Claude3Opus, self.model),
+                model_btn(AiModel::Claude3Sonnet, self.model),
+            ]);
+        }
         ctx.edit_origin(msg, keymap).await?;
         Ok(())
     }
@@ -54,7 +60,7 @@ impl View for AiView {
             .statistics
             .ask_ai(&mut ctx.session, self.model, text.to_string())
             .await?;
-        ctx.send_notification(&ai_response).await;         
+        ctx.send_notification(&escape(&ai_response)).await;
         Ok(Jmp::Stay)
     }
 

@@ -25,10 +25,7 @@ impl Default for MonthStatistics {
                 other_expense: 0,
                 sell_subscriptions: 0,
             },
-            training: TrainingsStat {
-                trainings: HashMap::new(),
-                instructors: HashMap::new(),
-            },
+            training: TrainingsStat::default(),
         }
     }
 }

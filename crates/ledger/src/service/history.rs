@@ -148,22 +148,6 @@ impl History {
         self.store.store(session, entry).await
     }
 
-    pub async fn presell_subscription(
-        &self,
-        session: &mut Session,
-        subscription: Subscription,
-        buyer: String,
-    ) -> Result<()> {
-        let entry = HistoryRow::new(
-            session.actor(),
-            Action::PreSellSub {
-                subscription,
-                phone: buyer,
-            },
-        );
-        self.store.store(session, entry).await
-    }
-
     pub async fn sign_up(
         &self,
         session: &mut Session,
