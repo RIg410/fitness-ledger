@@ -17,7 +17,7 @@ impl Ledger {
         training: &Training,
     ) -> Result<Vec<ObjectId>, LedgerError> {
         for client in &training.clients {
-            self.sign_out_tx_less(session, training, *client, false)
+            self.sign_out_tx_less(session, training, *client, true)
                 .await?;
         }
         let training = self.calendar.cancel_training(session, training).await?;
