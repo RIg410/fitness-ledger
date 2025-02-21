@@ -43,7 +43,7 @@ impl Task for MotivationNotifier {
                 if let Ok(response) = self
                     .ledger
                     .ai
-                    .ask(ai::AiModel::Gpt4oMini, prompt, None)
+                    .ask(ai::AiModel::Gpt4oMini, prompt, &mut Default::default())
                     .await
                 {
                     self.bot

@@ -63,31 +63,45 @@ pub(crate) struct ResponsePayload {
 
 #[derive(Default)]
 pub struct Context {
-    pub system_prompt: Option<String>,
+    pub(crate) history: Vec<HistoryEntry>,
 }
 
 impl Context {
-    pub fn with_system_prompt(system_prompt: String) -> Self {
-        Context {
-            system_prompt: Some(system_prompt),
-        }
+    pub fn add_system_message(&mut self, message: String) {
+        self.history.push(HistoryEntry {
+            role: Role::System,
+            content: message,
+        });
+    }
+
+    pub fn add_user_message(&mut self, message: String) {
+        self.history.push(HistoryEntry {
+            role: Role::User,
+            content: message,
+        });
+    }
+
+    pub fn add_assistant_message(&mut self, message: String) {
+        self.history.push(HistoryEntry {
+            role: Role::Assistant,
+            content: message,
+        });
     }
 }
 
 impl From<Context> for Vec<HistoryEntry> {
     fn from(ctx: Context) -> Self {
-        ctx.system_prompt
-            .map(|prompt| {
-                vec![HistoryEntry {
-                    role: Role::System,
-                    content: prompt,
-                }]
-            })
-            .unwrap_or_default()
+        ctx.history
     }
 }
 
 pub struct Response {
     pub response: String,
     pub used_words_count: u32,
+}
+
+impl Response {
+    pub fn fill_context(self, ctx: &mut Context) {
+        ctx.add_assistant_message(self.response);
+    }
 }

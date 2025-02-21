@@ -14,6 +14,7 @@ use teloxide::{
     types::{
         ChatId, FileMeta, InlineKeyboardMarkup, InputFile, MessageId, ParseMode, ReplyMarkup, True,
     },
+    utils::markdown::escape,
     ApiError, Bot, RequestError,
 };
 
@@ -48,6 +49,9 @@ impl TgBot {
         log::info!("Sending notification: {}", msg);
         if let Err(err) = self.send_msg(msg).await {
             log::error!("Failed to send notification: {}. Msg:[{}]", err, msg);
+            if let Err(err) = self.send_msg(&escape(msg)).await {
+                log::error!("Failed to send notification: {}. Msg:[{}]", err, msg);
+            }
         }
 
         if let Err(err) = self.reset_origin().await {

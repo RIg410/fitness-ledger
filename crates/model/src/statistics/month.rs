@@ -1,7 +1,7 @@
 use super::{source::Source, training::TrainingsStat};
 use crate::user::rate::EmployeeRole;
 use bson::oid::ObjectId;
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 pub struct MonthStatistics {
     pub training: TrainingsStat,
@@ -17,14 +17,7 @@ impl Default for MonthStatistics {
                 source: HashMap::new(),
             },
             subscriptions: vec![],
-            treasury: TreasuryIO {
-                income_other: 0,
-                rent: 0,
-                employees: vec![],
-                sub_rent: 0,
-                other_expense: 0,
-                sell_subscriptions: 0,
-            },
+            treasury: TreasuryIO::default(),
             training: TrainingsStat::default(),
         }
     }
@@ -57,6 +50,7 @@ pub struct SubscriptionStat {
     pub discount: i64,
 }
 
+#[derive(Default)]
 pub struct TreasuryIO {
     pub rent: i64,
     pub sub_rent: i64,
@@ -64,4 +58,5 @@ pub struct TreasuryIO {
     pub income_other: i64,
     pub employees: Vec<EmployeeStat>,
     pub sell_subscriptions: i64,
+    pub marketing: HashMap<Source, i64>,
 }

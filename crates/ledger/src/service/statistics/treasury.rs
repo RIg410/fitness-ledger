@@ -9,7 +9,8 @@ use model::{
 
 use crate::service::{treasury::Treasury, users::Users};
 
-use super::month_range;
+use super::aggregation::month_range;
+
 
 pub async fn load_treasury(
     session: &mut Session,
@@ -18,7 +19,7 @@ pub async fn load_treasury(
     users: &Users,
     stat: &mut MonthStatistics,
 ) -> Result<(), Error> {
-    let (start, end) = month_range(month_id);
+    let (start, end) = month_range(&month_id);
     let mut rows = treasury.find_range(session, Some(start), Some(end)).await?;
     while let Some(row) = rows.next(session).await {
         let row = row?;
@@ -63,6 +64,9 @@ pub async fn load_treasury(
                 }
             }
             Event::Marketing(source) => {
+                let source_sum = stat.treasury.marketing.entry(source).or_insert(0);
+                *source_sum += sum;
+
                 let stat = stat.marketing.source.entry(source).or_insert_with(|| {
                     model::statistics::month::SourceStat {
                         buy_test: 0,

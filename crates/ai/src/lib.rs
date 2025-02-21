@@ -4,8 +4,8 @@ use model::{Context, Model, RequestPayload, Response, ResponsePayload};
 use reqwest::Client;
 
 mod model;
-pub use model::Model as AiModel;
 pub use model::Context as AiContext;
+pub use model::Model as AiModel;
 
 #[derive(Clone)]
 pub struct Ai {
@@ -24,19 +24,30 @@ impl Ai {
         &self,
         model: Model,
         message: String,
-        context: Option<Context>,
+        context: &mut Context,
     ) -> Result<Response, Error> {
         let client = Client::new();
 
+        let history = std::mem::take(&mut context.history);
         let payload = RequestPayload {
             message,
             api_key: self.api_key.clone(),
-            history: context.map(Into::into),
+            history: if history.is_empty() {
+                None
+            } else {
+                Some(history)
+            },
         };
 
         info!("Sending request to AI: {:?}", payload);
-        let response = client.post(format!("{}/{}", self.base_url, model.name())).json(&payload).send().await?;
+        let response = client
+            .post(format!("{}/{}", self.base_url, model.name()))
+            .json(&payload)
+            .send()
+            .await?;
         info!("Received response from AI: {:?}", response);
+        context.history = payload.history.unwrap_or_default();
+        context.add_user_message(payload.message);
 
         if response.status().is_success() {
             let resp_json: ResponsePayload = response.json().await?;

@@ -1907,6 +1907,7 @@ version = "0.1.0"
 dependencies = [
  "ai",
  "arc-swap",
+ "async-trait",
  "bson",
  "chrono",
  "csv",

@@ -6,6 +6,7 @@ use model::{
     session::Session,
     statistics::{
         month::{MarketingStat, MonthStatistics, SubscriptionStat, TreasuryIO},
+        source::Source,
         training::TrainingsStat,
     },
 };
@@ -45,7 +46,7 @@ pub async fn render_statistic(
 
     let now = chrono::Local::now();
     Ok(format!(
-        "training avigation:\n{}application avigation:\n{}subscription sales avigation:\n{}:cost and income base\n{}\nnow:{}",
+        "trainings aggregation:\n{}request aggregation:\n{}subscription aggregation:\n{}:financial statistics\n{}\nnow:{}",
         trainings_db, marketing_db, subscriptions_db, treasury_db, now.format("%Y-%m-%d %H:%M")
     ))
 }
@@ -61,19 +62,23 @@ impl TreasuryIOWriter {
 
         let mut rows = vec![
             "month".to_string(),
-            "rent payment".to_string(),
-            "sublease payment received".to_string(),
+            "expended on rent".to_string(),
+            "received from subleasing".to_string(),
             "other expenses".to_string(),
             "other income".to_string(),
-            "received from sales of subscriptions".to_string(),
+            "Subscriptions sold for a total amount of".to_string(),
         ];
         let employees = employees.into_iter().collect::<Vec<_>>();
         for employee in &employees {
-            rows.push(format!("{} salary", employee));
+            rows.push(format!("Salary paid to {}", employee));
+        }
+
+        let source = Source::iter();
+        for src in source {
+            rows.push(format!("Expended on {} marketing", src.name()));
         }
 
         wtr.write_record(&rows)?;
-
         Ok(Self { wtr, employees })
     }
 
@@ -93,6 +98,15 @@ impl TreasuryIOWriter {
             } else {
                 row.push("0".to_string());
             }
+        }
+        for src in Source::iter() {
+            row.push(
+                stat.marketing
+                    .get(&src)
+                    .cloned()
+                    .unwrap_or_default()
+                    .to_string(),
+            );
         }
 
         self.wtr.write_record(&row)?;

@@ -1,3 +1,4 @@
+use crate::service::{history::History, requests::Requests, users::Users};
 use chrono::NaiveDate;
 use eyre::Result;
 use model::{
@@ -7,7 +8,7 @@ use model::{
 };
 use std::collections::HashMap;
 
-use crate::service::{history::History, requests::Requests, statistics::month_range, users::Users};
+use super::aggregation::month_range;
 
 pub async fn load_requests_and_history(
     session: &mut Session,
@@ -17,7 +18,7 @@ pub async fn load_requests_and_history(
     users: &Users,
     month: &mut MonthStatistics,
 ) -> Result<()> {
-    let (start, end) = month_range(month_id);
+    let (start, end) = month_range(&month_id);
 
     let mut user_for_marketing = HashMap::new();
     let mut requests = requests.find_range(session, Some(start), Some(end)).await?;

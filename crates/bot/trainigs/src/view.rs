@@ -5,7 +5,6 @@ use bot_core::{
     calldata,
     context::Context,
     widget::{Jmp, View},
-    CommonLocation,
 };
 use bot_viewer::{day::fmt_dt, fmt_phone, training::fmt_training_type};
 use chrono::Local;

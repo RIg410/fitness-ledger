@@ -59,8 +59,15 @@ impl View for AiView {
             .ledger
             .statistics
             .ask_ai(&mut ctx.session, self.model, text.to_string())
-            .await?;
-        ctx.send_notification(&escape(&ai_response)).await;
+            .await;
+        match ai_response {
+            Ok(resp) => {
+                ctx.send_notification(&resp).await;
+            }
+            Err(err) => {
+                ctx.send_notification(&format!("Ошибка: {}", err)).await;
+            }
+        }
         Ok(Jmp::Stay)
     }
 
