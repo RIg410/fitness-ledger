@@ -2,7 +2,7 @@ use super::Users;
 use chrono::Utc;
 use eyre::{eyre, Result};
 use log::info;
-use model::{session::Session, subscription::UserSubscription, treasury::subs};
+use model::{session::Session, subscription::UserSubscription};
 use mongodb::bson::oid::ObjectId;
 use tx_macro::tx;
 

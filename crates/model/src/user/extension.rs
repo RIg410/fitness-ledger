@@ -3,6 +3,8 @@ use chrono::{DateTime, Datelike as _, Local, Timelike};
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Debug, Display, Formatter};
 
+use super::comments::Comment;
+
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct UserExtension {
     #[serde(rename = "_id")]
@@ -11,6 +13,7 @@ pub struct UserExtension {
     #[serde(default)]
     pub notification_mask: NotificationMask,
     pub ai_message_prompt: Option<String>,
+    pub comments: Vec<Comment>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

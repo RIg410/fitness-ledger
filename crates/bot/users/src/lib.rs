@@ -30,6 +30,7 @@ pub mod set_birthday;
 pub mod set_fio;
 pub mod set_phone;
 pub mod subscriptions;
+pub mod comments;
 
 pub const LIMIT: u64 = 7;
 

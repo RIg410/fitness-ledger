@@ -85,6 +85,8 @@ pub enum Rule {
     EditFamily,
     ViewFamily,
     EditAiPrompt,
+    ViewUserComments,
+    EditUserComments,
 
     // Training
     EditTraining,
@@ -160,6 +162,7 @@ pub enum Rule {
 
     //ai
     AIStatistic,
+    AIUserInfo,
     SelectModel,
 }
 

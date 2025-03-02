@@ -15,11 +15,8 @@ use calendar::load_calendar;
 use chrono::{DateTime, Datelike as _, Duration, Local, Months, NaiveDate, TimeZone as _};
 use eyre::Error;
 use history::load_requests_and_history;
-use log::info;
 use model::session::Session;
 use prompt::{make_prompt, select_aggregation};
-use serde::Deserialize;
-use treasury::load_treasury;
 
 pub struct Statistics {
     calendar: Calendar,

@@ -20,6 +20,7 @@ use tx_macro::tx;
 pub mod employee;
 pub mod family;
 pub mod subscription;
+pub mod comments;
 
 #[derive(Clone)]
 pub struct Users {
@@ -72,6 +73,7 @@ impl Users {
                         birthday: None,
                         notification_mask: Default::default(),
                         ai_message_prompt: None,
+                        comments: Default::default(),
                     },
                 )
                 .await?;
@@ -117,6 +119,7 @@ impl Users {
                     id: user.id,
                     notification_mask: Default::default(),
                     ai_message_prompt: None,
+                    comments: Default::default(),
                 },
             )
             .await?;

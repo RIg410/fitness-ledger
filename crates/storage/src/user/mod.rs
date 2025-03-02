@@ -599,6 +599,7 @@ impl UserStore {
                 birthday: None,
                 notification_mask: Default::default(),
                 ai_message_prompt: None,
+                comments: Default::default(),
             }))
     }
 
