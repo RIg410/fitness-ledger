@@ -91,7 +91,7 @@ async fn render(
     let mut users = ctx
         .ledger
         .users
-        .find(&mut ctx.session, query, offset, LIMIT, Some(false))
+        .find(&mut ctx.session, query, offset, LIMIT, Some(false), true)
         .await?;
 
     let msg = format!(

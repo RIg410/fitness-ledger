@@ -25,10 +25,10 @@ pub mod notification;
 pub mod profile;
 pub mod rewards;
 pub mod rights;
+pub mod set_ai_prompt;
 pub mod set_birthday;
 pub mod set_fio;
 pub mod set_phone;
-pub mod set_ai_prompt;
 pub mod subscriptions;
 
 pub const LIMIT: u64 = 7;
@@ -50,7 +50,7 @@ impl View for UsersView {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
-        let count = ctx.ledger.users.count(&mut ctx.session).await?;
+        let count = ctx.ledger.users.count(&mut ctx.session, self.query.only_with_subscriptions).await?;
         let users = ctx
             .ledger
             .users
@@ -60,11 +60,11 @@ impl View for UsersView {
                 self.query.offset,
                 LIMIT,
                 Some(false),
+                self.query.only_with_subscriptions,
             )
             .await?;
 
-        let (txt, markup) =
-            render_message(ctx, count, &self.query.query, users, self.query.offset).await?;
+        let (txt, markup) = render_message(ctx, count, &self.query, users).await?;
         ctx.edit_origin(&txt, markup).await?;
         Ok(())
     }
@@ -89,7 +89,11 @@ impl View for UsersView {
             remove_non_alphanumeric(&query)
         };
 
-        self.query = Query { query, offset: 0 };
+        self.query = Query {
+            query,
+            offset: 0,
+            only_with_subscriptions: false,
+        };
         Ok(Jmp::Stay)
     }
 
@@ -106,6 +110,9 @@ impl View for UsersView {
             Callback::Select(user_id) => {
                 return Ok(UserProfile::new(ObjectId::from_bytes(user_id)).into());
             }
+            Callback::OnlyWithSubscriptions => {
+                self.query.only_with_subscriptions = !self.query.only_with_subscriptions;
+            }
         }
 
         Ok(Jmp::Stay)
@@ -116,6 +123,7 @@ impl View for UsersView {
 pub struct Query {
     pub query: String,
     pub offset: u64,
+    pub only_with_subscriptions: bool,
 }
 
 impl Default for Query {
@@ -123,6 +131,7 @@ impl Default for Query {
         Query {
             query: "".to_string(),
             offset: 0,
+            only_with_subscriptions: false,
         }
     }
 }
@@ -130,9 +139,8 @@ impl Default for Query {
 async fn render_message(
     ctx: &mut Context,
     total_count: u64,
-    query: &str,
+    query: &Query,
     mut users: SessionCursor<User>,
-    offset: u64,
 ) -> Result<(String, InlineKeyboardMarkup), Error> {
     let msg = format!(
         "
@@ -146,10 +154,22 @@ async fn render_message(
     Запрос: _'{}'_
     ",
         total_count,
-        escape(query)
+        escape(&query.query)
     );
 
     let mut keymap = InlineKeyboardMarkup::default();
+    if query.only_with_subscriptions {
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+            "Только с абонементами",
+            Callback::OnlyWithSubscriptions.to_data(),
+        )]);
+    } else {
+        keymap = keymap.append_row(vec![InlineKeyboardButton::callback(
+            "Все пользователи",
+            Callback::OnlyWithSubscriptions.to_data(),
+        )]);
+    }
+
     let mut users_count = 0;
     let mut ids = vec![];
     while let Some(user) = users.next(&mut ctx.session).await {
@@ -176,7 +196,7 @@ async fn render_message(
 
     let mut raw = vec![];
 
-    if offset > 0 {
+    if query.offset > 0 {
         raw.push(InlineKeyboardButton::callback(
             "⬅️",
             Callback::Prev.to_data(),
@@ -222,6 +242,7 @@ enum Callback {
     Next,
     Prev,
     Select([u8; 12]),
+    OnlyWithSubscriptions,
 }
 
 fn remove_non_alphanumeric(input: &str) -> String {

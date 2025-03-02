@@ -2,7 +2,7 @@ use super::Users;
 use chrono::Utc;
 use eyre::{eyre, Result};
 use log::info;
-use model::{session::Session, subscription::UserSubscription};
+use model::{session::Session, subscription::UserSubscription, treasury::subs};
 use mongodb::bson::oid::ObjectId;
 use tx_macro::tx;
 
@@ -27,6 +27,44 @@ impl Users {
                 } = &mut sub.status
                 {
                     *end_date += chrono::Duration::days(days as i64);
+                }
+            }
+            self.store.update(session, &mut payer).await?;
+        }
+        Ok(())
+    }
+
+    #[tx]
+    pub async fn change_subscription_program(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+        subscription_id: ObjectId,
+        program_id: ObjectId,
+        add: bool,
+    ) -> Result<()> {
+        let mut user = self
+            .store
+            .get(session, id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+        self.resolve_family(session, &mut user).await?;
+        let mut payer = user.payer_mut()?;
+
+        let sub = payer
+            .subscriptions_mut()
+            .iter_mut()
+            .find(|sub| sub.id == subscription_id);
+        if let Some(sub) = sub {
+            if let model::subscription::SubscriptionType::Group { program_filter } = &mut sub.tp {
+                if add {
+                    if program_filter.contains(&program_id) {
+                        return Ok(());
+                    } else {
+                        program_filter.push(program_id);
+                    }
+                } else {
+                    program_filter.retain(|p| p != &program_id);
                 }
             }
             self.store.update(session, &mut payer).await?;
@@ -93,7 +131,9 @@ impl Users {
                 if delta > 0 {
                     sub.locked_balance += delta as u32;
                 } else {
-                    sub.locked_balance = sub.locked_balance.saturating_sub(delta.unsigned_abs() as u32);
+                    sub.locked_balance = sub
+                        .locked_balance
+                        .saturating_sub(delta.unsigned_abs() as u32);
                 }
             });
         self.store.update(session, &mut payer).await?;
@@ -140,7 +180,11 @@ impl Users {
     }
 
     #[tx]
-    pub async fn expire_subscription(&self, session: &mut Session, id: ObjectId) -> Result<Vec<UserSubscription>> {
+    pub async fn expire_subscription(
+        &self,
+        session: &mut Session,
+        id: ObjectId,
+    ) -> Result<Vec<UserSubscription>> {
         let mut user = self
             .store
             .get(session, id)

@@ -88,6 +88,10 @@ impl User {
         &mut self.subscriptions
     }
 
+    pub fn subscriptions(&self) -> &[UserSubscription] {
+        &self.subscriptions
+    }
+
     pub fn with_tg_id(tg_id: i64) -> User {
         User {
             id: ObjectId::new(),
@@ -136,7 +140,7 @@ impl User {
         if self.family.is_individual {
             return Ok(Payer::new(self, true));
         }
-        
+
         if !self.subscriptions.is_empty() {
             return Ok(Payer::new(self, true));
         }

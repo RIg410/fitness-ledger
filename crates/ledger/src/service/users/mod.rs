@@ -42,7 +42,7 @@ impl Users {
         come_from: Source,
     ) -> Result<ObjectId> {
         let phone = sanitize_phone(&phone);
-        let is_first_user = self.store.count(session).await? == 0;
+        let is_first_user = self.store.count(session, false).await? == 0;
         let rights = if is_first_user {
             Rights::full()
         } else {
@@ -130,10 +130,11 @@ impl Users {
         offset: u64,
         limit: u64,
         employee: Option<bool>,
+        only_with_subscriptions: bool,
     ) -> Result<SessionCursor<User>> {
         let keywords = query.split_whitespace().collect::<Vec<_>>();
         self.store
-            .find(session, &keywords, offset, limit, employee)
+            .find(session, &keywords, offset, limit, employee,  only_with_subscriptions)
             .await
     }
 

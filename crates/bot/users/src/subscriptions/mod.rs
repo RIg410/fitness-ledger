@@ -1,3 +1,5 @@
+pub mod program;
+
 use async_trait::async_trait;
 use bot_core::{
     callback_data::Calldata as _,
@@ -69,6 +71,7 @@ impl View for SubscriptionsList {
                 Calldata::ChangeDays(-1).button("Уменьшить дни"),
                 Calldata::ChangeDays(1).button("Увеличить дни"),
             ]);
+            keymap = keymap.append_row(vec![Calldata::Programs.button("Программы")]);
         }
 
         ctx.edit_origin(&txt, keymap).await?;
@@ -117,6 +120,13 @@ impl View for SubscriptionsList {
                     .change_subscription_days(&mut ctx.session, self.id, sub.id, delta)
                     .await?;
             }
+            Calldata::Programs => {
+                return Ok(program::EditPrograms::new(
+                    self.id,
+                    payer.subscriptions()[self.index].id,
+                )
+                .into());
+            }
         }
 
         Ok(Jmp::Stay)
@@ -129,4 +139,5 @@ enum Calldata {
     ChangeBalance(i64),
     ChangeLockBalance(i64),
     ChangeDays(i64),
+    Programs,
 }

@@ -179,10 +179,15 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn count(&self, session: &mut Session) -> Result<u64> {
+    pub async fn count(&self, session: &mut Session, only_with_subscriptions: bool) -> Result<u64> {
+        let mut query = doc! {};
+        if only_with_subscriptions {
+            query = doc! { "$and": [ query, { "subscriptions": { "$ne": [] } } ] };
+        }
+
         Ok(self
             .users
-            .count_documents(doc! {})
+            .count_documents(query)
             .session(&mut *session)
             .await?)
     }
@@ -194,6 +199,7 @@ impl UserStore {
         offset: u64,
         limit: u64,
         employee: Option<bool>,
+        only_with_subscriptions: bool,
     ) -> Result<SessionCursor<User>> {
         let mut query = doc! {};
         if !keywords.is_empty() {
@@ -211,6 +217,10 @@ impl UserStore {
                 keyword_query.push(regex_query);
             }
             query = doc! { "$or": keyword_query };
+        }
+
+        if only_with_subscriptions {
+            query = doc! { "$and": [ query, { "subscriptions": { "$ne": [] } } ] };
         }
 
         if let Some(is_employee) = employee {
