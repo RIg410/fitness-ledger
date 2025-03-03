@@ -8,9 +8,7 @@ use bot_core::{
 };
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
-use teloxide::{
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
-};
+use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Message};
 
 pub struct AiView {
     model: AiModel,
