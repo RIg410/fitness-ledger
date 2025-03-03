@@ -1,14 +1,20 @@
 use ai::{AiContext, AiModel};
 use bson::oid::ObjectId;
 use chrono::Local;
+use eyre::eyre;
 use eyre::Error;
+use model::decimal::Decimal;
 use model::{
-    history::HistoryRow, session::Session, user::{
+    history::HistoryRow,
+    session::Session,
+    subscription::UserSubscription,
+    user::{
         extension::{self, UserExtension},
         User,
-    }
+    },
 };
-use eyre::eyre;
+
+use crate::service::statistics::prompt::select_aggregation;
 
 use super::Users;
 
@@ -18,7 +24,7 @@ impl Users {
         session: &mut Session,
         user: ObjectId,
         model: AiModel,
-        prompt: String,
+        question: String,
     ) -> Result<String, Error> {
         let mut user = self
             .store
@@ -27,17 +33,14 @@ impl Users {
             .ok_or_else(|| eyre!("User not found"))?;
         self.resolve_family(session, &mut user).await?;
 
-        let extension = self
-            .store
-            .get_extension(session, user.id)
-            .await?;
+        let extension = self.store.get_extension(session, user.id).await?;
 
-        let history = self.logs.get_actor_logs(session, user.id, 1000, 0).await?;
+        let history = self.logs.get_actor_logs(session, user.id, None, 0).await?;
 
         let mut ctx = AiContext::default();
-        // let response = self.ai.ask(model, request_aggregation, &mut ctx).await?;
-        // Ok(response.response)
-        todo!()
+        ctx.add_system_message(system_prompt(user, extension, history)?);
+        let response = self.ai.ask(model, question, &mut ctx).await?;
+        Ok(response.response)
     }
 }
 
@@ -46,10 +49,8 @@ fn system_prompt(
     extension: UserExtension,
     history: Vec<HistoryRow>,
 ) -> Result<String, Error> {
-    let mut prompt = "Ты помошник администратора. Вот данные пользователя и история его взаимодействия с ботом. Ответь на вопросы администратора на основе предоставленных данных." 
+    let mut prompt = "Ты помощник администратора. У тебя есть данные пользователя и история его взаимодействия с ботом. Отвечай на вопросы администратора, основываясь на предоставленной информации. Ответы должны быть краткими, точными и без какого-либо форматирования." 
         .to_string();
-    prompt.push_str(&format!("Имя: {}\n", user.name.first_name));
-
     if let Some(freeze) = &user.freeze {
         prompt.push_str(&format!(
             "Заморожен c {} по {}\n",
@@ -57,88 +58,127 @@ fn system_prompt(
             freeze.freeze_end.with_timezone(&Local)
         ));
     }
-    prompt.push_str(&format!("Дней для заморозки: {}\n", user.freeze_days));
+    prompt.push_str(&format!(
+        "Доступно дней для заморозки: {}\n",
+        user.freeze_days
+    ));
 
     let payer = user.payer()?;
 
+    prompt.push_str(&format!("Откуда пришел: {}\n", user.come_from.name()));
+
     prompt.push_str(&format!("Абонементы:\n"));
     for sub in payer.subscriptions() {
-        prompt.push_str(&format!(
-            "{}, осталось занятий:{}; зарезервировано:{}\n",
-            sub.name, sub.balance, sub.locked_balance
-        ));
+        prompt.push_str(&user_sub_to_prompt(sub));
     }
 
+    prompt.push_str(&format!("История операций:\n"));
+    for row in history {
+        if let Some(sub) = history_row_to_prompt(&row) {
+            prompt.push_str(&sub);
+        }
+    }
     Ok(prompt)
 }
 
-fn history_row_to_prompt(row: &HistoryRow) -> String {
+fn user_sub_to_prompt(sub: &UserSubscription) -> String {
+    let mut prompt = String::new();
+
+    prompt.push_str(&format!("Абонемент: {}\n", sub.name));
+    match &sub.status {
+        model::subscription::Status::Active {
+            start_date,
+            end_date,
+        } => {
+            prompt.push_str(&format!(
+                "Активен с {} по {}\n",
+                start_date.with_timezone(&Local),
+                end_date.with_timezone(&Local)
+            ));
+        }
+        model::subscription::Status::NotActive => {
+            prompt.push_str("Абонемент не активен");
+        }
+    }
+    prompt.push_str(&format!("Количество тренировок: {}\n", sub.balance));
+    prompt.push_str(&format!(
+        "Заблокированные тренировки: {}\n",
+        sub.locked_balance
+    ));
+    if sub.unlimited {
+        prompt.push_str("Абонемент безлимитный\n");
+    }
+
+    if let Some(discount) = &sub.discount {
+        prompt.push_str(&format!(
+            "Скидка на абонемент: {}%\n",
+            *discount * Decimal::int(100)
+        ));
+    }
+
+    prompt
+}
+
+fn history_row_to_prompt(row: &HistoryRow) -> Option<String> {
     let dt = row.date_time.with_timezone(&Local);
     let msg = match &row.action {
-        model::history::Action::BlockUser { is_active } => {
-            Some(if *is_active {
-                format!("Пользователь заблокирован")
-            } else {
-                format!("Пользователь разблокирован")
-            })
-        }
-        model::history::Action::SignUp { start_at, name } =>  {
-            Some(format!("записан на тренировку {} {}", start_at.with_timezone(&Local), name))
-        },
-        model::history::Action::SignOut { start_at, name } => {
-            Some(format!("отписан от тренировки {} {}", start_at.with_timezone(&Local), name))
-        },
+        model::history::Action::BlockUser { is_active } => Some(if *is_active {
+            format!("Пользователь заблокирован")
+        } else {
+            format!("Пользователь разблокирован")
+        }),
+        model::history::Action::SignUp { start_at, name } => Some(format!(
+            "записан на тренировку {} {}",
+            start_at.with_timezone(&Local),
+            name
+        )),
+        model::history::Action::SignOut { start_at, name } => Some(format!(
+            "отписан от тренировки {} {}",
+            start_at.with_timezone(&Local),
+            name
+        )),
         model::history::Action::SellSub {
             subscription,
             discount,
-        } => {
-            Some(format!("куплен абонемент {} цена: {}", subscription.name, subscription.price))
-        },
-        model::history::Action::PreSellSub {
-            ..
-        } => None,
-        model::history::Action::FinalizedCanceledTraining { name, start_at } => {
-            Some(format!("отменена тренировка {} {}", start_at.with_timezone(&Local), name))
-        },
-        model::history::Action::FinalizedTraining { name, start_at } => {
-            Some(format!("Посетил тренировку {} {}", start_at.with_timezone(&Local), name))
-        },
-        model::history::Action::Payment {
-            amount,
-            description,
-            date_time,
-        } => None,
-        model::history::Action::Deposit {
-            amount,
-            description,
-            date_time,
-        } => None,
-        model::history::Action::CreateUser { name, phone } => None,
-        model::history::Action::Freeze { days } => {
-            Some(format!("заморожен на {} дней", days))
-        },
-        model::history::Action::Unfreeze {} => {
-            Some(format!("разморожен"))
-        },
-        model::history::Action::ChangeBalance { amount } => None,
-        model::history::Action::ChangeReservedBalance { amount } => None,
-        model::history::Action::PayReward { amount } => None,
-        model::history::Action::ExpireSubscription { subscription } => {
-            todo!()
-        },
-        model::history::Action::BuySub {
+        }
+        | model::history::Action::BuySub {
             subscription,
             discount,
         } => {
-            Some(format!("куплен абонемент {} цена: {}", subscription.name, subscription.price))
-        },
+            if let Some(discount) = *discount {
+                Some(format!(
+                    "куплен абонемент {} цена: {}",
+                    subscription.name,
+                    subscription.price - subscription.price * discount * Decimal::int(100),
+                ))
+            } else {
+                Some(format!(
+                    "куплен абонемент {} цена: {}",
+                    subscription.name, subscription.price
+                ))
+            }
+        }
+        model::history::Action::PreSellSub { .. } => None,
+        model::history::Action::FinalizedCanceledTraining { .. } => None,
+        model::history::Action::FinalizedTraining { name, start_at } => Some(format!(
+            "посетил тренировку {} {}",
+            start_at.with_timezone(&Local),
+            name
+        )),
+        model::history::Action::Payment { .. } => None,
+        model::history::Action::Deposit { .. } => None,
+        model::history::Action::CreateUser { .. } => None,
+        model::history::Action::Freeze { days } => Some(format!("заморожен на {} дней", days)),
+        model::history::Action::Unfreeze {} => Some(format!("разморожен")),
+        model::history::Action::ChangeBalance { .. } => None,
+        model::history::Action::ChangeReservedBalance { .. } => None,
+        model::history::Action::PayReward { .. } => None,
+        model::history::Action::ExpireSubscription { subscription } => Some(format!(
+            "Абонемент {} истек. Сгорело: {} занятий",
+            subscription.name, subscription.balance
+        )),
         model::history::Action::RemoveFamilyMember {} => None,
         model::history::Action::AddFamilyMember {} => None,
     };
-    if let Some(msg) = msg {
-        format!("{} {}\n", dt.format("%d.%m.%Y %H:%M"), msg)
-    } else {
-        "".to_string()
-    }
-
+    msg.map(|msg| format!("{} {}\n", dt, msg))
 }

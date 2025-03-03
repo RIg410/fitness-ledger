@@ -66,7 +66,7 @@ impl HistoryStore {
         &self,
         session: &mut Session,
         actor: ObjectId,
-        limit: usize,
+        limit: Option<usize>,
         offset: usize,
     ) -> Result<Vec<HistoryRow>, Error> {
         let mut cursor = self
@@ -76,11 +76,13 @@ impl HistoryStore {
             .skip(offset as u64)
             .session(&mut *session)
             .await?;
-        let mut logs = Vec::with_capacity(limit);
+        let mut logs = Vec::with_capacity(limit.unwrap_or(100));
         while let Some(log) = cursor.next(&mut *session).await {
             logs.push(log?);
-            if logs.len() >= limit {
-                break;
+            if let Some(limit) = limit {
+                if logs.len() >= limit {
+                    break;
+                }
             }
         }
         Ok(logs)

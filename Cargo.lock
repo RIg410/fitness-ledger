@@ -543,6 +543,7 @@ dependencies = [
 name = "bot-users"
 version = "0.1.0"
 dependencies = [
+ "ai",
  "async-trait",
  "bincode",
  "bot-core",

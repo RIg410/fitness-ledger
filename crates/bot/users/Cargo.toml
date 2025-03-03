@@ -10,6 +10,8 @@ bot-core.workspace = true
 bot-trainigs.workspace = true
 bot-viewer.workspace = true
 bot-views.workspace = true
+ai.workspace = true
+
 chrono.workspace = true
 eyre.workspace = true
 hex.workspace = true

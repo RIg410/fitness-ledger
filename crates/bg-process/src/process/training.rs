@@ -25,7 +25,7 @@ pub struct TriningBg {
 #[async_trait]
 impl Task for TriningBg {
     const NAME: &'static str = "training";
-    const CRON: &'static str = "every 3 minutes";
+    const CRON: &'static str = "every 30 minutes";
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;

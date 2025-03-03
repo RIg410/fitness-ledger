@@ -1,5 +1,6 @@
 use crate::{
-    come_from::MarketingInfoView, comments::Comments, family::FamilyView, history::HistoryList, notification::NotificationView, rewards::RewardsList, subscriptions::SubscriptionsList
+    come_from::MarketingInfoView, comments::Comments, family::FamilyView, history::HistoryList,
+    notification::NotificationView, rewards::RewardsList, subscriptions::SubscriptionsList,
 };
 
 use super::{
@@ -19,15 +20,22 @@ use eyre::Error;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use teloxide::types::{InlineKeyboardMarkup, Message};
+use teloxide::{
+    types::{InlineKeyboardMarkup, Message},
+    utils::markdown::escape,
+};
 
 pub struct UserProfile {
     id: ObjectId,
+    skip_show: bool,
 }
 
 impl UserProfile {
     pub fn new(id: ObjectId) -> UserProfile {
-        UserProfile { id }
+        UserProfile {
+            id,
+            skip_show: false,
+        }
     }
 
     async fn block_user(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
@@ -127,6 +135,10 @@ impl View for UserProfile {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<(), eyre::Error> {
+        if self.skip_show {
+            self.skip_show = false;
+            return Ok(());
+        }
         let (msg, keymap) = render_user_profile(ctx, self.id).await?;
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())
@@ -138,6 +150,34 @@ impl View for UserProfile {
         message: &Message,
     ) -> Result<Jmp, eyre::Error> {
         ctx.delete_msg(message.id).await?;
+        if ctx.has_right(Rule::AIUserInfo) {
+            if let Some(text) = message.text() {
+                let ai_response = ctx
+                    .ledger
+                    .users
+                    .ask_ai(
+                        &mut ctx.session,
+                        self.id,
+                        ai::AiModel::Gpt4o,
+                        text.to_string(),
+                    )
+                    .await;
+                match ai_response {
+                    Ok(resp) => {
+                        let msg = format!(
+                            "\n\nВопрос: {}\nОтвет: {}",
+                            escape(&text),
+                            escape(&resp)
+                        );
+                        self.skip_show = true;
+                        ctx.send_notification(&msg).await;
+                    }
+                    Err(err) => {
+                        ctx.send_notification(&format!("Ошибка: {}", err)).await;
+                    }
+                }
+            }
+        }
         Ok(Jmp::Stay)
     }
 

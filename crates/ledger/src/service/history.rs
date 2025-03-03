@@ -61,7 +61,7 @@ impl History {
         offset: usize,
     ) -> Result<Vec<HistoryRow>> {
         self.store
-            .get_actor_logs(session, actor, limit, offset)
+            .get_actor_logs(session, actor, Some(limit), offset)
             .await
     }
 
