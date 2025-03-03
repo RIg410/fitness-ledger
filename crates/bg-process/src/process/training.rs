@@ -25,7 +25,7 @@ pub struct TriningBg {
 #[async_trait]
 impl Task for TriningBg {
     const NAME: &'static str = "training";
-    const CRON: &'static str = "every 30 minutes";
+    const CRON: &'static str = "every 3 minutes";
 
     async fn process(&mut self) -> Result<(), Error> {
         let mut session = self.ledger.db.start_session().await?;
@@ -105,7 +105,7 @@ impl TriningBg {
             statistic.earned += price;
             self.ledger
                 .treasury
-                .sub_rent(session, price, training.description)
+                .sub_rent_txless(session, price, training.description)
                 .await?;
         }
 
