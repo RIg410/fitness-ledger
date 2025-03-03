@@ -207,7 +207,9 @@ impl Calendar {
                         if !training.clients.is_empty() {
                             return Err(LedgerError::TrainingHasClients(id));
                         }
-                        self.calendar.delete_training(session, id).await?;
+                        self.calendar
+                            .delete_training(session, training.id())
+                            .await?;
                     }
                 }
             }

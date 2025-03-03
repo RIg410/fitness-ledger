@@ -1,4 +1,5 @@
 use super::history::History;
+use ::ai::Ai;
 use chrono::{DateTime, Local};
 use eyre::{bail, eyre, Result};
 use log::info;
@@ -17,20 +18,22 @@ use storage::user::UserStore;
 use thiserror::Error;
 use tx_macro::tx;
 
+pub mod comments;
 pub mod employee;
 pub mod family;
 pub mod subscription;
-pub mod comments;
+pub mod ai;
 
 #[derive(Clone)]
 pub struct Users {
     pub(super) store: Arc<UserStore>,
     pub(super) logs: History,
+    pub(crate) ai: Ai,
 }
 
 impl Users {
-    pub(crate) fn new(store: Arc<UserStore>, logs: History) -> Self {
-        Users { store, logs }
+    pub(crate) fn new(store: Arc<UserStore>, logs: History, ai: Ai) -> Self {
+        Users { store, logs, ai }
     }
 
     #[tx]
@@ -137,7 +140,14 @@ impl Users {
     ) -> Result<SessionCursor<User>> {
         let keywords = query.split_whitespace().collect::<Vec<_>>();
         self.store
-            .find(session, &keywords, offset, limit, employee,  only_with_subscriptions)
+            .find(
+                session,
+                &keywords,
+                offset,
+                limit,
+                employee,
+                only_with_subscriptions,
+            )
             .await
     }
 

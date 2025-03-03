@@ -3,6 +3,8 @@ use log::info;
 use model::{Context, Model, RequestPayload, Response, ResponsePayload};
 use reqwest::Client;
 
+mod ya_gpt;
+mod chat_gpt;
 mod model;
 pub use model::Context as AiContext;
 pub use model::Model as AiModel;

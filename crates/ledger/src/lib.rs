@@ -54,7 +54,9 @@ impl Ledger {
         let history = history::History::new(storage.history.clone());
         let programs = Programs::new(storage.programs.clone());
 
-        let users = Users::new(storage.users, history.clone());
+        let ai = Ai::new(env.ai_base_url().to_owned(), env.ai_api_key().to_owned());
+
+        let users = Users::new(storage.users, history.clone(), ai.clone());
         let calendar = Calendar::new(storage.calendar, users.clone(), programs.clone());
 
         let treasury = Treasury::new(storage.treasury, history.clone());
@@ -67,7 +69,6 @@ impl Ledger {
         let rewards = Rewards::new(storage.rewards);
         let requests = Requests::new(storage.requests, users.clone());
 
-        let ai = Ai::new(env.ai_base_url().to_owned(), env.ai_api_key().to_owned());
         let statistics = statistics::Statistics::new(
             calendar.clone(),
             history.clone(),

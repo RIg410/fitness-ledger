@@ -13,6 +13,7 @@ pub struct UserExtension {
     #[serde(default)]
     pub notification_mask: NotificationMask,
     pub ai_message_prompt: Option<String>,
+    #[serde(default)]
     pub comments: Vec<Comment>,
 }
 
