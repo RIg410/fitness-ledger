@@ -1,10 +1,7 @@
 use crate::Ledger;
 use chrono::{DateTime, Local};
 use model::{
-    errors::LedgerError,
-    session::Session,
-    training::{Training, TrainingId},
-    user::family::FindFor,
+    errors::LedgerError, rooms::Room, session::Session, training::{Training, TrainingId}, user::family::FindFor
 };
 use mongodb::bson::oid::ObjectId;
 use tx_macro::tx;
@@ -107,6 +104,7 @@ impl Ledger {
                 user_id,
                 training.get_slot().start_at(),
                 training.name,
+                Room::from(training.room),
             )
             .await?;
         Ok(())
@@ -186,6 +184,7 @@ impl Ledger {
                 user_id,
                 training.get_slot().start_at(),
                 training.name.clone(),
+                Room::from(training.room),
             )
             .await?;
         Ok(())

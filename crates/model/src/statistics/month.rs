@@ -50,6 +50,18 @@ pub struct SubscriptionStat {
     pub discount: i64,
 }
 
+impl SubscriptionStat {
+    pub fn new(name: String) -> Self {
+        SubscriptionStat {
+            name,
+            count: 0,
+            earned: 0,
+            burned_training: 0,
+            discount: 0,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct TreasuryIO {
     pub rent: i64,

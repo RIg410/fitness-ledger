@@ -16,7 +16,7 @@ pub const CLOSE_SING_UP: u32 = 3 * 60; // 3 hours
 #[non_exhaustive]
 pub struct Training {
     #[serde(default = "default_room_id")]
-    room: ObjectId,
+    pub room: ObjectId,
     #[serde(rename = "_id")]
     pub id: ObjectId,
     pub proto_id: ObjectId,

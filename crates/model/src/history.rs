@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     decimal::Decimal,
+    rooms::Room,
     subscription::{Subscription, UserSubscription},
     user::UserName,
 };
@@ -49,10 +50,14 @@ pub enum Action {
     SignUp {
         start_at: DateTime<Local>,
         name: String,
+        #[serde(default)]
+        room_id: Room,
     },
     SignOut {
         start_at: DateTime<Local>,
         name: String,
+        #[serde(default)]
+        room_id: Room,
     },
     SellSub {
         subscription: Subscription,
@@ -67,10 +72,14 @@ pub enum Action {
     FinalizedCanceledTraining {
         name: String,
         start_at: DateTime<Utc>,
+        #[serde(default)]
+        room_id: Room,
     },
     FinalizedTraining {
         name: String,
         start_at: DateTime<Utc>,
+        #[serde(default)]
+        room_id: Room,
     },
     Payment {
         amount: Decimal,
@@ -95,6 +104,9 @@ pub enum Action {
     },
     ChangeReservedBalance {
         amount: i32,
+    },
+    ChangeSubscriptionDays {
+        delta: i32,
     },
     PayReward {
         amount: Decimal,

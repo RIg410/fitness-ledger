@@ -78,7 +78,7 @@ impl Users {
         session: &mut Session,
         user_id: ObjectId,
         id: ObjectId,
-        delta: i64,
+        delta: i32,
     ) -> Result<()> {
         info!("Changing subscription balance for user {}", user_id);
         let mut user = self
@@ -89,6 +89,8 @@ impl Users {
 
         self.resolve_family(session, &mut user).await?;
         let mut payer = user.payer_mut()?;
+
+        self.logs.change_balance(session, payer.id, delta).await?;
 
         payer
             .subscriptions_mut()
@@ -111,7 +113,7 @@ impl Users {
         session: &mut Session,
         user_id: ObjectId,
         id: ObjectId,
-        delta: i64,
+        delta: i32,
     ) -> Result<()> {
         info!("Changing subscription balance for user {}", user_id);
         let mut user = self
@@ -122,6 +124,10 @@ impl Users {
 
         self.resolve_family(session, &mut user).await?;
         let mut payer = user.payer_mut()?;
+
+        self.logs
+            .change_reserved_balance(session, payer.id, delta)
+            .await?;
 
         payer
             .subscriptions_mut()
@@ -146,7 +152,7 @@ impl Users {
         session: &mut Session,
         user_id: ObjectId,
         id: ObjectId,
-        delta: i64,
+        delta: i32,
     ) -> Result<()> {
         info!("Changing subscription days for user {}", user_id);
         let mut user = self
@@ -158,23 +164,27 @@ impl Users {
         self.resolve_family(session, &mut user).await?;
         let mut payer = user.payer_mut()?;
 
-        payer
+        let payer_id = payer.id;
+        let sub = payer
             .subscriptions_mut()
             .iter_mut()
-            .find(|sub| sub.id == id)
-            .map(|sub| {
-                if let model::subscription::Status::Active {
-                    start_date: _,
-                    end_date,
-                } = &mut sub.status
-                {
-                    if delta > 0 {
-                        *end_date += chrono::Duration::days(delta);
-                    } else {
-                        *end_date -= chrono::Duration::days(delta.abs());
-                    }
+            .find(|sub| sub.id == id);
+        if let Some(sub) = sub {
+            if let model::subscription::Status::Active {
+                start_date: _,
+                end_date,
+            } = &mut sub.status
+            {
+                self.logs
+                    .change_subscription_days(session, payer_id, delta)
+                    .await?;
+                if delta > 0 {
+                    *end_date += chrono::Duration::days(delta as i64);
+                } else {
+                    *end_date -= chrono::Duration::days(delta.abs() as i64);
                 }
-            });
+            }
+        }
         self.store.update(session, &mut payer).await?;
         Ok(())
     }

@@ -23,6 +23,7 @@ pub mod employee;
 pub mod family;
 pub mod subscription;
 pub mod ai;
+pub mod statistics;
 
 #[derive(Clone)]
 pub struct Users {

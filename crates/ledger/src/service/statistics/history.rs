@@ -135,6 +135,9 @@ pub async fn load_requests_and_history(
             | Action::AddFamilyMember {} => {
                 continue;
             }
+            Action::ChangeSubscriptionDays { delta } => {
+                continue;
+            }
         }
     }
 

@@ -126,6 +126,14 @@ impl UserProfile {
         ctx.reload_user().await?;
         Ok(Jmp::Stay)
     }
+
+    async fn show_statistics(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
+        ctx.ensure(Rule::ViewStatistics)?;
+       
+       let user_stat = ctx.ledger.users.collect_statistics(&mut ctx.session, &self.id).await?;
+
+       Ok(Jmp::Stay)
+    }
 }
 
 #[async_trait]
@@ -164,11 +172,8 @@ impl View for UserProfile {
                     .await;
                 match ai_response {
                     Ok(resp) => {
-                        let msg = format!(
-                            "\n\nВопрос: {}\nОтвет: {}",
-                            escape(&text),
-                            escape(&resp)
-                        );
+                        let msg =
+                            format!("\n\nВопрос: {}\nОтвет: {}", escape(&text), escape(&resp));
                         self.skip_show = true;
                         ctx.send_notification(&msg).await;
                     }
@@ -204,6 +209,7 @@ impl View for UserProfile {
             Callback::FamilyView => self.family_view(ctx, self.id).await,
             Callback::UnFreeze => self.unfreeze_user(ctx).await,
             Callback::Comments => Ok(Comments::new(self.id).into()),
+            Callback::Statistics => self.show_statistics(ctx).await,
         }
     }
 }
@@ -283,6 +289,10 @@ async fn render_user_profile(
         keymap = keymap.append_row(Callback::Comments.btn_row("Комментарии 📝"));
     }
 
+    if ctx.has_right(Rule::ViewStatistics) {
+        keymap = keymap.append_row(Callback::Statistics.btn_row("Статистика 📊"));
+    }
+
     Ok((msg, keymap))
 }
 
@@ -303,4 +313,5 @@ pub enum Callback {
     FamilyView,
     UnFreeze,
     Comments,
+    Statistics,
 }

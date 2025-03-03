@@ -14,8 +14,6 @@ use model::{
     },
 };
 
-use crate::service::statistics::prompt::select_aggregation;
-
 use super::Users;
 
 impl Users {
@@ -46,10 +44,11 @@ impl Users {
 
 fn system_prompt(
     user: User,
-    extension: UserExtension,
+    _extension: UserExtension,
     history: Vec<HistoryRow>,
 ) -> Result<String, Error> {
-    let mut prompt = "Ты помощник администратора. У тебя есть данные пользователя и история его взаимодействия с ботом. Отвечай на вопросы администратора, основываясь на предоставленной информации. Ответы должны быть краткими, точными и без какого-либо форматирования." 
+    let mut prompt = "Ты помощник администратора. Используя предоставленные данные, отвечай максимально точно и кратко, избегая лишних пояснений. Ты можешь использовать только факты из данных ниже, не делая предположений. Если данных недостаточно для ответа, сообщи об этом.
+    Ты НЕ должен пытаться сделать выводы о мотивах, чувствах или фактах, не указанных в данных. Если данных недостаточно, просто сообщи: \"Информация отсутствует.\""
         .to_string();
     if let Some(freeze) = &user.freeze {
         prompt.push_str(&format!(
@@ -127,12 +126,12 @@ fn history_row_to_prompt(row: &HistoryRow) -> Option<String> {
         } else {
             format!("Пользователь разблокирован")
         }),
-        model::history::Action::SignUp { start_at, name } => Some(format!(
+        model::history::Action::SignUp { start_at, name, .. } => Some(format!(
             "записан на тренировку {} {}",
             start_at.with_timezone(&Local),
             name
         )),
-        model::history::Action::SignOut { start_at, name } => Some(format!(
+        model::history::Action::SignOut { start_at, name, .. } => Some(format!(
             "отписан от тренировки {} {}",
             start_at.with_timezone(&Local),
             name
@@ -160,7 +159,7 @@ fn history_row_to_prompt(row: &HistoryRow) -> Option<String> {
         }
         model::history::Action::PreSellSub { .. } => None,
         model::history::Action::FinalizedCanceledTraining { .. } => None,
-        model::history::Action::FinalizedTraining { name, start_at } => Some(format!(
+        model::history::Action::FinalizedTraining { name, start_at, .. } => Some(format!(
             "посетил тренировку {} {}",
             start_at.with_timezone(&Local),
             name
@@ -179,6 +178,7 @@ fn history_row_to_prompt(row: &HistoryRow) -> Option<String> {
         )),
         model::history::Action::RemoveFamilyMember {} => None,
         model::history::Action::AddFamilyMember {} => None,
+        model::history::Action::ChangeSubscriptionDays { .. } => None,
     };
     msg.map(|msg| format!("{} {}\n", dt, msg))
 }

@@ -5,6 +5,7 @@ use eyre::Result;
 use model::{
     decimal::Decimal,
     history::{Action, HistoryRow},
+    rooms::Room,
     session::Session,
     subscription::{Subscription, UserSubscription},
     training::Training,
@@ -100,6 +101,20 @@ impl History {
         self.store.store(session, entry).await
     }
 
+    pub async fn change_subscription_days(
+        &self,
+        session: &mut Session,
+        user: ObjectId,
+        delta: i32,
+    ) -> Result<()> {
+        let entry = HistoryRow::with_sub_actors(
+            session.actor(),
+            vec![user],
+            Action::ChangeSubscriptionDays { delta },
+        );
+        self.store.store(session, entry).await
+    }
+
     pub async fn change_reserved_balance(
         &self,
         session: &mut Session,
@@ -154,6 +169,7 @@ impl History {
         user_id: ObjectId,
         start_at: DateTime<Local>,
         name: String,
+        room_id: Room,
     ) -> Result<()> {
         self.store
             .store(
@@ -161,7 +177,11 @@ impl History {
                 HistoryRow::with_sub_actors(
                     session.actor(),
                     vec![user_id],
-                    Action::SignUp { start_at, name },
+                    Action::SignUp {
+                        start_at,
+                        name,
+                        room_id,
+                    },
                 ),
             )
             .await
@@ -173,6 +193,7 @@ impl History {
         user_id: ObjectId,
         start_at: DateTime<Local>,
         name: String,
+        room_id: Room,
     ) -> Result<()> {
         self.store
             .store(
@@ -180,7 +201,11 @@ impl History {
                 HistoryRow::with_sub_actors(
                     session.actor(),
                     vec![user_id],
-                    Action::SignOut { start_at, name },
+                    Action::SignOut {
+                        start_at,
+                        name,
+                        room_id,
+                    },
                 ),
             )
             .await
@@ -207,12 +232,14 @@ impl History {
     pub async fn process_finished(&self, session: &mut Session, training: &Training) -> Result<()> {
         let sub_actors = training.clients.to_vec();
 
+        let slot = training.id();
         let entry = HistoryRow::with_sub_actors(
             training.instructor,
             sub_actors,
             Action::FinalizedTraining {
                 name: training.name.clone(),
-                start_at: training.start_at_utc(),
+                start_at: slot.start_at,
+                room_id: Room::from(slot.room),
             },
         );
         self.store.store(session, entry).await
@@ -221,12 +248,14 @@ impl History {
     pub async fn process_canceled(&self, session: &mut Session, training: &Training) -> Result<()> {
         let sub_actors = training.clients.to_vec();
 
+        let slot = training.id();
         let entry = HistoryRow::with_sub_actors(
             training.instructor,
             sub_actors,
             Action::FinalizedCanceledTraining {
                 name: training.name.clone(),
-                start_at: training.start_at_utc(),
+                start_at: slot.start_at,
+                room_id: Room::from(slot.room),
             },
         );
         self.store.store(session, entry).await

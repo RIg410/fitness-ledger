@@ -146,9 +146,9 @@ impl View for SubscriptionsList {
 #[derive(Serialize, Deserialize)]
 enum Calldata {
     Select(usize),
-    ChangeBalance(i64),
-    ChangeLockBalance(i64),
-    ChangeDays(i64),
+    ChangeBalance(i32),
+    ChangeLockBalance(i32),
+    ChangeDays(i32),
     Programs,
     ItemPrice,
 }

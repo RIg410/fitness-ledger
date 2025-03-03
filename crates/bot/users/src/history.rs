@@ -121,7 +121,11 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             }
         }
-        model::history::Action::SignUp { start_at, name } => {
+        model::history::Action::SignUp {
+            start_at,
+            name,
+            room_id: _,
+        } => {
             if is_actor {
                 format!(
                     "Вы записались на тренировку *{}* на {}",
@@ -137,7 +141,11 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             }
         }
-        model::history::Action::SignOut { start_at, name } => {
+        model::history::Action::SignOut {
+            start_at,
+            name,
+            room_id: _,
+        } => {
             if ctx.has_right(Rule::HistoryViewer) {
                 let sub = if let Some(subject) = log.sub_actors.first() {
                     let user = ctx.ledger.get_user(&mut ctx.session, *subject).await?;
@@ -151,12 +159,12 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 };
 
                 format!(
-                    "Пользователь \\(@{}\\) отменил запись на тренировку *{}* на {} пользователю {}",
-                    escape(&actor.name.tg_user_name.unwrap_or_default()),
-                    escape(name),
-                    fmt_dt(start_at),
-                    sub,
-                )
+                        "Пользователь \\(@{}\\) отменил запись на тренировку *{}* на {} пользователю {}",
+                        escape(&actor.name.tg_user_name.unwrap_or_default()),
+                        escape(name),
+                        fmt_dt(start_at),
+                        sub,
+                    )
             } else if is_actor {
                 format!(
                     "Вы отменили запись на тренировку *{}* на {}",
@@ -187,9 +195,9 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                     "-".to_string()
                 };
                 format!(
-                    "Вы продали абонемент *{}*\nКоличество занятий:_{}_\nCумма:_{}_\nПользователю {}",
-                    escape(&subscription.name), subscription.items, escape(&subscription.price.to_string()), escape(&sub)
-                )
+                        "Вы продали абонемент *{}*\nКоличество занятий:_{}_\nCумма:_{}_\nПользователю {}",
+                        escape(&subscription.name), subscription.items, escape(&subscription.price.to_string()), escape(&sub)
+                    )
             } else {
                 format!(
                     "Вы купили абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_",
@@ -205,9 +213,9 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
         } => {
             if is_actor {
                 format!(
-                    "Вы продали абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",
-                    escape(&subscription.name), subscription.items, escape(&subscription.price.to_string()), escape(phone)
-                )
+                        "Вы продали абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_\nПользователю {}",
+                        escape(&subscription.name), subscription.items, escape(&subscription.price.to_string()), escape(phone)
+                    )
             } else {
                 format!(
                     "Вы купили абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_",
@@ -217,14 +225,22 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 )
             }
         }
-        model::history::Action::FinalizedCanceledTraining { name, start_at } => {
+        model::history::Action::FinalizedCanceledTraining {
+            name,
+            start_at,
+            room_id: _,
+        } => {
             format!(
                 "Тренировка *{}* в _{}_ отменена",
                 escape(name),
                 fmt_dt(&start_at.with_timezone(&Local))
             )
         }
-        model::history::Action::FinalizedTraining { name, start_at } => {
+        model::history::Action::FinalizedTraining {
+            name,
+            start_at,
+            room_id: _,
+        } => {
             if is_actor {
                 format!(
                     "Вы провели тренировку *{}* в _{}_",
@@ -383,7 +399,10 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 subscription.balance
             )
         }
-        model::history::Action::BuySub { subscription, discount } => {
+        model::history::Action::BuySub {
+            subscription,
+            discount,
+        } => {
             format!(
                 "Вы купили абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_",
                 escape(&subscription.name),
@@ -450,6 +469,29 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 escape(&member),
                 escape(&main),
             )
+        }
+        model::history::Action::ChangeSubscriptionDays { delta } => {
+            let sub = if let Some(subject) = log.sub_actors.first() {
+                ctx.ledger
+                    .get_user(&mut ctx.session, *subject)
+                    .await?
+                    .name
+                    .to_string()
+            } else {
+                "-".to_string()
+            };
+            if is_actor {
+                format!(
+                    "Вы изменили количество дней абонемента пользователя {} на _{}_",
+                    escape(&sub),
+                    escape(&delta.to_string())
+                )
+            } else {
+                format!(
+                    "Ваш абонемент изменен на _{}_ дней",
+                    escape(&delta.to_string())
+                )
+            }
         }
     };
 
