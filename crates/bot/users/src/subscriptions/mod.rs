@@ -1,3 +1,4 @@
+pub mod item_price;
 pub mod program;
 
 use async_trait::async_trait;
@@ -8,6 +9,7 @@ use bot_core::{
     widget::{Jmp, View},
 };
 use bot_viewer::user::render_sub;
+use item_price::SetItemPrice;
 use model::rights::Rule;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -47,9 +49,10 @@ impl View for SubscriptionsList {
             for (i, sub) in subs.iter().enumerate() {
                 let select = if i == self.index { "✅" } else { " " };
                 txt.push_str(&format!(
-                    "{} *{}*\n",
+                    "{} *{}*\nЦена занятия:{}\n",
                     select,
-                    render_sub(sub, payer.is_owner())
+                    render_sub(sub, payer.is_owner()),
+                    sub.item_price()
                 ));
             }
         }
@@ -71,7 +74,10 @@ impl View for SubscriptionsList {
                 Calldata::ChangeDays(-1).button("Уменьшить дни"),
                 Calldata::ChangeDays(1).button("Увеличить дни"),
             ]);
-            keymap = keymap.append_row(vec![Calldata::Programs.button("Программы")]);
+            keymap = keymap.append_row(vec![
+                Calldata::Programs.button("Программы"),
+                Calldata::ItemPrice.button("Цена занятия"),
+            ]);
         }
 
         ctx.edit_origin(&txt, keymap).await?;
@@ -127,6 +133,10 @@ impl View for SubscriptionsList {
                 )
                 .into());
             }
+            Calldata::ItemPrice => {
+                let sub = &payer.subscriptions()[self.index];
+                return Ok(SetItemPrice::new(self.id, sub.id).into());
+            }
         }
 
         Ok(Jmp::Stay)
@@ -140,4 +150,5 @@ enum Calldata {
     ChangeLockBalance(i64),
     ChangeDays(i64),
     Programs,
+    ItemPrice,
 }

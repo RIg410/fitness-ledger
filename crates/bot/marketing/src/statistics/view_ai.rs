@@ -10,7 +10,6 @@ use model::rights::Rule;
 use serde::{Deserialize, Serialize};
 use teloxide::{
     types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
-    utils::markdown::escape,
 };
 
 pub struct AiView {

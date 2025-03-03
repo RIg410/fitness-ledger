@@ -83,6 +83,8 @@ pub struct UserSubscription {
     pub unlimited: bool,
     #[serde(default)]
     pub discount: Option<Decimal>,
+    #[serde(default)]
+    pub item_price: Option<Decimal>,
 }
 
 impl UserSubscription {
@@ -109,6 +111,10 @@ impl UserSubscription {
     }
 
     pub fn item_price(&self) -> Decimal {
+        if let Some(item_price) = self.item_price {
+            return item_price;
+        }
+
         let full_price = if self.items == 0 {
             Decimal::zero()
         } else {
@@ -197,6 +203,7 @@ impl From<Subscription> for UserSubscription {
             id: ObjectId::new(),
             unlimited: value.unlimited,
             discount: None,
+            item_price: None,
         }
     }
 }

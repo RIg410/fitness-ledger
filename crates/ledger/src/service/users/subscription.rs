@@ -2,7 +2,7 @@ use super::Users;
 use chrono::Utc;
 use eyre::{eyre, Result};
 use log::info;
-use model::{session::Session, subscription::UserSubscription};
+use model::{decimal::Decimal, session::Session, subscription::UserSubscription};
 use mongodb::bson::oid::ObjectId;
 use tx_macro::tx;
 
@@ -209,5 +209,35 @@ impl Users {
         }
         self.store.update(session, &mut payer).await?;
         Ok(expired)
+    }
+
+    #[tx]
+    pub async fn set_subscription_item_price(
+        &self,
+        session: &mut Session,
+        user_id: ObjectId,
+        id: ObjectId,
+        price: Decimal,
+    ) -> Result<()> {
+        info!("Setting subscription item price for user {}", id);
+
+        let mut user = self
+            .store
+            .get(session, user_id)
+            .await?
+            .ok_or_else(|| eyre!("User not found"))?;
+
+        self.resolve_family(session, &mut user).await?;
+        let mut payer = user.payer_mut()?;
+
+        payer
+            .subscriptions_mut()
+            .iter_mut()
+            .find(|sub| sub.id == id)
+            .map(|sub| {
+                sub.item_price = Some(price);
+            });
+        self.store.update(session, &mut payer).await?;
+        Ok(())
     }
 }
