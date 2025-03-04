@@ -105,9 +105,9 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
         model::history::Action::BlockUser { is_active } => {
             if is_actor {
                 if *is_active {
-                    format!("Вы заблокировали пользователя {}", actor.name)
+                    format!("Вы заблокировали пользователя {}", escape(&actor.name.to_string()))
                 } else {
-                    format!("Bы заблокировали пользователя {}", actor.name)
+                    format!("Bы заблокировали пользователя {}", escape(&actor.name.to_string()))
                 }
             } else if *is_active {
                 format!(

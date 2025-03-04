@@ -10,10 +10,14 @@ use model::{
     program::TrainingType,
     rights::Rule,
     session::Session,
+    subscription::UserSubscription,
     training::{Statistics, Training, TrainingStatus},
     user::{employee::UserRewardContribution, family::FindFor, User},
 };
-use teloxide::types::{ChatId, InlineKeyboardMarkup};
+use teloxide::{
+    types::{ChatId, InlineKeyboardMarkup},
+    utils::markdown::escape,
+};
 use tx_macro::tx;
 
 #[derive(Clone)]
@@ -129,7 +133,7 @@ impl TriningBg {
             for client in &training.clients {
                 let mut user = self.ledger.get_user(session, *client).await?;
                 let mut payer = user.payer_mut()?;
-                if let Some(sub) = payer.find_subscription(FindFor::Charge, &training) {
+                let sub = if let Some(sub) = payer.find_subscription(FindFor::Charge, &training) {
                     if !sub.change_locked_balance(&training) {
                         return Err(eyre!("Not enough balance:{}", user.id));
                     }
@@ -140,12 +144,20 @@ impl TriningBg {
                         subscription_price: sub.subscription_price(),
                         lessons_count: sub.items(),
                     });
+                    if sub.balance == 0 {
+                        Some(sub.clone())
+                    } else {
+                        None
+                    }
                 } else {
                     return Err(eyre!("Subscription not found for user:{}", user.id));
-                }
+                };
+
                 self.ledger.users.update(session, &mut payer).await?;
-                if let Some(notification) = self.user_notification(&user, &training)? {
-                    notifications.push(notification);
+                if let Some(sub) = sub {
+                    if let Some(notification) = self.user_notification(&mut user, sub, &training)? {
+                        notifications.push(notification);
+                    }
                 }
             }
             let mut couch = self.ledger.get_user(session, training.instructor).await?;
@@ -193,10 +205,17 @@ impl TriningBg {
         Ok(())
     }
 
-    fn user_notification(&self, user: &User, training: &Training) -> Result<Option<Notification>> {
+    fn user_notification(
+        &self,
+        user: &mut User,
+        sub: UserSubscription,
+        training: &Training,
+    ) -> Result<Option<Notification>> {
         let payer = user.payer()?;
         let balance = payer.available_balance_for_training(&training);
-        if balance == 0 {
+
+        // Notify user and manager if balance is zero and user has more than one lesson in subscription.
+        if balance == 0 && sub.items > 1 {
             Ok(Some(Notification {
                 to_user: (
                     "Ваш абонемент закончился🥺".to_string(),
@@ -204,9 +223,10 @@ impl TriningBg {
                 ),
                 to_manager: (
                     format!(
-                        "У {} {} заканчивается абонемент\\.",
+                        "У {} {} закончился абонемент {}\\.",
                         link_to_user(payer.as_ref()),
-                        fmt_phone(payer.as_ref().phone.as_deref())
+                        fmt_phone(payer.as_ref().phone.as_deref()),
+                        escape(&sub.name)
                     ),
                     InlineKeyboardMarkup::default()
                         .append_row(vec![CommonLocation::Profile(payer.as_ref().id).button()]),

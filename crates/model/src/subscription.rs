@@ -66,7 +66,7 @@ pub struct UserSubscription {
     pub id: ObjectId,
     pub subscription_id: ObjectId,
     pub name: String,
-    pub(crate) items: u32,
+    pub items: u32,
     #[serde(default = "default_days")]
     pub days: u32,
     #[serde(default)]
