@@ -15,6 +15,7 @@ use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};
 pub mod couch;
 pub mod name;
 pub mod time;
+pub mod program;
 
 pub struct EditTraining {
     id: TrainingId,
@@ -130,7 +131,12 @@ impl View for EditTraining {
 
         if ctx.has_right(Rule::EditTraining) {
             keymap = keymap.append_row(vec![Callback::ChangeName.button("🔄 Изменить название")]);
+            keymap = keymap.append_row(vec![
+                Callback::ChangeProgram(false).button("🔄 Изменить программу"),
+                Callback::ChangeProgram(true).button("🔄 Изменить программу для всех")
+            ]);
         }
+
         if ctx.has_right(Rule::ChangeTrainingSlot) {
             keymap = keymap.append_row(vec![
                 Callback::ChangeStartAt(false).button("🕒 Изменить время")
@@ -204,6 +210,13 @@ impl View for EditTraining {
                     Ok(Jmp::Stay)
                 }
             }
+            Callback::ChangeProgram(all) => {
+                if ctx.has_right(Rule::EditTraining) {
+                    Ok(program::ChangeProgram::new(self.id, all).into())
+                } else {
+                    Ok(Jmp::Stay)
+                }
+            }
         }
     }
 }
@@ -216,4 +229,5 @@ enum Callback {
     SetFree(bool),
     ChangeStartAt(bool),
     ChangeName,
+    ChangeProgram(bool),
 }

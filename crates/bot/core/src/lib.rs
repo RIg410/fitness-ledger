@@ -12,6 +12,7 @@ pub mod handlers;
 pub mod script;
 pub mod state;
 pub mod widget;
+pub mod confirm;
 
 const ERROR: &str = "Что-то пошло не так. Пожалуйста, попробуйте позже.";
 
