@@ -8,6 +8,7 @@ use bot_core::{
 };
 use bot_viewer::day::fmt_dt;
 use chrono::Local;
+use clients::ClientsStatistics;
 use eyre::Error;
 use eyre::Result;
 use model::{rights::Rule, statistics::range::Range};
@@ -43,34 +44,7 @@ impl View for StatisticsView {
     async fn show(&mut self, ctx: &mut Context) -> Result<(), Error> {
         ctx.ensure(Rule::ViewStatistics)?;
 
-        let now = Local::now();
-        let has_next = self.range.base_date() < now;
-
-        let navi = if has_next {
-            vec![Calldata::Prev.button("⬅️"), Calldata::Next.button("➡️")]
-        } else {
-            vec![Calldata::Prev.button("⬅️")]
-        };
-
         let mut keymap = InlineKeyboardMarkup::default()
-            .append_row(vec![
-                Calldata::Range(Range::Day(now).into()).button(if self.range.is_day() {
-                    "✅по дням"
-                } else {
-                    "по дням"
-                }),
-                Calldata::Range(Range::Week(now).into()).button(if self.range.is_week() {
-                    "✅по неделям"
-                } else {
-                    "по неделям"
-                }),
-                Calldata::Range(Range::Month(now).into()).button(if self.range.is_month() {
-                    "✅по месяцам"
-                } else {
-                    "по месяцам"
-                }),
-            ])
-            .append_row(navi)
             .append_row(Calldata::Budget.btn_row("💰 Бюджет"))
             .append_row(Calldata::Instructor.btn_row("👨‍🏫 Инструкторы"))
             .append_row(Calldata::Clients.btn_row("👥 Клиенты"))
@@ -94,46 +68,18 @@ impl View for StatisticsView {
         ctx.ensure(Rule::ViewStatistics)?;
 
         match calldata!(data) {
-            Calldata::Budget => {
-                budget::send_statistic(ctx, self.range).await?;
-            }
-            Calldata::Instructor => {
-                instructors::send_statistic(ctx, self.range).await?;
-            }
+            Calldata::Budget => Ok(Jmp::Stay),
+            Calldata::Instructor => Ok(Jmp::Stay),
             Calldata::Clients => {
-                clients::send_statistic(ctx, self.range).await?;
+                Ok(ClientsStatistics::default().into())
             }
-            Calldata::Marketing => {
-                marketing::send_statistic(ctx, self.range).await?;
-            }
-            Calldata::Range(range) => {
-                let range: Range = range.into();
-                let base_date = self.range.base_date();
-                match range {
-                    Range::Day(_) => {
-                        self.range = Range::Day(base_date);
-                    }
-                    Range::Week(_) => {
-                        self.range = Range::Week(base_date);
-                    }
-                    Range::Month(_) => {
-                        self.range = Range::Month(base_date);
-                    }
-                }
-            }
-            Calldata::Next => {
-                self.range = self.range.next()?;
-            }
-            Calldata::Prev => {
-                self.range = self.range.prev()?;
-            }
+            Calldata::Marketing => Ok(Jmp::Stay),
             Calldata::AI => {
                 ctx.ensure(Rule::AIStatistic)?;
                 let view = view_ai::AiView::new(AiModel::Gpt4oMini);
                 return Ok(view.into());
             }
         }
-        Ok(Jmp::Stay)
     }
 }
 
@@ -144,9 +90,6 @@ enum Calldata {
     Clients,
     Marketing,
     AI,
-    Range(RangeCalldata),
-    Next,
-    Prev,
 }
 
 #[derive(Serialize, Deserialize)]

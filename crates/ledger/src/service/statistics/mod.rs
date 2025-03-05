@@ -3,6 +3,7 @@ pub mod calendar;
 pub mod history;
 pub mod prompt;
 pub mod treasury;
+pub mod clients;
 
 use std::{sync::Arc, time::Instant};
 

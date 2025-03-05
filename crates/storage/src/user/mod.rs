@@ -619,6 +619,16 @@ impl UserStore {
         Ok(())
     }
 
+    pub async fn users_without_subscription(
+        &self,
+        session: &mut Session,
+    ) -> Result<SessionCursor<User>, Error> {
+        let filter = doc! {
+            "subscriptions": { "$eq": [] }
+        };
+        Ok(self.users.find(filter).session(&mut *session).await?)
+    }
+
     pub async fn find_with_subscription(
         &self,
         session: &mut Session,
