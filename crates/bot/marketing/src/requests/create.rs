@@ -567,9 +567,10 @@ impl View for ConfirmSellSubscription {
         ]);
 
         if self.discount.is_none() {
-            markup = markup
-                .append_row(vec![ConfirmSellSubscriptionCallback::AddFamilyDiscount
-                    .button("👨‍👩‍👧‍👦 Добавить скидку 10%")]);
+            markup = markup.append_row(vec![
+                ConfirmSellSubscriptionCallback::AddDiscount(10).button("👨‍👩‍👧‍👦 Cкидка 10%"),
+                ConfirmSellSubscriptionCallback::AddDiscount(20).button("👨‍👩‍👧‍👦 Cкидка 20%"),
+            ]);
         } else {
             markup = markup
                 .append_row(vec![ConfirmSellSubscriptionCallback::RemoveFamilyDiscount
@@ -600,8 +601,8 @@ impl View for ConfirmSellSubscription {
                 Ok(Jmp::Goto(Marketing {}.into()))
             }
             ConfirmSellSubscriptionCallback::No => Ok(Jmp::Goto(Marketing {}.into())),
-            ConfirmSellSubscriptionCallback::AddFamilyDiscount => {
-                self.discount = Some(Decimal::from(10));
+            ConfirmSellSubscriptionCallback::AddDiscount(d) => {
+                self.discount = Some(Decimal::int(d as i64));
                 Ok(Jmp::Stay)
             }
             ConfirmSellSubscriptionCallback::RemoveFamilyDiscount => {
@@ -616,6 +617,6 @@ impl View for ConfirmSellSubscription {
 pub enum ConfirmSellSubscriptionCallback {
     Yes,
     No,
-    AddFamilyDiscount,
+    AddDiscount(u32),
     RemoveFamilyDiscount,
 }

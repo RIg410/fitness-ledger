@@ -16,7 +16,6 @@ use teloxide::{
     utils::markdown::escape,
 };
 
-pub const FAMILY_DISCOUNT: Decimal = Decimal::int(10);
 pub const LIMIT: u64 = 7;
 
 pub struct SellView {
@@ -48,13 +47,20 @@ impl View for SellView {
                 text = "Введите номер телефона пользователя".to_string();
             }
             SellViewState::FindByPhone(phone) => {
-                if ctx
+                let user = ctx
                     .ledger
                     .users
                     .get_by_phone(&mut ctx.session, phone)
-                    .await?
-                    .is_none()
-                {
+                    .await?;
+
+                if let Some(user) = user {
+                    text = format!(
+                        "Найден пользователь с номером *{}*\\. Продолжить?",
+                        fmt_phone(Some(phone))
+                    );
+                    keymap = keymap
+                        .append_row(SellViewCallback::Next(user.id.bytes()).btn_row("Продолжить"))
+                } else {
                     text = format!(
                         "Пользователь с номером *{}* не найден\\. Создать нового пользователя?",
                         fmt_phone(Some(phone))
@@ -126,6 +132,11 @@ impl View for SellView {
                     return Ok(Jmp::Next(SetName::new(self.sub_id, phone.clone()).into()));
                 }
             }
+            SellViewCallback::Next(user_id) => {
+                return Ok(Jmp::Next(
+                    ConfirmSell::new(user_id.into(), self.sub_id).into(),
+                ));
+            }
         }
         Ok(Jmp::Stay)
     }
@@ -134,6 +145,7 @@ impl View for SellView {
 #[derive(Debug, Serialize, Deserialize)]
 enum SellViewCallback {
     CreateNewUser,
+    Next([u8; 12]),
 }
 
 enum SellViewState {
@@ -282,6 +294,16 @@ impl View for CreateUserAndSell {
             .await?
             .ok_or_else(|| eyre::eyre!("Subscription {} not found", self.sub_id))?;
 
+        let price_with_discount = if let Some(discount) = self.discount {
+            let full_price = sub.price * (Decimal::int(1) - discount / Decimal::int(100));
+            format!(
+                "Цена со скидкой: *{}*",
+                full_price.to_string().replace(".", ",")
+            )
+        } else {
+            "".to_string()
+        };
+
         let text = format!(
             "
  📌  Продажа
@@ -292,6 +314,7 @@ impl View for CreateUserAndSell {
     Номер:*{}*
     Источник: *{}*\n\n
     Скидка: *{}*
+    {}
     Все верно? 
     ",
             escape(&sub.name),
@@ -303,7 +326,8 @@ impl View for CreateUserAndSell {
             self.come_from.name(),
             self.discount
                 .map(|d| d.to_string().replace(".", ","))
-                .unwrap_or_else(|| "нет".to_string())
+                .unwrap_or_else(|| "нет".to_string()),
+            price_with_discount
         );
 
         let mut keymap = InlineKeyboardMarkup::default();
@@ -313,7 +337,8 @@ impl View for CreateUserAndSell {
         ]);
         if self.discount.is_none() {
             keymap = keymap.append_row(vec![
-                Callback::AddFamilyDiscount.button("👨‍👩‍👧‍👦 Добавить скидку 10%")
+                Callback::AddDiscount(10).button("👨‍👩‍👧‍👦 Скидка 10%"),
+                Callback::AddDiscount(20).button("👨‍👩‍👧‍👦 Скидка 20%"),
             ]);
         } else {
             keymap = keymap.append_row(vec![Callback::RemoveDiscount.button("👨‍👩‍👧‍👦 Убрать скидку")]);
@@ -369,8 +394,8 @@ impl View for CreateUserAndSell {
                     Ok(Jmp::Goto(SubscriptionView.into()))
                 }
             }
-            Callback::AddFamilyDiscount => {
-                self.discount = Some(FAMILY_DISCOUNT);
+            Callback::AddDiscount(d) => {
+                self.discount = Some(Decimal::int(d as i64));
                 Ok(Jmp::Stay)
             }
             Callback::RemoveDiscount => {
@@ -385,7 +410,7 @@ impl View for CreateUserAndSell {
 #[derive(Serialize, Deserialize)]
 enum Callback {
     Sell,
-    AddFamilyDiscount,
+    AddDiscount(u32),
     RemoveDiscount,
     Cancel,
 }

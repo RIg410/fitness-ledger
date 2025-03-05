@@ -15,6 +15,7 @@ pub enum Source {
     Recommendation {},
     Other {},
     WebSearch {},
+    OldBase {},
 }
 
 impl Source {
@@ -33,6 +34,7 @@ impl Source {
             Source::Recommendation {},
             Source::Other {},
             Source::WebSearch {},
+            Source::OldBase {},
         ]
         .iter()
         .copied()
@@ -53,6 +55,7 @@ impl Source {
             Source::Recommendation {} => "Рекомендация",
             Source::Other {} => "Другое",
             Source::WebSearch {} => "Поиск в интернете",
+            Source::OldBase {} => "Старая база",
         }
     }
 }

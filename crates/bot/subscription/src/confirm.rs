@@ -1,4 +1,4 @@
-use crate::{sell::FAMILY_DISCOUNT, SubscriptionView};
+use crate::SubscriptionView;
 
 use super::View;
 use async_trait::async_trait;
@@ -60,11 +60,11 @@ impl View for ConfirmSell {
                     Ok(Jmp::Goto(SubscriptionView.into()))
                 }
             }
-            Callback::AddFamilyDiscount => {
-                self.discount = Some(FAMILY_DISCOUNT);
+            Callback::AddDiscount(d) => {
+                self.discount = Some(Decimal::int(d as i64));
                 Ok(Jmp::Stay)
             }
-            Callback::RemoveFamilyDiscount => {
+            Callback::RemoveDiscount => {
                 self.discount = None;
                 Ok(Jmp::Stay)
             }
@@ -93,6 +93,15 @@ async fn render(
         .await?
         .ok_or_else(|| eyre!("User not found:{}", user_id))?;
 
+    let price_with_discount = if let Some(discount) = discount {
+        let full_price = sub.price * (Decimal::int(1) - discount / Decimal::int(100));
+        format!(
+            "Цена со скидкой: *{}*",
+            full_price.to_string().replace(".", ",")
+        )
+    } else {
+        "".to_string()
+    };
     let text = format!(
         "
  📌  Продажа
@@ -102,6 +111,7 @@ async fn render(
     Фамилия:_{}_
     Номер:_{}_\n
     Скидка: _{}%_
+    {}
     \n
     Все верно? 
     ",
@@ -111,7 +121,8 @@ async fn render(
         escape(&user.name.first_name),
         escape(&user.name.last_name.unwrap_or_else(|| "-".to_string())),
         fmt_phone(user.phone.as_deref()),
-        discount.unwrap_or_default().to_string().replace(".", ",")
+        discount.unwrap_or_default().to_string().replace(".", ","),
+        price_with_discount
     );
 
     let mut keymap = InlineKeyboardMarkup::default();
@@ -121,12 +132,11 @@ async fn render(
     ]);
     if discount.is_none() {
         keymap = keymap.append_row(vec![
-            Callback::AddFamilyDiscount.button("👨‍👩‍👧‍👦 Добавить скидку 10%")
+            Callback::AddDiscount(10).button("Cкидка 10%"),
+            Callback::AddDiscount(20).button("Cкидка 20%"),
         ]);
     } else {
-        keymap = keymap.append_row(vec![
-            Callback::RemoveFamilyDiscount.button("👨‍👩‍👧‍👦 Убрать скидку")
-        ]);
+        keymap = keymap.append_row(vec![Callback::RemoveDiscount.button("Убрать скидку")]);
     }
     Ok((text, keymap))
 }
@@ -134,7 +144,7 @@ async fn render(
 #[derive(Serialize, Deserialize)]
 enum Callback {
     Sell,
-    AddFamilyDiscount,
-    RemoveFamilyDiscount,
+    AddDiscount(u32),
+    RemoveDiscount,
     Cancel,
 }
