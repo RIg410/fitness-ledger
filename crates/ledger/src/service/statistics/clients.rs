@@ -24,23 +24,18 @@ impl Statistics {
 
             let logs = self
                 .history
-                .get_actor_logs(session, user.id, Some(10), 0)
+                .get_actor_logs(session, user.id, None, 0)
                 .await?;
-            let has_actions = logs.iter().any(|log| {
-                matches!(
-                    log.action,
-                    Action::SignUp { .. }
-                        | Action::SignOut { .. }
-                        | Action::SellSub { .. }
-                        | Action::FinalizedTraining { .. }
-                        | Action::Freeze { .. }
-                        | Action::Unfreeze { .. }
-                        | Action::ChangeBalance { .. }
-                        | Action::ChangeReservedBalance { .. }
-                        | Action::ChangeSubscriptionDays { .. }
-                        | Action::ExpireSubscription { .. }
-                        | Action::BuySub { .. }
-                )
+            let has_actions = logs.iter().any(|log| match &log.action {
+                Action::SellSub {
+                    subscription,
+                    discount: _,
+                }
+                | Action::BuySub {
+                    subscription,
+                    discount: _,
+                } => subscription.items > 1 && subscription.subscription_type.is_group(),
+                _ => false,
             });
             if has_actions {
                 result.push(user);
