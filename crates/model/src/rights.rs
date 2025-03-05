@@ -87,6 +87,7 @@ pub enum Rule {
     EditAiPrompt,
     ViewUserComments,
     EditUserComments,
+    DeleteUserComments,
 
     // Training
     EditTraining,

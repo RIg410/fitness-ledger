@@ -72,7 +72,7 @@ impl View for Comments {
             row.push(Calldata::Next.button("⬇️"));
         }
         keymap = keymap.append_row(row);
-        if !user.comments.is_empty() && ctx.has_right(Rule::EditUserComments) {
+        if !user.comments.is_empty() && ctx.has_right(Rule::DeleteUserComments) {
             keymap = keymap.append_row(vec![Calldata::Delete.button("❌")]);
         }
         ctx.edit_origin(&message, keymap).await?;
@@ -108,7 +108,7 @@ impl View for Comments {
                 self.index = self.index.saturating_sub(1);
             }
             Calldata::Delete => {
-                ctx.ensure(Rule::EditUserComments)?;
+                ctx.ensure(Rule::DeleteUserComments)?;
                 if let Some(comment) = self.comments.get(self.index) {
                     ctx.ledger
                         .users
