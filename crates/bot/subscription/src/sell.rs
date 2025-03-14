@@ -41,7 +41,7 @@ impl View for SellView {
     }
 
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
-        let text = String::new();
+        let text;
         let mut keymap = InlineKeyboardMarkup::default();
 
         match &self.state {
