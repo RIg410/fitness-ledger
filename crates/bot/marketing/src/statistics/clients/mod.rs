@@ -5,7 +5,7 @@ use bot_core::{
     context::Context,
     widget::{Jmp, View},
 };
-use bot_viewer::{fmt_phone, user::link_to_user};
+use bot_viewer::fmt_phone;
 use model::rights::Rule;
 use serde::{Deserialize, Serialize};
 use teloxide::{types::InlineKeyboardMarkup, utils::markdown::escape};

@@ -30,10 +30,6 @@ impl Statistics {
                 Action::SellSub {
                     subscription,
                     discount: _,
-                }
-                | Action::BuySub {
-                    subscription,
-                    discount: _,
                 } => subscription.items > 1 && subscription.subscription_type.is_group(),
                 _ => false,
             });

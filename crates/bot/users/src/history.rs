@@ -105,9 +105,15 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
         model::history::Action::BlockUser { is_active } => {
             if is_actor {
                 if *is_active {
-                    format!("Вы заблокировали пользователя {}", escape(&actor.name.to_string()))
+                    format!(
+                        "Вы заблокировали пользователя {}",
+                        escape(&actor.name.to_string())
+                    )
                 } else {
-                    format!("Bы заблокировали пользователя {}", escape(&actor.name.to_string()))
+                    format!(
+                        "Bы заблокировали пользователя {}",
+                        escape(&actor.name.to_string())
+                    )
                 }
             } else if *is_active {
                 format!(
@@ -397,17 +403,6 @@ async fn fmt_row(ctx: &mut Context, log: &HistoryRow) -> Result<String> {
                 escape(&subscription.name),
                 escape(&actor.name.tg_user_name.unwrap_or_default()),
                 subscription.balance
-            )
-        }
-        model::history::Action::BuySub {
-            subscription,
-            discount,
-        } => {
-            format!(
-                "Вы купили абонемент *{}*\nКоличество занятий:_{}_\nСумма:_{}_",
-                escape(&subscription.name),
-                subscription.items,
-                escape(&subscription.price.to_string())
             )
         }
         model::history::Action::RemoveFamilyMember {} => {

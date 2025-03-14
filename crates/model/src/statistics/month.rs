@@ -1,7 +1,7 @@
 use super::{source::Source, training::TrainingsStat};
 use crate::user::rate::EmployeeRole;
 use bson::oid::ObjectId;
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 pub struct MonthStatistics {
     pub training: TrainingsStat,

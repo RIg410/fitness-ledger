@@ -129,22 +129,6 @@ impl History {
         self.store.store(session, entry).await
     }
 
-    pub async fn buy_subscription(
-        &self,
-        session: &mut Session,
-        subscription: Subscription,
-    ) -> Result<()> {
-        let entry = HistoryRow::with_sub_actors(
-            session.actor(),
-            vec![session.actor()],
-            Action::BuySub {
-                subscription,
-                discount: None,
-            },
-        );
-        self.store.store(session, entry).await
-    }
-
     pub async fn sell_subscription(
         &self,
         session: &mut Session,

@@ -8,10 +8,7 @@ use model::{
     history::HistoryRow,
     session::Session,
     subscription::UserSubscription,
-    user::{
-        extension::{self, UserExtension},
-        User,
-    },
+    user::{extension::UserExtension, User},
 };
 
 use super::Users;
@@ -137,10 +134,6 @@ fn history_row_to_prompt(row: &HistoryRow) -> Option<String> {
             name
         )),
         model::history::Action::SellSub {
-            subscription,
-            discount,
-        }
-        | model::history::Action::BuySub {
             subscription,
             discount,
         } => {

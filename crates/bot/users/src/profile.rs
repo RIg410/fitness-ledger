@@ -17,7 +17,10 @@ use bot_core::{
 use bot_trainigs::list::TrainingList;
 use bot_viewer::user::render_profile_msg;
 use eyre::Error;
-use model::rights::Rule;
+use model::{
+    rights::Rule,
+    statistics::user::{SubscriptionStat, TrainingsStat},
+};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use teloxide::{
@@ -129,11 +132,80 @@ impl UserProfile {
 
     async fn show_statistics(&mut self, ctx: &mut Context) -> Result<Jmp, eyre::Error> {
         ctx.ensure(Rule::ViewStatistics)?;
-       
-       let user_stat = ctx.ledger.users.collect_statistics(&mut ctx.session, &self.id).await?;
 
-       Ok(Jmp::Stay)
+        let user_stat = ctx
+            .ledger
+            .users
+            .collect_statistics(&mut ctx.session, &self.id)
+            .await?;
+        let mut message = "Статистика пользователя: \n".to_string();
+
+        message.push_str("Cтатистика по абонентам 📊: \n");
+        let mut total_sub = SubscriptionStat::new("Общая".to_string());
+        for (_, sub) in user_stat.subscriptions {
+            message.push_str(&print_sub_stat(&sub));
+            total_sub.join(&sub);
+        }
+
+        let mut total = TrainingsStat::default();
+        message.push_str("Cтатистика по тренировкам 📊: \n");
+        for (name, training) in user_stat.training {
+            message.push_str(&print_training_stat(&training, name));
+            total.join(&training);
+        }
+
+        message.push_str(&print_training_stat(&total, "Общая статистика".to_string()));
+        message.push_str(&print_sub_stat(&total_sub));
+
+        if user_stat.changed_subscription_days > 0 {
+            message.push_str(&format!(
+                "Добавлено *{}* дней к абонементу\n",
+                user_stat.changed_subscription_days
+            ));
+        } else {
+            message.push_str(&format!(
+                "Списано *{}* дней с абонемента\n",
+                user_stat.changed_subscription_days.abs()
+            ));
+        }
+
+        if user_stat.changed_subscription_balance > 0 {
+            message.push_str(&format!(
+                "Добавлено *{}* тренировок к абонементу\n",
+                user_stat.changed_subscription_balance
+            ));
+        } else {
+            message.push_str(&format!(
+                "Списано *{}* тренировок с абонемента\n",
+                user_stat.changed_subscription_balance.abs()
+            ));
+        }
+
+        ctx.send_notification(&message).await;
+        Ok(Jmp::Stay)
     }
+}
+
+fn print_training_stat(training: &TrainingsStat, name: String) -> String {
+    format!(
+        "{}\nВсего посещяно *{}* тренировок\nОтменено *{}* тренировок\n\n",
+        escape(&name),
+        training.count,
+        training.cancellations_count
+    )
+}
+
+fn print_sub_stat(sub: &SubscriptionStat) -> String {
+    format!(
+        "📦 {}\nКуплено: *{}* шт\nПотрачено: *{}* руб\nОбщая скидка: *{}* руб\nВозвраты: *{}* руб\nСгорело *{}* тренировок на сумму *{}* руб\n\n",
+        escape(&sub.name),
+        sub.soult_count,
+        sub.spent.to_string().replace(".", ","),
+        sub.discount.to_string().replace(".", ","),
+        sub.refunds_sum.to_string().replace(".", ","),
+        sub.expired_trainings,
+        sub.expired_sum.to_string().replace(".", ","),
+    )
 }
 
 #[async_trait]

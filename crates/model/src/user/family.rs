@@ -317,7 +317,7 @@ mod tests {
             locked_balance: 0,
             unlimited: false,
             discount: None,
-            item_price: 0,
+            item_price: None,
         }
     }
 

@@ -47,11 +47,7 @@ pub async fn load_requests_and_history(
     while let Some(row) = history.next(session).await {
         let row = row?;
         match row.action {
-            Action::BuySub {
-                subscription,
-                discount,
-            }
-            | Action::SellSub {
+            Action::SellSub {
                 subscription,
                 discount,
             } => {
@@ -135,7 +131,7 @@ pub async fn load_requests_and_history(
             | Action::AddFamilyMember {} => {
                 continue;
             }
-            Action::ChangeSubscriptionDays { delta } => {
+            Action::ChangeSubscriptionDays { .. } => {
                 continue;
             }
         }
