@@ -1,3 +1,5 @@
+use std::str::FromStr as _;
+
 use crate::Marketing;
 use async_trait::async_trait;
 use bot_core::{
@@ -568,8 +570,12 @@ impl View for ConfirmSellSubscription {
 
         if self.discount.is_none() {
             markup = markup.append_row(vec![
-                ConfirmSellSubscriptionCallback::AddDiscount(10).button("👨‍👩‍👧‍👦 Cкидка 10%"),
-                ConfirmSellSubscriptionCallback::AddDiscount(20).button("👨‍👩‍👧‍👦 Cкидка 20%"),
+                ConfirmSellSubscriptionCallback::AddDiscount(Decimal::int(10))
+                    .button("👨‍👩‍👧‍👦 Cкидка 10%"),
+                ConfirmSellSubscriptionCallback::AddDiscount(Decimal::from_str("13.043478").unwrap())
+                    .button("Cкидка 13.043478%"),
+                ConfirmSellSubscriptionCallback::AddDiscount(Decimal::int(20))
+                    .button("👨‍👩‍👧‍👦 Cкидка 20%"),
             ]);
         } else {
             markup = markup
@@ -602,7 +608,7 @@ impl View for ConfirmSellSubscription {
             }
             ConfirmSellSubscriptionCallback::No => Ok(Jmp::Goto(Marketing {}.into())),
             ConfirmSellSubscriptionCallback::AddDiscount(d) => {
-                self.discount = Some(Decimal::int(d as i64));
+                self.discount = Some(d);
                 Ok(Jmp::Stay)
             }
             ConfirmSellSubscriptionCallback::RemoveFamilyDiscount => {
@@ -617,6 +623,6 @@ impl View for ConfirmSellSubscription {
 pub enum ConfirmSellSubscriptionCallback {
     Yes,
     No,
-    AddDiscount(u32),
+    AddDiscount(Decimal),
     RemoveFamilyDiscount,
 }

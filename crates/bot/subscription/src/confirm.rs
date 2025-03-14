@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::SubscriptionView;
 
 use super::View;
@@ -61,7 +63,7 @@ impl View for ConfirmSell {
                 }
             }
             Callback::AddDiscount(d) => {
-                self.discount = Some(Decimal::int(d as i64));
+                self.discount = Some(d);
                 Ok(Jmp::Stay)
             }
             Callback::RemoveDiscount => {
@@ -132,8 +134,9 @@ async fn render(
     ]);
     if discount.is_none() {
         keymap = keymap.append_row(vec![
-            Callback::AddDiscount(10).button("Cкидка 10%"),
-            Callback::AddDiscount(20).button("Cкидка 20%"),
+            Callback::AddDiscount(Decimal::int(10)).button("Cкидка 10%"),
+            Callback::AddDiscount(Decimal::from_str("13.043478").unwrap()).button("Cкидка 13.043478%"),
+            Callback::AddDiscount(Decimal::int(20)).button("Cкидка 20%"),
         ]);
     } else {
         keymap = keymap.append_row(vec![Callback::RemoveDiscount.button("Убрать скидку")]);
@@ -144,7 +147,7 @@ async fn render(
 #[derive(Serialize, Deserialize)]
 enum Callback {
     Sell,
-    AddDiscount(u32),
+    AddDiscount(Decimal),
     RemoveDiscount,
     Cancel,
 }

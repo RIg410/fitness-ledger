@@ -53,7 +53,6 @@ pub enum Aggregation {
     MarketingStatistics,
 }
 
-
 pub fn month_range(month: &NaiveDate) -> (DateTime<Local>, DateTime<Local>) {
     let start = Local
         .with_ymd_and_hms(month.year(), month.month(), 1, 0, 0, 0)
@@ -66,6 +65,7 @@ pub fn month_range(month: &NaiveDate) -> (DateTime<Local>, DateTime<Local>) {
 mod tests {
     #![allow(deprecated)]
     use super::*;
+    use crate::statistics::month_id;
 
     #[test]
     fn test_month_id() {

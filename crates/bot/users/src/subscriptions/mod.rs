@@ -52,7 +52,7 @@ impl View for SubscriptionsList {
                     "{} *{}*\nЦена занятия:{}\n",
                     select,
                     render_sub(sub, payer.is_owner()),
-                    sub.item_price()
+                    sub.item_price().to_string().replace(".", ",")
                 ));
             }
         }
