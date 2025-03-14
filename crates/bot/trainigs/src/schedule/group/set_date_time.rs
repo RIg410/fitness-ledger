@@ -70,14 +70,14 @@ impl View for SetDateTime {
 
         if self.preset.day.is_none() {
             if let Ok(day) = parts.to_date() {
-                let mut preset = self.preset.clone();
+                let mut preset = self.preset;
                 preset.day = Some(day);
                 return Ok(preset.into_next_view().into());
             } else {
                 ctx.send_msg("Неверный формат даты\\. _дд\\.мм_").await?;
             }
         } else {
-            let mut preset = self.preset.clone();
+            let mut preset = self.preset;
             let day = preset.day.unwrap();
             let date_time = day.with_hour(parts.0).and_then(|d| d.with_minute(parts.1));
 

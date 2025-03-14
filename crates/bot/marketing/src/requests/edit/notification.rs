@@ -38,7 +38,7 @@ impl View for AddNotification {
         match calldata!(data) {
             CalldataYesNo::Yes => Ok(Jmp::Next(
                 SetRemindLater {
-                    id: self.id.clone(),
+                    id: self.id,
                 }
                 .into(),
             )),

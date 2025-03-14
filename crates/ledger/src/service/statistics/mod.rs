@@ -5,19 +5,16 @@ pub mod prompt;
 pub mod treasury;
 pub mod clients;
 
-use std::{sync::Arc, time::Instant};
 
 use super::{
     calendar::Calendar, history::History, requests::Requests, treasury::Treasury, users::Users,
 };
 use aggregation::RequiredAggregations;
 use ai::{Ai, AiContext, AiModel};
-use calendar::load_calendar;
-use chrono::{DateTime, Datelike as _, Duration, Local, Months, NaiveDate, TimeZone as _};
+use chrono::{DateTime, Datelike as _, Local, NaiveDate};
 use eyre::Error;
-use history::load_requests_and_history;
 use model::session::Session;
-use prompt::{make_prompt, select_aggregation};
+use prompt::select_aggregation;
 
 pub struct Statistics {
     calendar: Calendar,

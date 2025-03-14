@@ -63,12 +63,12 @@ fn system_prompt(
 
     prompt.push_str(&format!("Откуда пришел: {}\n", user.come_from.name()));
 
-    prompt.push_str(&format!("Абонементы:\n"));
+    prompt.push_str("Абонементы:\n");
     for sub in payer.subscriptions() {
         prompt.push_str(&user_sub_to_prompt(sub));
     }
 
-    prompt.push_str(&format!("История операций:\n"));
+    prompt.push_str("История операций:\n");
     for row in history {
         if let Some(sub) = history_row_to_prompt(&row) {
             prompt.push_str(&sub);
@@ -119,9 +119,9 @@ fn history_row_to_prompt(row: &HistoryRow) -> Option<String> {
     let dt = row.date_time.with_timezone(&Local);
     let msg = match &row.action {
         model::history::Action::BlockUser { is_active } => Some(if *is_active {
-            format!("Пользователь заблокирован")
+            "Пользователь заблокирован".to_string()
         } else {
-            format!("Пользователь разблокирован")
+            "Пользователь разблокирован".to_string()
         }),
         model::history::Action::SignUp { start_at, name, .. } => Some(format!(
             "записан на тренировку {} {}",
@@ -161,7 +161,7 @@ fn history_row_to_prompt(row: &HistoryRow) -> Option<String> {
         model::history::Action::Deposit { .. } => None,
         model::history::Action::CreateUser { .. } => None,
         model::history::Action::Freeze { days } => Some(format!("заморожен на {} дней", days)),
-        model::history::Action::Unfreeze {} => Some(format!("разморожен")),
+        model::history::Action::Unfreeze {} => Some("разморожен".to_string()),
         model::history::Action::ChangeBalance { .. } => None,
         model::history::Action::ChangeReservedBalance { .. } => None,
         model::history::Action::PayReward { .. } => None,

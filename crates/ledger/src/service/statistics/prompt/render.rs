@@ -126,7 +126,7 @@ pub struct SubscriptionStatWriter {
 impl SubscriptionStatWriter {
     pub fn new() -> Result<Self> {
         let mut wtr = csv::Writer::from_writer(vec![]);
-        wtr.write_record(&[
+        wtr.write_record([
             "month",
             "subscription name",
             "number of subscription sold",
@@ -165,7 +165,7 @@ pub struct MarketingWriter {
 impl MarketingWriter {
     pub fn new() -> Result<Self> {
         let mut wtr = csv::Writer::from_writer(vec![]);
-        wtr.write_record(&[
+        wtr.write_record([
             "month",
             "where did the client come from(direction)",
             "clients who purchased a trial lesson",
@@ -219,7 +219,7 @@ impl TrainingWriter {
         let mut by_weekday = csv::Writer::from_writer(vec![]);
         let mut by_time = csv::Writer::from_writer(vec![]);
 
-        by_program.write_record(&[
+        by_program.write_record([
             "training name",
             "month",
             "trainings count",
@@ -229,7 +229,7 @@ impl TrainingWriter {
             "canceled trainings",
         ])?;
 
-        by_instructor.write_record(&[
+        by_instructor.write_record([
             "instructor",
             "month",
             "trainings count",
@@ -239,7 +239,7 @@ impl TrainingWriter {
             "canceled trainings",
         ])?;
 
-        by_room.write_record(&[
+        by_room.write_record([
             "room",
             "month",
             "trainings count",
@@ -249,7 +249,7 @@ impl TrainingWriter {
             "canceled trainings",
         ])?;
 
-        by_type.write_record(&[
+        by_type.write_record([
             "training type",
             "month",
             "trainings count",
@@ -259,7 +259,7 @@ impl TrainingWriter {
             "canceled trainings",
         ])?;
 
-        by_weekday.write_record(&[
+        by_weekday.write_record([
             "weekday",
             "month",
             "trainings count",
@@ -269,7 +269,7 @@ impl TrainingWriter {
             "canceled trainings",
         ])?;
 
-        by_time.write_record(&[
+        by_time.write_record([
             "time",
             "month",
             "trainings count",

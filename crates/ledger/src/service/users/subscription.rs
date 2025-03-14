@@ -100,7 +100,7 @@ impl Users {
                 if delta > 0 {
                     sub.balance += delta as u32;
                 } else {
-                    sub.balance = sub.balance.saturating_sub(delta.unsigned_abs() as u32);
+                    sub.balance = sub.balance.saturating_sub(delta.unsigned_abs());
                 }
             });
         self.store.update(session, &mut payer).await?;
@@ -139,7 +139,7 @@ impl Users {
                 } else {
                     sub.locked_balance = sub
                         .locked_balance
-                        .saturating_sub(delta.unsigned_abs() as u32);
+                        .saturating_sub(delta.unsigned_abs());
                 }
             });
         self.store.update(session, &mut payer).await?;
@@ -240,13 +240,10 @@ impl Users {
         self.resolve_family(session, &mut user).await?;
         let mut payer = user.payer_mut()?;
 
-        payer
+        if let Some(sub) = payer
             .subscriptions_mut()
             .iter_mut()
-            .find(|sub| sub.id == id)
-            .map(|sub| {
-                sub.item_price = Some(price);
-            });
+            .find(|sub| sub.id == id) { sub.item_price = Some(price); }
         self.store.update(session, &mut payer).await?;
         Ok(())
     }

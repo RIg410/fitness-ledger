@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn test_to_data_profile() {
         let id = ObjectId::new();
-        let location = CommonLocation::Profile(id.clone());
+        let location = CommonLocation::Profile(id);
         let data = location.to_data();
         assert_eq!(data, format!("/cl/usr/{}", id.to_hex()));
     }
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn test_to_data_request() {
         let id = ObjectId::new();
-        let location = CommonLocation::Request(id.clone());
+        let location = CommonLocation::Request(id);
         let data = location.to_data();
         assert_eq!(data, format!("/cl/req/{}", id.to_hex()));
     }

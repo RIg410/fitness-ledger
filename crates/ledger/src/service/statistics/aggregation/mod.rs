@@ -7,9 +7,7 @@ use chrono::Local;
 use chrono::Months;
 use chrono::NaiveDate;
 use chrono::TimeZone;
-use model::session::Session;
 use serde::Deserialize;
-use std::collections::HashSet;
 
 #[derive(Deserialize, Debug)]
 pub struct RequiredAggregations {

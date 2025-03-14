@@ -98,18 +98,14 @@ impl View for ClientsList {
             );
             let mut row = Vec::with_capacity(2);
             row.push(Callback::SelectClient(user.id.bytes()).button(format!("👤 {}", user_name)));
-            if ctx.has_right(Rule::EditTrainingClientsList) && !training.is_processed {
-                if training.is_group() {
-                    row.push(Callback::DeleteClient(user.id.bytes()).button("❌"));
-                }
+            if ctx.has_right(Rule::EditTrainingClientsList) && !training.is_processed && training.is_group() {
+                row.push(Callback::DeleteClient(user.id.bytes()).button("❌"));
             }
             keymap = keymap.append_row(row);
         }
 
-        if training.is_group() {
-            if ctx.has_right(Rule::EditTrainingClientsList) && !training.is_processed {
-                keymap = keymap.append_row(vec![Callback::AddClient.button("Добавить 👤")]);
-            }
+        if training.is_group() && ctx.has_right(Rule::EditTrainingClientsList) && !training.is_processed {
+            keymap = keymap.append_row(vec![Callback::AddClient.button("Добавить 👤")]);
         }
         ctx.edit_origin(&msg, keymap).await?;
         Ok(())

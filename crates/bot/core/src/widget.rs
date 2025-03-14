@@ -65,7 +65,7 @@ impl Widget {
     }
 
     pub(crate) fn is_back_main_view(&self) -> bool {
-        self.back.as_ref().map_or(false, |b| b.view.main_view())
+        self.back.as_ref().is_some_and(|b| b.view.main_view())
     }
 }
 

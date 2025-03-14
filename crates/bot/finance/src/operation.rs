@@ -113,10 +113,10 @@ async fn render_event(ctx: &mut Context, event: &TreasuryEvent) -> Result<String
                 income.description
             )
         }
-        model::treasury::Event::SubRent { .. } => {
+        model::treasury::Event::SubRent => {
             format!("🏠 Субаренда: {} руб.", event.sum())
         }
-        model::treasury::Event::Rent { .. } => {
+        model::treasury::Event::Rent => {
             format!("🏠 Аренда: {} руб.", event.sum())
         }
         model::treasury::Event::Marketing(come_from) => {

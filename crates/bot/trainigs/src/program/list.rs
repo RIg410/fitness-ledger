@@ -46,7 +46,7 @@ impl View for ProgramList {
             }
             Callback::SelectTraining(id) => {
                 let id = ObjectId::from_bytes(id);
-                Ok(ProgramView::new(id, self.preset.clone().unwrap_or_default()).into())
+                Ok(ProgramView::new(id, self.preset.unwrap_or_default()).into())
             }
         }
     }

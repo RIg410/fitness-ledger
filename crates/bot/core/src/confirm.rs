@@ -1,7 +1,6 @@
 use crate::Calldata;
 use crate::{
     callback_data::Calldata as _,
-    calldata,
     context::Context,
     widget::{Jmp, View},
 };

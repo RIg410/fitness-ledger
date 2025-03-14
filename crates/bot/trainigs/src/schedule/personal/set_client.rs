@@ -33,7 +33,7 @@ impl View for SetClient {
     async fn show(&mut self, ctx: &mut Context) -> Result<()> {
         let preset = self.preset.instructor.unwrap_or_default();
         let (msg, keymap) = render(ctx, preset).await?;
-        ctx.edit_origin(&msg, keymap).await?;
+        ctx.edit_origin(msg, keymap).await?;
         Ok(())
     }
 

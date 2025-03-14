@@ -18,6 +18,7 @@ mod create;
 mod edit;
 mod history;
 
+#[derive(Default)]
 pub struct Requests {
     pub phone: Option<String>,
     pub found: bool,
@@ -30,15 +31,6 @@ impl Requests {
     }
 }
 
-impl Default for Requests {
-    fn default() -> Self {
-        Self {
-            phone: None,
-            found: false,
-            id: None,
-        }
-    }
-}
 
 #[async_trait]
 impl View for Requests {
@@ -63,7 +55,7 @@ impl View for Requests {
                 .get_by_phone(&mut ctx.session, &sanitize_phone(phone))
                 .await?;
             if let Some(request) = request.as_ref() {
-                self.id = Some(request.id.clone());
+                self.id = Some(request.id);
                 self.found = true;
                 text.push_str(&fmt_request(request));
                 keymap = keymap.append_row(Calldata::AddComment.btn_row("Добавить комментарий 📝"));
@@ -74,13 +66,11 @@ impl View for Requests {
                 self.id = None;
                 text.push_str("Заявка не найдена");
             }
-        } else {
-            if let Some(id) = self.id {
-                let request = ctx.ledger.requests.get(&mut ctx.session, id).await?;
-                if let Some(request) = request {
-                    self.phone = Some(request.phone);
-                    return self.show(ctx).await;
-                }
+        } else if let Some(id) = self.id {
+            let request = ctx.ledger.requests.get(&mut ctx.session, id).await?;
+            if let Some(request) = request {
+                self.phone = Some(request.phone);
+                return self.show(ctx).await;
             }
         }
 

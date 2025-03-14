@@ -78,7 +78,7 @@ impl View for NotificationView {
             Callback::btn(&user, 23, "23 \\- 00"),
         ]);
 
-        ctx.edit_origin(&msg, keymap).await?;
+        ctx.edit_origin(msg, keymap).await?;
         Ok(())
     }
 

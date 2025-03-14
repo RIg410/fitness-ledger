@@ -109,6 +109,6 @@ pub async fn render_msg(
             .room
             .map(|r| fmt_room(Room::from(r)))
             .unwrap_or_else(|| "❓"),
-        escape(&if request.is_empty() {"."} else {request}),
+        escape(if request.is_empty() {"."} else {request}),
     ))
 }

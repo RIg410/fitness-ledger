@@ -212,7 +212,7 @@ impl TriningBg {
         training: &Training,
     ) -> Result<Option<Notification>> {
         let payer = user.payer()?;
-        let balance = payer.available_balance_for_training(&training);
+        let balance = payer.available_balance_for_training(training);
 
         // Notify user and manager if balance is zero and user has more than one lesson in subscription.
         if balance == 0 && sub.items > 1 {

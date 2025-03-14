@@ -24,7 +24,7 @@ pub async fn bassness_error(ctx: &mut Context, err: &LedgerError) -> Result<Opti
     Ok(Some(match err {
         LedgerError::Eyre(_) => return Ok(None),
         LedgerError::UserNotFound(object_id) => {
-            format!("Ошибка: *Пользователь {} не найден*", obj_id(&object_id))
+            format!("Ошибка: *Пользователь {} не найден*", obj_id(object_id))
         }
         LedgerError::MemberNotFound { user_id, member_id } => {
             let user = user_name(ctx, *user_id).await?;

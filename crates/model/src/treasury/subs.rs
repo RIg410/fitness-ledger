@@ -45,7 +45,7 @@ pub enum UserId {
 impl UserId {
     pub fn object_id(&self) -> Option<ObjectId> {
         match self {
-            UserId::Id(id) => Some(id.clone()),
+            UserId::Id(id) => Some(*id),
             _ => None,
         }
     }

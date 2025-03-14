@@ -41,7 +41,7 @@ impl RequestStore {
                     "$elemMatch": {
                         "comment": {
                             "$regex": Regex {
-                                pattern: pattern,
+                                pattern,
                                 options: String::from("i"),
                             }
                         }

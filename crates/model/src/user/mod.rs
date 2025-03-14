@@ -162,7 +162,7 @@ impl User {
     }
 
     pub fn is_couch(&self) -> bool {
-        self.employee.as_ref().map_or(false, |e| e.is_couch())
+        self.employee.as_ref().is_some_and(|e| e.is_couch())
     }
 
     pub fn has_family(&self) -> bool {

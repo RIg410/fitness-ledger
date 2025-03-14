@@ -250,10 +250,10 @@ impl Treasury {
                 Event::Income(_) => {
                     income.other.add(tx.debit);
                 }
-                Event::SubRent { .. } => {
+                Event::SubRent => {
                     income.sub_rent.add(tx.debit);
                 }
-                Event::Rent { .. } => {
+                Event::Rent => {
                     outcome.rent.add(tx.credit);
                 }
                 Event::Marketing(come_from) => {

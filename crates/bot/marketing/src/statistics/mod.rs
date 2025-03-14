@@ -71,7 +71,7 @@ impl View for StatisticsView {
             Calldata::Budget => Ok(Jmp::Stay),
             Calldata::Instructor => Ok(Jmp::Stay),
             Calldata::Clients => {
-                Ok(ClientsStatistics::default().into())
+                Ok(ClientsStatistics.into())
             }
             Calldata::Marketing => Ok(Jmp::Stay),
             Calldata::AI => {

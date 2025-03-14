@@ -8,7 +8,7 @@ use plotly::{
     }, layout::{
         Annotation, Axis, BarMode, CategoryOrder, Layout, LayoutGrid, Legend, TicksDirection,
         TraceOrder,
-    }, sankey::{Line as SankeyLine, Link, Node}, traces::table::{Cells, Header}, Bar, ImageFormat, Pie, Plot, Sankey, Scatter, ScatterPolar, Table
+    }, sankey::{Line as SankeyLine, Link, Node}, traces::table::{Cells, Header}, Bar, Pie, Plot, Sankey, Scatter, ScatterPolar, Table
 };
 use rand_distr::{Distribution, Normal, Uniform};
 

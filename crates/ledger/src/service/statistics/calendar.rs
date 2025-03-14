@@ -19,7 +19,7 @@ pub async fn load_calendar(
         let month = month_id(day.day_date());
         let month = monthes
             .entry(month)
-            .or_insert_with(|| MonthStatistics::default());
+            .or_insert_with(MonthStatistics::default);
 
         for training in &day.training {
             if !training.is_processed {

@@ -37,9 +37,9 @@ pub fn fmt_phone_escape_less(phone: Option<&str>) -> String {
         result.push_str(&phone[1..4]);
         result.push_str(") ");
         result.push_str(&phone[4..7]);
-        result.push_str("-");
+        result.push('-');
         result.push_str(&phone[7..9]);
-        result.push_str("-");
+        result.push('-');
         result.push_str(&phone[9..11]);
         result
     } else {

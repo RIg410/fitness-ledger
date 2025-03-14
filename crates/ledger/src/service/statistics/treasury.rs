@@ -31,10 +31,10 @@ pub async fn load_treasury(
             Event::Income(_) => {
                 stat.treasury.income_other += sum;
             }
-            Event::SubRent { .. } => {
+            Event::SubRent => {
                 stat.treasury.rent += sum;
             }
-            Event::Rent { .. } => {
+            Event::Rent => {
                 stat.treasury.rent += sum;
             }
             Event::Outcome(_) => {

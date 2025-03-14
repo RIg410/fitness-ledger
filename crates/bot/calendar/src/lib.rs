@@ -206,7 +206,7 @@ pub async fn render_week(
         }
 
         if !ctx.has_right(Rule::ViewAllTrainings) && training.tp.is_personal() {
-            let client_id = training.clients.get(0).copied().unwrap_or_default();
+            let client_id = training.clients.first().copied().unwrap_or_default();
             if !(ctx.is_employee() || client_id == ctx.me.id) {
                 continue;
             }

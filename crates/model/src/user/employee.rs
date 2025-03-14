@@ -85,15 +85,13 @@ impl Employee {
                     percent = *rate_percent;
                     break;
                 }
-            } else {
-                if let Rate::PersonalTraining {
-                    percent: rate_percent,
-                } = rate
-                {
-                    reward = sum * *rate_percent;
-                    percent = *rate_percent;
-                    break;
-                }
+            } else if let Rate::PersonalTraining {
+                percent: rate_percent,
+            } = rate
+            {
+                reward = sum * *rate_percent;
+                percent = *rate_percent;
+                break;
             }
         }
 
@@ -110,7 +108,7 @@ impl Employee {
                     training_id: training.id(),
                     name: training.name.clone(),
                     user_originals: users,
-                    percent: percent,
+                    percent,
                 },
             })
         })

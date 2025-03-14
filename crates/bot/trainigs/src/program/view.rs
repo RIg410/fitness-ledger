@@ -31,7 +31,7 @@ impl ProgramView {
 
     async fn schedule(&mut self, ctx: &mut Context) -> Result<Jmp> {
         ctx.ensure(Rule::ScheduleGroupTraining)?;
-        let mut preset = self.preset.clone();
+        let mut preset = self.preset;
         preset.program_id = Some(self.id);
         let view = preset.into_next_view();
         Ok(view.into())
